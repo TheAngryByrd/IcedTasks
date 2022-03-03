@@ -136,7 +136,6 @@ namespace IcedTasks
         // of the execution in a try/with.  The resumption is changed at each step
         // to represent the continuation of the computation.
         static member RunDynamic(code: CancellableTaskCode<'T, 'T>) : CancellableTask<'T> =
-            printfn "~~> HERE - RunDynamic"
             let mutable sm = CancellableTaskStateMachine<'T>()
             let initialResumptionFunc = CancellableTaskResumptionFunc<'T>(fun sm -> code.Invoke(&sm))
             let resumptionInfo =
@@ -176,7 +175,6 @@ namespace IcedTasks
                     sm.Data.MethodBuilder.Task
 
         member inline _.Run(code : CancellableTaskCode<'T, 'T>) : CancellableTask<'T> =
-            printfn "~~> HERE - Run"
             if __useResumableCode then
                 __stateMachine<CancellableTaskStateMachineData<'T>, CancellableTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
@@ -442,3 +440,10 @@ namespace IcedTasks.CancellableTaskBuilderExtensions
                     let! ct = Async.CancellationToken
                     return! t ct |> Async.AwaitTask
                 }
+    module CancellableTask =
+        let getCancellationToken =
+            CancellableTaskBuilder.cancellableTask.Run(
+                CancellableTaskCode<_, _>(fun sm ->
+                    sm.Data.Result <- sm.Data.CancellationToken
+                    true)
+            )

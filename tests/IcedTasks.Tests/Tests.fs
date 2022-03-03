@@ -8,6 +8,31 @@ open IcedTasks.ColdTaskBuilder
 open IcedTasks.ColdTaskBuilderExtensions
 open IcedTasks.CancellableTaskBuilder
 open IcedTasks.CancellableTaskBuilderExtensions
+
+type Expect =
+
+    static member CancellationRequested (asyncf : Async<_>) =
+        async {
+            try
+                do! asyncf
+            with
+            | :? TaskCanceledException as e ->
+                ()
+            | :? OperationCanceledException as e ->
+                ()
+        }
+
+    static member CancellationRequested (asyncf : Task<_>) =
+        task {
+            try
+                do! asyncf
+            with
+            | :? TaskCanceledException as e ->
+                ()
+            | :? OperationCanceledException as e ->
+                ()
+        }
+
 module SayTests =
     open System.Threading
 
@@ -123,7 +148,7 @@ module SayTests =
 
     [<Tests>]
     let tests2 =
-        ftestList
+        testList
             "IcedTasks.CancellableTaskBuilder"
             [
                 testCaseAsync "simple result" <| async {
@@ -137,7 +162,8 @@ module SayTests =
 
 
                 testCaseAsync "simple result ct" <| async {
-                    try
+                    do! Expect.CancellationRequested(async {
+
                         let foo = cancellableTask {
                             return "lol"
                         }
@@ -146,20 +172,14 @@ module SayTests =
                         let! result = foo cts.Token  |> Async.AwaitTask
 
                         Expect.equal result "lol" ""
-                    with
-                    | :? TaskCanceledException as e ->
-                        // printfn "%A" e
-                        ()
-                    | :? OperationCanceledException as e ->
-                        // printfn "%A" e
-                        ()
+                    })
                 }
 
 
                 testCaseAsync "simple can canel" <| async {
 
                     let mutable someValue = null
-                    try
+                    do! Expect.CancellationRequested(async {
                         let fooColdTask = cancellableTask {
                             someValue <- "lol"
                         }
@@ -174,17 +194,39 @@ module SayTests =
                         do! fooAsync
 
                         Expect.equal someValue "lol" ""
-                    with
-                    | :? TaskCanceledException as e ->
-                        // printfn "%A" e
-                        ()
-                    | :? OperationCanceledException as e ->
-                        // printfn "%A" e
-                        ()
+                    })
+
 
                     Expect.equal someValue null ""
                 }
+                testCaseAsync "pass along CancellableTask.getCancellationToken " <| async {
+                    let fooTask = cancellableTask {
+                        let! ct = CancellableTask.getCancellationToken
+                        return ct
+                    }
+                    use cts = new CancellationTokenSource()
+                    let! result = fooTask cts.Token |> Async.AwaitTask
+                    Expect.equal result cts.Token ""
+                }
 
+                testCaseAsync "pass along deep CancellableTask.getCancellationToken " <| async {
+                    do!
+                        Expect.CancellationRequested( async {
+                            let fooTask = cancellableTask {
+                                return! cancellableTask {
+                                    do! cancellableTask {
+                                        let! ct = CancellableTask.getCancellationToken
+                                        do! Task.Delay(10000,ct)
+                                        }
+                                }
+                            }
+                            use cts = new CancellationTokenSource()
+                            cts.CancelAfter(100)
+                            do! fooTask cts.Token |> Async.AwaitTask
+                        }
+                        )
+
+                }
 
                 testCaseAsync "pass along CancellationToken to async bind" <| async {
                     let mutable passedct = CancellationToken.None
