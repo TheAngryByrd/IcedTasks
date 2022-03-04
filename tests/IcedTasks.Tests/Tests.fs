@@ -55,14 +55,14 @@ module SayTests =
     let tests =
         testList
             "IcedTasks.ColdTaskBuilder"
-            [ testCaseAsync "simple result"
+            [ testCaseAsync "ColdTask simple result"
               <| async {
                   let foo = coldTask { return "lol" }
                   let! result = foo |> Async.AwaitColdTask
 
                   Expect.equal result "lol" ""
               }
-              testCaseAsync "run immediately"
+              testCaseAsync "Task run immediately"
               <| async {
                   let mutable someValue = null
                   let foo = task { someValue <- "lol" }
@@ -71,7 +71,7 @@ module SayTests =
 
                   Expect.equal someValue "lol" ""
               }
-              testCaseAsync "wont run immediately"
+              testCaseAsync "ColdTask are lazily evaluated"
               <| async {
                   let mutable someValue = null
                   let fooColdTask = coldTask { someValue <- "lol" }
@@ -86,7 +86,7 @@ module SayTests =
                   Expect.equal someValue "lol" ""
               }
 
-              testCaseAsync "can bind with async"
+              testCaseAsync "Can Bind Async<T>"
               <| async {
                   let innerCall = async { return "lol" }
 
@@ -100,9 +100,19 @@ module SayTests =
 
                   Expect.equal result "lmaolol" ""
               }
+              testCaseAsync "Can ReturnFrom Async<T>"
+              <| async {
+                  let innerCall = async { return "lol" }
+
+                  let foo = coldTask { return! innerCall }
+
+                  let! result = foo |> Async.AwaitColdTask
+
+                  Expect.equal result "lol" ""
+              }
 
 
-              testCaseAsync "can bind with task"
+              testCaseAsync "Can Bind Task<T>"
               <| async {
 
                   let foo =
@@ -114,6 +124,27 @@ module SayTests =
                   let! result = foo |> Async.AwaitColdTask
 
                   Expect.equal result "lmaolol" ""
+              }
+              testCaseAsync "Can ReturnFrom Task<T>"
+              <| async {
+
+                  let foo = coldTask { return! task { return "lol" } }
+
+                  let! result = foo |> Async.AwaitColdTask
+
+                  Expect.equal result "lol" ""
+              }
+              testCaseAsync "Can Bind Task"
+              <| async {
+                  let foo = coldTask { do! Task.FromResult() }
+                  do! foo |> Async.AwaitColdTask
+              // Compiling is a sufficient Expect
+              }
+              testCaseAsync "Can ReturnFrom Task"
+              <| async {
+                  let foo = coldTask { return! Task.FromResult() }
+                  do! foo |> Async.AwaitColdTask
+              // Compiling is a sufficient Expect
               }
 
               testCaseAsync "wont run immediately with binding innerTask"
@@ -130,7 +161,7 @@ module SayTests =
 
                   Expect.equal someValue "lol" ""
               }
-              testCaseAsync "can bind with coldtask"
+              testCaseAsync "Can Bind ColdTask<T>"
               <| async {
 
                   let foo =
@@ -144,14 +175,115 @@ module SayTests =
                   Expect.equal result "lmaolol" ""
               }
 
-              testCaseAsync "can ReturnFrom with coldtask"
+              testCaseAsync "Can ReturnFrom with Coldtask<T>"
               <| async {
                   // ct.ThrowIfCancellationRequested
                   let foo = coldTask { return! coldTask { return "lol" } }
                   let! result = foo () |> Async.AwaitTask
 
                   Expect.equal result "lol" ""
-              } ]
+              }
+
+              testCaseAsync "Can Bind Coldtask"
+              <| async {
+
+                  let innerCold: ColdTask = fun () -> Task.FromResult()
+                  let foo = coldTask { do! innerCold }
+                  do! foo |> Async.AwaitColdTask
+              // Compiling is a sufficient Expect
+              }
+              testCaseAsync "Can ReturnFrom Coldtask"
+              <| async {
+                  let innerCold: ColdTask = fun () -> Task.FromResult()
+                  let foo = coldTask { return! innerCold }
+                  do! foo |> Async.AwaitColdTask
+              // Compiling is a sufficient Expect
+              }
+
+
+              testCaseAsync "Async Bind Coldtask<T>"
+              <| async {
+                  let innerCall = coldTask { return "lol" }
+
+                  let foo =
+                      async {
+                          let! result = innerCall
+                          return "lmao" + result
+                      }
+
+                  let! result = foo
+
+                  Expect.equal result "lmaolol" ""
+              }
+              testCaseAsync "Async ReturnFrom Coldtask<T>"
+              <| async {
+                  let innerCall = coldTask { return "lol" }
+
+                  let foo = async { return! innerCall }
+
+                  let! result = foo
+
+                  Expect.equal result "lol" ""
+              }
+
+              testCaseAsync "Async Bind Coldtask"
+              <| async {
+
+                  let innerCold: ColdTask = fun () -> Task.FromResult()
+                  let foo = async { do! innerCold }
+                  do! foo
+              // Compiling is a sufficient Expect
+              }
+              testCaseAsync "Async ReturnFrom Coldtask"
+              <| async {
+                  let innerCold: ColdTask = fun () -> Task.FromResult()
+                  let foo = async { return! innerCold }
+                  do! foo
+              // Compiling is a sufficient Expect
+              }
+
+              testCaseAsync "Task Bind Coldtask<T>"
+              <| async {
+                  let innerCall = coldTask { return "lol" }
+
+                  let foo =
+                      task {
+                          let! result = innerCall
+                          return "lmao" + result
+                      }
+
+                  let! result = foo |> Async.AwaitTask
+
+                  Expect.equal result "lmaolol" ""
+              }
+              testCaseAsync "Task ReturnFrom Coldtask<T>"
+              <| async {
+                  let innerCall = coldTask { return "lol" }
+
+                  let foo = task { return! innerCall }
+
+                  let! result = foo |> Async.AwaitTask
+
+                  Expect.equal result "lol" ""
+              }
+
+              testCaseAsync "Task Bind Coldtask"
+              <| async {
+
+                  let innerCold: ColdTask = fun () -> Task.FromResult()
+                  let foo = task { do! innerCold }
+                  do! foo |> Async.AwaitTask
+              // Compiling is a sufficient Expect
+              }
+              testCaseAsync "Task ReturnFrom Coldtask"
+              <| async {
+                  let innerCold: ColdTask = fun () -> Task.FromResult()
+                  let foo = task { return! innerCold }
+                  do! foo |> Async.AwaitTask
+              // Compiling is a sufficient Expect
+              }
+
+              ]
 
     [<Tests>]
     let tests2 =
@@ -204,6 +336,7 @@ module SayTests =
                               Expect.equal someValue "lol" ""
                           }
                       )
+
                   Expect.equal someValue null ""
               }
               testCaseAsync "Can extract context's CancellationToken via CancellableTask.getCancellationToken"
@@ -354,6 +487,7 @@ module SayTests =
                   let expected = "lol"
 
                   let coldT = coldTask { return expected }
+
                   let outerTask =
                       cancellableTask {
                           let! result = coldT
@@ -378,7 +512,8 @@ module SayTests =
               testCaseAsync "Can Bind ColdTask"
               <| async {
 
-                  let coldT : ColdTask = fun () -> Task.FromResult()
+                  let coldT: ColdTask = fun () -> Task.FromResult()
+
                   let outerTask =
                       cancellableTask {
                           let! result = coldT
@@ -387,15 +522,15 @@ module SayTests =
 
                   use cts = new CancellationTokenSource()
                   do! outerTask cts.Token |> Async.AwaitTask
-                  // Compiling is a sufficient Expect
+              // Compiling is a sufficient Expect
               }
               testCaseAsync "Can ReturnFrom ColdTask"
               <| async {
-                  let coldT : ColdTask = fun () -> Task.FromResult()
+                  let coldT: ColdTask = fun () -> Task.FromResult()
                   let outerTask = cancellableTask { return! coldT }
                   use cts = new CancellationTokenSource()
                   do! outerTask cts.Token |> Async.AwaitTask
-                  // Compiling is a sufficient Expect
+              // Compiling is a sufficient Expect
               }
 
               testCaseAsync "Can Bind Async<T>"

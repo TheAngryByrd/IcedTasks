@@ -44,7 +44,9 @@ and CancellableTaskCode<'TOverall, 'T> = ResumableCode<CancellableTaskStateMachi
 type CancellableTaskBuilderBase() =
 
 
-    member inline _.Delay([<InlineIfLambda>] generator: unit -> CancellableTaskCode<'TOverall, 'T>) : CancellableTaskCode<'TOverall, 'T> =
+    member inline _.Delay
+        ([<InlineIfLambda>] generator: unit -> CancellableTaskCode<'TOverall, 'T>)
+        : CancellableTaskCode<'TOverall, 'T> =
         CancellableTaskCode<'TOverall, 'T>(fun sm -> (generator ()).Invoke(&sm))
 
     /// Used to represent no-ops like the implicit empty "else" branch of an "if" expression.
@@ -578,13 +580,19 @@ module MediumPriority =
     // Medium priority extensions
     type CancellableTaskBuilderBase with
         member inline _.Source(s: #seq<'value>) : #seq<'value> = s
-        member inline _.Source([<InlineIfLambda>]computation: CancellableTask<'T>) : CancellableTask<'T> = computation
-        member inline _.Source([<InlineIfLambda>]computation: CancellableTask) : CancellableTask = computation
-        member inline _.Source(computation: Async<'T>) : CancellableTask<'T> = fun ct -> Async.StartAsTask(computation, cancellationToken = ct)
+        member inline _.Source([<InlineIfLambda>] computation: CancellableTask<'T>) : CancellableTask<'T> = computation
+        member inline _.Source([<InlineIfLambda>] computation: CancellableTask) : CancellableTask = computation
+
+        member inline _.Source(computation: Async<'T>) : CancellableTask<'T> =
+            fun ct -> Async.StartAsTask(computation, cancellationToken = ct)
+
         member inline _.Source(computation: Task<'T>) : CancellableTask<'T> = fun ct -> computation
         member inline _.Source(computation: Task) : CancellableTask = fun ct -> computation
-        member inline _.Source([<InlineIfLambda>]computation: ColdTask<'T>) : CancellableTask<'T> = fun ct -> computation ()
-        member inline _.Source([<InlineIfLambda>]computation: ColdTask) : CancellableTask = fun ct -> computation ()
+
+        member inline _.Source([<InlineIfLambda>] computation: ColdTask<'T>) : CancellableTask<'T> =
+            fun ct -> computation ()
+
+        member inline _.Source([<InlineIfLambda>] computation: ColdTask) : CancellableTask = fun ct -> computation ()
 
 [<AutoOpen>]
 module AsyncExtenions =
@@ -607,6 +615,7 @@ module AsyncExtenions =
 
         member inline _.Source([<InlineIfLambda>] cancellableTask: CancellableTask<'T>) : Async<'T> =
             Async.AwaitCancellableTask cancellableTask
+
         member inline _.Source([<InlineIfLambda>] cancellableTask: CancellableTask) : Async<unit> =
             Async.AwaitCancellableTask cancellableTask
 
