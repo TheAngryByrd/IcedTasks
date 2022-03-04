@@ -11,49 +11,41 @@ open IcedTasks.CancellableTaskBuilderExtensions
 
 type Expect =
 
-    static member CancellationRequested (asyncf : Async<_>) =
+    static member CancellationRequested(asyncf: Async<_>) =
         async {
             try
                 do! asyncf
             with
-            | :? TaskCanceledException as e ->
-                ()
-            | :? OperationCanceledException as e ->
-                ()
+            | :? TaskCanceledException as e -> ()
+            | :? OperationCanceledException as e -> ()
         }
 
-    static member CancellationRequested (asyncf : Task<_>) =
+    static member CancellationRequested(asyncf: Task<_>) =
         task {
             try
                 do! asyncf
             with
-            | :? TaskCanceledException as e ->
-                ()
-            | :? OperationCanceledException as e ->
-                ()
+            | :? TaskCanceledException as e -> ()
+            | :? OperationCanceledException as e -> ()
         }
 
-    static member CancellationRequested (asyncf : ColdTask<_>) =
+    static member CancellationRequested(asyncf: ColdTask<_>) =
         coldTask {
             try
                 do! asyncf
             with
-            | :? TaskCanceledException as e ->
-                ()
-            | :? OperationCanceledException as e ->
-                ()
+            | :? TaskCanceledException as e -> ()
+            | :? OperationCanceledException as e -> ()
         }
 
 
-    static member CancellationRequested (asyncf : CancellableTask<_>) =
+    static member CancellationRequested(asyncf: CancellableTask<_>) =
         cancellableTask {
             try
                 do! asyncf
             with
-            | :? TaskCanceledException as e ->
-                ()
-            | :? OperationCanceledException as e ->
-                ()
+            | :? TaskCanceledException as e -> ()
+            | :? OperationCanceledException as e -> ()
         }
 
 module SayTests =
@@ -63,395 +55,387 @@ module SayTests =
     let tests =
         testList
             "IcedTasks.ColdTaskBuilder"
-            [
-                testCaseAsync "simple result" <| async {
-                    let foo = coldTask {
-                        return "lol"
-                    }
-                    let! result = foo  |> Async.AwaitColdTask
+            [ testCaseAsync "simple result"
+              <| async {
+                  let foo = coldTask { return "lol" }
+                  let! result = foo |> Async.AwaitColdTask
 
-                    Expect.equal result "lol" ""
-                }
-                testCaseAsync "run immediately" <| async {
-                    let mutable someValue = null
-                    let foo = task {
-                        someValue <- "lol"
-                    }
+                  Expect.equal result "lol" ""
+              }
+              testCaseAsync "run immediately"
+              <| async {
+                  let mutable someValue = null
+                  let foo = task { someValue <- "lol" }
 
-                    do! Async.Sleep(100)
+                  do! Async.Sleep(100)
 
-                    Expect.equal someValue "lol" ""
-                }
-                testCaseAsync "wont run immediately" <| async {
-                    let mutable someValue = null
-                    let fooColdTask = coldTask {
-                        someValue <- "lol"
-                    }
-                    do! Async.Sleep(100)
-                    Expect.equal someValue null ""
-                    let fooAsync = fooColdTask |> Async.AwaitColdTask
-                    do! Async.Sleep(100)
-                    Expect.equal someValue null ""
+                  Expect.equal someValue "lol" ""
+              }
+              testCaseAsync "wont run immediately"
+              <| async {
+                  let mutable someValue = null
+                  let fooColdTask = coldTask { someValue <- "lol" }
+                  do! Async.Sleep(100)
+                  Expect.equal someValue null ""
+                  let fooAsync = fooColdTask |> Async.AwaitColdTask
+                  do! Async.Sleep(100)
+                  Expect.equal someValue null ""
 
-                    do! fooAsync
+                  do! fooAsync
 
-                    Expect.equal someValue "lol" ""
-                }
+                  Expect.equal someValue "lol" ""
+              }
 
-                testCaseAsync "can bind with async" <| async {
-                    let innerCall = async {
-                        return "lol"
-                    }
-                    let foo = coldTask {
-                        let! result = innerCall
-                        return "lmao" + result
-                    }
-                    let! result = foo |> Async.AwaitColdTask
+              testCaseAsync "can bind with async"
+              <| async {
+                  let innerCall = async { return "lol" }
 
-                    Expect.equal result "lmaolol" ""
-                }
+                  let foo =
+                      coldTask {
+                          let! result = innerCall
+                          return "lmao" + result
+                      }
+
+                  let! result = foo |> Async.AwaitColdTask
+
+                  Expect.equal result "lmaolol" ""
+              }
 
 
-                testCaseAsync "can bind with task" <| async {
+              testCaseAsync "can bind with task"
+              <| async {
 
-                    let foo = coldTask {
-                        let! result = task {
-                            return "lol"
-                        }
-                        return "lmao" + result
-                    }
-                    let! result = foo |> Async.AwaitColdTask
+                  let foo =
+                      coldTask {
+                          let! result = task { return "lol" }
+                          return "lmao" + result
+                      }
 
-                    Expect.equal result "lmaolol" ""
-                }
+                  let! result = foo |> Async.AwaitColdTask
 
-                testCaseAsync "wont run immediately with binding innerTask" <| async {
-                    let mutable someValue = null
-                    let fooColdTask = coldTask {
-                        do! task {
-                            someValue <- "lol"
-                        }
-                    }
-                    do! Async.Sleep(100)
-                    Expect.equal someValue null ""
-                    let fooAsync = fooColdTask |> Async.AwaitColdTask
-                    do! Async.Sleep(100)
-                    Expect.equal someValue null ""
+                  Expect.equal result "lmaolol" ""
+              }
 
-                    do! fooAsync
+              testCaseAsync "wont run immediately with binding innerTask"
+              <| async {
+                  let mutable someValue = null
+                  let fooColdTask = coldTask { do! task { someValue <- "lol" } }
+                  do! Async.Sleep(100)
+                  Expect.equal someValue null ""
+                  let fooAsync = fooColdTask |> Async.AwaitColdTask
+                  do! Async.Sleep(100)
+                  Expect.equal someValue null ""
 
-                    Expect.equal someValue "lol" ""
-                }
-                testCaseAsync "can bind with coldtask" <| async {
+                  do! fooAsync
 
-                    let foo = coldTask {
-                        let! result = coldTask {
-                            return "lol"
-                        }
-                        return "lmao" + result
-                    }
-                    let! result = foo () |> Async.AwaitTask
+                  Expect.equal someValue "lol" ""
+              }
+              testCaseAsync "can bind with coldtask"
+              <| async {
 
-                    Expect.equal result "lmaolol" ""
-                }
+                  let foo =
+                      coldTask {
+                          let! result = coldTask { return "lol" }
+                          return "lmao" + result
+                      }
 
-                testCaseAsync "can ReturnFrom with coldtask" <| async {
-                    // ct.ThrowIfCancellationRequested
-                    let foo = coldTask {
-                        return! coldTask {
-                            return "lol"
-                        }
-                    }
-                    let! result = foo () |> Async.AwaitTask
+                  let! result = foo () |> Async.AwaitTask
 
-                    Expect.equal result "lol" ""
-                }
-            ]
+                  Expect.equal result "lmaolol" ""
+              }
+
+              testCaseAsync "can ReturnFrom with coldtask"
+              <| async {
+                  // ct.ThrowIfCancellationRequested
+                  let foo = coldTask { return! coldTask { return "lol" } }
+                  let! result = foo () |> Async.AwaitTask
+
+                  Expect.equal result "lol" ""
+              } ]
 
     [<Tests>]
     let tests2 =
         testList
             "IcedTasks.CancellableTaskBuilder"
-            [
-                testCaseAsync "Simple Return" <| async {
-                    let foo = cancellableTask {
-                        return "lol"
-                    }
-                    let! result = foo  |> Async.AwaitCancellableTask
+            [ testCaseAsync "Simple Return"
+              <| async {
+                  let foo = cancellableTask { return "lol" }
+                  let! result = foo |> Async.AwaitCancellableTask
 
-                    Expect.equal result "lol" ""
-                }
+                  Expect.equal result "lol" ""
+              }
 
-                testCaseAsync "Simple Cancellation" <| async {
-                    do! Expect.CancellationRequested(async {
+              testCaseAsync "Simple Cancellation"
+              <| async {
+                  do!
+                      Expect.CancellationRequested(
+                          async {
 
-                        let foo = cancellableTask {
-                            return "lol"
-                        }
-                        use cts = new CancellationTokenSource()
-                        cts.Cancel()
-                        let! result = foo cts.Token  |> Async.AwaitTask
+                              let foo = cancellableTask { return "lol" }
+                              use cts = new CancellationTokenSource()
+                              cts.Cancel()
+                              let! result = foo cts.Token |> Async.AwaitTask
 
-                        Expect.equal result "lol" ""
-                    })
-                }
-
-
-                testCaseAsync "CancellationTasks are lazily evaluated" <| async {
-
-                    let mutable someValue = null
-                    do! Expect.CancellationRequested(async {
-                        let fooColdTask = cancellableTask {
-                            someValue <- "lol"
-                        }
-                        do! Async.Sleep(100)
-                        Expect.equal someValue null ""
-                        use cts = new CancellationTokenSource()
-                        cts.Cancel()
-                        let fooAsync = fooColdTask cts.Token |> Async.AwaitTask
-                        do! Async.Sleep(100)
-                        Expect.equal someValue null ""
-
-                        do! fooAsync
-
-                        Expect.equal someValue "lol" ""
-                    })
+                              Expect.equal result "lol" ""
+                          }
+                      )
+              }
 
 
-                    Expect.equal someValue null ""
-                }
-                testCaseAsync "Can extract context's CancellationToken via CancellableTask.getCancellationToken" <| async {
-                    let fooTask = cancellableTask {
-                        let! ct = CancellableTask.getCancellationToken
-                        return ct
-                    }
-                    use cts = new CancellationTokenSource()
-                    let! result = fooTask cts.Token |> Async.AwaitTask
-                    Expect.equal result cts.Token ""
-                }
+              testCaseAsync "CancellationTasks are lazily evaluated"
+              <| async {
 
-                testCaseAsync "Can extract context's CancellationToken via CancellableTask.getCancellationToken in a deeply nested CE" <| async {
-                    do!
-                        Expect.CancellationRequested( async {
-                            let fooTask = cancellableTask {
-                                return! cancellableTask {
-                                    do! cancellableTask {
-                                        let! ct = CancellableTask.getCancellationToken
-                                        do! Task.Delay(1000,ct)
-                                        failwith "Didn't cancel fast enough"
-                                        }
-                                }
-                            }
-                            use cts = new CancellationTokenSource()
-                            cts.CancelAfter(100)
-                            do! fooTask cts.Token |> Async.AwaitTask
-                            failwith "Didn't cancel fast enough"
-                        }
-                        )
+                  let mutable someValue = null
 
-                }
+                  do!
+                      Expect.CancellationRequested(
+                          async {
+                              let fooColdTask = cancellableTask { someValue <- "lol" }
+                              do! Async.Sleep(100)
+                              Expect.equal someValue null ""
+                              use cts = new CancellationTokenSource()
+                              cts.Cancel()
+                              let fooAsync = fooColdTask cts.Token |> Async.AwaitTask
+                              do! Async.Sleep(100)
+                              Expect.equal someValue null ""
 
-                testCaseAsync "pass along CancellationToken to async bind" <| async {
+                              do! fooAsync
 
-                    let fooTask = cancellableTask {
-                        let! result = async {
-                            let! ct = Async.CancellationToken
-                            return ct
-                        }
-                        return result
-                    }
-                    use cts = new CancellationTokenSource()
-                    let! passedct = fooTask cts.Token |> Async.AwaitTask
-                    Expect.equal passedct cts.Token ""
-                }
+                              Expect.equal someValue "lol" ""
+                          }
+                      )
 
 
-                testCaseAsync "Can Bind CancellableTask" <| async {
-                    let fooTask : CancellableTask = fun ct -> Task.FromResult()
-                    let outerTask = cancellableTask {
-                        do! fooTask
-                    }
-                    use cts = new CancellationTokenSource()
-                    do! outerTask cts.Token |> Async.AwaitTask
-                    // Compiling is a sufficient Expect
-                }
-                testCaseAsync "Can ReturnFrom CancellableTask" <| async {
-                    let fooTask : CancellableTask = fun ct -> Task.FromResult()
-                    let outerTask = cancellableTask {
-                        return! fooTask
-                    }
-                    use cts = new CancellationTokenSource()
-                    do! outerTask cts.Token |> Async.AwaitTask
-                    // Compiling is a sufficient Expect
-                }
+                  Expect.equal someValue null ""
+              }
+              testCaseAsync "Can extract context's CancellationToken via CancellableTask.getCancellationToken"
+              <| async {
+                  let fooTask =
+                      cancellableTask {
+                          let! ct = CancellableTask.getCancellationToken
+                          return ct
+                      }
 
-                testCaseAsync "Can Bind CancellableTask<T>" <| async {
-                    let expected = "lol"
-                    let fooTask : CancellableTask<_> = fun ct ->
-                        Task.FromResult expected
-                    let outerTask = cancellableTask {
-                        let! result = fooTask
-                        return result
-                    }
-                    use cts = new CancellationTokenSource()
-                    let! actual = outerTask cts.Token |> Async.AwaitTask
-                    Expect.equal actual expected ""
-                }
+                  use cts = new CancellationTokenSource()
+                  let! result = fooTask cts.Token |> Async.AwaitTask
+                  Expect.equal result cts.Token ""
+              }
 
-                testCaseAsync "Can ReturnFrom CancellableTask<T>" <| async {
-                    let expected = "lol"
-                    let fooTask : CancellableTask<_> = fun ct ->
-                        Task.FromResult expected
-                    let outerTask = cancellableTask {
-                        return! fooTask
-                    }
-                    use cts = new CancellationTokenSource()
-                    let! actual = outerTask cts.Token |> Async.AwaitTask
-                    Expect.equal actual expected ""
-                }
+              testCaseAsync
+                  "Can extract context's CancellationToken via CancellableTask.getCancellationToken in a deeply nested CE"
+              <| async {
+                  do!
+                      Expect.CancellationRequested(
+                          async {
+                              let fooTask =
+                                  cancellableTask {
+                                      return!
+                                          cancellableTask {
+                                              do!
+                                                  cancellableTask {
+                                                      let! ct = CancellableTask.getCancellationToken
+                                                      do! Task.Delay(1000, ct)
+                                                      failwith "Didn't cancel fast enough"
+                                                  }
+                                          }
+                                  }
 
+                              use cts = new CancellationTokenSource()
+                              cts.CancelAfter(100)
+                              do! fooTask cts.Token |> Async.AwaitTask
+                              failwith "Didn't cancel fast enough"
+                          }
+                      )
 
-                testCaseAsync "Can Bind Task" <| async {
-                    let outerTask = cancellableTask {
-                        do! Task.FromResult()
-                    }
-                    use cts = new CancellationTokenSource()
-                    do! outerTask cts.Token |> Async.AwaitTask
-                    // Compiling is a sufficient Expect
-                }
-                testCaseAsync "Can ReturnFrom Task" <| async {
-                    let outerTask = cancellableTask {
-                        return! Task.FromResult()
-                    }
-                    use cts = new CancellationTokenSource()
-                    do! outerTask cts.Token |> Async.AwaitTask
-                    // Compiling is a sufficient Expect
-                }
+              }
 
-                testCaseAsync "Can Bind Task<T>" <| async {
-                    let expected = "lol"
-                    let fooTask =
-                        Task.FromResult expected
-                    let outerTask = cancellableTask {
-                        let! result = fooTask
-                        return result
-                    }
-                    use cts = new CancellationTokenSource()
-                    let! actual = outerTask cts.Token |> Async.AwaitTask
-                    Expect.equal actual expected ""
-                }
-                testCaseAsync "Can ReturnFrom Task<T>" <| async {
-                    let expected = "lol"
-                    let fooTask = Task.FromResult expected
-                    let outerTask = cancellableTask {
-                        return! fooTask
-                    }
-                    use cts = new CancellationTokenSource()
-                    let! actual = outerTask cts.Token |> Async.AwaitTask
-                    Expect.equal actual expected ""
-                }
+              testCaseAsync "pass along CancellationToken to async bind"
+              <| async {
 
-                testCaseAsync "Can Bind Async<T>" <| async {
-                    let expected = "lol"
-                    let fooTask =
-                        async.Return expected
-                    let outerTask = cancellableTask {
-                        let! result = fooTask
-                        return result
-                    }
-                    use cts = new CancellationTokenSource()
-                    let! actual = outerTask cts.Token |> Async.AwaitTask
-                    Expect.equal actual expected ""
-                }
-                testCaseAsync "Can ReturnFrom Async<T>" <| async {
-                    let expected = "lol"
-                    let fooTask = async.Return expected
-                    let outerTask = cancellableTask {
-                        return! fooTask
-                    }
-                    use cts = new CancellationTokenSource()
-                    let! actual = outerTask cts.Token |> Async.AwaitTask
-                    Expect.equal actual expected ""
-                }
+                  let fooTask =
+                      cancellableTask {
+                          let! result =
+                              async {
+                                  let! ct = Async.CancellationToken
+                                  return ct
+                              }
 
-                testCase "CancellationToken flows from Async<unit> to CancellableTask<T> via Async.AwaitCancellableTask" <| fun () ->
-                    let innerTask = cancellableTask {
-                        return! CancellableTask.getCancellationToken
-                    }
-                    let outerAsync = async {
-                        return! innerTask |> Async.AwaitCancellableTask
-                    }
+                          return result
+                      }
 
-                    use cts = new CancellationTokenSource()
-                    let actual = Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
-                    Expect.equal actual cts.Token ""
-
-                testCase "CancellationToken flows from Async<unit> to CancellableTask via Async.AwaitCancellableTask" <| fun () ->
-                    let mutable actual = CancellationToken.None
-                    let innerTask : CancellableTask = fun ct ->
-                        task {
-                            actual <- ct
-                        } :> Task
-                    let outerAsync = async {
-                        return! innerTask |> Async.AwaitCancellableTask
-                    }
-
-                    use cts = new CancellationTokenSource()
-                    Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
-                    Expect.equal actual cts.Token ""
+                  use cts = new CancellationTokenSource()
+                  let! passedct = fooTask cts.Token |> Async.AwaitTask
+                  Expect.equal passedct cts.Token ""
+              }
 
 
-                testCase "AsyncBuilder can Bind CancellableTask<T>" <| fun () ->
-                    let innerTask = cancellableTask {
-                        return! CancellableTask.getCancellationToken
-                    }
-                    let outerAsync = async {
-                        let! result = innerTask
-                        return result
-                    }
+              testCaseAsync "Can Bind CancellableTask"
+              <| async {
+                  let fooTask: CancellableTask = fun ct -> Task.FromResult()
+                  let outerTask = cancellableTask { do! fooTask }
+                  use cts = new CancellationTokenSource()
+                  do! outerTask cts.Token |> Async.AwaitTask
+              // Compiling is a sufficient Expect
+              }
+              testCaseAsync "Can ReturnFrom CancellableTask"
+              <| async {
+                  let fooTask: CancellableTask = fun ct -> Task.FromResult()
+                  let outerTask = cancellableTask { return! fooTask }
+                  use cts = new CancellationTokenSource()
+                  do! outerTask cts.Token |> Async.AwaitTask
+              // Compiling is a sufficient Expect
+              }
 
-                    use cts = new CancellationTokenSource()
-                    let actual = Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
-                    Expect.equal actual cts.Token ""
+              testCaseAsync "Can Bind CancellableTask<T>"
+              <| async {
+                  let expected = "lol"
+                  let fooTask: CancellableTask<_> = fun ct -> Task.FromResult expected
+
+                  let outerTask =
+                      cancellableTask {
+                          let! result = fooTask
+                          return result
+                      }
+
+                  use cts = new CancellationTokenSource()
+                  let! actual = outerTask cts.Token |> Async.AwaitTask
+                  Expect.equal actual expected ""
+              }
+
+              testCaseAsync "Can ReturnFrom CancellableTask<T>"
+              <| async {
+                  let expected = "lol"
+                  let fooTask: CancellableTask<_> = fun ct -> Task.FromResult expected
+                  let outerTask = cancellableTask { return! fooTask }
+                  use cts = new CancellationTokenSource()
+                  let! actual = outerTask cts.Token |> Async.AwaitTask
+                  Expect.equal actual expected ""
+              }
 
 
-                testCase "AsyncBuilder can ReturnFrom CancellableTask<T>" <| fun () ->
-                    let innerTask = cancellableTask {
-                        return! CancellableTask.getCancellationToken
-                    }
-                    let outerAsync = async {
-                        return! innerTask
-                    }
+              testCaseAsync "Can Bind Task"
+              <| async {
+                  let outerTask = cancellableTask { do! Task.FromResult() }
+                  use cts = new CancellationTokenSource()
+                  do! outerTask cts.Token |> Async.AwaitTask
+              // Compiling is a sufficient Expect
+              }
+              testCaseAsync "Can ReturnFrom Task"
+              <| async {
+                  let outerTask = cancellableTask { return! Task.FromResult() }
+                  use cts = new CancellationTokenSource()
+                  do! outerTask cts.Token |> Async.AwaitTask
+              // Compiling is a sufficient Expect
+              }
 
-                    use cts = new CancellationTokenSource()
-                    let actual = Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
-                    Expect.equal actual cts.Token ""
+              testCaseAsync "Can Bind Task<T>"
+              <| async {
+                  let expected = "lol"
+
+                  let outerTask =
+                      cancellableTask {
+                          let! result = Task.FromResult expected
+                          return result
+                      }
+
+                  use cts = new CancellationTokenSource()
+                  let! actual = outerTask cts.Token |> Async.AwaitTask
+                  Expect.equal actual expected ""
+              }
+              testCaseAsync "Can ReturnFrom Task<T>"
+              <| async {
+                  let expected = "lol"
+                  let outerTask = cancellableTask { return! Task.FromResult expected }
+                  use cts = new CancellationTokenSource()
+                  let! actual = outerTask cts.Token |> Async.AwaitTask
+                  Expect.equal actual expected ""
+              }
+
+              testCaseAsync "Can Bind Async<T>"
+              <| async {
+                  let expected = "lol"
+                  let fooTask = async.Return expected
+
+                  let outerTask =
+                      cancellableTask {
+                          let! result = fooTask
+                          return result
+                      }
+
+                  use cts = new CancellationTokenSource()
+                  let! actual = outerTask cts.Token |> Async.AwaitTask
+                  Expect.equal actual expected ""
+              }
+              testCaseAsync "Can ReturnFrom Async<T>"
+              <| async {
+                  let expected = "lol"
+                  let fooTask = async.Return expected
+                  let outerTask = cancellableTask { return! fooTask }
+                  use cts = new CancellationTokenSource()
+                  let! actual = outerTask cts.Token |> Async.AwaitTask
+                  Expect.equal actual expected ""
+              }
+
+              testCase "CancellationToken flows from Async<unit> to CancellableTask<T> via Async.AwaitCancellableTask"
+              <| fun () ->
+                  let innerTask = cancellableTask { return! CancellableTask.getCancellationToken }
+                  let outerAsync = async { return! innerTask |> Async.AwaitCancellableTask }
+
+                  use cts = new CancellationTokenSource()
+                  let actual = Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
+                  Expect.equal actual cts.Token ""
+
+              testCase "CancellationToken flows from Async<unit> to CancellableTask via Async.AwaitCancellableTask"
+              <| fun () ->
+                  let mutable actual = CancellationToken.None
+                  let innerTask: CancellableTask = fun ct -> task { actual <- ct } :> Task
+                  let outerAsync = async { return! innerTask |> Async.AwaitCancellableTask }
+
+                  use cts = new CancellationTokenSource()
+                  Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
+                  Expect.equal actual cts.Token ""
 
 
-                testCase "AsyncBuilder can Bind CancellableTask" <| fun () ->
-                    let mutable actual = CancellationToken.None
-                    let innerTask : CancellableTask = fun ct ->
-                        task {
-                            actual <- ct
-                        } :> Task
-                    let outerAsync = async {
-                        do! innerTask
-                    }
+              testCase "AsyncBuilder can Bind CancellableTask<T>"
+              <| fun () ->
+                  let innerTask = cancellableTask { return! CancellableTask.getCancellationToken }
 
-                    use cts = new CancellationTokenSource()
-                    Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
-                    Expect.equal actual cts.Token ""
-                testCase "AsyncBuilder can ReturnFrom CancellableTask" <| fun () ->
-                    let mutable actual = CancellationToken.None
-                    let innerTask : CancellableTask = fun ct ->
-                        task {
-                            actual <- ct
-                        } :> Task
-                    let outerAsync = async {
-                        return! innerTask
-                    }
+                  let outerAsync =
+                      async {
+                          let! result = innerTask
+                          return result
+                      }
 
-                    use cts = new CancellationTokenSource()
-                    Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
-                    Expect.equal actual cts.Token ""
-            ]
+                  use cts = new CancellationTokenSource()
+                  let actual = Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
+                  Expect.equal actual cts.Token ""
+
+
+              testCase "AsyncBuilder can ReturnFrom CancellableTask<T>"
+              <| fun () ->
+                  let innerTask = cancellableTask { return! CancellableTask.getCancellationToken }
+                  let outerAsync = async { return! innerTask }
+
+                  use cts = new CancellationTokenSource()
+                  let actual = Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
+                  Expect.equal actual cts.Token ""
+
+
+              testCase "AsyncBuilder can Bind CancellableTask"
+              <| fun () ->
+                  let mutable actual = CancellationToken.None
+                  let innerTask: CancellableTask = fun ct -> task { actual <- ct } :> Task
+                  let outerAsync = async { do! innerTask }
+
+                  use cts = new CancellationTokenSource()
+                  Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
+                  Expect.equal actual cts.Token ""
+              testCase "AsyncBuilder can ReturnFrom CancellableTask"
+              <| fun () ->
+                  let mutable actual = CancellationToken.None
+                  let innerTask: CancellableTask = fun ct -> task { actual <- ct } :> Task
+                  let outerAsync = async { return! innerTask }
+
+                  use cts = new CancellationTokenSource()
+                  Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
+                  Expect.equal actual cts.Token "" ]
