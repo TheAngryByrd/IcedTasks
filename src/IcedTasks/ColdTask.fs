@@ -3,13 +3,11 @@
 // Originally written in 2016 by Robert Peele (humbobst@gmail.com)
 // New operator-based overload resolution for F# 4.0 compatibility by Gustavo Leon in 2018.
 // Revised for insertion into FSharp.Core by Microsoft, 2019.
+// Revised to implement Lazy/ColdTask semantics
 //
 // Original notice:
 // To the extent possible under law, the author(s) have dedicated all copyright and related and neighboring rights
 // to this software to the public domain worldwide. This software is distributed without any warranty.
-//
-// Updates:
-// Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
 
 namespace IcedTasks
 
