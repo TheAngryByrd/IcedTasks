@@ -204,8 +204,6 @@ module SayTests =
                               Expect.equal someValue "lol" ""
                           }
                       )
-
-
                   Expect.equal someValue null ""
               }
               testCaseAsync "Can extract context's CancellationToken via CancellableTask.getCancellationToken"
@@ -349,6 +347,55 @@ module SayTests =
                   use cts = new CancellationTokenSource()
                   let! actual = outerTask cts.Token |> Async.AwaitTask
                   Expect.equal actual expected ""
+              }
+
+              testCaseAsync "Can Bind ColdTask<T>"
+              <| async {
+                  let expected = "lol"
+
+                  let coldT = coldTask { return expected }
+                  let outerTask =
+                      cancellableTask {
+                          let! result = coldT
+                          return result
+                      }
+
+                  use cts = new CancellationTokenSource()
+                  let! actual = outerTask cts.Token |> Async.AwaitTask
+                  Expect.equal actual expected ""
+              }
+              testCaseAsync "Can ReturnFrom ColdTask<T>"
+              <| async {
+                  let expected = "lol"
+                  let coldT = coldTask { return expected }
+                  let outerTask = cancellableTask { return! coldT }
+                  use cts = new CancellationTokenSource()
+                  let! actual = outerTask cts.Token |> Async.AwaitTask
+                  Expect.equal actual expected ""
+              }
+
+
+              testCaseAsync "Can Bind ColdTask"
+              <| async {
+
+                  let coldT : ColdTask = fun () -> Task.FromResult()
+                  let outerTask =
+                      cancellableTask {
+                          let! result = coldT
+                          return result
+                      }
+
+                  use cts = new CancellationTokenSource()
+                  do! outerTask cts.Token |> Async.AwaitTask
+                  // Compiling is a sufficient Expect
+              }
+              testCaseAsync "Can ReturnFrom ColdTask"
+              <| async {
+                  let coldT : ColdTask = fun () -> Task.FromResult()
+                  let outerTask = cancellableTask { return! coldT }
+                  use cts = new CancellationTokenSource()
+                  do! outerTask cts.Token |> Async.AwaitTask
+                  // Compiling is a sufficient Expect
               }
 
               testCaseAsync "Can Bind Async<T>"
