@@ -33,6 +33,29 @@ type Expect =
                 ()
         }
 
+    static member CancellationRequested (asyncf : ColdTask<_>) =
+        coldTask {
+            try
+                do! asyncf
+            with
+            | :? TaskCanceledException as e ->
+                ()
+            | :? OperationCanceledException as e ->
+                ()
+        }
+
+
+    static member CancellationRequested (asyncf : CancellableTask<_>) =
+        cancellableTask {
+            try
+                do! asyncf
+            with
+            | :? TaskCanceledException as e ->
+                ()
+            | :? OperationCanceledException as e ->
+                ()
+        }
+
 module SayTests =
     open System.Threading
 
@@ -229,18 +252,16 @@ module SayTests =
                 }
 
                 testCaseAsync "pass along CancellationToken to async bind" <| async {
-                    let mutable passedct = CancellationToken.None
 
                     let fooTask = cancellableTask {
                         let! result = async {
                             let! ct = Async.CancellationToken
-                            passedct <- ct
-                            return "lol"
+                            return ct
                         }
                         return result
                     }
                     use cts = new CancellationTokenSource()
-                    let! _ = fooTask cts.Token |> Async.AwaitTask
+                    let! passedct = fooTask cts.Token |> Async.AwaitTask
                     Expect.equal passedct cts.Token ""
                 }
             ]

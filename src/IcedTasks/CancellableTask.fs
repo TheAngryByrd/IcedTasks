@@ -220,7 +220,7 @@ namespace IcedTasks
                 CancellableTaskBuilder.RunDynamic(code)
             else
 
-                fun (ct) -> Task.Run<'T>(fun () -> CancellableTaskBuilder.RunDynamic(code)(ct) )
+                fun (ct) -> Task.Run<'T>((fun () -> CancellableTaskBuilder.RunDynamic(code)(ct)), ct )
 
         //// Same as CancellableTaskBuilder.Run except the start is inside Task.Run if necessary
         member inline _.Run(code : CancellableTaskCode<'T, 'T>) : CancellableTask<'T> =
@@ -263,12 +263,12 @@ namespace IcedTasks
                                 if ct.IsCancellationRequested then
                                     Task.FromCanceled<_>(ct)
                                 else
-                                    Task.Run<'T>(fun () ->
+                                    Task.Run<'T>((fun () ->
                                         let mutable sm = sm // host local mutable copy of contents of state machine on this thread pool thread
                                         sm.Data.CancellationToken <- ct
                                         sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                                         sm.Data.MethodBuilder.Start(&sm)
-                                        sm.Data.MethodBuilder.Task)))
+                                        sm.Data.MethodBuilder.Task),ct)))
              else
                 BackgroundCancellableTaskBuilder.RunDynamic(code)
 
@@ -299,9 +299,11 @@ namespace IcedTasks.CancellableTaskBuilderExtensions
                                                 and ^Awaiter :> ICriticalNotifyCompletion
                                                 and ^Awaiter: (member get_IsCompleted:  unit -> bool)
                                                 and ^Awaiter: (member GetResult:  unit ->  'TResult1)>
-                        (sm: byref<_>, task: ^TaskLike, continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)) : bool =
+                        (sm: byref<ResumableStateMachine<CancellableTaskStateMachineData<'TOverall>>>, task: ^TaskLike, continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)) : bool =
 
-                    let mutable awaiter = (^TaskLike: (member GetAwaiter : unit -> ^Awaiter)(task))
+                    let mutable awaiter =
+                        sm.Data.CancellationToken.ThrowIfCancellationRequested()
+                        (^TaskLike: (member GetAwaiter : unit -> ^Awaiter)(task))
 
                     let cont =
                         (CancellableTaskResumptionFunc<'TOverall>( fun sm ->
@@ -328,7 +330,9 @@ namespace IcedTasks.CancellableTaskBuilderExtensions
                     if __useResumableCode then
                         //-- RESUMABLE CODE START
                         // Get an awaiter from the awaitable
-                        let mutable awaiter = (^TaskLike: (member GetAwaiter : unit -> ^Awaiter)(task))
+                        let mutable awaiter =
+                            sm.Data.CancellationToken.ThrowIfCancellationRequested()
+                            (^TaskLike: (member GetAwaiter : unit -> ^Awaiter)(task))
 
                         let mutable __stack_fin = true
                         if not (^Awaiter : (member get_IsCompleted : unit -> bool)(awaiter)) then
@@ -366,7 +370,12 @@ namespace IcedTasks.CancellableTaskBuilderExtensions
         // High priority extensions
         type CancellableTaskBuilderBase with
             static member BindDynamic (sm: byref<ResumableStateMachine<CancellableTaskStateMachineData<'TOverall>>>, task: CancellableTask<'TResult1>, continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)) : bool =
-                let mutable awaiter = task(sm.Data.CancellationToken).GetAwaiter()
+                let mutable awaiter =
+                    let ct = sm.Data.CancellationToken
+                    if ct.IsCancellationRequested then
+                        Task.FromCanceled<_>(ct).GetAwaiter()
+                    else
+                        task(ct).GetAwaiter()
 
                 let cont =
                     (CancellableTaskResumptionFunc<'TOverall>(fun sm ->
@@ -388,7 +397,12 @@ namespace IcedTasks.CancellableTaskBuilderExtensions
                     if __useResumableCode then
                         //-- RESUMABLE CODE START
                         // Get an awaiter from the task
-                        let mutable awaiter = task(sm.Data.CancellationToken).GetAwaiter()
+                        let mutable awaiter =
+                            let ct = sm.Data.CancellationToken
+                            if ct.IsCancellationRequested then
+                                Task.FromCanceled<_>(ct).GetAwaiter()
+                            else
+                                task(ct).GetAwaiter()
 
                         let mutable __stack_fin = true
                         if not awaiter.IsCompleted then
@@ -406,27 +420,37 @@ namespace IcedTasks.CancellableTaskBuilderExtensions
                         CancellableTaskBuilderBase.BindDynamic(&sm, task, continuation)
                     //-- RESUMABLE CODE END
                 )
-            member inline this.Bind (task: Task<'TResult1>, continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)) : CancellableTaskCode<'TOverall, 'TResult2> =
-                this.Bind((fun _ -> task), continuation)
 
-
-            member inline this.ReturnFrom (task: Task<'T>) : CancellableTaskCode<'T, 'T> =
-                this.Bind((fun _ -> task), (fun v -> this.Return v))
 
             member inline this.ReturnFrom (task: CancellableTask<'T>) : CancellableTaskCode<'T, 'T> =
                 this.Bind((task), (fun v -> this.Return v))
 
     [<AutoOpen>]
     module MediumPriority =
-        open HighPriority
 
         // Medium priority extensions
         type CancellableTaskBuilderBase with
+
             member inline this.Bind (computation: Async<'TResult1>, continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)) : CancellableTaskCode<'TOverall, 'TResult2> =
                 this.Bind ((fun ct -> Async.StartAsTask(computation, cancellationToken=ct)), continuation)
 
             member inline this.ReturnFrom (computation: Async<'T>)  : CancellableTaskCode<'T, 'T> =
                 this.ReturnFrom (fun ct -> Async.StartAsTask(computation, cancellationToken=ct))
+
+    [<AutoOpen>]
+    module Priority4 =
+
+        type CancellableTaskBuilderBase with
+            member inline this.Bind (task: Task<'TResult1>, continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)) : CancellableTaskCode<'TOverall, 'TResult2> =
+                this.Bind((fun _ -> task), continuation)
+            // member inline this.Bind (task: Task, continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)) : CancellableTaskCode<'TOverall, 'TResult2> =
+            //     this.Bind((fun _ -> task.ContinueWith(fun _ -> Task.FromResult(())).Unwrap()), continuation)
+
+
+            member inline this.ReturnFrom (task: Task<'T>) : CancellableTaskCode<'T, 'T> =
+                this.Bind((fun _ -> task), (fun v -> this.Return v))
+            // member inline this.ReturnFrom (task: Task) : CancellableTaskCode<'T, 'T> =
+            //     this.Bind((fun _ -> task.ContinueWith(fun _ -> Task.FromResult(())).Unwrap()), (fun v -> this.Return v))
     [<AutoOpen>]
     module AsyncExtenions =
         type Microsoft.FSharp.Control.Async with
