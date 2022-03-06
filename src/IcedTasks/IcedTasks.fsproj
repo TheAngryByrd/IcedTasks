@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
     <Title>IcedTasks</Title>
-    <Description>IcedTasks does the thing!</Description>
+    <Description>Adds ColdTask and CancellableTask computation expressions to F#</Description>
 
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Release'">

@@ -148,7 +148,7 @@ type CancellableTaskBuilderBase() =
 
     member inline this.Using<'Resource, 'TOverall, 'T when 'Resource :> IAsyncDisposable>
         (
-            [<InlineIfLambda>] resource: 'Resource,
+            resource: 'Resource,
             [<InlineIfLambda>] body: 'Resource -> CancellableTaskCode<'TOverall, 'T>
         ) : CancellableTaskCode<'TOverall, 'T> =
         this.TryFinallyAsync(
