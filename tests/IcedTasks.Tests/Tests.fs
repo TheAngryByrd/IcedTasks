@@ -4,10 +4,6 @@ open System
 open Expecto
 open System.Threading.Tasks
 open IcedTasks
-open IcedTasks.ColdTaskBuilder
-open IcedTasks.ColdTaskBuilderExtensions
-open IcedTasks.CancellableTaskBuilder
-open IcedTasks.CancellableTaskBuilderExtensions
 
 type Expect =
 
@@ -338,7 +334,7 @@ module SayTests =
               }
 
 
-              testCaseAsync "CancellationTasks are lazily evaluated"
+              testCaseAsync "CancellableTasks are lazily evaluated"
               <| async {
 
                   let mutable someValue = null

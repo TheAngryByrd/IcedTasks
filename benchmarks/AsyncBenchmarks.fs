@@ -8,10 +8,8 @@ open BenchmarkDotNet.Configs
 open System.Threading
 open System.Threading.Tasks
 
-open IcedTasks.ColdTaskBuilder
-open IcedTasks.ColdTaskBuilderExtensions
-open IcedTasks.CancellableTaskBuilder
-open IcedTasks.CancellableTaskBuilderExtensions
+open IcedTasks
+
 open System.IO
 
 
@@ -119,7 +117,7 @@ module Helpers =
          }
 
 
-    let tenBindSync_cancellationTask() =
+    let tenBindSync_cancellableTask() =
         cancellableTask {
             let! res1 = syncCtTask
             let! res2 = syncCtTask
@@ -236,7 +234,7 @@ type AsyncBenchmarks () =
         |> Async.RunSynchronously
         File.Delete(path)
 
-    [<BenchmarkCategory("ManyWriteFile");Benchmark>]
+    [<BenchmarkCategory("ManyWriteFile");Benchmark(Baseline=true)>]
     member _.ManyWriteFile_task () =
         let path = Path.GetTempFileName()
         task {
@@ -284,7 +282,7 @@ type AsyncBenchmarks () =
         for i in 1 .. manyIterations*100 do
              tenBindSync_async() |> Async.RunSynchronously |> ignore
 
-    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark(Baseline=true)>]
     member _.NonAsyncBinds_task() =
         for i in 1 .. manyIterations*100 do
              tenBindSync_task().Wait()
@@ -294,21 +292,20 @@ type AsyncBenchmarks () =
              (tenBindSync_coldTask()()).Wait()
 
     [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
-    member _.NonAsyncBinds_cancellationTask() =
+    member _.NonAsyncBinds_cancellableTask() =
         for i in 1 .. manyIterations*100 do
-             (tenBindSync_cancellationTask() CancellationToken.None).Wait()
+             (tenBindSync_cancellableTask() CancellationToken.None).Wait()
 
 
     [<BenchmarkCategory("AsyncBinds"); Benchmark>]
     member _.AsyncBinds_ply() =
          for i in 1 .. manyIterations do
              tenBindAsync_ply().Wait()
-
     [<BenchmarkCategory("AsyncBinds"); Benchmark>]
     member _.AsyncBinds_async() =
          for i in 1 .. manyIterations do
              tenBindAsync_async() |> Async.RunSynchronously
-    [<BenchmarkCategory("AsyncBinds"); Benchmark>]
+    [<BenchmarkCategory("AsyncBinds"); Benchmark(Baseline=true)>]
     member _.AsyncBinds_task() =
          for i in 1 .. manyIterations do
              tenBindAsync_task().Wait()
