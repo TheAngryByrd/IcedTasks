@@ -33,6 +33,11 @@ let productName = "IcedTasks"
 let sln = __SOURCE_DIRECTORY__ </> ".." </> "IcedTasks.sln"
 
 
+let benchmarksCodeGlob =
+    !! (__SOURCE_DIRECTORY__ </> ".." </> "benchmarks/**/*.fs")
+    ++ (__SOURCE_DIRECTORY__ </> ".." </> "benchmarks/**/*.fsx")
+    -- (__SOURCE_DIRECTORY__ </> ".." </> "benchmarks/**/obj/**/*.fs")
+
 let srcCodeGlob =
     !! (__SOURCE_DIRECTORY__ </> ".." </> "src/**/*.fs")
     ++ (__SOURCE_DIRECTORY__ </> ".." </> "src/**/*.fsx")
@@ -597,6 +602,7 @@ let githubRelease _ =
 let formatCode _ =
     let result =
         [
+            benchmarksCodeGlob
             srcCodeGlob
             testsCodeGlob
         ]

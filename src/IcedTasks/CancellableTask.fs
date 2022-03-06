@@ -42,7 +42,10 @@ module CancellableTasks =
 
     and CancellableTaskStateMachine<'TOverall> = ResumableStateMachine<CancellableTaskStateMachineData<'TOverall>>
     and CancellableTaskResumptionFunc<'TOverall> = ResumptionFunc<CancellableTaskStateMachineData<'TOverall>>
-    and CancellableTaskResumptionDynamicInfo<'TOverall> = ResumptionDynamicInfo<CancellableTaskStateMachineData<'TOverall>>
+
+    and CancellableTaskResumptionDynamicInfo<'TOverall> =
+        ResumptionDynamicInfo<CancellableTaskStateMachineData<'TOverall>>
+
     and CancellableTaskCode<'TOverall, 'T> = ResumableCode<CancellableTaskStateMachineData<'TOverall>, 'T>
 
     type CancellableTaskBuilderBase() =
@@ -110,7 +113,7 @@ module CancellableTasks =
             ) : CancellableTaskCode<'TOverall, unit> =
             ResumableCode.For(sequence, body)
 
-    #if NETSTANDARD2_1
+#if NETSTANDARD2_1
         member inline internal this.TryFinallyAsync
             (
                 [<InlineIfLambda>] body: CancellableTaskCode<'TOverall, 'T>,
@@ -163,7 +166,7 @@ module CancellableTasks =
                     else
                         ValueTask())
             )
-    #endif
+#endif
 
 
     type CancellableTaskBuilder() =
@@ -510,7 +513,8 @@ module CancellableTasks =
                     let! ct = Async.CancellationToken
                     return! t ct |> Async.AwaitTask
                 }
-            static member inline AsCancellableTask (computation : Async<'T>) =
+
+            static member inline AsCancellableTask(computation: Async<'T>) =
                 fun ct -> Async.StartAsTask(computation, cancellationToken = ct)
 
         // High priority extensions
@@ -659,10 +663,10 @@ module CancellableTasks =
             member inline this.ReturnFrom([<InlineIfLambda>] t: CancellableTask) : Async<unit> =
                 this.ReturnFrom(Async.AwaitCancellableTask t)
 
-        // There is explicitly no Binds for `CancellableTasks` in `Microsoft.FSharp.Control.TaskBuilderBase`.
-        // You need to explicitly pass in a `CancellationToken`to start it, you can use `CancellationToken.None`.
-        // Reason is I don't want people to assume cancellation is happening without the caller being explicit about where the CancellationToken came from.
-        // Similar reasoning for `IcedTasks.ColdTasks.ColdTaskBuilderBase`.
+    // There is explicitly no Binds for `CancellableTasks` in `Microsoft.FSharp.Control.TaskBuilderBase`.
+    // You need to explicitly pass in a `CancellationToken`to start it, you can use `CancellationToken.None`.
+    // Reason is I don't want people to assume cancellation is happening without the caller being explicit about where the CancellationToken came from.
+    // Similar reasoning for `IcedTasks.ColdTasks.ColdTaskBuilderBase`.
 
     [<RequireQualifiedAccess>]
     module CancellableTask =

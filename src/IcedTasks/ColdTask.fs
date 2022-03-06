@@ -97,10 +97,14 @@ module ColdTasks =
                     true)
             )
 
-        member inline _.For(sequence: seq<'T>, body: 'T -> ColdTaskCode<'TOverall, unit>) : ColdTaskCode<'TOverall, unit> =
+        member inline _.For
+            (
+                sequence: seq<'T>,
+                body: 'T -> ColdTaskCode<'TOverall, unit>
+            ) : ColdTaskCode<'TOverall, unit> =
             ResumableCode.For(sequence, body)
 
-    #if NETSTANDARD2_1
+#if NETSTANDARD2_1
         member inline internal this.TryFinallyAsync
             (
                 [<InlineIfLambda>] body: ColdTaskCode<'TOverall, 'T>,
@@ -153,7 +157,7 @@ module ColdTasks =
                     else
                         ValueTask())
             )
-    #endif
+#endif
 
     type ColdTaskBuilder() =
 
@@ -228,6 +232,7 @@ module ColdTasks =
                     (SetStateMachineMethodImpl<_>(fun sm state -> sm.Data.MethodBuilder.SetStateMachine(state)))
                     (AfterCode<_, _> (fun sm ->
                         let mutable sm = sm
+
                         fun () ->
                             sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create ()
                             sm.Data.MethodBuilder.Start(&sm)
@@ -415,8 +420,9 @@ module ColdTasks =
             static member inline AwaitColdTask([<InlineIfLambda>] t: ColdTask) =
                 async.Delay(fun () -> t () |> Async.AwaitTask)
 
-            static member inline AsColdTask (computation : Async<'T>) : ColdTask<_> =
+            static member inline AsColdTask(computation: Async<'T>) : ColdTask<_> =
                 fun () -> Async.StartAsTask(computation)
+
         type ColdTaskBuilderBase with
             static member inline BindDynamic
                 (

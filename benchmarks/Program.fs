@@ -4,11 +4,12 @@ open BenchmarkDotNet.Configs
 open BenchmarkDotNet.Jobs
 open BenchmarkDotNet.Environments
 open IcedTasks.Benchmarks
+
 [<EntryPoint>]
 let main argv =
-    let cfg =
-        DefaultConfig.Instance
+    let cfg = DefaultConfig.Instance
 
-    BenchmarkRunner.Run<AsyncBenchmarks>(cfg) |> ignore
+    BenchmarkRunner.Run<AsyncBenchmarks>(cfg)
+    |> ignore
 
     0
