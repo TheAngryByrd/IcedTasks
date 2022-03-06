@@ -8,22 +8,22 @@ Intel Core i9-9980HK CPU 2.40GHz, 1 CPU, 16 logical and 8 physical cores
 
 
 ```
-|                         Method |    Categories |         Mean |      Error |      StdDev |      Gen 0 |  Gen 1 |  Allocated |
-|------------------------------- |-------------- |-------------:|-----------:|------------:|-----------:|-------:|-----------:|
-|              ManyWriteFile_ply | ManyWriteFile |     3.128 ms |  0.1152 ms |   0.3362 ms |          - |      - |      10 KB |
-|            ManyWriteFile_async | ManyWriteFile |     3.549 ms |  0.0713 ms |   0.2035 ms |    31.2500 | 7.8125 |     292 KB |
-|             ManyWriteFile_task | ManyWriteFile |     3.199 ms |  0.0928 ms |   0.2707 ms |          - |      - |       8 KB |
-|         ManyWriteFile_coldTask | ManyWriteFile |     3.716 ms |  0.1606 ms |   0.4735 ms |    23.4375 | 7.8125 |     219 KB |
-|  ManyWriteFile_cancellableTask | ManyWriteFile |     3.462 ms |  0.1497 ms |   0.4391 ms |    15.6250 | 7.8125 |     134 KB |
-|                                |               |              |            |             |            |        |            |
-|              NonAsyncBinds_ply | NonAsyncBinds |    18.858 ms |  0.3729 ms |   0.8862 ms |  9468.7500 |      - |  77,344 KB |
-|            NonAsyncBinds_async | NonAsyncBinds | 1,401.882 ms | 53.8624 ms | 158.8146 ms | 30000.0000 |      - | 248,438 KB |
-|             NonAsyncBinds_task | NonAsyncBinds |    16.959 ms |  0.3377 ms |   0.7759 ms |  9468.7500 |      - |  77,344 KB |
-|         NonAsyncBinds_coldTask | NonAsyncBinds |    51.517 ms |  1.0237 ms |   2.9039 ms | 26400.0000 |      - | 216,406 KB |
-| NonAsyncBinds_cancellationTask | NonAsyncBinds |    82.281 ms |  1.6268 ms |   2.2805 ms | 39571.4286 |      - | 324,219 KB |
-|                                |               |              |            |             |            |        |            |
-|                 AsyncBinds_ply |    AsyncBinds |    24.414 ms |  0.4566 ms |   0.8233 ms |    62.5000 |      - |     656 KB |
-|               AsyncBinds_async |    AsyncBinds |   115.684 ms |  2.5590 ms |   7.4647 ms |  1000.0000 |      - |   8,375 KB |
-|                AsyncBinds_task |    AsyncBinds |    22.444 ms |  0.4395 ms |   0.7812 ms |          - |      - |     188 KB |
-|            AsyncBinds_coldTask |    AsyncBinds |    23.649 ms |  0.4698 ms |   0.9382 ms |   218.7500 |      - |   1,922 KB |
-|     AsyncBinds_cancellableTask |    AsyncBinds |    23.748 ms |  0.4737 ms |   0.9569 ms |   218.7500 |      - |   1,930 KB |
+|                         Method |    Categories |         Mean |      Error |      StdDev |       Median |      Gen 0 |   Gen 1 |  Allocated |
+|------------------------------- |-------------- |-------------:|-----------:|------------:|-------------:|-----------:|--------:|-----------:|
+|              ManyWriteFile_ply | ManyWriteFile |     2.749 ms |  0.0534 ms |   0.0907 ms |     2.730 ms |          - |       - |      10 KB |
+|            ManyWriteFile_async | ManyWriteFile |     2.977 ms |  0.0593 ms |   0.0906 ms |     2.968 ms |    35.1563 | 11.7188 |     292 KB |
+|             ManyWriteFile_task | ManyWriteFile |     2.761 ms |  0.0549 ms |   0.1095 ms |     2.769 ms |          - |       - |       8 KB |
+|         ManyWriteFile_coldTask | ManyWriteFile |     2.797 ms |  0.0547 ms |   0.0958 ms |     2.805 ms |          - |       - |       8 KB |
+|  ManyWriteFile_cancellableTask | ManyWriteFile |     2.781 ms |  0.0548 ms |   0.1042 ms |     2.752 ms |          - |       - |       8 KB |
+|                                |               |              |            |             |              |            |         |            |
+|              NonAsyncBinds_ply | NonAsyncBinds |    18.027 ms |  0.3547 ms |   0.3795 ms |    17.964 ms |  9468.7500 |       - |  77,344 KB |
+|            NonAsyncBinds_async | NonAsyncBinds | 1,268.306 ms | 46.0299 ms | 132.8067 ms | 1,219.354 ms | 30000.0000 |       - | 248,438 KB |
+|             NonAsyncBinds_task | NonAsyncBinds |    14.717 ms |  0.1840 ms |   0.1537 ms |    14.714 ms |  9468.7500 |       - |  77,344 KB |
+|         NonAsyncBinds_coldTask | NonAsyncBinds |    27.717 ms |  0.5509 ms |   1.3820 ms |    28.139 ms | 11562.5000 |       - |  94,531 KB |
+| NonAsyncBinds_cancellationTask | NonAsyncBinds |    24.367 ms |  0.2168 ms |   0.1810 ms |    24.439 ms | 11656.2500 |       - |  95,313 KB |
+|                                |               |              |            |             |              |            |         |            |
+|                 AsyncBinds_ply |    AsyncBinds |    23.127 ms |  0.3770 ms |   0.3342 ms |    23.149 ms |    62.5000 |       - |     656 KB |
+|               AsyncBinds_async |    AsyncBinds |   110.963 ms |  2.1657 ms |   4.7080 ms |   109.955 ms |  1000.0000 |       - |   8,375 KB |
+|                AsyncBinds_task |    AsyncBinds |    22.727 ms |  0.4370 ms |   0.9122 ms |    22.564 ms |          - |       - |     188 KB |
+|            AsyncBinds_coldTask |    AsyncBinds |    21.655 ms |  0.4086 ms |   0.4013 ms |    21.704 ms |    31.2500 |       - |     328 KB |
+|     AsyncBinds_cancellableTask |    AsyncBinds |    22.558 ms |  0.4411 ms |   0.4126 ms |    22.610 ms |    31.2500 |       - |     344 KB |
