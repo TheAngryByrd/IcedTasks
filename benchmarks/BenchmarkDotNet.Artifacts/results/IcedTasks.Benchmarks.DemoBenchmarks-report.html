@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>IcedTasks.Benchmarks.DemoBenchmarks-20220305-182029</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet=v0.13.1, OS=macOS Big Sur 11.6.2 (20G314) [Darwin 20.6.0]
+Intel Core i9-9980HK CPU 2.40GHz, 1 CPU, 16 logical and 8 physical cores
+.NET SDK=6.0.100
+  [Host]     : .NET 6.0.0 (6.0.21.52210), X64 RyuJIT DEBUG
+  DefaultJob : .NET 6.0.0 (6.0.21.52210), X64 RyuJIT
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method</th><th>sleepTime</th><th>        Mean</th><th>      Error</th><th>     StdDev</th>
+</tr>
+</thead><tbody><tr><td>Thread</td><td>0</td><td>492.049 ns</td><td>9.3319 ns</td><td>18.2011 ns</td>
+</tr><tr><td>Task</td><td>0</td><td>2.692 ns</td><td>0.0828 ns</td><td>0.1407 ns</td>
+</tr><tr><td>AsyncToTask</td><td>0</td><td>9,236.660 ns</td><td>126.1845 ns</td><td>105.3697 ns</td>
+</tr><tr><td>AsyncToSync</td><td>0</td><td>15,760.698 ns</td><td>113.6551 ns</td><td>88.7344 ns</td>
+</tr><tr><td>Thread</td><td>1</td><td>1,220,216.584 ns</td><td>8,970.1701 ns</td><td>8,390.7027 ns</td>
+</tr><tr><td>Task</td><td>1</td><td>1,281,219.630 ns</td><td>14,788.0069 ns</td><td>13,832.7108 ns</td>
+</tr><tr><td>AsyncToTask</td><td>1</td><td>1,279,958.851 ns</td><td>19,385.0955 ns</td><td>18,132.8304 ns</td>
+</tr><tr><td>AsyncToSync</td><td>1</td><td>1,288,056.642 ns</td><td>14,035.9483 ns</td><td>13,129.2347 ns</td>
+</tr><tr><td>Thread</td><td>15</td><td>16,790,810.349 ns</td><td>227,051.2306 ns</td><td>212,383.8620 ns</td>
+</tr><tr><td>Task</td><td>15</td><td>16,908,052.290 ns</td><td>188,012.2018 ns</td><td>175,866.7302 ns</td>
+</tr><tr><td>AsyncToTask</td><td>15</td><td>16,909,077.952 ns</td><td>232,461.7271 ns</td><td>217,444.8438 ns</td>
+</tr><tr><td>AsyncToSync</td><td>15</td><td>16,954,107.596 ns</td><td>159,484.6724 ns</td><td>141,379.0080 ns</td>
+</tr><tr><td>Thread</td><td>100</td><td>102,964,828.147 ns</td><td>1,127,213.8671 ns</td><td>1,054,396.5507 ns</td>
+</tr><tr><td>Task</td><td>100</td><td>102,783,996.067 ns</td><td>762,403.4067 ns</td><td>713,152.6196 ns</td>
+</tr><tr><td>AsyncToTask</td><td>100</td><td>102,883,749.933 ns</td><td>708,326.1313 ns</td><td>662,568.7027 ns</td>
+</tr><tr><td>AsyncToSync</td><td>100</td><td>102,828,820.667 ns</td><td>597,120.2566 ns</td><td>558,546.6585 ns</td>
+</tr></tbody></table>
+</body>
+</html>

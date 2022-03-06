@@ -535,8 +535,8 @@ module HighPriority =
 
         member inline _.Bind
             (
-                [<InlineIfLambda>] task: CancellableTask<'TResult1>,
-                [<InlineIfLambda>] continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
+                task: CancellableTask<'TResult1>,
+                continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
             ) : CancellableTaskCode<'TOverall, 'TResult2> =
 
             CancellableTaskCode<'TOverall, _> (fun sm ->
@@ -576,23 +576,52 @@ module HighPriority =
 
 [<AutoOpen>]
 module MediumPriority =
-
+    open HighPriority
     // Medium priority extensions
     type CancellableTaskBuilderBase with
-        member inline _.Source(s: #seq<'value>) : #seq<'value> = s
-        member inline _.Source([<InlineIfLambda>] computation: CancellableTask<'T>) : CancellableTask<'T> = computation
-        member inline _.Source([<InlineIfLambda>] computation: CancellableTask) : CancellableTask = computation
+        member inline this.Bind
+            (
+                [<InlineIfLambda>] computation: ColdTask<'TResult1>,
+                [<InlineIfLambda>] continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
+            ) : CancellableTaskCode<'TOverall, 'TResult2> =
+            this.Bind((fun (_ : CancellationToken) -> computation () ), continuation)
 
-        member inline _.Source(computation: Async<'T>) : CancellableTask<'T> =
-            fun ct -> Async.StartAsTask(computation, cancellationToken = ct)
+        member inline this.ReturnFrom([<InlineIfLambda>] computation: ColdTask<'T>) : CancellableTaskCode<'T, 'T> =
+            this.ReturnFrom(fun (_ : CancellationToken) -> computation ())
 
-        member inline _.Source(computation: Task<'T>) : CancellableTask<'T> = fun ct -> computation
-        member inline _.Source(computation: Task) : CancellableTask = fun ct -> computation
+        member inline this.Bind
+            (
+                [<InlineIfLambda>] computation: ColdTask,
+                [<InlineIfLambda>] continuation: (unit -> CancellableTaskCode<_, _>)
+            ) : CancellableTaskCode<_, _> =
+                let foo = fun (_ : CancellationToken) -> computation ()
+                this.Bind(foo, continuation)
 
-        member inline _.Source([<InlineIfLambda>] computation: ColdTask<'T>) : CancellableTask<'T> =
-            fun ct -> computation ()
+        member inline this.ReturnFrom([<InlineIfLambda>] computation: ColdTask) : CancellableTaskCode<_, _> =
+            this.ReturnFrom(fun (_ : CancellationToken) -> computation ())
 
-        member inline _.Source([<InlineIfLambda>] computation: ColdTask) : CancellableTask = fun ct -> computation ()
+        member inline this.Bind
+            (
+                computation: Async<'TResult1>,
+                [<InlineIfLambda>] continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
+            ) : CancellableTaskCode<'TOverall, 'TResult2> =
+            this.Bind((fun ct -> Async.StartAsTask(computation, cancellationToken = ct)), continuation)
+
+        member inline this.ReturnFrom(computation: Async<'T>) : CancellableTaskCode<'T, 'T> =
+            this.ReturnFrom(fun ct -> Async.StartAsTask(computation, cancellationToken = ct))
+        member inline this.Bind
+            (
+                computation: Task<'TResult1>,
+                [<InlineIfLambda>] continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
+            ) : CancellableTaskCode<'TOverall, 'TResult2> =
+            this.Bind((fun (_ : CancellationToken) -> computation ), continuation)
+
+        member inline this.ReturnFrom(computation: Task<'T>) : CancellableTaskCode<'T, 'T> =
+            this.ReturnFrom(fun (_ : CancellationToken) -> computation)
+
+
+
+
 
 [<AutoOpen>]
 module AsyncExtenions =
@@ -610,14 +639,14 @@ module AsyncExtenions =
             }
 
     type Microsoft.FSharp.Control.AsyncBuilder with
-        member inline _.Source(s: #seq<'value>) : #seq<'value> = s
-        member inline _.Source(computation: Async<'T>) : Async<'T> = computation
-
-        member inline _.Source([<InlineIfLambda>] cancellableTask: CancellableTask<'T>) : Async<'T> =
-            Async.AwaitCancellableTask cancellableTask
-
-        member inline _.Source([<InlineIfLambda>] cancellableTask: CancellableTask) : Async<unit> =
-            Async.AwaitCancellableTask cancellableTask
+        member inline this.Bind([<InlineIfLambda>]t: CancellableTask<'T>, [<InlineIfLambda>] binder: ('T -> Async<'U>)) : Async<'U> =
+            this.Bind(Async.AwaitCancellableTask t, binder)
+        member inline this.ReturnFrom([<InlineIfLambda>] t: CancellableTask<'T>) : Async<'T> =
+            this.ReturnFrom(Async.AwaitCancellableTask t)
+        member inline this.Bind([<InlineIfLambda>] t: CancellableTask, [<InlineIfLambda>] binder: (unit -> Async<'U>)) : Async<'U> =
+            this.Bind(Async.AwaitCancellableTask t, binder)
+        member inline this.ReturnFrom([<InlineIfLambda>] t: CancellableTask) : Async<unit> =
+            this.ReturnFrom(Async.AwaitCancellableTask t)
 
 [<RequireQualifiedAccess>]
 module CancellableTask =

@@ -1,12 +1,14 @@
 source https://www.nuget.org/api/v2
 source https://api.nuget.org/v3/index.json
 storage: none
-nuget FSharp.Core ~> 6.
+nuget FSharp.Core ~> 6
 nuget Microsoft.SourceLink.GitHub 1.1.0 copy_local: true
 nuget Expecto 9.0.4
 nuget YoloDev.Expecto.TestSdk 0.12.12
 nuget Microsoft.NET.Test.Sdk 17.1.0-preview-20211109-03
 nuget altcover ~> 8.2.825
+nuget BenchmarkDotNet
+nuget Ply
 
 // [ FAKE GROUP ]
 group Build
@@ -40,7 +42,6 @@ group Docs
     nuget FSharp.Formatting 4.0.0-rc1
     nuget FSharp.Literate 4.0.0-rc1
     nuget Fable.React
-
 group Analyzers
   source https://www.nuget.org/api/v2
   source https://api.nuget.org/v3/index.json
