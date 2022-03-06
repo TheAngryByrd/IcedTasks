@@ -40,7 +40,9 @@ and ColdTaskCode<'TOverall, 'T> = ResumableCode<ColdTaskStateMachineData<'TOvera
 
 type ColdTaskBuilderBase() =
 
-    member inline _.Delay([<InlineIfLambda>] generator: unit -> ColdTaskCode<'TOverall, 'T>) : ColdTaskCode<'TOverall, 'T> =
+    member inline _.Delay
+        ([<InlineIfLambda>] generator: unit -> ColdTaskCode<'TOverall, 'T>)
+        : ColdTaskCode<'TOverall, 'T> =
         ColdTaskCode<'TOverall, 'T>(fun sm -> (generator ()).Invoke(&sm))
 
     /// Used to represent no-ops like the implicit empty "else" branch of an "if" expression.
@@ -57,8 +59,8 @@ type ColdTaskBuilderBase() =
     /// This prevents constructs like `task { return 1; return 2; }`.
     member inline _.Combine
         (
-            [<InlineIfLambda>]task1: ColdTaskCode<'TOverall, unit>,
-            [<InlineIfLambda>]task2: ColdTaskCode<'TOverall, 'T>
+            [<InlineIfLambda>] task1: ColdTaskCode<'TOverall, unit>,
+            [<InlineIfLambda>] task2: ColdTaskCode<'TOverall, 'T>
         ) : ColdTaskCode<'TOverall, 'T> =
         ResumableCode.Combine(task1, task2)
 
@@ -477,7 +479,8 @@ module HighPriority =
         member inline this.ReturnFrom(task: Task<'T>) : ColdTaskCode<'T, 'T> =
             this.Bind(task, (fun v -> this.Return v))
 
-        member inline this.ReturnFrom([<InlineIfLambda>] task: ColdTask<'T>) : ColdTaskCode<'T, 'T> = this.ReturnFrom(task ())
+        member inline this.ReturnFrom([<InlineIfLambda>] task: ColdTask<'T>) : ColdTaskCode<'T, 'T> =
+            this.ReturnFrom(task ())
 
 [<AutoOpen>]
 module MediumPriority =
@@ -506,35 +509,47 @@ module AsyncExtenions =
 
     type Microsoft.FSharp.Control.AsyncBuilder with
 
-        member inline this.Bind([<InlineIfLambda>]coldTask: ColdTask<'T>, [<InlineIfLambda>]binder: ('T -> Async<'U>)) : Async<'U> =
+        member inline this.Bind
+            (
+                [<InlineIfLambda>] coldTask: ColdTask<'T>,
+                [<InlineIfLambda>] binder: ('T -> Async<'U>)
+            ) : Async<'U> =
             this.Bind(Async.AwaitColdTask coldTask, binder)
-        member inline this.ReturnFrom([<InlineIfLambda>]coldTask: ColdTask<'T>) : Async<'T> =
+
+        member inline this.ReturnFrom([<InlineIfLambda>] coldTask: ColdTask<'T>) : Async<'T> =
             this.ReturnFrom(Async.AwaitColdTask coldTask)
-        member inline this.Bind([<InlineIfLambda>]coldTask: ColdTask,[<InlineIfLambda>] binder: (unit -> Async<'U>)) : Async<'U> =
+
+        member inline this.Bind
+            (
+                [<InlineIfLambda>] coldTask: ColdTask,
+                [<InlineIfLambda>] binder: (unit -> Async<'U>)
+            ) : Async<'U> =
             this.Bind(Async.AwaitColdTask coldTask, binder)
-        member inline this.ReturnFrom([<InlineIfLambda>]coldTask: ColdTask) : Async<unit> =
+
+        member inline this.ReturnFrom([<InlineIfLambda>] coldTask: ColdTask) : Async<unit> =
             this.ReturnFrom(Async.AwaitColdTask coldTask)
 
 
     type Microsoft.FSharp.Control.TaskBuilderBase with
-        member inline this.Bind([<InlineIfLambda>]coldTask: ColdTask<'T>, [<InlineIfLambda>]binder: ('T -> _)) =
+        member inline this.Bind([<InlineIfLambda>] coldTask: ColdTask<'T>, [<InlineIfLambda>] binder: ('T -> _)) =
             this.Bind(coldTask (), binder)
-        member inline this.ReturnFrom([<InlineIfLambda>]coldTask: ColdTask<'T>) =
-            this.ReturnFrom(coldTask ())
-        member inline this.Bind([<InlineIfLambda>]coldTask: ColdTask, [<InlineIfLambda>]binder: (_ -> _)) =
-            this.Bind(coldTask (), binder)
-        member inline this.ReturnFrom([<InlineIfLambda>]coldTask: ColdTask) =
-            this.ReturnFrom(coldTask ())
-            // this.Bind((coldTask ()), binder)
-        // member inline this.ReturnFrom(coldTask: ColdTask<'T>) : Async<'T> =
-        //     this.ReturnFrom(Async.AwaitColdTask coldTask)
-        // member inline this.Bind(coldTask: ColdTask, binder: (unit -> Async<'U>)) : Async<'U> =
-        //     this.Bind(Async.AwaitColdTask coldTask, binder)
-        // member inline this.ReturnFrom(coldTask: ColdTask) : Async<unit> =
-        //     this.ReturnFrom(Async.AwaitColdTask coldTask)
-    //     member inline _.Source(s: #seq<'value>) : #seq<'value> = s
-    //     member inline _.Source(computation: Task) : Task= computation
-    //     member inline _.Source(computation: Task<'T>) : Task<'T> = computation
 
-    //     member inline _.Source([<InlineIfLambda>] coldTask: ColdTask<'T>) : Task<'T> = coldTask ()
-    //     member inline _.Source([<InlineIfLambda>] coldTask: ColdTask) : Task = coldTask ()
+        member inline this.ReturnFrom([<InlineIfLambda>] coldTask: ColdTask<'T>) = this.ReturnFrom(coldTask ())
+
+        member inline this.Bind([<InlineIfLambda>] coldTask: ColdTask, [<InlineIfLambda>] binder: (_ -> _)) =
+            this.Bind(coldTask (), binder)
+
+        member inline this.ReturnFrom([<InlineIfLambda>] coldTask: ColdTask) = this.ReturnFrom(coldTask ())
+// this.Bind((coldTask ()), binder)
+// member inline this.ReturnFrom(coldTask: ColdTask<'T>) : Async<'T> =
+//     this.ReturnFrom(Async.AwaitColdTask coldTask)
+// member inline this.Bind(coldTask: ColdTask, binder: (unit -> Async<'U>)) : Async<'U> =
+//     this.Bind(Async.AwaitColdTask coldTask, binder)
+// member inline this.ReturnFrom(coldTask: ColdTask) : Async<unit> =
+//     this.ReturnFrom(Async.AwaitColdTask coldTask)
+//     member inline _.Source(s: #seq<'value>) : #seq<'value> = s
+//     member inline _.Source(computation: Task) : Task= computation
+//     member inline _.Source(computation: Task<'T>) : Task<'T> = computation
+
+//     member inline _.Source([<InlineIfLambda>] coldTask: ColdTask<'T>) : Task<'T> = coldTask ()
+//     member inline _.Source([<InlineIfLambda>] coldTask: ColdTask) : Task = coldTask ()

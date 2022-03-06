@@ -282,32 +282,29 @@ module SayTests =
                   do! foo |> Async.AwaitTask
               // Compiling is a sufficient Expect
               }
-              testCaseAsync "Multi start task" <| async {
-                    let values = ResizeArray<_>()
-                    let someTask = task {
-                        values.Add("foo")
-                    }
-                    do! someTask |> Async.AwaitTask
-                    do! someTask |> Async.AwaitTask
-                    Expect.hasLength values 1 ""
+              testCaseAsync "Multi start task"
+              <| async {
+                  let values = ResizeArray<_>()
+                  let someTask = task { values.Add("foo") }
+                  do! someTask |> Async.AwaitTask
+                  do! someTask |> Async.AwaitTask
+                  Expect.hasLength values 1 ""
               }
-              testCaseAsync "Multi start async" <| async {
-                    let values = ResizeArray<_>()
-                    let someTask = async {
-                        values.Add("foo")
-                    }
-                    do! someTask
-                    do! someTask
-                    Expect.hasLength values 2 ""
+              testCaseAsync "Multi start async"
+              <| async {
+                  let values = ResizeArray<_>()
+                  let someTask = async { values.Add("foo") }
+                  do! someTask
+                  do! someTask
+                  Expect.hasLength values 2 ""
               }
-              testCaseAsync "Multi start coldTask" <| async {
-                    let values = ResizeArray<_>()
-                    let someTask = coldTask {
-                        values.Add("foo")
-                    }
-                    do! someTask |> Async.AwaitColdTask
-                    do! someTask |> Async.AwaitColdTask
-                    Expect.hasLength values 2 ""
+              testCaseAsync "Multi start coldTask"
+              <| async {
+                  let values = ResizeArray<_>()
+                  let someTask = coldTask { values.Add("foo") }
+                  do! someTask |> Async.AwaitColdTask
+                  do! someTask |> Async.AwaitColdTask
+                  Expect.hasLength values 2 ""
               }
 
               ]
