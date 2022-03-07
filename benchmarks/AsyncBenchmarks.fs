@@ -348,6 +348,23 @@ type AsyncBenchmarks() =
 
         File.Delete(path)
 
+
+    [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
+    member _.ManyWriteFile_cancellableTask_withCancellation() =
+        let path = Path.GetTempFileName()
+
+        cancellableTask {
+            let junk = Array.zeroCreate bufferSize
+            use file = File.Create(path)
+            let! ct = CancellableTask.getCancellationToken
+
+            for i = 1 to manyIterations do
+                do! file.WriteAsync(junk, 0, junk.Length, ct)
+        }
+        |> fun t -> t(CancellationToken.None).Wait()
+
+        File.Delete(path)
+
     [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
     member _.NonAsyncBinds_ply() =
         for i in 1 .. manyIterations * 100 do
