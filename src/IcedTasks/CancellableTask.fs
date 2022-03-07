@@ -247,12 +247,12 @@ module CancellableTasks =
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state -> sm.Data.MethodBuilder.SetStateMachine(state)))
                     (AfterCode<_, _> (fun sm ->
-                        let mutable sm = sm
-
+                        let sm = sm
                         fun (ct) ->
                             if ct.IsCancellationRequested then
                                 Task.FromCanceled<_>(ct)
                             else
+                                let mutable sm = sm
                                 sm.Data.CancellationToken <- ct
                                 sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create ()
                                 sm.Data.MethodBuilder.Start(&sm)

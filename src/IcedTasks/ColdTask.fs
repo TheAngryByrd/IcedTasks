@@ -231,9 +231,9 @@ module ColdTasks =
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state -> sm.Data.MethodBuilder.SetStateMachine(state)))
                     (AfterCode<_, _> (fun sm ->
-                        let mutable sm = sm
-
+                        let sm = sm
                         fun () ->
+                            let mutable sm = sm
                             sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create ()
                             sm.Data.MethodBuilder.Start(&sm)
                             sm.Data.MethodBuilder.Task))
