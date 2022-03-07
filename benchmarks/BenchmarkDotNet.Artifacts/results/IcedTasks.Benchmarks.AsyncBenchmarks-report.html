@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>IcedTasks.Benchmarks.AsyncBenchmarks-20220306-103959</title>
+<title>IcedTasks.Benchmarks.AsyncBenchmarks-20220307-083826</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -22,23 +22,24 @@ Intel Core i9-9980HK CPU 2.40GHz, 1 CPU, 16 logical and 8 physical cores
 <pre><code></code></pre>
 
 <table>
-<thead><tr><th>                 Method</th><th>Categories</th><th>  Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen 0</th><th>Gen 1</th><th>Allocated</th>
+<thead><tr><th>                                  Method</th><th>Categories</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen 0</th><th>Gen 1</th><th>Allocated</th>
 </tr>
-</thead><tbody><tr><td>ManyWriteFile_ply</td><td>ManyWriteFile</td><td>2.688 ms</td><td>0.0629 ms</td><td>0.1775 ms</td><td>1.09</td><td>0.09</td><td>-</td><td>-</td><td>10 KB</td>
-</tr><tr><td>ManyWriteFile_async</td><td>ManyWriteFile</td><td>2.958 ms</td><td>0.0585 ms</td><td>0.0927 ms</td><td>1.19</td><td>0.05</td><td>35.1563</td><td>11.7188</td><td>292 KB</td>
-</tr><tr><td>ManyWriteFile_task</td><td>ManyWriteFile</td><td>2.487 ms</td><td>0.0496 ms</td><td>0.0968 ms</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>8 KB</td>
-</tr><tr><td>ManyWriteFile_coldTask</td><td>ManyWriteFile</td><td>2.586 ms</td><td>0.0474 ms</td><td>0.0752 ms</td><td>1.04</td><td>0.05</td><td>-</td><td>-</td><td>8 KB</td>
-</tr><tr><td>ManyWriteFile_cancellableTask</td><td>ManyWriteFile</td><td>2.710 ms</td><td>0.0775 ms</td><td>0.2187 ms</td><td>1.10</td><td>0.11</td><td>-</td><td>-</td><td>8 KB</td>
-</tr><tr><td>NonAsyncBinds_ply</td><td>NonAsyncBinds</td><td>17.512 ms</td><td>0.2568 ms</td><td>0.2145 ms</td><td>1.02</td><td>0.07</td><td>9468.7500</td><td>-</td><td>77,344 KB</td>
-</tr><tr><td>NonAsyncBinds_async</td><td>NonAsyncBinds</td><td>1,311.779 ms</td><td>36.4711 ms</td><td>105.2275 ms</td><td>79.11</td><td>7.32</td><td>30000.0000</td><td>-</td><td>248,438 KB</td>
-</tr><tr><td>NonAsyncBinds_task</td><td>NonAsyncBinds</td><td>16.620 ms</td><td>0.3640 ms</td><td>1.0619 ms</td><td>1.00</td><td>0.00</td><td>9468.7500</td><td>-</td><td>77,344 KB</td>
-</tr><tr><td>NonAsyncBinds_coldTask</td><td>NonAsyncBinds</td><td>26.570 ms</td><td>0.5262 ms</td><td>1.2404 ms</td><td>1.63</td><td>0.10</td><td>11562.5000</td><td>-</td><td>94,531 KB</td>
-</tr><tr><td>NonAsyncBinds_cancellableTask</td><td>NonAsyncBinds</td><td>25.963 ms</td><td>0.5191 ms</td><td>0.9876 ms</td><td>1.58</td><td>0.12</td><td>11656.2500</td><td>-</td><td>95,313 KB</td>
-</tr><tr><td>AsyncBinds_ply</td><td>AsyncBinds</td><td>23.491 ms</td><td>0.4660 ms</td><td>0.7785 ms</td><td>1.13</td><td>0.06</td><td>62.5000</td><td>-</td><td>656 KB</td>
-</tr><tr><td>AsyncBinds_async</td><td>AsyncBinds</td><td>125.269 ms</td><td>3.7783 ms</td><td>11.0810 ms</td><td>5.89</td><td>0.57</td><td>1000.0000</td><td>-</td><td>8,375 KB</td>
-</tr><tr><td>AsyncBinds_task</td><td>AsyncBinds</td><td>20.903 ms</td><td>0.4142 ms</td><td>0.7470 ms</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>188 KB</td>
-</tr><tr><td>AsyncBinds_coldTask</td><td>AsyncBinds</td><td>22.618 ms</td><td>0.4487 ms</td><td>0.7741 ms</td><td>1.09</td><td>0.05</td><td>31.2500</td><td>-</td><td>328 KB</td>
-</tr><tr><td>AsyncBinds_cancellableTask</td><td>AsyncBinds</td><td>23.023 ms</td><td>0.4584 ms</td><td>1.1331 ms</td><td>1.11</td><td>0.08</td><td>31.2500</td><td>-</td><td>344 KB</td>
+</thead><tbody><tr><td>ManyWriteFile_ply</td><td>ManyWriteFile</td><td>1.107 ms</td><td>0.0215 ms</td><td>0.0180 ms</td><td>1.07</td><td>0.03</td><td>-</td><td>-</td><td>10 KB</td>
+</tr><tr><td>ManyWriteFile_async</td><td>ManyWriteFile</td><td>1.287 ms</td><td>0.0132 ms</td><td>0.0110 ms</td><td>1.24</td><td>0.02</td><td>35.1563</td><td>9.7656</td><td>292 KB</td>
+</tr><tr><td>ManyWriteFile_task</td><td>ManyWriteFile</td><td>1.029 ms</td><td>0.0185 ms</td><td>0.0254 ms</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>8 KB</td>
+</tr><tr><td>ManyWriteFile_coldTask</td><td>ManyWriteFile</td><td>1.032 ms</td><td>0.0193 ms</td><td>0.0189 ms</td><td>1.00</td><td>0.03</td><td>-</td><td>-</td><td>8 KB</td>
+</tr><tr><td>ManyWriteFile_cancellableTask</td><td>ManyWriteFile</td><td>1.047 ms</td><td>0.0162 ms</td><td>0.0144 ms</td><td>1.01</td><td>0.02</td><td>-</td><td>-</td><td>8 KB</td>
+</tr><tr><td>ManyWriteFile_cancellableTask_withCancellation</td><td>ManyWriteFile</td><td>1.016 ms</td><td>0.0203 ms</td><td>0.0180 ms</td><td>0.98</td><td>0.03</td><td>-</td><td>-</td><td>9 KB</td>
+</tr><tr><td>NonAsyncBinds_ply</td><td>NonAsyncBinds</td><td>14.976 ms</td><td>0.2448 ms</td><td>0.2044 ms</td><td>1.16</td><td>0.03</td><td>9468.7500</td><td>-</td><td>77,344 KB</td>
+</tr><tr><td>NonAsyncBinds_async</td><td>NonAsyncBinds</td><td>871.476 ms</td><td>16.8612 ms</td><td>16.5599 ms</td><td>67.40</td><td>1.65</td><td>30000.0000</td><td>-</td><td>248,444 KB</td>
+</tr><tr><td>NonAsyncBinds_task</td><td>NonAsyncBinds</td><td>12.925 ms</td><td>0.1447 ms</td><td>0.1282 ms</td><td>1.00</td><td>0.00</td><td>9468.7500</td><td>-</td><td>77,344 KB</td>
+</tr><tr><td>NonAsyncBinds_coldTask</td><td>NonAsyncBinds</td><td>21.464 ms</td><td>0.4169 ms</td><td>0.3900 ms</td><td>1.66</td><td>0.03</td><td>11281.2500</td><td>-</td><td>92,188 KB</td>
+</tr><tr><td>NonAsyncBinds_cancellableTask</td><td>NonAsyncBinds</td><td>21.575 ms</td><td>0.3903 ms</td><td>0.3651 ms</td><td>1.67</td><td>0.02</td><td>11375.0000</td><td>-</td><td>92,969 KB</td>
+</tr><tr><td>AsyncBinds_ply</td><td>AsyncBinds</td><td>15.096 ms</td><td>0.3678 ms</td><td>1.0844 ms</td><td>0.87</td><td>0.06</td><td>78.1250</td><td>-</td><td>656 KB</td>
+</tr><tr><td>AsyncBinds_async</td><td>AsyncBinds</td><td>78.382 ms</td><td>0.5136 ms</td><td>0.4289 ms</td><td>5.11</td><td>0.24</td><td>1000.0000</td><td>-</td><td>8,375 KB</td>
+</tr><tr><td>AsyncBinds_task</td><td>AsyncBinds</td><td>17.366 ms</td><td>0.4141 ms</td><td>1.2144 ms</td><td>1.00</td><td>0.00</td><td>15.6250</td><td>-</td><td>188 KB</td>
+</tr><tr><td>AsyncBinds_coldTask</td><td>AsyncBinds</td><td>15.610 ms</td><td>0.3418 ms</td><td>1.0023 ms</td><td>0.91</td><td>0.11</td><td>31.2500</td><td>-</td><td>305 KB</td>
+</tr><tr><td>AsyncBinds_cancellableTask</td><td>AsyncBinds</td><td>18.537 ms</td><td>0.3673 ms</td><td>0.8366 ms</td><td>1.10</td><td>0.11</td><td>31.2500</td><td>-</td><td>320 KB</td>
 </tr></tbody></table>
 </body>
 </html>

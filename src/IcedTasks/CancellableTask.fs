@@ -52,7 +52,7 @@ module CancellableTasks =
 
 
         member inline _.Delay
-            ([<InlineIfLambda>] generator: unit -> CancellableTaskCode<'TOverall, 'T>)
+            (generator: unit -> CancellableTaskCode<'TOverall, 'T>)
             : CancellableTaskCode<'TOverall, 'T> =
             CancellableTaskCode<'TOverall, 'T>(fun sm -> (generator ()).Invoke(&sm))
 
@@ -70,8 +70,8 @@ module CancellableTasks =
         /// This prevents constructs like `task { return 1; return 2; }`.
         member inline _.Combine
             (
-                [<InlineIfLambda>] task1: CancellableTaskCode<'TOverall, unit>,
-                [<InlineIfLambda>] task2: CancellableTaskCode<'TOverall, 'T>
+                task1: CancellableTaskCode<'TOverall, unit>,
+                task2: CancellableTaskCode<'TOverall, 'T>
             ) : CancellableTaskCode<'TOverall, 'T> =
             ResumableCode.Combine(task1, task2)
 
@@ -79,7 +79,7 @@ module CancellableTasks =
         member inline _.While
             (
                 [<InlineIfLambda>] condition: unit -> bool,
-                [<InlineIfLambda>] body: CancellableTaskCode<'TOverall, unit>
+                body: CancellableTaskCode<'TOverall, unit>
             ) : CancellableTaskCode<'TOverall, unit> =
             ResumableCode.While(condition, body)
 
@@ -87,8 +87,8 @@ module CancellableTasks =
         /// to retrieve the step, and in the continuation of the step (if any).
         member inline _.TryWith
             (
-                [<InlineIfLambda>] body: CancellableTaskCode<'TOverall, 'T>,
-                [<InlineIfLambda>] catch: exn -> CancellableTaskCode<'TOverall, 'T>
+                body: CancellableTaskCode<'TOverall, 'T>,
+                catch: exn -> CancellableTaskCode<'TOverall, 'T>
             ) : CancellableTaskCode<'TOverall, 'T> =
             ResumableCode.TryWith(body, catch)
 
@@ -96,7 +96,7 @@ module CancellableTasks =
         /// to retrieve the step, and in the continuation of the step (if any).
         member inline _.TryFinally
             (
-                [<InlineIfLambda>] body: CancellableTaskCode<'TOverall, 'T>,
+                body: CancellableTaskCode<'TOverall, 'T>,
                 [<InlineIfLambda>] compensation: unit -> unit
             ) : CancellableTaskCode<'TOverall, 'T> =
             ResumableCode.TryFinally(
@@ -109,15 +109,15 @@ module CancellableTasks =
         member inline _.For
             (
                 sequence: seq<'T>,
-                [<InlineIfLambda>] body: 'T -> CancellableTaskCode<'TOverall, unit>
+                body: 'T -> CancellableTaskCode<'TOverall, unit>
             ) : CancellableTaskCode<'TOverall, unit> =
             ResumableCode.For(sequence, body)
 
 #if NETSTANDARD2_1
         member inline internal this.TryFinallyAsync
             (
-                [<InlineIfLambda>] body: CancellableTaskCode<'TOverall, 'T>,
-                [<InlineIfLambda>] compensation: unit -> ValueTask
+                body: CancellableTaskCode<'TOverall, 'T>,
+                compensation: unit -> ValueTask
             ) : CancellableTaskCode<'TOverall, 'T> =
             ResumableCode.TryFinallyAsync(
                 body,
@@ -156,7 +156,7 @@ module CancellableTasks =
         member inline this.Using<'Resource, 'TOverall, 'T when 'Resource :> IAsyncDisposable>
             (
                 resource: 'Resource,
-                [<InlineIfLambda>] body: 'Resource -> CancellableTaskCode<'TOverall, 'T>
+                body: 'Resource -> CancellableTaskCode<'TOverall, 'T>
             ) : CancellableTaskCode<'TOverall, 'T> =
             this.TryFinallyAsync(
                 (fun sm -> (body resource).Invoke(&sm)),
@@ -179,7 +179,7 @@ module CancellableTasks =
         // The executor stays constant throughout the execution, it wraps each step
         // of the execution in a try/with.  The resumption is changed at each step
         // to represent the continuation of the computation.
-        static member inline RunDynamic([<InlineIfLambda>] code: CancellableTaskCode<'T, 'T>) : CancellableTask<'T> =
+        static member inline RunDynamic(code: CancellableTaskCode<'T, 'T>) : CancellableTask<'T> =
 
             let mutable sm = CancellableTaskStateMachine<'T>()
 
@@ -224,7 +224,7 @@ module CancellableTasks =
                     sm.Data.MethodBuilder.Start(&sm)
                     sm.Data.MethodBuilder.Task
 
-        member inline _.Run([<InlineIfLambda>] code: CancellableTaskCode<'T, 'T>) : CancellableTask<'T> =
+        member inline _.Run(code: CancellableTaskCode<'T, 'T>) : CancellableTask<'T> =
             if __useResumableCode then
                 __stateMachine<CancellableTaskStateMachineData<'T>, CancellableTask<'T>>
                     (MoveNextMethodImpl<_> (fun sm ->
@@ -248,6 +248,7 @@ module CancellableTasks =
                     (SetStateMachineMethodImpl<_>(fun sm state -> sm.Data.MethodBuilder.SetStateMachine(state)))
                     (AfterCode<_, _> (fun sm ->
                         let sm = sm
+
                         fun (ct) ->
                             if ct.IsCancellationRequested then
                                 Task.FromCanceled<_>(ct)
@@ -264,7 +265,7 @@ module CancellableTasks =
 
         inherit CancellableTaskBuilderBase()
 
-        static member inline RunDynamic([<InlineIfLambda>] code: CancellableTaskCode<'T, 'T>) : CancellableTask<'T> =
+        static member inline RunDynamic(code: CancellableTaskCode<'T, 'T>) : CancellableTask<'T> =
             // backgroundTask { .. } escapes to a background thread where necessary
             // See spec of ConfigureAwait(false) at https://devblogs.microsoft.com/dotnet/configureawait-faq/
             if
@@ -276,7 +277,7 @@ module CancellableTasks =
                 fun (ct) -> Task.Run<'T>((fun () -> CancellableTaskBuilder.RunDynamic(code) (ct)), ct)
 
         //// Same as CancellableTaskBuilder.Run except the start is inside Task.Run if necessary
-        member inline _.Run([<InlineIfLambda>] code: CancellableTaskCode<'T, 'T>) : CancellableTask<'T> =
+        member inline _.Run(code: CancellableTaskCode<'T, 'T>) : CancellableTask<'T> =
             if __useResumableCode then
                 __stateMachine<CancellableTaskStateMachineData<'T>, CancellableTask<'T>>
                     (MoveNextMethodImpl<_> (fun sm ->
@@ -349,7 +350,7 @@ module CancellableTasks =
                 (
                     sm: byref<ResumableStateMachine<CancellableTaskStateMachineData<'TOverall>>>,
                     task: ^TaskLike,
-                    [<InlineIfLambda>] continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
+                    continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
                 ) : bool =
                 sm.Data.CancellationToken.ThrowIfCancellationRequested()
                 let mutable awaiter = (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))
@@ -374,8 +375,8 @@ module CancellableTasks =
                 unit -> bool) and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 (
                     sm: byref<ResumableStateMachine<CancellableTaskStateMachineData<'TOverall>>>,
-                    [<InlineIfLambda>] task: CancellationToken -> ^TaskLike,
-                    [<InlineIfLambda>] continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
+                    task: CancellationToken -> ^TaskLike,
+                    continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
                 ) : bool =
                 sm.Data.CancellationToken.ThrowIfCancellationRequested()
 
@@ -401,7 +402,7 @@ module CancellableTasks =
                 unit -> bool) and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 (
                     task: ^TaskLike,
-                    [<InlineIfLambda>] continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
+                    continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
                 ) : CancellableTaskCode<'TOverall, 'TResult2> =
 
                 CancellableTaskCode<'TOverall, _> (fun sm ->
@@ -440,8 +441,8 @@ module CancellableTasks =
                 unit -> ^Awaiter) and ^Awaiter :> ICriticalNotifyCompletion and ^Awaiter: (member get_IsCompleted:
                 unit -> bool) and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 (
-                    [<InlineIfLambda>] task: CancellationToken -> ^TaskLike,
-                    [<InlineIfLambda>] continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
+                    task: CancellationToken -> ^TaskLike,
+                    continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
                 ) : CancellableTaskCode<'TOverall, 'TResult2> =
 
                 CancellableTaskCode<'TOverall, _> (fun sm ->
@@ -487,7 +488,7 @@ module CancellableTasks =
             [<NoEagerConstraintApplication>]
             member inline this.ReturnFrom< ^TaskLike, ^Awaiter, 'T when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter) and ^Awaiter :> ICriticalNotifyCompletion and ^Awaiter: (member get_IsCompleted:
                 unit -> bool) and ^Awaiter: (member GetResult: unit -> 'T)>
-                ([<InlineIfLambda>] task: CancellationToken -> ^TaskLike)
+                (task: CancellationToken -> ^TaskLike)
                 : CancellableTaskCode<'T, 'T> =
 
                 this.Bind(task, (fun v -> this.Return v))
@@ -495,7 +496,7 @@ module CancellableTasks =
             member inline _.Using<'Resource, 'TOverall, 'T when 'Resource :> IDisposable>
                 (
                     resource: 'Resource,
-                    [<InlineIfLambda>] body: 'Resource -> CancellableTaskCode<'TOverall, 'T>
+                    body: 'Resource -> CancellableTaskCode<'TOverall, 'T>
                 ) =
                 ResumableCode.Using(resource, body)
 
@@ -522,8 +523,8 @@ module CancellableTasks =
             static member inline BindDynamic
                 (
                     sm: byref<ResumableStateMachine<CancellableTaskStateMachineData<'TOverall>>>,
-                    [<InlineIfLambda>] task: CancellableTask<'TResult1>,
-                    [<InlineIfLambda>] continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
+                    task: CancellableTask<'TResult1>,
+                    continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
                 ) : bool =
                 let mutable awaiter =
                     let ct = sm.Data.CancellationToken
@@ -585,7 +586,7 @@ module CancellableTasks =
                 )
 
 
-            member inline this.ReturnFrom([<InlineIfLambda>] task: CancellableTask<'T>) : CancellableTaskCode<'T, 'T> =
+            member inline this.ReturnFrom(task: CancellableTask<'T>) : CancellableTaskCode<'T, 'T> =
                 this.Bind((task), (fun v -> this.Return v))
 
     [<AutoOpen>]
@@ -600,7 +601,7 @@ module CancellableTasks =
                 ) : CancellableTaskCode<'TOverall, 'TResult2> =
                 this.Bind((fun (_: CancellationToken) -> computation ()), continuation)
 
-            member inline this.ReturnFrom([<InlineIfLambda>] computation: ColdTask<'T>) : CancellableTaskCode<'T, 'T> =
+            member inline this.ReturnFrom(computation: ColdTask<'T>) : CancellableTaskCode<'T, 'T> =
                 this.ReturnFrom(fun (_: CancellationToken) -> computation ())
 
             member inline this.Bind
@@ -611,7 +612,7 @@ module CancellableTasks =
                 let foo = fun (_: CancellationToken) -> computation ()
                 this.Bind(foo, continuation)
 
-            member inline this.ReturnFrom([<InlineIfLambda>] computation: ColdTask) : CancellableTaskCode<_, _> =
+            member inline this.ReturnFrom(computation: ColdTask) : CancellableTaskCode<_, _> =
                 this.ReturnFrom(fun (_: CancellationToken) -> computation ())
 
             member inline this.Bind
