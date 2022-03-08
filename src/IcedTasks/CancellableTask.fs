@@ -25,7 +25,9 @@ module CancellableTasks =
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
     open Microsoft.FSharp.Collections
 
+    /// CancellationToken -> Task<'T>
     type CancellableTask<'T> = CancellationToken -> Task<'T>
+    /// CancellationToken -> Task
     type CancellableTask = CancellationToken -> Task
 
     /// The extra data stored in ResumableStateMachine for tasks
@@ -167,6 +169,8 @@ module CancellableTasks =
                         ValueTask())
             )
 #endif
+
+
 
 
     type CancellableTaskBuilder() =
@@ -352,7 +356,6 @@ module CancellableTasks =
                     task: ^TaskLike,
                     continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
                 ) : bool =
-                sm.Data.CancellationToken.ThrowIfCancellationRequested()
                 let mutable awaiter = (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))
 
                 let cont =
@@ -520,6 +523,7 @@ module CancellableTasks =
 
         // High priority extensions
         type CancellableTaskBuilderBase with
+
             static member inline BindDynamic
                 (
                     sm: byref<ResumableStateMachine<CancellableTaskStateMachineData<'TOverall>>>,

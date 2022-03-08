@@ -23,7 +23,9 @@ module ColdTasks =
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
     open Microsoft.FSharp.Collections
 
+    /// unit -> Task<'T>
     type ColdTask<'T> = unit -> Task<'T>
+    /// unit -> Task
     type ColdTask = unit -> Task
 
     /// The extra data stored in ResumableStateMachine for tasks

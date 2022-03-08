@@ -61,7 +61,7 @@ module Helpers =
     let syncTask_async2 () = Task.FromResult 100
     let asyncYield () = Async.Sleep(0)
     let asyncTask () = Task.Yield()
-    let asyncTaskCt  (ct: CancellationToken) = Task.Yield()
+    let asyncTaskCt (ct: CancellationToken) = Task.Yield()
 
     let tenBindSync_ply () =
         FSharp.Control.Tasks.Affine.task {
@@ -359,11 +359,13 @@ module Helpers =
 type AsyncBenchmarks() =
 
 
-// ManyWriteFile
+    // ManyWriteFile
 
-    [<BenchmarkCategory("ManyWriteFile"); Benchmark(Baseline=true)>]
-    member _.ManyWriteFile_CSharpTasks () =
-        TaskPerfCSharp.ManyWriteFileAsync(manyIterations).Wait();
+    [<BenchmarkCategory("ManyWriteFile"); Benchmark(Baseline = true)>]
+    member _.ManyWriteFile_CSharpTasks() =
+        TaskPerfCSharp
+            .ManyWriteFileAsync(manyIterations)
+            .Wait()
 
 
     [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
@@ -489,13 +491,13 @@ type AsyncBenchmarks() =
 
         File.Delete(path)
 
-// NonAsyncBinds
+    // NonAsyncBinds
 
 
-    [<BenchmarkCategory("NonAsyncBinds"); Benchmark(Baseline=true)>]
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark(Baseline = true)>]
     member _.NonAsyncBinds_CSharpTasks() =
-         for i in 1 .. manyIterations*100 do
-             TaskPerfCSharp.TenBindsSync_CSharp().Wait()
+        for i in 1 .. manyIterations * 100 do
+            TaskPerfCSharp.TenBindsSync_CSharp().Wait()
 
     [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
     member _.NonAsyncBinds_ply() =
@@ -536,13 +538,13 @@ type AsyncBenchmarks() =
             (tenBindSync_cancellableTask_bindCancellableTask () CancellationToken.None)
                 .Wait()
 
-//AsyncBinds
+    //AsyncBinds
 
 
-    [<BenchmarkCategory("AsyncBinds"); Benchmark(Baseline=true)>]
+    [<BenchmarkCategory("AsyncBinds"); Benchmark(Baseline = true)>]
     member _.AsyncBinds_CSharpTasks() =
-         for i in 1 .. manyIterations do
-             TaskPerfCSharp.TenBindsAsync_CSharp().Wait()
+        for i in 1..manyIterations do
+            TaskPerfCSharp.TenBindsAsync_CSharp().Wait()
 
     [<BenchmarkCategory("AsyncBinds"); Benchmark>]
     member _.AsyncBinds_ply() =
