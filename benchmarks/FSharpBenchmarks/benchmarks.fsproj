@@ -22,8 +22,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\src\IcedTasks\IcedTasks.fsproj" />
-    <ProjectReference Include="CSharpBenchmarks\CSharpBenchmarks.csproj" />
+    <ProjectReference Include="..\CSharpTaskBenchmarks\CSharpTaskBenchmarks.csproj" />
   </ItemGroup>
 
-  <Import Project="..\.paket\Paket.Restore.targets" />
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
