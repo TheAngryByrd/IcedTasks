@@ -61,6 +61,7 @@ module Helpers =
     let syncTask_async2 () = Task.FromResult 100
     let asyncYield () = Async.Sleep(0)
     let asyncTask () = Task.Yield()
+    let asyncTaskCt  (ct: CancellationToken) = Task.Yield()
 
     let tenBindSync_ply () =
         FSharp.Control.Tasks.Affine.task {
@@ -140,7 +141,34 @@ module Helpers =
                 + res10
         }
 
-    let tenBindSync_coldTask () =
+
+    let tenBindSync_coldTask_bindTask () =
+        coldTask {
+            let! res1 = syncTask ()
+            let! res2 = syncTask ()
+            let! res3 = syncTask ()
+            let! res4 = syncTask ()
+            let! res5 = syncTask ()
+            let! res6 = syncTask ()
+            let! res7 = syncTask ()
+            let! res8 = syncTask ()
+            let! res9 = syncTask ()
+            let! res10 = syncTask ()
+
+            return
+                res1
+                + res2
+                + res3
+                + res4
+                + res5
+                + res6
+                + res7
+                + res8
+                + res9
+                + res10
+        }
+
+    let tenBindSync_coldTask_bindColdTask () =
         coldTask {
             let! res1 = syncTask
             let! res2 = syncTask
@@ -167,7 +195,34 @@ module Helpers =
         }
 
 
-    let tenBindSync_cancellableTask () =
+    let tenBindSync_cancellableTask_bindTask () =
+        cancellableTask {
+            let! res1 = syncTask ()
+            let! res2 = syncTask ()
+            let! res3 = syncTask ()
+            let! res4 = syncTask ()
+            let! res5 = syncTask ()
+            let! res6 = syncTask ()
+            let! res7 = syncTask ()
+            let! res8 = syncTask ()
+            let! res9 = syncTask ()
+            let! res10 = syncTask ()
+
+            return
+                res1
+                + res2
+                + res3
+                + res4
+                + res5
+                + res6
+                + res7
+                + res8
+                + res9
+                + res10
+        }
+
+
+    let tenBindSync_cancellableTask_bindCancellableTask () =
         cancellableTask {
             let! res1 = syncCtTask
             let! res2 = syncCtTask
@@ -237,7 +292,7 @@ module Helpers =
         }
 
 
-    let tenBindAsync_coldTask () =
+    let tenBindAsync_coldTask_bindTask () =
         coldTask {
             do! asyncTask ()
             do! asyncTask ()
@@ -252,7 +307,25 @@ module Helpers =
         }
 
 
-    let tenBindAsync_cancellableTask () =
+
+    let tenBindAsync_coldTask_bindColdTask () =
+        coldTask {
+            do! asyncTask
+            do! asyncTask
+            do! asyncTask
+            do! asyncTask
+            do! asyncTask
+            do! asyncTask
+            do! asyncTask
+            do! asyncTask
+            do! asyncTask
+            do! asyncTask
+        }
+
+
+
+
+    let tenBindAsync_cancellableTask_bindTask () =
         cancellableTask {
             do! asyncTask ()
             do! asyncTask ()
@@ -266,10 +339,32 @@ module Helpers =
             do! asyncTask ()
         }
 
+    let tenBindAsync_cancellableTask_bindCancellableTask () =
+        cancellableTask {
+            do! asyncTaskCt
+            do! asyncTaskCt
+            do! asyncTaskCt
+            do! asyncTaskCt
+            do! asyncTaskCt
+            do! asyncTaskCt
+            do! asyncTaskCt
+            do! asyncTaskCt
+            do! asyncTaskCt
+            do! asyncTaskCt
+        }
+
 [<MemoryDiagnoser>]
 [<GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)>]
 [<CategoriesColumn>]
 type AsyncBenchmarks() =
+
+
+// ManyWriteFile
+
+    [<BenchmarkCategory("ManyWriteFile"); Benchmark(Baseline=true)>]
+    member _.ManyWriteFile_CSharpTasks () =
+        TaskPerfCSharp.ManyWriteFileAsync(manyIterations).Wait();
+
 
     [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
     member _.ManyWriteFile_ply() =
@@ -301,7 +396,7 @@ type AsyncBenchmarks() =
 
         File.Delete(path)
 
-    [<BenchmarkCategory("ManyWriteFile"); Benchmark(Baseline = true)>]
+    [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
     member _.ManyWriteFile_task() =
         let path = Path.GetTempFileName()
 
@@ -365,6 +460,43 @@ type AsyncBenchmarks() =
 
         File.Delete(path)
 
+    [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
+    member _.ManyWriteFile_cancellableTask_withCancellation2() =
+        let path = Path.GetTempFileName()
+
+        cancellableTask {
+            let junk = Array.zeroCreate bufferSize
+            use file = File.Create(path)
+
+            for i = 1 to manyIterations do
+                do! fun ct -> file.WriteAsync(junk, 0, junk.Length, ct)
+        }
+        |> fun t -> t(CancellationToken.None).Wait()
+
+    [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
+    member _.ManyWriteFile_cancellableTask_withCancellation3() =
+        let path = Path.GetTempFileName()
+
+        cancellableTask {
+            let junk = Array.zeroCreate bufferSize
+            use file = File.Create(path)
+
+            for i = 1 to manyIterations do
+                let! ct = CancellableTask.getCancellationToken
+                do! file.WriteAsync(junk, 0, junk.Length, ct)
+        }
+        |> fun t -> t(CancellationToken.None).Wait()
+
+        File.Delete(path)
+
+// NonAsyncBinds
+
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark(Baseline=true)>]
+    member _.NonAsyncBinds_CSharpTasks() =
+         for i in 1 .. manyIterations*100 do
+             TaskPerfCSharp.TenBindsSync_CSharp().Wait()
+
     [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
     member _.NonAsyncBinds_ply() =
         for i in 1 .. manyIterations * 100 do
@@ -377,22 +509,40 @@ type AsyncBenchmarks() =
             |> Async.RunSynchronously
             |> ignore
 
-    [<BenchmarkCategory("NonAsyncBinds"); Benchmark(Baseline = true)>]
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
     member _.NonAsyncBinds_task() =
         for i in 1 .. manyIterations * 100 do
             tenBindSync_task().Wait()
 
     [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
-    member _.NonAsyncBinds_coldTask() =
+    member _.NonAsyncBinds_coldTask_bindTask() =
         for i in 1 .. manyIterations * 100 do
-            (tenBindSync_coldTask () ()).Wait()
+            (tenBindSync_coldTask_bindTask () ()).Wait()
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.NonAsyncBinds_coldTask_bindColdTask() =
+        for i in 1 .. manyIterations * 100 do
+            (tenBindSync_coldTask_bindColdTask () ()).Wait()
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.NonAsyncBinds_cancellableTask_bindTask() =
+        for i in 1 .. manyIterations * 100 do
+            (tenBindSync_cancellableTask_bindTask () CancellationToken.None)
+                .Wait()
 
     [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
     member _.NonAsyncBinds_cancellableTask() =
         for i in 1 .. manyIterations * 100 do
-            (tenBindSync_cancellableTask () CancellationToken.None)
+            (tenBindSync_cancellableTask_bindCancellableTask () CancellationToken.None)
                 .Wait()
 
+//AsyncBinds
+
+
+    [<BenchmarkCategory("AsyncBinds"); Benchmark(Baseline=true)>]
+    member _.AsyncBinds_CSharpTasks() =
+         for i in 1 .. manyIterations do
+             TaskPerfCSharp.TenBindsAsync_CSharp().Wait()
 
     [<BenchmarkCategory("AsyncBinds"); Benchmark>]
     member _.AsyncBinds_ply() =
@@ -404,18 +554,30 @@ type AsyncBenchmarks() =
         for i in 1..manyIterations do
             tenBindAsync_async () |> Async.RunSynchronously
 
-    [<BenchmarkCategory("AsyncBinds"); Benchmark(Baseline = true)>]
+    [<BenchmarkCategory("AsyncBinds"); Benchmark>]
     member _.AsyncBinds_task() =
         for i in 1..manyIterations do
             tenBindAsync_task().Wait()
 
     [<BenchmarkCategory("AsyncBinds"); Benchmark>]
-    member _.AsyncBinds_coldTask() =
+    member _.AsyncBinds_coldTask_bindTask() =
         for i in 1..manyIterations do
-            (tenBindAsync_coldTask () ()).Wait()
+            (tenBindAsync_coldTask_bindTask () ()).Wait()
 
     [<BenchmarkCategory("AsyncBinds"); Benchmark>]
-    member _.AsyncBinds_cancellableTask() =
+    member _.AsyncBinds_coldTask_bindColdTask() =
         for i in 1..manyIterations do
-            (tenBindAsync_cancellableTask () (CancellationToken.None))
+            (tenBindAsync_coldTask_bindColdTask () ()).Wait()
+
+    [<BenchmarkCategory("AsyncBinds"); Benchmark>]
+    member _.AsyncBinds_cancellableTask_bindTask() =
+        for i in 1..manyIterations do
+            (tenBindAsync_cancellableTask_bindTask () (CancellationToken.None))
+                .Wait()
+
+
+    [<BenchmarkCategory("AsyncBinds"); Benchmark>]
+    member _.AsyncBinds_cancellableTask_bindCancellableTask() =
+        for i in 1..manyIterations do
+            (tenBindAsync_cancellableTask_bindCancellableTask () (CancellationToken.None))
                 .Wait()
