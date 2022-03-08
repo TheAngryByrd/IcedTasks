@@ -29,42 +29,44 @@ let environVarAsBoolOrDefault varName defaultValue =
 // Metadata and Configuration
 //-----------------------------------------------------------------------------
 
+let rootDirectory = __SOURCE_DIRECTORY__ </> ".."
+
 let productName = "IcedTasks"
-let sln = __SOURCE_DIRECTORY__ </> ".." </> "IcedTasks.sln"
+let sln = rootDirectory </> "IcedTasks.sln"
 
 
 let benchmarksCodeGlob =
-    !! (__SOURCE_DIRECTORY__ </> ".." </> "benchmarks/**/*.fs")
-    ++ (__SOURCE_DIRECTORY__ </> ".." </> "benchmarks/**/*.fsx")
-    -- (__SOURCE_DIRECTORY__ </> ".." </> "benchmarks/**/obj/**/*.fs")
+    !! (rootDirectory </> "benchmarks/**/*.fs")
+    ++ (rootDirectory </> "benchmarks/**/*.fsx")
+    -- (rootDirectory </> "benchmarks/**/obj/**/*.fs")
 
 let srcCodeGlob =
-    !! (__SOURCE_DIRECTORY__ </> ".." </> "src/**/*.fs")
-    ++ (__SOURCE_DIRECTORY__ </> ".." </> "src/**/*.fsx")
-    -- (__SOURCE_DIRECTORY__ </> ".." </> "src/**/obj/**/*.fs")
+    !! (rootDirectory </> "src/**/*.fs")
+    ++ (rootDirectory </> "src/**/*.fsx")
+    -- (rootDirectory </> "src/**/obj/**/*.fs")
 
 let testsCodeGlob =
-    !! (__SOURCE_DIRECTORY__ </> ".." </> "tests/**/*.fs")
-    ++ (__SOURCE_DIRECTORY__ </> ".." </> "tests/**/*.fsx")
-    -- (__SOURCE_DIRECTORY__ </> ".." </> "tests/**/obj/**/*.fs")
+    !! (rootDirectory </> "tests/**/*.fs")
+    ++ (rootDirectory </> "tests/**/*.fsx")
+    -- (rootDirectory </> "tests/**/obj/**/*.fs")
 
-let srcGlob =__SOURCE_DIRECTORY__ </> ".." </> "src/**/*.??proj"
-let testsGlob = __SOURCE_DIRECTORY__ </> ".." </> "tests/**/*.??proj"
+let srcGlob = rootDirectory </> "src/**/*.??proj"
+let testsGlob = rootDirectory </> "tests/**/*.??proj"
 
 let srcAndTest =
     !! srcGlob
     ++ testsGlob
 
-let distDir = __SOURCE_DIRECTORY__ </> ".." </> "dist"
+let distDir = rootDirectory </> "dist"
 let distGlob = distDir </> "*.nupkg"
 
 let coverageThresholdPercent = 80
-let coverageReportDir =  __SOURCE_DIRECTORY__ </> ".." </> "docs" </> "coverage"
+let coverageReportDir =  rootDirectory </> "docs" </> "coverage"
 
 
-let docsDir = __SOURCE_DIRECTORY__ </> ".." </> "docs"
-let docsSrcDir = __SOURCE_DIRECTORY__ </> ".." </> "docsSrc"
-let docsToolDir = __SOURCE_DIRECTORY__ </> ".." </> "docsTool"
+let docsDir = rootDirectory </> "docs"
+let docsSrcDir = rootDirectory </> "docsSrc"
+let docsToolDir = rootDirectory </> "docsTool"
 
 let gitOwner = "TheAngryByrd"
 let gitRepoName = "IcedTasks"
@@ -75,7 +77,7 @@ let releaseBranch = "master"
 
 let tagFromVersionNumber versionNumber = sprintf "v%s" versionNumber
 
-let changelogFilename = __SOURCE_DIRECTORY__ </> ".." </> "CHANGELOG.md"
+let changelogFilename = rootDirectory </> "CHANGELOG.md"
 let changelog = Fake.Core.Changelog.load changelogFilename
 let mutable latestEntry =
     if Seq.isEmpty changelog.Entries
@@ -409,7 +411,7 @@ let fsharpAnalyzers _ =
     |> Seq.iter(fun proj ->
         let args  =
             [
-                FSharpAnalyzers.Analyzers_Path (__SOURCE_DIRECTORY__ </> ".." </> "packages/analyzers")
+                FSharpAnalyzers.Analyzers_Path (rootDirectory </> "packages/analyzers")
                 FSharpAnalyzers.Arguments.Project proj
                 FSharpAnalyzers.Arguments.Fail_On_Warnings [
                     "BDH0002"
@@ -618,6 +620,7 @@ let formatCode _ =
 let checkFormatCode _ =
     let result =
         [
+            benchmarksCodeGlob
             srcCodeGlob
             testsCodeGlob
         ]
