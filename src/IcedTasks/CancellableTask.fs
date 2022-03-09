@@ -422,7 +422,7 @@ module CancellableTasks =
                     task: ^TaskLike,
                     continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
                 ) : CancellableTaskCode<'TOverall, 'TResult2> =
-                this.Bind((fun (ct : CancellationToken) -> task), continuation)
+                this.Bind((fun (ct: CancellationToken) -> task), continuation)
 
             [<NoEagerConstraintApplication>]
             member inline this.Bind< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall when ^TaskLike: (member GetAwaiter:
@@ -432,7 +432,7 @@ module CancellableTasks =
                     task: unit -> ^TaskLike,
                     continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
                 ) : CancellableTaskCode<'TOverall, 'TResult2> =
-                this.Bind((fun (ct : CancellationToken) -> task ()), continuation)
+                this.Bind((fun (ct: CancellationToken) -> task ()), continuation)
 
             [<NoEagerConstraintApplication>]
             member inline this.ReturnFrom< ^TaskLike, ^Awaiter, 'T when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter) and ^Awaiter :> ICriticalNotifyCompletion and ^Awaiter: (member get_IsCompleted:

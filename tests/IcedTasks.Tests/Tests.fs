@@ -565,7 +565,7 @@ module SayTests =
 
                   use cts = new CancellationTokenSource()
                   do! outerTask cts.Token |> Async.AwaitTask
-                  // Compiling is sufficient expect
+              // Compiling is sufficient expect
               }
               testCaseAsync "Can ReturnFrom cold TaskLike"
               <| async {
@@ -573,7 +573,7 @@ module SayTests =
                   let outerTask = cancellableTask { return! fooTask }
                   use cts = new CancellationTokenSource()
                   do! outerTask cts.Token |> Async.AwaitTask
-                  // Compiling is sufficient expect
+              // Compiling is sufficient expect
               }
 
               testCaseAsync "Can Bind Async<T>"
