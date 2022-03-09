@@ -353,31 +353,6 @@ module CancellableTasks =
                 unit -> bool) and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 (
                     sm: byref<ResumableStateMachine<CancellableTaskStateMachineData<'TOverall>>>,
-                    task: ^TaskLike,
-                    continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
-                ) : bool =
-                let mutable awaiter = (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))
-
-                let cont =
-                    (CancellableTaskResumptionFunc<'TOverall> (fun sm ->
-                        let result = (^Awaiter: (member GetResult: unit -> 'TResult1) (awaiter))
-                        (continuation result).Invoke(&sm)))
-
-                // shortcut to continue immediately
-                if (^Awaiter: (member get_IsCompleted: unit -> bool) (awaiter)) then
-                    cont.Invoke(&sm)
-                else
-                    sm.ResumptionDynamicInfo.ResumptionData <- (awaiter :> ICriticalNotifyCompletion)
-                    sm.ResumptionDynamicInfo.ResumptionFunc <- cont
-                    false
-
-
-            [<NoEagerConstraintApplication>]
-            static member inline BindDynamic< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall when ^TaskLike: (member GetAwaiter:
-                unit -> ^Awaiter) and ^Awaiter :> ICriticalNotifyCompletion and ^Awaiter: (member get_IsCompleted:
-                unit -> bool) and ^Awaiter: (member GetResult: unit -> 'TResult1)>
-                (
-                    sm: byref<ResumableStateMachine<CancellableTaskStateMachineData<'TOverall>>>,
                     task: CancellationToken -> ^TaskLike,
                     continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
                 ) : bool =
@@ -398,46 +373,6 @@ module CancellableTasks =
                     sm.ResumptionDynamicInfo.ResumptionData <- (awaiter :> ICriticalNotifyCompletion)
                     sm.ResumptionDynamicInfo.ResumptionFunc <- cont
                     false
-
-            [<NoEagerConstraintApplication>]
-            member inline _.Bind< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall when ^TaskLike: (member GetAwaiter:
-                unit -> ^Awaiter) and ^Awaiter :> ICriticalNotifyCompletion and ^Awaiter: (member get_IsCompleted:
-                unit -> bool) and ^Awaiter: (member GetResult: unit -> 'TResult1)>
-                (
-                    task: ^TaskLike,
-                    continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
-                ) : CancellableTaskCode<'TOverall, 'TResult2> =
-
-                CancellableTaskCode<'TOverall, _> (fun sm ->
-                    if __useResumableCode then
-                        //-- RESUMABLE CODE START
-                        sm.Data.CancellationToken.ThrowIfCancellationRequested()
-                        // Get an awaiter from the awaitable
-                        let mutable awaiter = (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))
-
-                        let mutable __stack_fin = true
-
-                        if not (^Awaiter: (member get_IsCompleted: unit -> bool) (awaiter)) then
-                            // This will yield with __stack_yield_fin = false
-                            // This will resume with __stack_yield_fin = true
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-                            __stack_fin <- __stack_yield_fin
-
-                        if __stack_fin then
-                            let result = (^Awaiter: (member GetResult: unit -> 'TResult1) (awaiter))
-                            (continuation result).Invoke(&sm)
-                        else
-                            sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
-                            false
-                    else
-                        CancellableTaskBuilderBase.BindDynamic< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall>(
-                            &sm,
-                            task,
-                            continuation
-                        )
-                //-- RESUMABLE CODE END
-                )
-
 
             [<NoEagerConstraintApplication>]
             member inline _.Bind< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall when ^TaskLike: (member GetAwaiter:
@@ -480,6 +415,26 @@ module CancellableTasks =
                 )
 
             [<NoEagerConstraintApplication>]
+            member inline this.Bind< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall when ^TaskLike: (member GetAwaiter:
+                unit -> ^Awaiter) and ^Awaiter :> ICriticalNotifyCompletion and ^Awaiter: (member get_IsCompleted:
+                unit -> bool) and ^Awaiter: (member GetResult: unit -> 'TResult1)>
+                (
+                    task: ^TaskLike,
+                    continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
+                ) : CancellableTaskCode<'TOverall, 'TResult2> =
+                this.Bind((fun (ct : CancellationToken) -> task), continuation)
+
+            [<NoEagerConstraintApplication>]
+            member inline this.Bind< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall when ^TaskLike: (member GetAwaiter:
+                unit -> ^Awaiter) and ^Awaiter :> ICriticalNotifyCompletion and ^Awaiter: (member get_IsCompleted:
+                unit -> bool) and ^Awaiter: (member GetResult: unit -> 'TResult1)>
+                (
+                    task: unit -> ^TaskLike,
+                    continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
+                ) : CancellableTaskCode<'TOverall, 'TResult2> =
+                this.Bind((fun (ct : CancellationToken) -> task ()), continuation)
+
+            [<NoEagerConstraintApplication>]
             member inline this.ReturnFrom< ^TaskLike, ^Awaiter, 'T when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter) and ^Awaiter :> ICriticalNotifyCompletion and ^Awaiter: (member get_IsCompleted:
                 unit -> bool) and ^Awaiter: (member GetResult: unit -> 'T)>
                 (task: ^TaskLike)
@@ -487,6 +442,14 @@ module CancellableTasks =
 
                 this.Bind(task, (fun v -> this.Return v))
 
+
+            [<NoEagerConstraintApplication>]
+            member inline this.ReturnFrom< ^TaskLike, ^Awaiter, 'T when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter) and ^Awaiter :> ICriticalNotifyCompletion and ^Awaiter: (member get_IsCompleted:
+                unit -> bool) and ^Awaiter: (member GetResult: unit -> 'T)>
+                (task: unit -> ^TaskLike)
+                : CancellableTaskCode<'T, 'T> =
+
+                this.Bind(task, (fun v -> this.Return v))
 
             [<NoEagerConstraintApplication>]
             member inline this.ReturnFrom< ^TaskLike, ^Awaiter, 'T when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter) and ^Awaiter :> ICriticalNotifyCompletion and ^Awaiter: (member get_IsCompleted:

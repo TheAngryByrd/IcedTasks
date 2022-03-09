@@ -11,46 +11,6 @@ open System.Threading.Tasks
 open IcedTasks
 
 open System.IO
-
-
-type DemoBenchmarks() =
-    [<Params(0, 1, 15, 100)>]
-    member val public sleepTime = 0 with get, set
-
-    // [<GlobalSetup>]
-    // member self.GlobalSetup() =
-    //     printfn "%s" "Global Setup"
-
-    // [<GlobalCleanup>]
-    // member self.GlobalCleanup() =
-    //     printfn "%s" "Global Cleanup"
-
-    // [<IterationSetup>]
-    // member self.IterationSetup() =
-    //     printfn "%s" "Iteration Setup"
-
-    // [<IterationCleanup>]
-    // member self.IterationCleanup() =
-    //     printfn "%s" "Iteration Cleanup"
-
-    [<Benchmark>]
-    member this.Thread() =
-        System.Threading.Thread.Sleep(this.sleepTime)
-
-    [<Benchmark>]
-    member this.Task() =
-        System.Threading.Tasks.Task.Delay(this.sleepTime)
-
-    [<Benchmark>]
-    member this.AsyncToTask() =
-        Async.Sleep(this.sleepTime) |> Async.StartAsTask
-
-    [<Benchmark>]
-    member this.AsyncToSync() =
-        Async.Sleep(this.sleepTime)
-        |> Async.RunSynchronously
-
-
 [<AutoOpen>]
 module Helpers =
     let bufferSize = 128
@@ -339,6 +299,21 @@ module Helpers =
             do! asyncTask ()
         }
 
+
+    let tenBindAsync_cancellableTask_bindColdTask () =
+        cancellableTask {
+            do! asyncTask
+            do! asyncTask
+            do! asyncTask
+            do! asyncTask
+            do! asyncTask
+            do! asyncTask
+            do! asyncTask
+            do! asyncTask
+            do! asyncTask
+            do! asyncTask
+        }
+
     let tenBindAsync_cancellableTask_bindCancellableTask () =
         cancellableTask {
             do! asyncTaskCt
@@ -577,6 +552,12 @@ type AsyncBenchmarks() =
             (tenBindAsync_cancellableTask_bindTask () (CancellationToken.None))
                 .Wait()
 
+
+    [<BenchmarkCategory("AsyncBinds"); Benchmark>]
+    member _.AsyncBinds_cancellableTask_bindColdTask() =
+        for i in 1..manyIterations do
+            (tenBindAsync_cancellableTask_bindColdTask () (CancellationToken.None))
+                .Wait()
 
     [<BenchmarkCategory("AsyncBinds"); Benchmark>]
     member _.AsyncBinds_cancellableTask_bindCancellableTask() =

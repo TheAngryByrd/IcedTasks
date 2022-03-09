@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\IcedTasks\IcedTasks.fsproj" />
+    <ProjectReference Include="..\..\src\IcedTasks\IcedTasks.fsproj" />
     <ProjectReference Include="..\CSharpTaskBenchmarks\CSharpTaskBenchmarks.csproj" />
   </ItemGroup>
 

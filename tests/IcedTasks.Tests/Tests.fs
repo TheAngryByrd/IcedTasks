@@ -55,7 +55,6 @@ module SayTests =
               <| async {
                   let foo = coldTask { return "lol" }
                   let! result = foo |> Async.AwaitColdTask
-
                   Expect.equal result "lol" ""
               }
               testCaseAsync "Task run immediately"
@@ -551,6 +550,30 @@ module SayTests =
                   use cts = new CancellationTokenSource()
                   do! outerTask cts.Token |> Async.AwaitTask
               // Compiling is a sufficient Expect
+              }
+
+
+              testCaseAsync "Can Bind cold TaskLike"
+              <| async {
+                  let fooTask = fun () -> Task.Yield()
+
+                  let outerTask =
+                      cancellableTask {
+                          let! result = fooTask
+                          return result
+                      }
+
+                  use cts = new CancellationTokenSource()
+                  do! outerTask cts.Token |> Async.AwaitTask
+                  // Compiling is sufficient expect
+              }
+              testCaseAsync "Can ReturnFrom cold TaskLike"
+              <| async {
+                  let fooTask = fun () -> Task.Yield()
+                  let outerTask = cancellableTask { return! fooTask }
+                  use cts = new CancellationTokenSource()
+                  do! outerTask cts.Token |> Async.AwaitTask
+                  // Compiling is sufficient expect
               }
 
               testCaseAsync "Can Bind Async<T>"
