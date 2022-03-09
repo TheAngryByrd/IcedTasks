@@ -17,7 +17,7 @@ GitHub Actions |
 [![GitHub Actions](https://github.com/TheAngryByrd/IcedTasks/workflows/Build%20master/badge.svg)](https://github.com/TheAngryByrd/IcedTasks/actions?query=branch%3Amaster) |
 [![Build History](https://buildstats.info/github/chart/TheAngryByrd/IcedTasks)](https://github.com/TheAngryByrd/IcedTasks/actions?query=branch%3Amaster) |
 
-## NuGet 
+## NuGet
 
 Package | Stable | Prerelease
 --- | --- | ---
@@ -29,13 +29,11 @@ IcedTasks | [![NuGet Badge](https://buildstats.info/nuget/IcedTasks)](https://ww
 
 Make sure the following **requirements** are installed on your system:
 
-- [dotnet SDK](https://www.microsoft.com/net/download/core) 3.0 or higher
-- [Mono](http://www.mono-project.com/) if you're on Linux or macOS.
+- [dotnet SDK](https://www.microsoft.com/net/download/core) 6.0 or higher
 
 or
 
 - [VSCode Dev Container](https://code.visualstudio.com/docs/remote/containers)
-
 
 ---
 
@@ -48,11 +46,9 @@ or
 - `DISABLE_COVERAGE` Will disable running code coverage metrics.  AltCover can have [severe performance degradation](https://github.com/SteveGilham/altcover/issues/57) so it's worth disabling when looking to do a quicker feedback loop.
   - `DISABLE_COVERAGE=1 ./build.sh`
 
-
 ---
 
 ### Building
-
 
 ```sh
 > build.cmd <optional buildtarget> // on windows
@@ -61,7 +57,7 @@ $ ./build.sh  <optional buildtarget>// on unix
 
 The bin of your library should look similar to:
 
-```
+```bash
 $ tree src/MyCoolNewLib/bin/
 src/MyCoolNewLib/bin/
 └── Debug
@@ -94,8 +90,8 @@ src/MyCoolNewLib/bin/
 - `WatchDocs` - Generates documentation and starts a webserver locally.  It will rebuild and hot reload if it detects any changes made to `docsSrc` files, libraries in `src`, or the `docsTool` itself.
 - `ReleaseDocs` - Will stage, commit, and push docs generated in the `BuildDocs` target.
 - [`Release`](#Releasing) - Task that runs all release type tasks such as `PublishToNuGet`, `GitRelease`, `ReleaseDocs`, and `GitHubRelease`. Make sure to read [Releasing](#Releasing) to setup your environment correctly for releases.
----
 
+---
 
 ### Releasing
 
@@ -109,14 +105,13 @@ git push -u origin master
 ```
 
 - [Create your NuGeT API key](https://docs.microsoft.com/en-us/nuget/nuget-org/publish-a-package#create-api-keys)
-    - [Add your NuGet API key to paket](https://fsprojects.github.io/Paket/paket-config.html#Adding-a-NuGet-API-key)
+  - [Add your NuGet API key to paket](https://fsprojects.github.io/Paket/paket-config.html#Adding-a-NuGet-API-key)
 
-    ```sh
-    paket config add-token "https://www.nuget.org" 4003d786-cc37-4004-bfdf-c4f3e8ef9b3a
-    ```
+  ```sh
+  paket config add-token "https://www.nuget.org" 4003d786-cc37-4004-bfdf-c4f3e8ef9b3a
+  ```
 
-    - or set the environment variable `NUGET_TOKEN` to your key
-
+  - or set the environment variable `NUGET_TOKEN` to your key
 
 - [Create a GitHub OAuth Token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/)
   - You can then set the environment variable `GITHUB_TOKEN` to upload release notes and artifacts to github
@@ -167,5 +162,3 @@ macOS/Linux Environment Variable:
 ```sh
 RELEASE_VERSION=0.2.0 ./build.sh Release
 ```
-
-
