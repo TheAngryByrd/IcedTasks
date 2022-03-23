@@ -25,13 +25,12 @@ module CancellableTaskTests =
               <| async {
                   do!
                       Expect.CancellationRequested(
-                          async {
+                          cancellableTask {
 
                               let foo = cancellableTask { return "lol" }
                               use cts = new CancellationTokenSource()
                               cts.Cancel()
-                              let! result = foo cts.Token |> Async.AwaitTask
-
+                              let! result = foo cts.Token
                               Expect.equal result "lol" ""
                           }
                       )
@@ -45,13 +44,13 @@ module CancellableTaskTests =
 
                   do!
                       Expect.CancellationRequested(
-                          async {
+                          cancellableTask {
                               let fooColdTask = cancellableTask { someValue <- "lol" }
                               do! Async.Sleep(100)
                               Expect.equal someValue null ""
                               use cts = new CancellationTokenSource()
                               cts.Cancel()
-                              let fooAsync = fooColdTask cts.Token |> Async.AwaitTask
+                              let fooAsync = fooColdTask cts.Token
                               do! Async.Sleep(100)
                               Expect.equal someValue null ""
 
@@ -81,7 +80,7 @@ module CancellableTaskTests =
               <| async {
                   do!
                       Expect.CancellationRequested(
-                          async {
+                          cancellableTask {
                               let fooTask =
                                   cancellableTask {
                                       return!
@@ -90,15 +89,13 @@ module CancellableTaskTests =
                                                   cancellableTask {
                                                       let! ct = CancellableTask.getCancellationToken
                                                       do! Task.Delay(1000, ct)
-                                                      failwith "Didn't cancel fast enough"
                                                   }
                                           }
                                   }
 
                               use cts = new CancellationTokenSource()
                               cts.CancelAfter(100)
-                              do! fooTask cts.Token |> Async.AwaitTask
-                              failwith "Didn't cancel fast enough"
+                              do! fooTask cts.Token
                           }
                       )
 

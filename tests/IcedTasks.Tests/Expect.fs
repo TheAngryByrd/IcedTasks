@@ -9,41 +9,43 @@ module TestHelpers =
         { new System.IDisposable with
             member this.Dispose() = () }
 
+module Expect =
+    open Expecto
+    [<RequiresExplicitTypeArguments>]
+    /// Expects the passed function to throw `'texn`.
+    let throwsTAsync<'texn when 'texn :> exn> f message = async {
+        let! thrown = async {
+            try
+                do! f ()
+                return None
+            with e ->
+                return Some e
+        }
+        match thrown with
+        | Some e when e.GetType().IsAssignableFrom typeof<'texn> ->
+            failtestf "%s. Expected f to throw an exn of type %s, but one of type %s was thrown."
+                message
+                (typeof<'texn>.FullName)
+                (e.GetType().FullName)
+        | Some _ -> ()
+        | _ -> failtestf "%s. Expected f to throw." message
+    }
+
+
 type Expect =
 
     static member CancellationRequested(operation: Async<_>) =
-        async {
-            try
-                do! operation
-            with
-            | :? TaskCanceledException as e -> ()
-            | :? OperationCanceledException as e -> ()
-        }
+        Expect.throwsTAsync<OperationCanceledException> (fun () -> operation) "Should have been cancelled"
+
 
     static member CancellationRequested(operation: Task<_>) =
-        task {
-            try
-                do! operation
-            with
-            | :? TaskCanceledException as e -> ()
-            | :? OperationCanceledException as e -> ()
-        }
+        Expect.CancellationRequested(Async.AwaitTask operation)
+        |> Async.StartAsTask
 
     static member CancellationRequested(operation: ColdTask<_>) =
-        coldTask {
-            try
-                do! operation
-            with
-            | :? TaskCanceledException as e -> ()
-            | :? OperationCanceledException as e -> ()
-        }
-
+        Expect.CancellationRequested(Async.AwaitColdTask operation)
+        |> Async.AsColdTask
 
     static member CancellationRequested(operation: CancellableTask<_>) =
-        cancellableTask {
-            try
-                do! operation
-            with
-            | :? TaskCanceledException as e -> ()
-            | :? OperationCanceledException as e -> ()
-        }
+        Expect.CancellationRequested(Async.AwaitCancellableTask operation)
+        |> Async.AsCancellableTask
