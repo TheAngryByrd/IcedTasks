@@ -608,8 +608,6 @@ module CancellableTasks =
 
     [<AutoOpen>]
     module AsyncExtenions =
-
-
         type Microsoft.FSharp.Control.AsyncBuilder with
             member inline this.Bind
                 (
