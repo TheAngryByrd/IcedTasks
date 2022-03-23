@@ -16,11 +16,13 @@ open System.IO
 module Helpers =
     let bufferSize = 128
     let manyIterations = 1000
+    let fewerIterations = manyIterations / 10
     let syncTask () = Task.FromResult 100
     let syncCtTask (ct: CancellationToken) = Task.FromResult 100
     let syncTask_async () = async.Return 100
     let syncTask_async2 () = Task.FromResult 100
     let asyncYield () = Async.Sleep(0)
+    let asyncYieldLong () = Async.Sleep(10)
     let asyncTask () = Task.Yield()
     let asyncTaskCt (ct: CancellationToken) = Task.Yield()
 
@@ -565,3 +567,275 @@ type AsyncBenchmarks() =
         for i in 1..manyIterations do
             (tenBindAsync_cancellableTask_bindCancellableTask () (CancellationToken.None))
                 .Wait()
+
+
+
+
+module AsyncExns =
+
+    type AsyncBuilder with
+        member inline _.MergeSources(t1: Async<'T>, t2: Async<'T1>) =
+            // async {
+            //     let! t1r = t1
+            //     let! t2r = t2
+            //     return t1r,t2r
+            // }
+            async.Bind(t1, (fun t1r -> async.Bind(t2, (fun t2r -> async.Return(t1r, t2r)))))
+
+open AsyncExns
+
+[<MemoryDiagnoser>]
+[<GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)>]
+[<CategoriesColumn>]
+type ParallelAsyncBenchmarks() =
+
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.AsyncBuilder_sync() =
+
+        for i in 1..manyIterations do
+            Helpers.tenBindSync_async ()
+            |> Async.RunSynchronously
+            |> ignore
+
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.AsyncBuilder_sync_applicative_overhead() =
+
+        for i in 1..manyIterations do
+            async {
+                let! res1 = syncTask_async ()
+                and! res2 = syncTask_async ()
+                and! res3 = syncTask_async ()
+                and! res4 = syncTask_async ()
+                and! res5 = syncTask_async ()
+                and! res6 = syncTask_async ()
+                and! res7 = syncTask_async ()
+                and! res8 = syncTask_async ()
+                and! res9 = syncTask_async ()
+                and! res10 = syncTask_async ()
+
+                return
+                    res1
+                    + res2
+                    + res3
+                    + res4
+                    + res5
+                    + res6
+                    + res7
+                    + res8
+                    + res9
+                    + res10
+            }
+            |> Async.RunSynchronously
+            |> ignore
+
+
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.ParallelAsyncBuilderUsingStartChild_sync() =
+
+        for i in 1..manyIterations do
+            parallelAsyncUsingStartChild {
+                let! res1 = syncTask_async ()
+                and! res2 = syncTask_async ()
+                and! res3 = syncTask_async ()
+                and! res4 = syncTask_async ()
+                and! res5 = syncTask_async ()
+                and! res6 = syncTask_async ()
+                and! res7 = syncTask_async ()
+                and! res8 = syncTask_async ()
+                and! res9 = syncTask_async ()
+                and! res10 = syncTask_async ()
+
+                return
+                    res1
+                    + res2
+                    + res3
+                    + res4
+                    + res5
+                    + res6
+                    + res7
+                    + res8
+                    + res9
+                    + res10
+            }
+            |> Async.RunSynchronously
+            |> ignore
+
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.ParallelAsyncBuilderUsingStartImmediateAsTask_sync() =
+        for i in 1..manyIterations do
+            parallelAsyncUsingStartImmediateAsTask {
+                let! res1 = syncTask_async ()
+                and! res2 = syncTask_async ()
+                and! res3 = syncTask_async ()
+                and! res4 = syncTask_async ()
+                and! res5 = syncTask_async ()
+                and! res6 = syncTask_async ()
+                and! res7 = syncTask_async ()
+                and! res8 = syncTask_async ()
+                and! res9 = syncTask_async ()
+                and! res10 = syncTask_async ()
+
+                return
+                    res1
+                    + res2
+                    + res3
+                    + res4
+                    + res5
+                    + res6
+                    + res7
+                    + res8
+                    + res9
+                    + res10
+            }
+            |> Async.RunSynchronously
+            |> ignore
+
+    [<BenchmarkCategory("AsyncBinds"); Benchmark>]
+    member _.AsyncBuilder_async() =
+
+        for i in 1..manyIterations do
+            Helpers.tenBindAsync_async ()
+            |> Async.RunSynchronously
+
+
+    [<BenchmarkCategory("AsyncBinds"); Benchmark>]
+    member _.AsyncBuilder_async_applicative_overhead() =
+
+        for i in 1..manyIterations do
+            async {
+                let! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                return ()
+            }
+            |> Async.RunSynchronously
+
+
+    [<BenchmarkCategory("AsyncBinds"); Benchmark>]
+    member _.ParallelAsyncBuilderUsingStartChild_async() =
+
+        for i in 1..manyIterations do
+            parallelAsyncUsingStartChild {
+                let! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                return ()
+            }
+            |> Async.RunSynchronously
+
+    [<BenchmarkCategory("AsyncBinds"); Benchmark>]
+    member _.ParallelAsyncBuilderUsingStartImmediateAsTask_async() =
+
+        for i in 1..manyIterations do
+            parallelAsyncUsingStartImmediateAsTask {
+
+                let! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                and! _ = asyncYield ()
+                return ()
+            }
+            |> Async.RunSynchronously
+
+
+    [<BenchmarkCategory("AsyncBindsLong"); Benchmark>]
+    member _.AsyncBuilder_async_long() =
+
+        for i in 1..fewerIterations do
+            async {
+                let! _ = asyncYieldLong ()
+                let! _ = asyncYieldLong ()
+                let! _ = asyncYieldLong ()
+                let! _ = asyncYieldLong ()
+                let! _ = asyncYieldLong ()
+                let! _ = asyncYieldLong ()
+                let! _ = asyncYieldLong ()
+                let! _ = asyncYieldLong ()
+                let! _ = asyncYieldLong ()
+                let! _ = asyncYieldLong ()
+                return ()
+            }
+            |> Async.RunSynchronously
+
+
+    [<BenchmarkCategory("AsyncBindsLong"); Benchmark>]
+    member _.AsyncBuilder_async_long_applicative_overhead() =
+
+        for i in 1..fewerIterations do
+            async {
+                let! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                return ()
+            }
+            |> Async.RunSynchronously
+
+    [<BenchmarkCategory("AsyncBindsLong"); Benchmark>]
+    member _.ParallelAsyncBuilderUsingStartChild_async_long() =
+
+        for i in 1..fewerIterations do
+            parallelAsyncUsingStartChild {
+                let! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                return ()
+            }
+            |> Async.RunSynchronously
+
+    [<BenchmarkCategory("AsyncBindsLong"); Benchmark>]
+    member _.ParallelAsyncBuilderUsingStartImmediateAsTask_async_long() =
+
+        for i in 1..fewerIterations do
+            parallelAsyncUsingStartImmediateAsTask {
+
+                let! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                and! _ = asyncYieldLong ()
+                return ()
+            }
+            |> Async.RunSynchronously
