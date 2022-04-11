@@ -58,14 +58,14 @@ Accessing the context's CancellationToken:
     let writeJunkToFile = 
         let path = Path.GetTempFileName()
 
-            cancellableTask {
-                let junk = Array.zeroCreate bufferSize
-                use file = File.Create(path)
-                // You can bind against `CancellableTask.getCancellationToken` to get the current context's `CancellationToken`.
-                let! ct = CancellableTask.getCancellationToken
-                for i = 1 to manyIterations do
-                    do! file.WriteAsync(junk, 0, junk.Length, ct)
-            }
+        cancellableTask {
+            let junk = Array.zeroCreate bufferSize
+            use file = File.Create(path)
+            // You can bind against `CancellableTask.getCancellationToken` to get the current context's `CancellationToken`.
+            let! ct = CancellableTask.getCancellationToken
+            for i = 1 to manyIterations do
+                do! file.WriteAsync(junk, 0, junk.Length, ct)
+        }
     ```
 
 Short example:
