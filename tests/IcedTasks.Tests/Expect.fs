@@ -11,25 +11,30 @@ module TestHelpers =
 
 module Expect =
     open Expecto
+
     [<RequiresExplicitTypeArguments>]
     /// Expects the passed function to throw `'texn`.
-    let throwsTAsync<'texn when 'texn :> exn> f message = async {
-        let! thrown = async {
-            try
-                do! f ()
-                return None
-            with e ->
-                return Some e
+    let throwsTAsync<'texn when 'texn :> exn> f message =
+        async {
+            let! thrown =
+                async {
+                    try
+                        do! f ()
+                        return None
+                    with
+                    | e -> return Some e
+                }
+
+            match thrown with
+            | Some e when e.GetType().IsAssignableFrom typeof<'texn> ->
+                failtestf
+                    "%s. Expected f to throw an exn of type %s, but one of type %s was thrown."
+                    message
+                    (typeof<'texn>.FullName)
+                    (e.GetType().FullName)
+            | Some _ -> ()
+            | _ -> failtestf "%s. Expected f to throw." message
         }
-        match thrown with
-        | Some e when e.GetType().IsAssignableFrom typeof<'texn> ->
-            failtestf "%s. Expected f to throw an exn of type %s, but one of type %s was thrown."
-                message
-                (typeof<'texn>.FullName)
-                (e.GetType().FullName)
-        | Some _ -> ()
-        | _ -> failtestf "%s. Expected f to throw." message
-    }
 
 
 type Expect =
