@@ -39,12 +39,17 @@ module ColdTasks =
 
     and ColdTaskStateMachine<'TOverall> = ResumableStateMachine<ColdTaskStateMachineData<'TOverall>>
     and ColdTaskResumptionFunc<'TOverall> = ResumptionFunc<ColdTaskStateMachineData<'TOverall>>
-    and ColdTaskResumptionDynamicInfo<'TOverall> = ResumptionDynamicInfo<ColdTaskStateMachineData<'TOverall>>
+
+    and ColdTaskResumptionDynamicInfo<'TOverall> =
+        ResumptionDynamicInfo<ColdTaskStateMachineData<'TOverall>>
+
     and ColdTaskCode<'TOverall, 'T> = ResumableCode<ColdTaskStateMachineData<'TOverall>, 'T>
 
     type ColdTaskBuilderBase() =
 
-        member inline _.Delay(generator: unit -> ColdTaskCode<'TOverall, 'T>) : ColdTaskCode<'TOverall, 'T> =
+        member inline _.Delay
+            (generator: unit -> ColdTaskCode<'TOverall, 'T>)
+            : ColdTaskCode<'TOverall, 'T> =
             ColdTaskCode<'TOverall, 'T>(fun sm -> (generator ()).Invoke(&sm))
 
         /// Used to represent no-ops like the implicit empty "else" branch of an "if" expression.
@@ -52,9 +57,10 @@ module ColdTasks =
         member inline _.Zero() : ColdTaskCode<'TOverall, unit> = ResumableCode.Zero()
 
         member inline _.Return(value: 'T) : ColdTaskCode<'T, 'T> =
-            ColdTaskCode<'T, _> (fun sm ->
+            ColdTaskCode<'T, _>(fun sm ->
                 sm.Data.Result <- value
-                true)
+                true
+            )
 
         /// Chains together a step with its following step.
         /// Note that this requires that the first step has no result.
@@ -92,9 +98,10 @@ module ColdTasks =
             ) : ColdTaskCode<'TOverall, 'T> =
             ResumableCode.TryFinally(
                 body,
-                ResumableCode<_, _> (fun _sm ->
+                ResumableCode<_, _>(fun _sm ->
                     compensation ()
-                    true)
+                    true
+                )
             )
 
         member inline _.For
@@ -112,7 +119,7 @@ module ColdTasks =
             ) : ColdTaskCode<'TOverall, 'T> =
             ResumableCode.TryFinallyAsync(
                 body,
-                ResumableCode<_, _> (fun sm ->
+                ResumableCode<_, _>(fun sm ->
                     if __useResumableCode then
                         let mutable __stack_condition_fin = true
                         let __stack_vtask = compensation ()
@@ -131,17 +138,23 @@ module ColdTasks =
                         let mutable awaiter = vtask.GetAwaiter()
 
                         let cont =
-                            ColdTaskResumptionFunc<'TOverall> (fun sm ->
-                                awaiter.GetResult() |> ignore
-                                true)
+                            ColdTaskResumptionFunc<'TOverall>(fun sm ->
+                                awaiter.GetResult()
+                                |> ignore
+
+                                true
+                            )
 
                         // shortcut to continue immediately
                         if awaiter.IsCompleted then
                             true
                         else
-                            sm.ResumptionDynamicInfo.ResumptionData <- (awaiter :> ICriticalNotifyCompletion)
+                            sm.ResumptionDynamicInfo.ResumptionData <-
+                                (awaiter :> ICriticalNotifyCompletion)
+
                             sm.ResumptionDynamicInfo.ResumptionFunc <- cont
-                            false)
+                            false
+                )
             )
 
         member inline this.Using<'Resource, 'TOverall, 'T when 'Resource :> IAsyncDisposable>
@@ -155,7 +168,8 @@ module ColdTasks =
                     if not (isNull (box resource)) then
                         resource.DisposeAsync()
                     else
-                        ValueTask())
+                        ValueTask()
+                )
             )
 #endif
 
@@ -187,20 +201,22 @@ module ColdTasks =
                                 sm.Data.MethodBuilder.SetResult(sm.Data.Result)
                             else
                                 let mutable awaiter =
-                                    sm.ResumptionDynamicInfo.ResumptionData :?> ICriticalNotifyCompletion
+                                    sm.ResumptionDynamicInfo.ResumptionData
+                                    :?> ICriticalNotifyCompletion
 
                                 assert not (isNull awaiter)
                                 sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
 
-                        with
-                        | exn -> savedExn <- exn
+                        with exn ->
+                            savedExn <- exn
                         // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
                         match savedExn with
                         | null -> ()
                         | exn -> sm.Data.MethodBuilder.SetException exn
 
                     member _.SetStateMachine(sm, state) =
-                        sm.Data.MethodBuilder.SetStateMachine(state) }
+                        sm.Data.MethodBuilder.SetStateMachine(state)
+                }
 
             fun () ->
                 sm.ResumptionDynamicInfo <- resumptionInfo
@@ -211,7 +227,7 @@ module ColdTasks =
         member inline _.Run(code: ColdTaskCode<'T, 'T>) : ColdTask<'T> =
             if __useResumableCode then
                 __stateMachine<ColdTaskStateMachineData<'T>, ColdTask<'T>>
-                    (MoveNextMethodImpl<_> (fun sm ->
+                    (MoveNextMethodImpl<_>(fun sm ->
                         //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
                         let mutable __stack_exn: Exception = null
@@ -221,23 +237,26 @@ module ColdTasks =
 
                             if __stack_code_fin then
                                 sm.Data.MethodBuilder.SetResult(sm.Data.Result)
-                        with
-                        | exn -> __stack_exn <- exn
+                        with exn ->
+                            __stack_exn <- exn
                         // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
                         match __stack_exn with
                         | null -> ()
                         | exn -> sm.Data.MethodBuilder.SetException exn
                     //-- RESUMABLE CODE END
                     ))
-                    (SetStateMachineMethodImpl<_>(fun sm state -> sm.Data.MethodBuilder.SetStateMachine(state)))
-                    (AfterCode<_, _> (fun sm ->
+                    (SetStateMachineMethodImpl<_>(fun sm state ->
+                        sm.Data.MethodBuilder.SetStateMachine(state)
+                    ))
+                    (AfterCode<_, _>(fun sm ->
                         let sm = sm
 
                         fun () ->
                             let mutable sm = sm
                             sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create ()
                             sm.Data.MethodBuilder.Start(&sm)
-                            sm.Data.MethodBuilder.Task))
+                            sm.Data.MethodBuilder.Task
+                    ))
             else
                 ColdTaskBuilder.RunDynamic(code)
 
@@ -255,13 +274,13 @@ module ColdTasks =
                 ColdTaskBuilder.RunDynamic(code)
             else
 
-                fun () -> Task.Run<'T>(fun () -> ColdTaskBuilder.RunDynamic(code) ())
+                fun () -> Task.Run<'T>(fun () -> ColdTaskBuilder.RunDynamic (code) ())
 
         //// Same as ColdTaskBuilder.Run except the start is inside Task.Run if necessary
         member inline _.Run(code: ColdTaskCode<'T, 'T>) : ColdTask<'T> =
             if __useResumableCode then
                 __stateMachine<ColdTaskStateMachineData<'T>, ColdTask<'T>>
-                    (MoveNextMethodImpl<_> (fun sm ->
+                    (MoveNextMethodImpl<_>(fun sm ->
                         //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
 
@@ -270,12 +289,14 @@ module ColdTasks =
 
                             if __stack_code_fin then
                                 sm.Data.MethodBuilder.SetResult(sm.Data.Result)
-                        with
-                        | exn -> sm.Data.MethodBuilder.SetException exn
+                        with exn ->
+                            sm.Data.MethodBuilder.SetException exn
                     //-- RESUMABLE CODE END
                     ))
-                    (SetStateMachineMethodImpl<_>(fun sm state -> sm.Data.MethodBuilder.SetStateMachine(state)))
-                    (AfterCode<_, ColdTask<'T>> (fun sm ->
+                    (SetStateMachineMethodImpl<_>(fun sm state ->
+                        sm.Data.MethodBuilder.SetStateMachine(state)
+                    ))
+                    (AfterCode<_, ColdTask<'T>>(fun sm ->
                         // backgroundTask { .. } escapes to a background thread where necessary
                         // See spec of ConfigureAwait(false) at https://devblogs.microsoft.com/dotnet/configureawait-faq/
                         if
@@ -292,11 +313,13 @@ module ColdTasks =
                             let sm = sm // copy
 
                             fun () ->
-                                Task.Run<'T> (fun () ->
+                                Task.Run<'T>(fun () ->
                                     let mutable sm = sm // host local mutable copy of contents of state machine on this thread pool thread
                                     sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create ()
                                     sm.Data.MethodBuilder.Start(&sm)
-                                    sm.Data.MethodBuilder.Task)))
+                                    sm.Data.MethodBuilder.Task
+                                )
+                    ))
             else
                 BackgroundColdTaskBuilder.RunDynamic(code)
 
@@ -307,17 +330,17 @@ module ColdTasks =
         let backgroundColdTask = BackgroundColdTaskBuilder()
 
 
-
-
     [<AutoOpen>]
     module LowPriority =
         // Low priority extensions
         type ColdTaskBuilderBase with
 
             [<NoEagerConstraintApplication>]
-            static member inline BindDynamic< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall when ^TaskLike: (member GetAwaiter:
-                unit -> ^Awaiter) and ^Awaiter :> ICriticalNotifyCompletion and ^Awaiter: (member get_IsCompleted:
-                unit -> bool) and ^Awaiter: (member GetResult: unit -> 'TResult1)>
+            static member inline BindDynamic< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall
+                when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
+                and ^Awaiter :> ICriticalNotifyCompletion
+                and ^Awaiter: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 (
                     sm: byref<_>,
                     task: ^TaskLike,
@@ -327,32 +350,38 @@ module ColdTasks =
                 let mutable awaiter = (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))
 
                 let cont =
-                    (ColdTaskResumptionFunc<'TOverall> (fun sm ->
+                    (ColdTaskResumptionFunc<'TOverall>(fun sm ->
                         let result = (^Awaiter: (member GetResult: unit -> 'TResult1) (awaiter))
-                        (continuation result).Invoke(&sm)))
+                        (continuation result).Invoke(&sm)
+                    ))
 
                 // shortcut to continue immediately
                 if (^Awaiter: (member get_IsCompleted: unit -> bool) (awaiter)) then
                     cont.Invoke(&sm)
                 else
-                    sm.ResumptionDynamicInfo.ResumptionData <- (awaiter :> ICriticalNotifyCompletion)
+                    sm.ResumptionDynamicInfo.ResumptionData <-
+                        (awaiter :> ICriticalNotifyCompletion)
+
                     sm.ResumptionDynamicInfo.ResumptionFunc <- cont
                     false
 
             [<NoEagerConstraintApplication>]
-            member inline _.Bind< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall when ^TaskLike: (member GetAwaiter:
-                unit -> ^Awaiter) and ^Awaiter :> ICriticalNotifyCompletion and ^Awaiter: (member get_IsCompleted:
-                unit -> bool) and ^Awaiter: (member GetResult: unit -> 'TResult1)>
+            member inline _.Bind< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall
+                when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
+                and ^Awaiter :> ICriticalNotifyCompletion
+                and ^Awaiter: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 (
                     task: ^TaskLike,
                     continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
                 ) : ColdTaskCode<'TOverall, 'TResult2> =
 
-                ColdTaskCode<'TOverall, _> (fun sm ->
+                ColdTaskCode<'TOverall, _>(fun sm ->
                     if __useResumableCode then
                         //-- RESUMABLE CODE START
                         // Get an awaiter from the awaitable
-                        let mutable awaiter = (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))
+                        let mutable awaiter =
+                            (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))
 
                         let mutable __stack_fin = true
 
@@ -379,9 +408,11 @@ module ColdTasks =
 
 
             [<NoEagerConstraintApplication>]
-            member inline this.Bind< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall when ^TaskLike: (member GetAwaiter:
-                unit -> ^Awaiter) and ^Awaiter :> ICriticalNotifyCompletion and ^Awaiter: (member get_IsCompleted:
-                unit -> bool) and ^Awaiter: (member GetResult: unit -> 'TResult1)>
+            member inline this.Bind< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall
+                when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
+                and ^Awaiter :> ICriticalNotifyCompletion
+                and ^Awaiter: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 (
                     task: unit -> ^TaskLike,
                     continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
@@ -389,16 +420,22 @@ module ColdTasks =
                 this.Bind(task (), continuation)
 
             [<NoEagerConstraintApplication>]
-            member inline this.ReturnFrom< ^TaskLike, ^Awaiter, 'T when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter) and ^Awaiter :> ICriticalNotifyCompletion and ^Awaiter: (member get_IsCompleted:
-                unit -> bool) and ^Awaiter: (member GetResult: unit -> 'T)>
+            member inline this.ReturnFrom< ^TaskLike, ^Awaiter, 'T
+                when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
+                and ^Awaiter :> ICriticalNotifyCompletion
+                and ^Awaiter: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter: (member GetResult: unit -> 'T)>
                 (task: ^TaskLike)
                 : ColdTaskCode<'T, 'T> =
 
                 this.Bind(task, (fun v -> this.Return v))
 
             [<NoEagerConstraintApplication>]
-            member inline this.ReturnFrom< ^TaskLike, ^Awaiter, 'T when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter) and ^Awaiter :> ICriticalNotifyCompletion and ^Awaiter: (member get_IsCompleted:
-                unit -> bool) and ^Awaiter: (member GetResult: unit -> 'T)>
+            member inline this.ReturnFrom< ^TaskLike, ^Awaiter, 'T
+                when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
+                and ^Awaiter :> ICriticalNotifyCompletion
+                and ^Awaiter: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter: (member GetResult: unit -> 'T)>
                 (task: unit -> ^TaskLike)
                 : ColdTaskCode<'T, 'T> =
                 this.Bind(task, (fun v -> this.Return v))
@@ -415,16 +452,24 @@ module ColdTasks =
     module HighPriority =
         // High priority extensions
         type Microsoft.FSharp.Control.Async with
+
             static member inline AwaitColdTask([<InlineIfLambda>] t: ColdTask<'T>) =
-                async.Delay(fun () -> t () |> Async.AwaitTask)
+                async.Delay(fun () ->
+                    t ()
+                    |> Async.AwaitTask
+                )
 
             static member inline AwaitColdTask([<InlineIfLambda>] t: ColdTask) =
-                async.Delay(fun () -> t () |> Async.AwaitTask)
+                async.Delay(fun () ->
+                    t ()
+                    |> Async.AwaitTask
+                )
 
             static member inline AsColdTask(computation: Async<'T>) : ColdTask<_> =
                 fun () -> Async.StartAsTask(computation)
 
         type ColdTaskBuilderBase with
+
             static member inline BindDynamic
                 (
                     sm: byref<_>,
@@ -434,15 +479,18 @@ module ColdTasks =
                 let mutable awaiter = task.GetAwaiter()
 
                 let cont =
-                    (ColdTaskResumptionFunc<'TOverall> (fun sm ->
+                    (ColdTaskResumptionFunc<'TOverall>(fun sm ->
                         let result = awaiter.GetResult()
-                        (continuation result).Invoke(&sm)))
+                        (continuation result).Invoke(&sm)
+                    ))
 
                 // shortcut to continue immediately
                 if awaiter.IsCompleted then
                     cont.Invoke(&sm)
                 else
-                    sm.ResumptionDynamicInfo.ResumptionData <- (awaiter :> ICriticalNotifyCompletion)
+                    sm.ResumptionDynamicInfo.ResumptionData <-
+                        (awaiter :> ICriticalNotifyCompletion)
+
                     sm.ResumptionDynamicInfo.ResumptionFunc <- cont
                     false
 
@@ -452,7 +500,7 @@ module ColdTasks =
                     continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
                 ) : ColdTaskCode<'TOverall, 'TResult2> =
 
-                ColdTaskCode<'TOverall, _> (fun sm ->
+                ColdTaskCode<'TOverall, _>(fun sm ->
                     if __useResumableCode then
                         //-- RESUMABLE CODE START
                         // Get an awaiter from the task
@@ -488,7 +536,8 @@ module ColdTasks =
             member inline this.ReturnFrom(task: Task<'T>) : ColdTaskCode<'T, 'T> =
                 this.Bind(task, (fun v -> this.Return v))
 
-            member inline this.ReturnFrom(task: ColdTask<'T>) : ColdTaskCode<'T, 'T> = this.ReturnFrom(task ())
+            member inline this.ReturnFrom(task: ColdTask<'T>) : ColdTaskCode<'T, 'T> =
+                this.ReturnFrom(task ())
 
     [<AutoOpen>]
     module MediumPriority =
@@ -496,6 +545,7 @@ module ColdTasks =
 
         // Medium priority extensions
         type ColdTaskBuilderBase with
+
             member inline this.Bind
                 (
                     computation: Async<'TResult1>,
@@ -512,13 +562,21 @@ module ColdTasks =
 
         type Microsoft.FSharp.Control.AsyncBuilder with
 
-            member inline this.Bind([<InlineIfLambda>] coldTask: ColdTask<'T>, binder: ('T -> Async<'U>)) : Async<'U> =
+            member inline this.Bind
+                (
+                    [<InlineIfLambda>] coldTask: ColdTask<'T>,
+                    binder: ('T -> Async<'U>)
+                ) : Async<'U> =
                 this.Bind(Async.AwaitColdTask coldTask, binder)
 
             member inline this.ReturnFrom([<InlineIfLambda>] coldTask: ColdTask<'T>) : Async<'T> =
                 this.ReturnFrom(Async.AwaitColdTask coldTask)
 
-            member inline this.Bind([<InlineIfLambda>] coldTask: ColdTask, binder: (unit -> Async<'U>)) : Async<'U> =
+            member inline this.Bind
+                (
+                    [<InlineIfLambda>] coldTask: ColdTask,
+                    binder: (unit -> Async<'U>)
+                ) : Async<'U> =
                 this.Bind(Async.AwaitColdTask coldTask, binder)
 
             member inline this.ReturnFrom([<InlineIfLambda>] coldTask: ColdTask) : Async<unit> =
@@ -526,12 +584,23 @@ module ColdTasks =
 
 
         type Microsoft.FSharp.Control.TaskBuilderBase with
-            member inline this.Bind([<InlineIfLambda>] coldTask: ColdTask<'T>, [<InlineIfLambda>] binder: ('T -> _)) =
+
+            member inline this.Bind
+                (
+                    [<InlineIfLambda>] coldTask: ColdTask<'T>,
+                    [<InlineIfLambda>] binder: ('T -> _)
+                ) =
                 this.Bind(coldTask (), binder)
 
-            member inline this.ReturnFrom([<InlineIfLambda>] coldTask: ColdTask<'T>) = this.ReturnFrom(coldTask ())
+            member inline this.ReturnFrom([<InlineIfLambda>] coldTask: ColdTask<'T>) =
+                this.ReturnFrom(coldTask ())
 
-            member inline this.Bind([<InlineIfLambda>] coldTask: ColdTask, [<InlineIfLambda>] binder: (_ -> _)) =
+            member inline this.Bind
+                (
+                    [<InlineIfLambda>] coldTask: ColdTask,
+                    [<InlineIfLambda>] binder: (_ -> _)
+                ) =
                 this.Bind(coldTask (), binder)
 
-            member inline this.ReturnFrom([<InlineIfLambda>] coldTask: ColdTask) = this.ReturnFrom(coldTask ())
+            member inline this.ReturnFrom([<InlineIfLambda>] coldTask: ColdTask) =
+                this.ReturnFrom(coldTask ())

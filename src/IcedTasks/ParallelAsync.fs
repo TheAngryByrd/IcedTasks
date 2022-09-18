@@ -29,10 +29,10 @@ type ParallelAsync =
             fun c1 ->
                 async.Bind(
                     Async.StartChild a2,
-                    fun c2 -> async.Bind(c1, (fun r1 -> async.Bind(c2, (fun r2 -> async.Return(r1, r2)))))
+                    fun c2 ->
+                        async.Bind(c1, (fun r1 -> async.Bind(c2, (fun r2 -> async.Return(r1, r2)))))
                 )
         )
-
 
 
     /// <summary>
@@ -41,7 +41,10 @@ type ParallelAsync =
     /// <param name="a1">An async to execute</param>
     /// <param name="a2">An async to execute</param>
     /// <returns>Tuple of computed values</returns>
-    static member inline zipUsingStartImmediateAsTask (a1: Async<'left>) (a2: Async<'right>) : Async<'left * 'right> =
+    static member inline zipUsingStartImmediateAsTask
+        (a1: Async<'left>)
+        (a2: Async<'right>)
+        : Async<'left * 'right> =
         // async {
         //     let! ct = Async.CancellationToken
         //     let x = Async.StartImmediateAsTask (a1, cancellationToken=ct)
@@ -94,7 +97,9 @@ type ParallelAsyncBuilderBase() =
 
 type ParallelAsyncBuilderUsingStartChild() =
     inherit ParallelAsyncBuilderBase()
-    member inline _.MergeSources(t1: Async<'T>, t2: Async<'T1>) = ParallelAsync.zipWithStartChild t1 t2
+
+    member inline _.MergeSources(t1: Async<'T>, t2: Async<'T1>) =
+        ParallelAsync.zipWithStartChild t1 t2
 
 
 type ParallelAsyncBuilderUsingStartImmediateAsTask() =
