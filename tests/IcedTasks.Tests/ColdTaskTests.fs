@@ -6,7 +6,7 @@ open System.Threading.Tasks
 open IcedTasks
 
 module ColdTaskHelpers =
-    let map (item : ColdTask<'a>) (mapper : 'a -> 'b) : ColdTask<'b> = coldTask {
+    let map  (mapper : 'a -> 'b) (item : ColdTask<'a>) : ColdTask<'b> = coldTask {
         let! i = item
         return mapper i
     }
