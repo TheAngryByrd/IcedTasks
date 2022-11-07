@@ -342,8 +342,8 @@ module ColdTaskTests =
             testCaseAsync "Generic coldTask parameter"
             <| async {
                 let innerCall = coldTask { return "lol" }
-                let someTask = innerCall |> ColdTaskHelpers.map (fun x -> x + "fooo")
-                return ()
+                let! someTask = innerCall |> ColdTaskHelpers.map (fun x -> x + "fooo")
+                Expect.equal "lolfooo" someTask ""
 
             }
 
