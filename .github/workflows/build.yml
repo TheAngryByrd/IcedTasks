@@ -15,15 +15,22 @@ jobs:
     # Not specifying a version will attempt to install via global.json
     - name: Use .NET Core global.json
       uses: actions/setup-dotnet@v3
-
-    - name: Build
+    - name: Setup necessary dotnet SDKs
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: |
+          2.1.x
+          3.1.x
+          5.x
+          6.x
+    - name: Build via Bash
       if: runner.os != 'Windows'
       run: |
         chmod +x ./build.sh
         ./build.sh
       env:
         CI: true
-    - name: Build
+    - name: Build via Windows
       if: runner.os == 'Windows'
       run: ./build.cmd
       env:
