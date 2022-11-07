@@ -7,7 +7,7 @@ open System.Threading.Tasks
 open IcedTasks
 
 module CancellableTaskHelpers =
-    let map  (mapper : 'a -> 'b) (item : CancellableTask<'a>) : CancellableTask<'b> = cancellableTask {
+    let map (mapper: 'a -> 'b) (item: CancellableTask<'a>) : CancellableTask<'b> = cancellableTask {
         let! i = item
         return mapper i
     }
@@ -444,7 +444,11 @@ module CancellableTaskTests =
             testCaseAsync "Generic coldTask parameter"
             <| async {
                 let innerCall = cancellableTask { return "lol" }
-                let! someTask = innerCall |> CancellableTaskHelpers.map (fun x -> x + "fooo")
+
+                let! someTask =
+                    innerCall
+                    |> CancellableTaskHelpers.map (fun x -> x + "fooo")
+
                 Expect.equal "lolfooo" someTask ""
             }
         ]
