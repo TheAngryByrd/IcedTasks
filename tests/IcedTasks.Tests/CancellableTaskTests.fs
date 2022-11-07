@@ -6,6 +6,13 @@ open System.Threading
 open System.Threading.Tasks
 open IcedTasks
 
+module CancellableTaskHelpers =
+    let map (mapper: 'a -> 'b) (item: CancellableTask<'a>) : CancellableTask<'b> = cancellableTask {
+        let! i = item
+        return mapper i
+    }
+
+
 module CancellableTaskTests =
 
 
@@ -423,6 +430,7 @@ module CancellableTaskTests =
                 use cts = new CancellationTokenSource()
                 Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
                 Expect.equal actual cts.Token ""
+
             testCase "AsyncBuilder can ReturnFrom CancellableTask"
             <| fun () ->
                 let mutable actual = CancellationToken.None
@@ -432,4 +440,15 @@ module CancellableTaskTests =
                 use cts = new CancellationTokenSource()
                 Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
                 Expect.equal actual cts.Token ""
+
+            testCaseAsync "Generic coldTask parameter"
+            <| async {
+                let innerCall = cancellableTask { return "lol" }
+
+                let! someTask =
+                    innerCall
+                    |> CancellableTaskHelpers.map (fun x -> x + "fooo")
+
+                Expect.equal "lolfooo" someTask ""
+            }
         ]

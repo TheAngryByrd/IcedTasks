@@ -5,6 +5,13 @@ open Expecto
 open System.Threading.Tasks
 open IcedTasks
 
+module ColdTaskHelpers =
+    let map (mapper: 'a -> 'b) (item: ColdTask<'a>) : ColdTask<'b> = coldTask {
+        let! i = item
+        return mapper i
+    }
+
+
 module ColdTaskTests =
     open System.Threading
 
@@ -330,6 +337,18 @@ module ColdTaskTests =
                     |> Async.AwaitColdTask
 
                 Expect.hasLength values 2 ""
+            }
+
+            testCaseAsync "Generic coldTask parameter"
+            <| async {
+                let innerCall = coldTask { return "lol" }
+
+                let! someTask =
+                    innerCall
+                    |> ColdTaskHelpers.map (fun x -> x + "fooo")
+
+                Expect.equal "lolfooo" someTask ""
+
             }
 
         ]
