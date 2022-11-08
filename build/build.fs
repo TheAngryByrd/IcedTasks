@@ -353,7 +353,6 @@ let updateChangelog ctx =
     let prereleaseEntries = changelog.Entries |> List.filter (fun entry -> entry.SemVer.PreRelease.IsSome && versionTuple entry.SemVer = versionTuple newVersion)
     let prereleaseChanges = prereleaseEntries |> List.collect (fun entry -> entry.Changes |> List.filter (not << Changelog.isEmptyChange)) |> List.distinct
     let assemblyVersion, nugetVersion = Changelog.parseVersions newVersion.AsString
-    linkReferenceForLatestEntry <- Changelog.mkLinkReference newVersion changelog
     let newEntry = Changelog.ChangelogEntry.New(assemblyVersion.Value, nugetVersion.Value, Some System.DateTime.Today, description, unreleasedChanges @ prereleaseChanges, false)
     let newChangelog = Changelog.Changelog.New(changelog.Header, changelog.Description, None, newEntry :: changelog.Entries)
     latestEntry <- newEntry
@@ -543,6 +542,7 @@ let generateAssemblyInfo _ =
 
 let dotnetPack ctx =
     // Get release notes with properly-linked version number
+    let linkReferenceForLatestEntry = Changelog.mkLinkReference latestEntry.SemVer changelog
     let releaseNotes = latestEntry |> Changelog.mkReleaseNotes linkReferenceForLatestEntry
     let args =
         [
@@ -607,6 +607,8 @@ let githubRelease _ =
 
     let files = !! distGlob
     // Get release notes with properly-linked version number
+
+    let linkReferenceForLatestEntry = Changelog.mkLinkReference latestEntry.SemVer changelog
     let releaseNotes = latestEntry |> Changelog.mkReleaseNotes linkReferenceForLatestEntry
 
     GitHub.createClientWithToken token
