@@ -13,6 +13,8 @@ indent_style = space
 indent_size = 4
 end_of_line = lf
 
+[*.yml]
+indent_size = 2
 
 [*.{fs,fsi,fsx,config}]
 # https://fsprojects.github.io/fantomas/docs/end-users/Configuration.html
