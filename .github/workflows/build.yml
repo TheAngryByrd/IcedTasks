@@ -19,9 +19,9 @@ jobs:
           3.1.x
           5.x
           6.x
-    # Not specifying a version will attempt to install via global.json
-    - name: Use .NET Core global.json
-      uses: actions/setup-dotnet@v3
+          
+      global-json-file: global.json
+
     - name: Build via Bash
       if: runner.os != 'Windows'
       run: |
