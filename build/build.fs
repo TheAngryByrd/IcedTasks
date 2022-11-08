@@ -337,7 +337,7 @@ let updateChangelog ctx =
     )
     let versionTuple version = (version.Major, version.Minor, version.Patch)
     let prereleaseEntries = changelog.Entries |> List.filter (fun entry -> entry.SemVer.PreRelease.IsSome && versionTuple entry.SemVer = versionTuple newVersion)
-    let prereleaseChanges = prereleaseEntries |> List.collect (fun entry -> entry.Changes |> List.filter (not << Changelog.isEmptyChange))
+    let prereleaseChanges = prereleaseEntries |> List.collect (fun entry -> entry.Changes |> List.filter (not << Changelog.isEmptyChange)) |> List.distinct
     let assemblyVersion, nugetVersion = Changelog.parseVersions newVersion.AsString
     linkReferenceForLatestEntry <- Changelog.mkLinkReference newVersion changelog
     let newEntry = Changelog.ChangelogEntry.New(assemblyVersion.Value, nugetVersion.Value, Some System.DateTime.Today, description, unreleasedChanges @ prereleaseChanges, false)
@@ -690,7 +690,8 @@ let initTargets () =
     Target.create "GitHubRelease" githubRelease
     Target.create "FormatCode" formatCode
     Target.create "CheckFormatCode" checkFormatCode
-    Target.create "Release" ignore
+    Target.create "Release" ignore // For local
+    Target.create "Publish" ignore //For CI
     Target.create "BuildDocs" buildDocs
     Target.create "WatchDocs" watchDocs
     Target.create "ReleaseDocs" releaseDocs
@@ -715,28 +716,31 @@ let initTargets () =
     // Ensure UpdateChangelog is called after DotnetRestore and before GenerateAssemblyInfo
     "DotnetRestore" ?=>! "UpdateChangelog"
     "UpdateChangelog" ?=>! "GenerateAssemblyInfo"
-    "UpdateChangelog" ==>! "PublishToNuGet"
-
-    "BuildDocs" ==>! "ReleaseDocs"
-    "BuildDocs" ?=>! "PublishToNuget"
-    "DotnetPack" ?=>! "BuildDocs"
-    "GenerateCoverageReport" ?=>! "ReleaseDocs"
 
 
-    "DotnetRestore"
-        ==> "CheckFormatCode"
-        ==> "DotnetBuild"
-        ==> "DotnetTest"
-        =?> ("GenerateCoverageReport", not disableCodeCoverage)
-        ==> "DotnetPack"
-        // ==> "SourceLinkTest"
-        ==> "PublishToNuGet"
-        ==> "GitRelease"
-        ==> "GitHubRelease"
-        ==>! "Release"
+    // "BuildDocs" ==>! "ReleaseDocs"
+    // "BuildDocs" ?=>! "PublishToNuget"
+    // "DotnetPack" ?=>! "BuildDocs"
+    // "GenerateCoverageReport" ?=>! "ReleaseDocs"
+
+    "UpdateChangelog"
+    ==> "GitRelease"
+    ==>! "Release"
+
+
 
     "DotnetRestore"
-        ==>! "WatchTests"
+    ==> "CheckFormatCode"
+    ==> "DotnetBuild"
+    // ==> "FSharpAnalyzers"
+    ==> "DotnetTest"
+    // =?> ("GenerateCoverageReport", not disableCodeCoverage)
+    ==> "DotnetPack"
+    ==> "PublishToNuGet"
+    ==> "GitHubRelease"
+    ==>! "Publish"
+
+    "DotnetRestore" ==>! "WatchTests"
 
 //-----------------------------------------------------------------------------
 // Target Start

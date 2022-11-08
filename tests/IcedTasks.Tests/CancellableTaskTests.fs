@@ -12,7 +12,6 @@ module CancellableTaskHelpers =
         return mapper i
     }
 
-
 module CancellableTaskTests =
 
 
@@ -441,7 +440,7 @@ module CancellableTaskTests =
                 Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
                 Expect.equal actual cts.Token ""
 
-            testCaseAsync "Generic coldTask parameter"
+            testCaseAsync "Generic cancellableTask parameter"
             <| async {
                 let innerCall = cancellableTask { return "lol" }
 
