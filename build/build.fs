@@ -120,10 +120,13 @@ let failOnBadExitAndPrint (p : ProcessResult) =
         p.Errors |> Seq.iter Trace.traceError
         failwithf "failed with exitcode %d" p.ExitCode
 
+
+let isCI = lazy environVarAsBoolOrDefault "CI" false
+
 // CI Servers can have bizzare failures that have nothing to do with your code
 let rec retryIfInCI times fn =
-    match Environment.environVarOrNone "CI" with
-    | Some _ ->
+    match isCI.Value with
+    | true ->
         if times > 1 then
             try
                 fn()
@@ -276,8 +279,19 @@ module DocsTool =
         ) "run" (sprintf "-- watch %s" (watchCLI()))
         |> failOnBadExitAndPrint
 
+
+
 let allReleaseChecks () =
     isReleaseBranchCheck ()
+    Changelog.isChangelogEmpty ()
+
+
+let isOnCI () =
+    if not isCI.Value then
+        failwith "Not on CI. If you want to publish, please use CI."
+
+let allPublishChecks () =
+    isOnCI ()
     Changelog.isChangelogEmpty ()
 
 //-----------------------------------------------------------------------------
