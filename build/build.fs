@@ -83,7 +83,6 @@ let mutable latestEntry =
     if Seq.isEmpty changelog.Entries
     then Changelog.ChangelogEntry.New("0.0.1", "0.0.1-alpha.1", Some DateTime.Today, None, [], false)
     else changelog.LatestEntry
-let mutable linkReferenceForLatestEntry = ""
 let mutable changelogBackupFilename = ""
 
 let publishUrl = "https://www.nuget.org"
@@ -171,7 +170,8 @@ module Changelog =
                 | None -> sprintf "%s/releases/tag/%s" gitHubRepoUrl (tagFromVersionNumber newVersion.AsString)
             sprintf "[%s]: %s" newVersion.AsString linkTarget
 
-    let mkReleaseNotes (linkReference : string) (latestEntry : Changelog.ChangelogEntry) =
+    let mkReleaseNotes (latestEntry : Changelog.ChangelogEntry) =
+        let linkReference = mkLinkReference latestEntry.SemVer changelog
         if String.isNullOrEmpty linkReference then latestEntry.ToString()
         else
             // Add link reference target to description before building release notes, since in main changelog file it's at the bottom of the file
@@ -366,7 +366,7 @@ let updateChangelog ctx =
     |> Changelog.save changelogFilename
 
     // Now update the link references at the end of the file
-    linkReferenceForLatestEntry <- Changelog.mkLinkReference newVersion changelog
+    let linkReferenceForLatestEntry = Changelog.mkLinkReference newVersion changelog
     let linkReferenceForUnreleased = sprintf "[Unreleased]: %s/compare/%s...%s" gitHubRepoUrl (tagFromVersionNumber newVersion.AsString) "HEAD"
     let tailLines = File.read changelogFilename |> List.ofSeq |> List.rev
 
@@ -542,8 +542,7 @@ let generateAssemblyInfo _ =
 
 let dotnetPack ctx =
     // Get release notes with properly-linked version number
-    let linkReferenceForLatestEntry = Changelog.mkLinkReference latestEntry.SemVer changelog
-    let releaseNotes = latestEntry |> Changelog.mkReleaseNotes linkReferenceForLatestEntry
+    let releaseNotes = latestEntry |> Changelog.mkReleaseNotes
     let args =
         [
             sprintf "/p:PackageVersion=%s" latestEntry.NuGetVersion
@@ -608,8 +607,7 @@ let githubRelease _ =
     let files = !! distGlob
     // Get release notes with properly-linked version number
 
-    let linkReferenceForLatestEntry = Changelog.mkLinkReference latestEntry.SemVer changelog
-    let releaseNotes = latestEntry |> Changelog.mkReleaseNotes linkReferenceForLatestEntry
+    let releaseNotes = latestEntry |> Changelog.mkReleaseNotes
 
     GitHub.createClientWithToken token
     |> GitHub.draftNewRelease gitOwner gitRepoName (tagFromVersionNumber latestEntry.NuGetVersion) (latestEntry.SemVer.PreRelease <> None) (releaseNotes |> Seq.singleton)
