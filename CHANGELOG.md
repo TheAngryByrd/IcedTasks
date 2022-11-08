@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0-beta003] - 2022-11-07
+
+### Fixed
+- [Verifies upstream F# fix for task resumption code](https://github.com/TheAngryByrd/IcedTasks/issues/8)
+
+### Changed
+- [Updates to F# 7](https://github.com/TheAngryByrd/IcedTasks/issues/8)
+
 ## [0.3.0-beta002] - 2022-11-07
 
 ### Fixed
@@ -48,7 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Increased soeed and lowered memory usage of ColdTask and CancellableTask
 - Build for netstandard2.0 and netstandard2.1
 
-[Unreleased]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.3.0-beta002...HEAD
+[Unreleased]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.3.0-beta003...HEAD
+[0.3.0-beta003]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.2.0...v0.3.0-beta003
 [0.3.0-beta002]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.2.0...v0.3.0-beta002
 [0.3.0-beta001]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.2.0...v0.3.0-beta001
 [0.2.0]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.1.1...v0.2.0
