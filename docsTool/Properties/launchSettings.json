@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "docsTool": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:63395;http://localhost:63396"
+    }
+  }
+}
