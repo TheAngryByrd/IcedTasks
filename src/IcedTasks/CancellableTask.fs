@@ -297,7 +297,7 @@ module CancellableTasks =
                 fun (ct) ->
                     Task.Run<'T>((fun () -> CancellableTaskBuilder.RunDynamic (code) (ct)), ct)
 
-        //// Same as CancellableTaskBuilder.Run except the start is inside Task.Run if necessary
+        /// Same as CancellableTaskBuilder.Run except the start is inside Task.Run if necessary
         member inline _.Run(code: CancellableTaskCode<'T, 'T>) : CancellableTask<'T> =
             if __useResumableCode then
                 __stateMachine<CancellableTaskStateMachineData<'T>, CancellableTask<'T>>
