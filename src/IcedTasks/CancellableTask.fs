@@ -84,6 +84,16 @@ module CancellableTasks =
         [<DefaultValue>]
         member inline _.Zero() : CancellableTaskCode<'TOverall, unit> = ResumableCode.Zero()
 
+        /// <summary>Creates an computation that returns the result <c>v</c>.</summary>
+        ///
+        /// <remarks>A cancellation check is performed when the computation is executed.
+        ///
+        /// The existence of this method permits the use of <c>return</c> in the
+        /// <c>cancellableTask { ... }</c> computation expression syntax.</remarks>
+        ///
+        /// <param name="value">The value to return from the computation.</param>
+        ///
+        /// <returns>An CancellableTask that returns <c>value</c> when executed.</returns>
         member inline _.Return(value: 'T) : CancellableTaskCode<'T, 'T> =
             CancellableTaskCode<'T, _>(fun sm ->
                 sm.Data.ThrowIfCancellationRequested()
@@ -1258,7 +1268,7 @@ module CancellableTasks =
         /// <param name="left">The left value.</param>
         /// <param name="right">The right value.</param>
         /// <returns>A tuple of the parameters passed in.</returns>
-        let inline parZip
+        let inline parallelZip
             ([<InlineIfLambda>] left: CancellableTask<'left>)
             ([<InlineIfLambda>] right: CancellableTask<'right>)
             =

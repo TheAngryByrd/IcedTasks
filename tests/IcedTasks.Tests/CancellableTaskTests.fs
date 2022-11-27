@@ -710,7 +710,7 @@ module CancellableTaskTests =
 
                     let! someTask =
                         innerCall
-                        |> CancellableTask.parZip innerCall2
+                        |> CancellableTask.parallelZip innerCall2
 
                     Expect.equal ("lol", "fooo") someTask ""
                 }
