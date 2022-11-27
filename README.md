@@ -62,7 +62,7 @@ Accessing the context's CancellationToken:
             let junk = Array.zeroCreate bufferSize
             use file = File.Create(path)
             // You can bind against `CancellableTask.getCancellationToken` to get the current context's `CancellationToken`.
-            let! ct = CancellableTask.getCancellationToken
+            let! ct = CancellableTask.getCancellationToken ()
             for i = 1 to manyIterations do
                 do! file.WriteAsync(junk, 0, junk.Length, ct)
         }
@@ -126,7 +126,7 @@ IcedTasks | [![NuGet Badge](https://buildstats.info/nuget/IcedTasks)](https://ww
 
 Make sure the following **requirements** are installed on your system:
 
-- [dotnet SDK](https://www.microsoft.com/net/download/core) 6.0 or higher
+- [dotnet SDK](https://www.microsoft.com/net/download/core) 7.0 or higher
 
 or
 
