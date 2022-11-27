@@ -9,7 +9,7 @@ open IcedTasks.Benchmarks
 let main argv =
     let cfg = DefaultConfig.Instance
 
-    BenchmarkRunner.Run<ParallelAsyncBenchmarks>(cfg)
+    BenchmarkRunner.Run<AsyncBenchmarks>(cfg)
     |> ignore
 
     0

@@ -10,11 +10,16 @@ module TestHelpers =
             member this.Dispose() = ()
         }
 
+    let makeAsyncDisposable () =
+        { new System.IAsyncDisposable with
+            member this.DisposeAsync() = ValueTask.CompletedTask
+        }
+
 module Expect =
     open Expecto
 
-    [<RequiresExplicitTypeArguments>]
     /// Expects the passed function to throw `'texn`.
+    [<RequiresExplicitTypeArguments>]
     let throwsTAsync<'texn when 'texn :> exn> f message = async {
         let! thrown = async {
             try

@@ -417,7 +417,7 @@ type AsyncBenchmarks() =
         cancellableTask {
             let junk = Array.zeroCreate bufferSize
             use file = File.Create(path)
-            let! ct = CancellableTask.getCancellationToken
+            let! ct = CancellableTask.getCancellationToken ()
 
             for i = 1 to manyIterations do
                 do! file.WriteAsync(junk, 0, junk.Length, ct)
@@ -448,7 +448,7 @@ type AsyncBenchmarks() =
             use file = File.Create(path)
 
             for i = 1 to manyIterations do
-                let! ct = CancellableTask.getCancellationToken
+                let! ct = CancellableTask.getCancellationToken ()
                 do! file.WriteAsync(junk, 0, junk.Length, ct)
         }
         |> fun t -> t(CancellationToken.None).Wait()
