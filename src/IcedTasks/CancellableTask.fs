@@ -1290,7 +1290,9 @@ module CancellableTasks =
         }
 
         /// <summary>Coverts a CancellableTask\&lt;_\&gt; to a CancellableTask.</summary>
-        /// <param name="unitCancellabletTask">The CancellableTask to convert.</param>
+        /// <param name="cancellabletTask">The CancellableTask to convert.</param>
         /// <returns>a CancellableTask.</returns>
-        let inline toUnit ([<InlineIfLambda>] c1: CancellableTask<_>) : CancellableTask =
-            fun ct -> c1 ct :> Task
+        let inline toUnit
+            ([<InlineIfLambda>] cancellabletTask: CancellableTask<_>)
+            : CancellableTask =
+            fun ct -> cancellabletTask ct :> Task

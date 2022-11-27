@@ -943,11 +943,14 @@ module ColdTasks =
             }
 
         /// <summary>Coverts a ColdTask to a ColdTask\&lt;unit\&gt;.</summary>
-        /// <param name="unitCancellabletTask">The ColdTask to convert.</param>
+        /// <param name="unitColdTask">The ColdTask to convert.</param>
         /// <returns>a ColdTask\&lt;unit\&gt;.</returns>
-        let inline ofUnit ([<InlineIfLambda>] c1: ColdTask) = coldTask { return! c1 }
+        let inline ofUnit ([<InlineIfLambda>] unitColdTask: ColdTask) = coldTask {
+            return! unitColdTask
+        }
 
         /// <summary>Coverts a ColdTask\&lt;_\&gt; to a ColdTask.</summary>
-        /// <param name="unitCancellabletTask">The ColdTask to convert.</param>
+        /// <param name="coldTask">The ColdTask to convert.</param>
         /// <returns>a ColdTask.</returns>
-        let inline toUnit ([<InlineIfLambda>] c1: ColdTask<_>) : ColdTask = fun () -> c1 () :> Task
+        let inline toUnit ([<InlineIfLambda>] coldTask: ColdTask<_>) : ColdTask =
+            fun () -> coldTask () :> Task
