@@ -611,21 +611,33 @@ module ColdTasks =
 
         let inline singleton (result: 'item) : ColdTask<'item> = coldTask { return result }
 
-        let inline bind ([<InlineIfLambda>] binder: 'input -> ColdTask<'output>) ([<InlineIfLambda>] cTask: ColdTask<'input>) = coldTask {
-            let! cResult = cTask
-            return! binder cResult
-        }
+        let inline bind
+            ([<InlineIfLambda>] binder: 'input -> ColdTask<'output>)
+            ([<InlineIfLambda>] cTask: ColdTask<'input>)
+            =
+            coldTask {
+                let! cResult = cTask
+                return! binder cResult
+            }
 
-        let inline map ([<InlineIfLambda>] mapper: 'input -> 'output) ([<InlineIfLambda>] cTask: ColdTask<'input>) = coldTask {
-            let! cResult = cTask
-            return mapper cResult
-        }
+        let inline map
+            ([<InlineIfLambda>] mapper: 'input -> 'output)
+            ([<InlineIfLambda>] cTask: ColdTask<'input>)
+            =
+            coldTask {
+                let! cResult = cTask
+                return mapper cResult
+            }
 
-        let inline apply ([<InlineIfLambda>] applicable: ColdTask<'input -> 'output>) ([<InlineIfLambda>] cTask: ColdTask<'input>) = coldTask {
-            let! applier = applicable
-            let! cResult = cTask
-            return applier cResult
-        }
+        let inline apply
+            ([<InlineIfLambda>] applicable: ColdTask<'input -> 'output>)
+            ([<InlineIfLambda>] cTask: ColdTask<'input>)
+            =
+            coldTask {
+                let! applier = applicable
+                let! cResult = cTask
+                return applier cResult
+            }
 
         let inline zip ([<InlineIfLambda>] a1: ColdTask<_>) ([<InlineIfLambda>] a2: ColdTask<_>) = coldTask {
             let! r1 = a1
@@ -633,13 +645,17 @@ module ColdTasks =
             return r1, r2
         }
 
-        let inline parZip ([<InlineIfLambda>] a1: ColdTask<_>) ([<InlineIfLambda>] a2: ColdTask<_>) = coldTask {
-            let r1 = a1 ()
-            let r2 = a2 ()
-            let! r1 = r1
-            let! r2 = r2
-            return r1, r2
-        }
+        let inline parZip
+            ([<InlineIfLambda>] a1: ColdTask<_>)
+            ([<InlineIfLambda>] a2: ColdTask<_>)
+            =
+            coldTask {
+                let r1 = a1 ()
+                let r2 = a2 ()
+                let! r1 = r1
+                let! r2 = r2
+                return r1, r2
+            }
 
 
         let inline ofUnit ([<InlineIfLambda>] c1: ColdTask) = coldTask { return! c1 }

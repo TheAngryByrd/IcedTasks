@@ -372,8 +372,7 @@ module CancellableTasks =
                         // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
                         match savedExn with
                         | null -> ()
-                        | exn ->
-                            sm.Data.MethodBuilder.SetException exn
+                        | exn -> sm.Data.MethodBuilder.SetException exn
 
                     member _.SetStateMachine(sm, state) =
                         sm.Data.MethodBuilder.SetStateMachine(state)
@@ -585,8 +584,7 @@ module CancellableTasks =
                 ) : bool =
                 sm.Data.ThrowIfCancellationRequested()
 
-                let mutable awaiter =
-                    (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))
+                let mutable awaiter = (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))
 
                 let cont =
                     (CancellableTaskResumptionFunc<'TOverall>(fun sm ->
@@ -855,7 +853,7 @@ module CancellableTasks =
             }
 
             /// <summary>Executes a computation in the thread pool.</summary>
-            static member inline AsCancellableTask(computation: Async<'T>) =
+            static member inline AsCancellableTask(computation: Async<'T>) : CancellableTask<_> =
                 fun ct -> Async.StartAsTask(computation, cancellationToken = ct)
 
         // High priority extensions
@@ -1112,7 +1110,7 @@ module CancellableTasks =
                             false
                     else
                         failwith "lol"
-                        // CancellableTaskBuilderBase.BindDynamic(&sm, task, continuation)
+                // CancellableTaskBuilderBase.BindDynamic(&sm, task, continuation)
                 //-- RESUMABLE CODE END
                 )
 
@@ -1126,7 +1124,7 @@ module CancellableTasks =
             ///
             /// <returns>The input computation.</returns>
             member inline this.ReturnFrom(task: Task<'T>) : CancellableTaskCode<'T, 'T> =
-                this.Bind(task, fun x -> this.Return x)
+                this.Bind(task, (fun x -> this.Return x))
 
 
     [<AutoOpen>]
@@ -1160,6 +1158,32 @@ module CancellableTasks =
 
     [<RequireQualifiedAccess>]
     module CancellableTask =
+
+        /// <summary>Gets the default cancellation token for executing computations.</summary>
+        ///
+        /// <returns>The default CancellationToken.</returns>
+        ///
+        /// <category index="3">Cancellation and Exceptions</category>
+        ///
+        /// <example id="default-cancellation-token-1">
+        /// <code lang="fsharp">
+        /// use tokenSource = new CancellationTokenSource()
+        /// let primes = [ 2; 3; 5; 7; 11 ]
+        /// for i in primes do
+        ///     let computation =
+        ///         cancellableTask {
+        ///             let! cancellationToken = CancellableTask.getCancellationToken()
+        ///             do! Task.Delay(i * 1000, cancellationToken)
+        ///             printfn $"{i}"
+        ///         }
+        ///     computation tokenSource.Token |> ignore
+        /// Thread.Sleep(6000)
+        /// tokenSource.Cancel()
+        /// printfn "Tasks Finished"
+        /// </code>
+        /// This will print "2" 2 seconds from start, "3" 3 seconds from start, "5" 5 seconds from start, cease computation and then
+        /// followed by "Tasks Finished".
+        /// </example>
         let getCancellationToken () =
             CancellableTaskBuilder.cancellableTask.Run(
                 CancellableTaskCode<_, _>(fun sm ->
@@ -1168,13 +1192,18 @@ module CancellableTasks =
                 )
             )
 
-        /// <summary>Lifts an item to a CancellableTask</summary>
-        /// <param name="item"></param>
-        /// <returns></returns>
+        /// <summary>Lifts an item to a CancellableTask.</summary>
+        /// <param name="item">The item to be the result of the CancellableTask.</param>
+        /// <returns>A CancellableTask with the item as the result.</returns>
         let inline singleton (item: 'item) : CancellableTask<'item> = cancellableTask {
             return item
         }
 
+
+        /// <summary>Allows chaining of CancellableTasks.</summary>
+        /// <param name="binder">The continuation.</param>
+        /// <param name="cTask">The value.</param>
+        /// <returns>The result of the binder.</returns>
         let inline bind
             ([<InlineIfLambda>] binder: 'input -> CancellableTask<'output>)
             ([<InlineIfLambda>] cTask: CancellableTask<'input>)
@@ -1184,6 +1213,10 @@ module CancellableTasks =
                 return! binder cResult
             }
 
+        /// <summary>Allows chaining of CancellableTasks.</summary>
+        /// <param name="mapper">The continuation.</param>
+        /// <param name="cTask">The value.</param>
+        /// <returns>The result of the mapper wrapped in a CancellableTasks.</returns>
         let inline map
             ([<InlineIfLambda>] mapper: 'input -> 'output)
             ([<InlineIfLambda>] cTask: CancellableTask<'input>)
@@ -1193,6 +1226,10 @@ module CancellableTasks =
                 return mapper cResult
             }
 
+        /// <summary>Allows chaining of CancellableTasks.</summary>
+        /// <param name="applicable">A function wrapped in a CancellableTasks</param>
+        /// <param name="cTask">The value.</param>
+        /// <returns>The result of the applicable.</returns>
         let inline apply
             ([<InlineIfLambda>] applicable: CancellableTask<'input -> 'output>)
             ([<InlineIfLambda>] cTask: CancellableTask<'input>)
@@ -1203,27 +1240,47 @@ module CancellableTasks =
                 return applier cResult
             }
 
+        /// <summary>Takes two CancellableTasks, starts them serially in order of left to right, and returns a tuple of the pair.</summary>
+        /// <param name="left">The left value.</param>
+        /// <param name="right">The right value.</param>
+        /// <returns>A tuple of the parameters passed in</returns>
         let inline zip
-            ([<InlineIfLambda>] a1: CancellableTask<_>)
-            ([<InlineIfLambda>] a2: CancellableTask<_>)
+            ([<InlineIfLambda>] left: CancellableTask<'left>)
+            ([<InlineIfLambda>] right: CancellableTask<'right>)
             =
             cancellableTask {
-                let! r1 = a1
-                let! r2 = a2
+                let! r1 = left
+                let! r2 = right
                 return r1, r2
             }
 
+        /// <summary>Takes two CancellableTask, starts them concurrently, and returns a tuple of the pair.</summary>
+        /// <param name="left">The left value.</param>
+        /// <param name="right">The right value.</param>
+        /// <returns>A tuple of the parameters passed in.</returns>
         let inline parZip
-            ([<InlineIfLambda>] a1: CancellableTask<_>)
-            ([<InlineIfLambda>] a2: CancellableTask<_>)
+            ([<InlineIfLambda>] left: CancellableTask<'left>)
+            ([<InlineIfLambda>] right: CancellableTask<'right>)
             =
             cancellableTask {
                 let! ct = getCancellationToken ()
-                let r1 = a1 ct
-                let r2 = a2 ct
+                let r1 = left ct
+                let r2 = right ct
                 let! r1 = r1
                 let! r2 = r2
                 return r1, r2
             }
 
-        let inline ofUnit ([<InlineIfLambda>] c1: CancellableTask) = cancellableTask { return! c1 }
+
+        /// <summary>Coverts a CancellableTask to a CancellableTask\&lt;unit\&gt;.</summary>
+        /// <param name="unitCancellabletTask">The CancellableTask to convert.</param>
+        /// <returns>a CancellableTask\&lt;unit\&gt;.</returns>
+        let inline ofUnit ([<InlineIfLambda>] unitCancellabletTask: CancellableTask) = cancellableTask {
+            return! unitCancellabletTask
+        }
+
+        /// <summary>Coverts a CancellableTask\&lt;_\&gt; to a CancellableTask.</summary>
+        /// <param name="unitCancellabletTask">The CancellableTask to convert.</param>
+        /// <returns>a CancellableTask.</returns>
+        let inline toUnit ([<InlineIfLambda>] c1: CancellableTask<_>) : CancellableTask =
+            fun ct -> c1 ct :> Task

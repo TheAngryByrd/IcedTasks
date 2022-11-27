@@ -12,8 +12,7 @@ module TestHelpers =
 
     let makeAsyncDisposable () =
         { new System.IAsyncDisposable with
-            member this.DisposeAsync() =
-                ValueTask.CompletedTask
+            member this.DisposeAsync() = ValueTask.CompletedTask
         }
 
 module Expect =

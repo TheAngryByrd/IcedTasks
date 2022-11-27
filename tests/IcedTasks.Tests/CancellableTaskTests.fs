@@ -347,8 +347,7 @@ module CancellableTaskTests =
                     let data = 42
 
                     let! actual = cancellableTask {
-                        use d =
-                            TestHelpers.makeAsyncDisposable ()
+                        use d = TestHelpers.makeAsyncDisposable ()
 
                         return data
                     }
@@ -556,7 +555,9 @@ module CancellableTaskTests =
                 testCase
                     "CancellationToken flows from Async<unit> to CancellableTask<T> via Async.AwaitCancellableTask"
                 <| fun () ->
-                    let innerTask = cancellableTask { return! CancellableTask.getCancellationToken () }
+                    let innerTask = cancellableTask {
+                        return! CancellableTask.getCancellationToken ()
+                    }
 
                     let outerAsync = async {
                         return!
@@ -587,9 +588,10 @@ module CancellableTaskTests =
             ]
 
 
-
         ]
-    let asyncBuilderTests = testList "AsyncBuilder" [
+
+    let asyncBuilderTests =
+        testList "AsyncBuilder" [
 
             testCase "AsyncBuilder can Bind CancellableTask<T>"
             <| fun () ->
@@ -643,8 +645,7 @@ module CancellableTaskTests =
                 <| async {
                     let innerCall = CancellableTask.singleton "lol"
 
-                    let! someTask =
-                        innerCall
+                    let! someTask = innerCall
 
                     Expect.equal "lol" someTask ""
                 }
@@ -656,7 +657,7 @@ module CancellableTaskTests =
 
                     let! someTask =
                         innerCall
-                        |> CancellableTask.bind (fun x -> cancellableTask {return x + "fooo"} )
+                        |> CancellableTask.bind (fun x -> cancellableTask { return x + "fooo" })
 
                     Expect.equal "lolfooo" someTask ""
                 }
@@ -677,7 +678,8 @@ module CancellableTaskTests =
                 testCaseAsync "Simple"
                 <| async {
                     let innerCall = cancellableTask { return "lol" }
-                    let applier = cancellableTask { return fun x -> x + "fooo"}
+                    let applier = cancellableTask { return fun x -> x + "fooo" }
+
                     let! someTask =
                         innerCall
                         |> CancellableTask.apply applier
@@ -691,11 +693,12 @@ module CancellableTaskTests =
                 <| async {
                     let innerCall = cancellableTask { return "fooo" }
                     let innerCall2 = cancellableTask { return "lol" }
+
                     let! someTask =
                         innerCall
                         |> CancellableTask.zip innerCall2
 
-                    Expect.equal ("lol" , "fooo") someTask ""
+                    Expect.equal ("lol", "fooo") someTask ""
                 }
             ]
 
@@ -704,11 +707,12 @@ module CancellableTaskTests =
                 <| async {
                     let innerCall = cancellableTask { return "fooo" }
                     let innerCall2 = cancellableTask { return "lol" }
+
                     let! someTask =
                         innerCall
                         |> CancellableTask.parZip innerCall2
 
-                    Expect.equal ("lol" , "fooo") someTask ""
+                    Expect.equal ("lol", "fooo") someTask ""
                 }
             ]
 
@@ -716,10 +720,24 @@ module CancellableTaskTests =
                 testCaseAsync "Simple"
                 <| async {
                     let innerCall = fun ct -> Task.CompletedTask
-                    let innerCall2 = cancellableTask { return "lol" }
+
                     let! someTask =
                         innerCall
                         |> CancellableTask.ofUnit
+
+                    Expect.equal () someTask ""
+                }
+            ]
+
+
+            testList "toUnit" [
+                testCaseAsync "Simple"
+                <| async {
+                    let innerCall = fun ct -> Task.FromResult "lol"
+
+                    let! someTask =
+                        innerCall
+                        |> CancellableTask.toUnit
 
                     Expect.equal () someTask ""
                 }
