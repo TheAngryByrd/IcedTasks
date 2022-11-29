@@ -25,7 +25,7 @@ module CancellableTaskTests =
             testList "ReturnFrom" [
                 testCaseAsync "Can ReturnFrom CancellableTask"
                 <| async {
-                    let fooTask: CancellableTask = fun ct -> Task.FromResult()
+                    let fooTask: CancellableTask = fun ct -> Task.CompletedTask
                     let outerTask = cancellableTask { return! fooTask }
                     use cts = new CancellationTokenSource()
 
@@ -49,7 +49,7 @@ module CancellableTaskTests =
                 }
                 testCaseAsync "Can ReturnFrom Task"
                 <| async {
-                    let outerTask = cancellableTask { return! Task.FromResult() }
+                    let outerTask = cancellableTask { return! Task.CompletedTask }
                     use cts = new CancellationTokenSource()
 
                     do!
@@ -71,7 +71,7 @@ module CancellableTaskTests =
                 }
                 testCaseAsync "Can ReturnFrom ColdTask"
                 <| async {
-                    let coldT: ColdTask = fun () -> Task.FromResult()
+                    let coldT: ColdTask = fun () -> Task.CompletedTask
                     let outerTask = cancellableTask { return! coldT }
                     use cts = new CancellationTokenSource()
 
@@ -124,7 +124,7 @@ module CancellableTaskTests =
             testList "Binds" [
                 testCaseAsync "Can Bind CancellableTask"
                 <| async {
-                    let fooTask: CancellableTask = fun ct -> Task.FromResult()
+                    let fooTask: CancellableTask = fun ct -> Task.CompletedTask
                     let outerTask = cancellableTask { do! fooTask }
                     use cts = new CancellationTokenSource()
 
@@ -153,7 +153,7 @@ module CancellableTaskTests =
                 }
                 testCaseAsync "Can Bind Task"
                 <| async {
-                    let outerTask = cancellableTask { do! Task.FromResult() }
+                    let outerTask = cancellableTask { do! Task.CompletedTask }
                     use cts = new CancellationTokenSource()
 
                     do!
@@ -203,7 +203,7 @@ module CancellableTaskTests =
                 testCaseAsync "Can Bind ColdTask"
                 <| async {
 
-                    let coldT: ColdTask = fun () -> Task.FromResult()
+                    let coldT: ColdTask = fun () -> Task.CompletedTask
 
                     let outerTask = cancellableTask {
                         let! result = coldT

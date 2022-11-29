@@ -324,6 +324,8 @@ module Helpers =
 [<CategoriesColumn>]
 type AsyncBenchmarks() =
 
+    let getTempFileName () =
+        Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("n"))
 
     // ManyWriteFile
 
@@ -334,7 +336,7 @@ type AsyncBenchmarks() =
 
     [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
     member _.ManyWriteFile_ply() =
-        let path = Path.GetTempFileName()
+        let path = getTempFileName ()
 
         FSharp.Control.Tasks.Affine.task {
             let junk = Array.zeroCreate bufferSize
@@ -349,7 +351,7 @@ type AsyncBenchmarks() =
 
     [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
     member _.ManyWriteFile_async() =
-        let path = Path.GetTempFileName()
+        let path = getTempFileName ()
 
         async {
             let junk = Array.zeroCreate bufferSize
@@ -364,7 +366,7 @@ type AsyncBenchmarks() =
 
     [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
     member _.ManyWriteFile_task() =
-        let path = Path.GetTempFileName()
+        let path = getTempFileName ()
 
         task {
             let junk = Array.zeroCreate bufferSize
@@ -380,7 +382,7 @@ type AsyncBenchmarks() =
 
     [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
     member _.ManyWriteFile_coldTask() =
-        let path = Path.GetTempFileName()
+        let path = getTempFileName ()
 
         coldTask {
             let junk = Array.zeroCreate bufferSize
@@ -396,7 +398,7 @@ type AsyncBenchmarks() =
 
     [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
     member _.ManyWriteFile_cancellableTask() =
-        let path = Path.GetTempFileName()
+        let path = getTempFileName ()
 
         cancellableTask {
             let junk = Array.zeroCreate bufferSize
@@ -412,7 +414,7 @@ type AsyncBenchmarks() =
 
     [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
     member _.ManyWriteFile_cancellableTask_withCancellation() =
-        let path = Path.GetTempFileName()
+        let path = getTempFileName ()
 
         cancellableTask {
             let junk = Array.zeroCreate bufferSize
@@ -428,7 +430,7 @@ type AsyncBenchmarks() =
 
     [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
     member _.ManyWriteFile_cancellableTask_withCancellation2() =
-        let path = Path.GetTempFileName()
+        let path = getTempFileName ()
 
         cancellableTask {
             let junk = Array.zeroCreate bufferSize
@@ -441,7 +443,7 @@ type AsyncBenchmarks() =
 
     [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
     member _.ManyWriteFile_cancellableTask_withCancellation3() =
-        let path = Path.GetTempFileName()
+        let path = getTempFileName ()
 
         cancellableTask {
             let junk = Array.zeroCreate bufferSize

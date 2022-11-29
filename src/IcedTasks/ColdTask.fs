@@ -538,51 +538,15 @@ module ColdTasks =
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
                 and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 ([<InlineIfLambda>] getAwaiter: unit -> ^Awaiter)
-                =
+                : unit -> ^Awaiter =
                 getAwaiter
 
-
-            /// <summary>Creates an ColdTask that runs <c>computation</c>, and when
-            /// <c>computation</c> generates a result <c>T</c>, runs <c>binder res</c>.</summary>
-            ///
-            /// <remarks>
-            ///
-            /// The existence of this method permits the use of <c>let!</c> in the
-            /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="task">The computation to provide an unbound result.</param>
-            /// <param name="continuation">The function to bind the result of <c>computation</c>.</param>
-            ///
-            /// <returns>An ColdTask that performs a monadic bind on the result
-            /// of <c>computation</c>.</returns>
             [<NoEagerConstraintApplication>]
-            member inline this.Bind
-                (
-                    task: ^TaskLike,
-                    [<InlineIfLambda>] continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
-                ) : ColdTaskCode<'TOverall, 'TResult2> =
-                this.Bind(
-                    (fun () -> (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))),
-                    continuation
-                )
+            member inline this.ReturnFrom
+                ([<InlineIfLambda>] getAwaiter: unit -> ^Awaiter)
+                : ColdTaskCode<_, _> =
+                this.Bind((fun () -> getAwaiter ()), (fun v -> this.Return v))
 
-
-            /// <summary>Creates an ColdTask that runs <c>computation</c>, and when
-            /// <c>computation</c> generates a result <c>T</c>, runs <c>binder res</c>.</summary>
-            ///
-            /// <remarks>
-            ///
-            /// The existence of this method permits the use of <c>let!</c> in the
-            /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="task">The computation to provide an unbound result.</param>
-            /// <param name="continuation">The function to bind the result of <c>computation</c>.</param>
-            ///
-            /// <returns>An ColdTask that performs a monadic bind on the result
-            /// of <c>computation</c>.</returns>
-            [<NoEagerConstraintApplication>]
-            member inline this.ReturnFrom(task: ^TaskLike) : ColdTaskCode<'T, 'T> =
-                this.Bind(task, (fun v -> this.Return v))
 
             [<NoEagerConstraintApplication>]
             member inline this.Source< ^TaskLike, ^Awaiter, 'T
@@ -591,8 +555,8 @@ module ColdTasks =
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
                 and ^Awaiter: (member GetResult: unit -> 'T)>
                 (task: ^TaskLike)
-                : ^TaskLike =
-                task
+                : unit -> ^Awaiter =
+                (fun () -> (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task)))
 
             [<NoEagerConstraintApplication>]
             member inline this.Source< ^TaskLike, ^Awaiter, 'T
@@ -601,8 +565,8 @@ module ColdTasks =
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
                 and ^Awaiter: (member GetResult: unit -> 'T)>
                 ([<InlineIfLambda>] task: unit -> ^TaskLike)
-                : ^TaskLike =
-                task ()
+                : unit -> ^Awaiter =
+                (fun () -> (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task ())))
 
 
             /// <summary>Creates an ColdTask that runs <c>binder(resource)</c>.

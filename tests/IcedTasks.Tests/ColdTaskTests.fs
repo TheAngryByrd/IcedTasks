@@ -31,7 +31,7 @@ module ColdTaskTests =
             testList "ReturnFrom" [
                 testCaseAsync "Can ReturnFrom ColdTask"
                 <| async {
-                    let fooTask: ColdTask = fun () -> Task.FromResult()
+                    let fooTask: ColdTask = fun () -> Task.CompletedTask
                     let outerTask = coldTask { return! fooTask }
 
                     do!
@@ -54,7 +54,7 @@ module ColdTaskTests =
                 }
                 testCaseAsync "Can ReturnFrom Task"
                 <| async {
-                    let outerTask = coldTask { return! Task.FromResult() }
+                    let outerTask = coldTask { return! Task.CompletedTask }
 
                     do!
                         outerTask ()
@@ -165,7 +165,7 @@ module ColdTaskTests =
             testList "Binds" [
                 testCaseAsync "Can Bind ColdTask"
                 <| async {
-                    let fooTask: ColdTask = fun () -> Task.FromResult()
+                    let fooTask: ColdTask = fun () -> Task.CompletedTask
                     let outerTask = coldTask { do! fooTask }
 
                     do!
@@ -191,7 +191,7 @@ module ColdTaskTests =
                 }
                 testCaseAsync "Can Bind Task"
                 <| async {
-                    let outerTask = coldTask { do! Task.FromResult() }
+                    let outerTask = coldTask { do! Task.CompletedTask }
 
                     do!
                         outerTask ()
@@ -644,7 +644,7 @@ module ColdTaskTests =
 
             testCase "AsyncBuilder can Bind ColdTask"
             <| fun () ->
-                let innerTask: ColdTask = fun () -> Task.FromResult()
+                let innerTask: ColdTask = fun () -> Task.CompletedTask
 
                 let outerAsync = async {
                     let! result = innerTask
@@ -656,7 +656,7 @@ module ColdTaskTests =
 
             testCase "AsyncBuilder can ReturnFrom ColdTask"
             <| fun () ->
-                let innerTask: ColdTask = fun () -> Task.FromResult()
+                let innerTask: ColdTask = fun () -> Task.CompletedTask
 
                 let outerAsync = async { return! innerTask }
 
@@ -692,7 +692,7 @@ module ColdTaskTests =
 
             testCase "TaskBuilder can Bind ColdTask"
             <| fun () ->
-                let innerTask: ColdTask = fun () -> Task.FromResult()
+                let innerTask: ColdTask = fun () -> Task.CompletedTask
 
                 let outerAsync = task {
                     let! result = innerTask
@@ -704,7 +704,7 @@ module ColdTaskTests =
 
             testCase "TaskBuilder can ReturnFrom ColdTask"
             <| fun () ->
-                let innerTask: ColdTask = fun () -> Task.FromResult()
+                let innerTask: ColdTask = fun () -> Task.CompletedTask
 
                 let outerAsync = task { return! innerTask }
 

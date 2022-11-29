@@ -545,56 +545,18 @@ module CancellableTasks =
             /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
             /// </summary>
             [<NoEagerConstraintApplication>]
-            static member inline BindDynamic< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall
-                when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
-                and ^Awaiter :> ICriticalNotifyCompletion
+            static member inline BindDynamic<'TResult1, 'TResult2, ^Awaiter, 'TOverall
+                when ^Awaiter :> ICriticalNotifyCompletion
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
                 and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 (
                     sm: byref<ResumableStateMachine<CancellableTaskStateMachineData<'TOverall>>>,
-                    [<InlineIfLambda>] task: CancellationToken -> ^TaskLike,
+                    [<InlineIfLambda>] getAwaiter: CancellationToken -> ^Awaiter,
                     continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
                 ) : bool =
                 sm.Data.ThrowIfCancellationRequested()
 
-                let mutable awaiter =
-                    (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task
-                                                                           sm.Data.CancellationToken))
-
-                let cont =
-                    (CancellableTaskResumptionFunc<'TOverall>(fun sm ->
-                        let result = (^Awaiter: (member GetResult: unit -> 'TResult1) (awaiter))
-                        (continuation result).Invoke(&sm)
-                    ))
-
-                // shortcut to continue immediately
-                if (^Awaiter: (member get_IsCompleted: unit -> bool) (awaiter)) then
-                    cont.Invoke(&sm)
-                else
-                    sm.ResumptionDynamicInfo.ResumptionData <-
-                        (awaiter :> ICriticalNotifyCompletion)
-
-                    sm.ResumptionDynamicInfo.ResumptionFunc <- cont
-                    false
-
-
-            /// <summary>
-            /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
-            /// </summary>
-            [<NoEagerConstraintApplication>]
-            static member inline BindDynamic< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall
-                when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
-                and ^Awaiter :> ICriticalNotifyCompletion
-                and ^Awaiter: (member get_IsCompleted: unit -> bool)
-                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
-                (
-                    sm: byref<ResumableStateMachine<CancellableTaskStateMachineData<'TOverall>>>,
-                    task: ^TaskLike,
-                    continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
-                ) : bool =
-                sm.Data.ThrowIfCancellationRequested()
-
-                let mutable awaiter = (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))
+                let mutable awaiter = getAwaiter sm.Data.CancellationToken
 
                 let cont =
                     (CancellableTaskResumptionFunc<'TOverall>(fun sm ->
@@ -626,13 +588,12 @@ module CancellableTasks =
             /// <returns>An CancellableTask that performs a monadic bind on the result
             /// of <c>computation</c>.</returns>
             [<NoEagerConstraintApplication>]
-            member inline _.Bind< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall
-                when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
-                and ^Awaiter :> ICriticalNotifyCompletion
+            member inline _.Bind<'TResult1, 'TResult2, ^Awaiter, 'TOverall
+                when ^Awaiter :> ICriticalNotifyCompletion
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
                 and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 (
-                    task: CancellationToken -> ^TaskLike,
+                    getAwaiter: CancellationToken -> ^Awaiter,
                     [<InlineIfLambda>] continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
                 ) : CancellableTaskCode<'TOverall, 'TResult2> =
 
@@ -641,9 +602,7 @@ module CancellableTasks =
                         //-- RESUMABLE CODE START
                         sm.Data.ThrowIfCancellationRequested()
                         // Get an awaiter from the awaitable
-                        let mutable awaiter =
-                            (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task
-                                                                                   sm.Data.CancellationToken))
+                        let mutable awaiter = getAwaiter sm.Data.CancellationToken
 
                         let mutable __stack_fin = true
 
@@ -660,153 +619,64 @@ module CancellableTasks =
                             sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
                             false
                     else
-                        CancellableTaskBuilderBase.BindDynamic< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall>(
+                        CancellableTaskBuilderBase.BindDynamic<'TResult1, 'TResult2, ^Awaiter, 'TOverall>(
                             &sm,
-                            task,
-                            continuation
-                        )
-                //-- RESUMABLE CODE END
-                )
-
-            /// <summary>Creates an CancellableTask that runs <c>computation</c>, and when
-            /// <c>computation</c> generates a result <c>T</c>, runs <c>binder res</c>.</summary>
-            ///
-            /// <remarks>A cancellation check is performed when the computation is executed.
-            ///
-            /// The existence of this method permits the use of <c>let!</c> in the
-            /// <c>cancellableTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="task">The computation to provide an unbound result.</param>
-            /// <param name="continuation">The function to bind the result of <c>computation</c>.</param>
-            ///
-            /// <returns>An CancellableTask that performs a monadic bind on the result
-            /// of <c>computation</c>.</returns>
-            [<NoEagerConstraintApplication>]
-            member inline this.Bind< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall
-                when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
-                and ^Awaiter :> ICriticalNotifyCompletion
-                and ^Awaiter: (member get_IsCompleted: unit -> bool)
-                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
-                (
-                    task: ^TaskLike,
-                    [<InlineIfLambda>] continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
-                ) : CancellableTaskCode<'TOverall, 'TResult2> =
-
-                CancellableTaskCode<'TOverall, _>(fun sm ->
-                    if __useResumableCode then
-                        //-- RESUMABLE CODE START
-                        sm.Data.ThrowIfCancellationRequested()
-                        // Get an awaiter from the awaitable
-                        let mutable awaiter =
-                            (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))
-
-                        let mutable __stack_fin = true
-
-                        if not (^Awaiter: (member get_IsCompleted: unit -> bool) (awaiter)) then
-                            // This will yield with __stack_yield_fin = false
-                            // This will resume with __stack_yield_fin = true
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-                            __stack_fin <- __stack_yield_fin
-
-                        if __stack_fin then
-                            let result = (^Awaiter: (member GetResult: unit -> 'TResult1) (awaiter))
-                            (continuation result).Invoke(&sm)
-                        else
-                            sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
-                            false
-                    else
-                        CancellableTaskBuilderBase.BindDynamic< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall>(
-                            &sm,
-                            task,
+                            getAwaiter,
                             continuation
                         )
                 //-- RESUMABLE CODE END
                 )
 
 
-            /// <summary>Creates an CancellableTask that runs <c>computation</c>, and when
-            /// <c>computation</c> generates a result <c>T</c>, runs <c>binder res</c>.</summary>
-            ///
-            /// <remarks>A cancellation check is performed when the computation is executed.
-            ///
-            /// The existence of this method permits the use of <c>let!</c> in the
-            /// <c>cancellableTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="task">The computation to provide an unbound result.</param>
-            /// <param name="continuation">The function to bind the result of <c>computation</c>.</param>
-            ///
-            /// <returns>An CancellableTask that performs a monadic bind on the result
-            /// of <c>computation</c>.</returns>
             [<NoEagerConstraintApplication>]
-            member inline this.Bind< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall
+            member inline this.ReturnFrom
+                ([<InlineIfLambda>] getAwaiter: CancellationToken -> ^Awaiter)
+                : CancellableTaskCode<_, _> =
+                this.Bind((fun ct -> getAwaiter ct), (fun v -> this.Return v))
+
+            [<NoEagerConstraintApplication>]
+            member inline _.Source<'TResult1, 'TResult2, ^Awaiter, 'TOverall
+                when ^Awaiter :> ICriticalNotifyCompletion
+                and ^Awaiter: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
+                ([<InlineIfLambda>] getAwaiter: CancellationToken -> ^Awaiter)
+                : CancellationToken -> ^Awaiter =
+                getAwaiter
+
+
+            [<NoEagerConstraintApplication>]
+            member inline _.Source< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall
                 when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
                 and ^Awaiter :> ICriticalNotifyCompletion
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
                 and ^Awaiter: (member GetResult: unit -> 'TResult1)>
-                (
-                    [<InlineIfLambda>] task: unit -> ^TaskLike,
-                    [<InlineIfLambda>] continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
-                ) : CancellableTaskCode<'TOverall, 'TResult2> =
-                this.Bind((fun (ct: CancellationToken) -> task ()), continuation)
-
-
-            /// <summary>Delegates to the input computation.</summary>
-            ///
-            /// <remarks>The existence of this method permits the use of <c>return!</c> in the
-            /// <c>cancellationTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="task">The input computation.</param>
-            ///
-            /// <returns>The input computation.</returns>
-            [<NoEagerConstraintApplication>]
-            member inline this.ReturnFrom< ^TaskLike, ^Awaiter, 'T
-                when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
-                and ^Awaiter :> ICriticalNotifyCompletion
-                and ^Awaiter: (member get_IsCompleted: unit -> bool)
-                and ^Awaiter: (member GetResult: unit -> 'T)>
                 (task: ^TaskLike)
-                : CancellableTaskCode<'T, 'T> =
+                : CancellationToken -> ^Awaiter =
+                (fun (ct: CancellationToken) ->
+                    (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))
+                )
 
-                this.Bind(task, (fun v -> this.Return v))
 
-
-            /// <summary>Delegates to the input computation.</summary>
-            ///
-            /// <remarks>The existence of this method permits the use of <c>return!</c> in the
-            /// <c>cancellationTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="task">The input computation.</param>
-            ///
-            /// <returns>The input computation.</returns>
             [<NoEagerConstraintApplication>]
-            member inline this.ReturnFrom< ^TaskLike, ^Awaiter, 'T
+            member inline _.Source< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall
                 when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
                 and ^Awaiter :> ICriticalNotifyCompletion
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
-                and ^Awaiter: (member GetResult: unit -> 'T)>
+                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
+                (task: CancellationToken -> ^TaskLike)
+                : CancellationToken -> ^Awaiter =
+                (fun ct -> (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task ct)))
+
+
+            [<NoEagerConstraintApplication>]
+            member inline _.Source< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall
+                when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
+                and ^Awaiter :> ICriticalNotifyCompletion
+                and ^Awaiter: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 ([<InlineIfLambda>] task: unit -> ^TaskLike)
-                : CancellableTaskCode<'T, 'T> =
-
-                this.Bind(task, (fun v -> this.Return v))
-
-            /// <summary>Delegates to the input computation.</summary>
-            ///
-            /// <remarks>The existence of this method permits the use of <c>return!</c> in the
-            /// <c>cancellationTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="task">The input computation.</param>
-            ///
-            /// <returns>The input computation.</returns>
-            [<NoEagerConstraintApplication>]
-            member inline this.ReturnFrom< ^TaskLike, ^Awaiter, 'T
-                when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
-                and ^Awaiter :> ICriticalNotifyCompletion
-                and ^Awaiter: (member get_IsCompleted: unit -> bool)
-                and ^Awaiter: (member GetResult: unit -> 'T)>
-                ([<InlineIfLambda>] task: CancellationToken -> ^TaskLike)
-                : CancellableTaskCode<'T, 'T> =
-
-                this.Bind(task, (fun v -> this.Return v))
+                : CancellationToken -> ^Awaiter =
+                (fun ct -> (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task ())))
 
 
             /// <summary>Creates an CancellableTask that runs <c>binder(resource)</c>.
@@ -869,41 +739,6 @@ module CancellableTasks =
         // High priority extensions
         type CancellableTaskBuilderBase with
 
-            /// <summary>
-            /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
-            /// </summary>
-            static member inline BindDynamic
-                (
-                    sm: byref<ResumableStateMachine<CancellableTaskStateMachineData<'TOverall>>>,
-                    [<InlineIfLambda>] task: CancellableTask<'TResult1>,
-                    [<InlineIfLambda>] continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
-                ) : bool =
-                let mutable awaiter =
-                    let ct = sm.Data.CancellationToken
-
-                    if ct.IsCancellationRequested then
-                        Task.FromCanceled<_>(ct).GetAwaiter()
-                    else
-                        task(ct).GetAwaiter()
-
-                let cont =
-                    (CancellableTaskResumptionFunc<'TOverall>(fun sm ->
-                        let result = awaiter.GetResult()
-                        (continuation result).Invoke(&sm)
-                    ))
-
-                // shortcut to continue immediately
-                if awaiter.IsCompleted then
-                    cont.Invoke(&sm)
-                else
-
-                    sm.ResumptionDynamicInfo.ResumptionData <-
-                        (awaiter :> ICriticalNotifyCompletion)
-
-                    sm.ResumptionDynamicInfo.ResumptionFunc <- cont
-                    false
-
-
             /// <summary>Creates an CancellableTask that runs <c>computation</c>, and when
             /// <c>computation</c> generates a result <c>T</c>, runs <c>binder res</c>.</summary>
             ///
@@ -917,42 +752,12 @@ module CancellableTasks =
             ///
             /// <returns>An CancellableTask that performs a monadic bind on the result
             /// of <c>computation</c>.</returns>
-            member inline _.Bind
+            member inline this.Bind
                 (
                     [<InlineIfLambda>] task: CancellableTask<'TResult1>,
                     [<InlineIfLambda>] continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
                 ) : CancellableTaskCode<'TOverall, 'TResult2> =
-
-                CancellableTaskCode<'TOverall, _>(fun sm ->
-                    if __useResumableCode then
-                        //-- RESUMABLE CODE START
-                        // Get an awaiter from the task
-                        let mutable awaiter =
-                            let ct = sm.Data.CancellationToken
-
-                            if ct.IsCancellationRequested then
-                                Task.FromCanceled<_>(ct).GetAwaiter()
-                            else
-                                task(ct).GetAwaiter()
-
-                        let mutable __stack_fin = true
-
-                        if not awaiter.IsCompleted then
-                            // This will yield with __stack_yield_fin = false
-                            // This will resume with __stack_yield_fin = true
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-                            __stack_fin <- __stack_yield_fin
-
-                        if __stack_fin then
-                            let result = awaiter.GetResult()
-                            (continuation result).Invoke(&sm)
-                        else
-                            sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
-                            false
-                    else
-                        CancellableTaskBuilderBase.BindDynamic(&sm, task, continuation)
-                //-- RESUMABLE CODE END
-                )
+                this.Bind((fun ct -> (task ct).GetAwaiter()), continuation)
 
             /// <summary>Delegates to the input computation.</summary>
             ///
@@ -967,175 +772,19 @@ module CancellableTasks =
                 : CancellableTaskCode<'T, 'T> =
                 this.Bind((task), (fun v -> this.Return v))
 
-    [<AutoOpen>]
-    module MediumPriority =
-        open HighPriority
-        // Medium priority extensions
-        type CancellableTaskBuilderBase with
 
-            /// <summary>Creates an CancellableTask that runs <c>computation</c>, and when
-            /// <c>computation</c> generates a result <c>T</c>, runs <c>binder res</c>.</summary>
-            ///
-            /// <remarks>
-            ///
-            /// The existence of this method permits the use of <c>let!</c> in the
-            /// <c>cancellableTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="coldTask">A ColdTask to provide an unbound result.</param>
-            /// <param name="continuation">The function to bind the result of <c>computation</c>.</param>
-            ///
-            /// <returns>An CancellableTask that performs a monadic bind on the result
-            /// of <c>computation</c>.</returns>
-            member inline this.Bind
-                (
-                    [<InlineIfLambda>] coldTask: ColdTask<'TResult1>,
-                    [<InlineIfLambda>] continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
-                ) : CancellableTaskCode<'TOverall, 'TResult2> =
-                this.Bind((fun (_: CancellationToken) -> coldTask ()), continuation)
+            member inline _.Source(task: CancellableTask<'TResult1>) = task
 
+            member inline _.Source(s: #seq<_>) : #seq<_> = s
 
-            /// <summary>Delegates to the input computation.</summary>
-            ///
-            /// <remarks>The existence of this method permits the use of <c>return!</c> in the
-            /// <c>cancellationTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="coldTask">The input computation.</param>
-            ///
-            /// <returns>The input computation.</returns>
-            member inline this.ReturnFrom(coldTask: ColdTask<'T>) : CancellableTaskCode<'T, 'T> =
-                this.ReturnFrom(fun (_: CancellationToken) -> coldTask ())
+            member inline _.Source(task: ColdTask<'TResult1>) : CancellableTask<'TResult1> =
+                (fun (ct: CancellationToken) -> task ())
 
+            member inline this.Source(computation: Async<'TResult1>) =
+                Async.AsCancellableTask computation
 
-            /// <summary>Creates an CancellableTask that runs <c>computation</c>, and when
-            /// <c>computation</c> generates a result <c>T</c>, runs <c>binder res</c>.</summary>
-            ///
-            /// <remarks>
-            ///
-            /// The existence of this method permits the use of <c>let!</c> in the
-            /// <c>cancellableTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="coldTask">A ColdTask to provide an unbound result.</param>
-            /// <param name="continuation">The function to bind the result of <c>computation</c>.</param>
-            ///
-            /// <returns>An CancellableTask that performs a monadic bind on the result
-            /// of <c>computation</c>.</returns>
-            member inline this.Bind
-                (
-                    [<InlineIfLambda>] coldTask: ColdTask,
-                    [<InlineIfLambda>] continuation: (unit -> CancellableTaskCode<_, _>)
-                ) : CancellableTaskCode<_, _> =
-                let foo = fun (_: CancellationToken) -> coldTask ()
-                this.Bind(foo, continuation)
-
-
-            /// <summary>Delegates to the input computation.</summary>
-            ///
-            /// <remarks>The existence of this method permits the use of <c>return!</c> in the
-            /// <c>cancellationTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="coldTask">The input computation.</param>
-            ///
-            /// <returns>The input computation.</returns>
-            member inline this.ReturnFrom(coldTask: ColdTask) : CancellableTaskCode<_, _> =
-                this.ReturnFrom(fun (_: CancellationToken) -> coldTask ())
-
-
-            /// <summary>Creates an CancellableTask that runs <c>computation</c>, and when
-            /// <c>computation</c> generates a result <c>T</c>, runs <c>binder res</c>.</summary>
-            ///
-            /// <remarks>
-            ///
-            /// The existence of this method permits the use of <c>let!</c> in the
-            /// <c>cancellableTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="computation">An Async to provide an unbound result.</param>
-            /// <param name="continuation">The function to bind the result of <c>computation</c>.</param>
-            ///
-            /// <returns>An CancellableTask that performs a monadic bind on the result
-            /// of <c>computation</c>.</returns>
-            member inline this.Bind
-                (
-                    computation: Async<'TResult1>,
-                    [<InlineIfLambda>] continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
-                ) : CancellableTaskCode<'TOverall, 'TResult2> =
-                this.Bind(Async.AsCancellableTask computation, continuation)
-
-
-            /// <summary>Delegates to the input computation.</summary>
-            ///
-            /// <remarks>The existence of this method permits the use of <c>return!</c> in the
-            /// <c>cancellationTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="computation">The input computation.</param>
-            ///
-            /// <returns>The input computation.</returns>
-            member inline this.ReturnFrom(computation: Async<'T>) : CancellableTaskCode<'T, 'T> =
-                this.ReturnFrom(Async.AsCancellableTask computation)
-
-
-            /// <summary>Creates an CancellableTask that runs <c>computation</c>, and when
-            /// <c>computation</c> generates a result <c>T</c>, runs <c>binder res</c>.</summary>
-            ///
-            /// <remarks>
-            ///
-            /// The existence of this method permits the use of <c>let!</c> in the
-            /// <c>cancellableTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="task">An Async to provide an unbound result.</param>
-            /// <param name="continuation">The function to bind the result of <c>computation</c>.</param>
-            ///
-            /// <returns>An CancellableTask that performs a monadic bind on the result
-            /// of <c>computation</c>.</returns>
-            member inline this.Bind
-                (
-                    task: Task<'TResult1>,
-                    [<InlineIfLambda>] continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
-                ) : CancellableTaskCode<'TOverall, 'TResult2> =
-
-                CancellableTaskCode<'TOverall, _>(fun sm ->
-                    if __useResumableCode then
-                        //-- RESUMABLE CODE START
-                        // Get an awaiter from the task
-                        let mutable awaiter =
-                            let ct = sm.Data.CancellationToken
-
-                            if ct.IsCancellationRequested then
-                                Task.FromCanceled<_>(ct).GetAwaiter()
-                            else
-                                task.GetAwaiter()
-
-                        let mutable __stack_fin = true
-
-                        if not awaiter.IsCompleted then
-                            // This will yield with __stack_yield_fin = false
-                            // This will resume with __stack_yield_fin = true
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-                            __stack_fin <- __stack_yield_fin
-
-                        if __stack_fin then
-                            let result = awaiter.GetResult()
-                            (continuation result).Invoke(&sm)
-                        else
-                            sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
-                            false
-                    else
-                        failwith "lol"
-                // CancellableTaskBuilderBase.BindDynamic(&sm, task, continuation)
-                //-- RESUMABLE CODE END
-                )
-
-
-            /// <summary>Delegates to the input computation.</summary>
-            ///
-            /// <remarks>The existence of this method permits the use of <c>return!</c> in the
-            /// <c>cancellationTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="task">The input computation.</param>
-            ///
-            /// <returns>The input computation.</returns>
-            member inline this.ReturnFrom(task: Task<'T>) : CancellableTaskCode<'T, 'T> =
-                this.Bind(task, (fun x -> this.Return x))
-
+            member inline _.Source(task: Task<'T>) : CancellableTask<'T> =
+                (fun (ct: CancellationToken) -> task)
 
     [<AutoOpen>]
     module AsyncExtenions =
