@@ -464,18 +464,17 @@ module ColdTasks =
             /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
             /// </summary>
             [<NoEagerConstraintApplication>]
-            static member inline BindDynamic< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall
-                when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
-                and ^Awaiter :> ICriticalNotifyCompletion
+            static member inline BindDynamic<'TResult1, 'TResult2, ^Awaiter, 'TOverall
+                when ^Awaiter :> ICriticalNotifyCompletion
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
                 and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 (
                     sm: byref<_>,
-                    task: ^TaskLike,
-                    continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
+                    [<InlineIfLambda>] getAwaiter: unit -> ^Awaiter,
+                    [<InlineIfLambda>] continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
                 ) : bool =
 
-                let mutable awaiter = (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))
+                let mutable awaiter = getAwaiter ()
 
                 let cont =
                     (ColdTaskResumptionFunc<'TOverall>(fun sm ->
@@ -497,22 +496,19 @@ module ColdTasks =
             /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
             /// </summary>
             [<NoEagerConstraintApplication>]
-            member inline _.Bind< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall
-                when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
-                and ^Awaiter :> ICriticalNotifyCompletion
+            member inline _.Bind<'TResult1, 'TResult2, ^Awaiter, 'TOverall
+                when ^Awaiter :> ICriticalNotifyCompletion
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
                 and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 (
-                    task: ^TaskLike,
-                    continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
+                    [<InlineIfLambda>] getAwaiter: unit -> ^Awaiter,
+                    [<InlineIfLambda>] continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
                 ) : ColdTaskCode<'TOverall, 'TResult2> =
 
                 ColdTaskCode<'TOverall, _>(fun sm ->
                     if __useResumableCode then
                         //-- RESUMABLE CODE START
-                        // Get an awaiter from the awaitable
-                        let mutable awaiter =
-                            (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))
+                        let mutable awaiter = getAwaiter ()
 
                         let mutable __stack_fin = true
 
@@ -529,12 +525,45 @@ module ColdTasks =
                             sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
                             false
                     else
-                        ColdTaskBuilderBase.BindDynamic< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall>(
+                        ColdTaskBuilderBase.BindDynamic<'TResult1, 'TResult2, ^Awaiter, 'TOverall>(
                             &sm,
-                            task,
+                            getAwaiter,
                             continuation
                         )
                 //-- RESUMABLE CODE END
+                )
+
+            member inline _.Source<'TResult1, 'TResult2, ^Awaiter, 'TOverall
+                when ^Awaiter :> ICriticalNotifyCompletion
+                and ^Awaiter: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
+                ([<InlineIfLambda>] getAwaiter: unit -> ^Awaiter)
+                =
+                getAwaiter
+
+
+            /// <summary>Creates an ColdTask that runs <c>computation</c>, and when
+            /// <c>computation</c> generates a result <c>T</c>, runs <c>binder res</c>.</summary>
+            ///
+            /// <remarks>
+            ///
+            /// The existence of this method permits the use of <c>let!</c> in the
+            /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
+            ///
+            /// <param name="task">The computation to provide an unbound result.</param>
+            /// <param name="continuation">The function to bind the result of <c>computation</c>.</param>
+            ///
+            /// <returns>An ColdTask that performs a monadic bind on the result
+            /// of <c>computation</c>.</returns>
+            [<NoEagerConstraintApplication>]
+            member inline this.Bind
+                (
+                    task: ^TaskLike,
+                    [<InlineIfLambda>] continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
+                ) : ColdTaskCode<'TOverall, 'TResult2> =
+                this.Bind(
+                    (fun () -> (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))),
+                    continuation
                 )
 
 
@@ -552,60 +581,28 @@ module ColdTasks =
             /// <returns>An ColdTask that performs a monadic bind on the result
             /// of <c>computation</c>.</returns>
             [<NoEagerConstraintApplication>]
-            member inline this.Bind< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall
-                when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
-                and ^Awaiter :> ICriticalNotifyCompletion
-                and ^Awaiter: (member get_IsCompleted: unit -> bool)
-                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
-                (
-                    task: unit -> ^TaskLike,
-                    continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
-                ) : ColdTaskCode<'TOverall, 'TResult2> =
-                this.Bind(task (), continuation)
+            member inline this.ReturnFrom(task: ^TaskLike) : ColdTaskCode<'T, 'T> =
+                this.Bind(task, (fun v -> this.Return v))
 
-
-            /// <summary>Creates an ColdTask that runs <c>computation</c>, and when
-            /// <c>computation</c> generates a result <c>T</c>, runs <c>binder res</c>.</summary>
-            ///
-            /// <remarks>
-            ///
-            /// The existence of this method permits the use of <c>let!</c> in the
-            /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="task">The computation to provide an unbound result.</param>
-            /// <param name="continuation">The function to bind the result of <c>computation</c>.</param>
-            ///
-            /// <returns>An ColdTask that performs a monadic bind on the result
-            /// of <c>computation</c>.</returns>
             [<NoEagerConstraintApplication>]
-            member inline this.ReturnFrom< ^TaskLike, ^Awaiter, 'T
+            member inline this.Source< ^TaskLike, ^Awaiter, 'T
                 when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
                 and ^Awaiter :> ICriticalNotifyCompletion
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
                 and ^Awaiter: (member GetResult: unit -> 'T)>
                 (task: ^TaskLike)
-                : ColdTaskCode<'T, 'T> =
+                : ^TaskLike =
+                task
 
-                this.Bind(task, (fun v -> this.Return v))
-
-
-            /// <summary>Delegates to the input computation.</summary>
-            ///
-            /// <remarks>The existence of this method permits the use of <c>return!</c> in the
-            /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="task">The input computation.</param>
-            ///
-            /// <returns>The input computation.</returns>
             [<NoEagerConstraintApplication>]
-            member inline this.ReturnFrom< ^TaskLike, ^Awaiter, 'T
+            member inline this.Source< ^TaskLike, ^Awaiter, 'T
                 when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
                 and ^Awaiter :> ICriticalNotifyCompletion
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
                 and ^Awaiter: (member GetResult: unit -> 'T)>
-                (task: unit -> ^TaskLike)
-                : ColdTaskCode<'T, 'T> =
-                this.Bind(task, (fun v -> this.Return v))
+                ([<InlineIfLambda>] task: unit -> ^TaskLike)
+                : ^TaskLike =
+                task ()
 
 
             /// <summary>Creates an ColdTask that runs <c>binder(resource)</c>.
@@ -657,34 +654,6 @@ module ColdTasks =
 
         type ColdTaskBuilderBase with
 
-            /// <summary>
-            /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
-            /// </summary>
-            static member inline BindDynamic
-                (
-                    sm: byref<_>,
-                    task: Task<'TResult1>,
-                    continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
-                ) : bool =
-                let mutable awaiter = task.GetAwaiter()
-
-                let cont =
-                    (ColdTaskResumptionFunc<'TOverall>(fun sm ->
-                        let result = awaiter.GetResult()
-                        (continuation result).Invoke(&sm)
-                    ))
-
-                // shortcut to continue immediately
-                if awaiter.IsCompleted then
-                    cont.Invoke(&sm)
-                else
-                    sm.ResumptionDynamicInfo.ResumptionData <-
-                        (awaiter :> ICriticalNotifyCompletion)
-
-                    sm.ResumptionDynamicInfo.ResumptionFunc <- cont
-                    false
-
-
             /// <summary>Creates an ColdTask that runs <c>computation</c>, and when
             /// <c>computation</c> generates a result <c>T</c>, runs <c>binder res</c>.</summary>
             ///
@@ -698,131 +667,34 @@ module ColdTasks =
             ///
             /// <returns>An ColdTask that performs a monadic bind on the result
             /// of <c>computation</c>.</returns>
-            member inline _.Bind
+            member inline this.Bind
                 (
                     task: Task<'TResult1>,
-                    continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
-                ) : ColdTaskCode<'TOverall, 'TResult2> =
-
-                ColdTaskCode<'TOverall, _>(fun sm ->
-                    if __useResumableCode then
-                        //-- RESUMABLE CODE START
-                        // Get an awaiter from the task
-                        let mutable awaiter = task.GetAwaiter()
-
-                        let mutable __stack_fin = true
-
-                        if not awaiter.IsCompleted then
-                            // This will yield with __stack_yield_fin = false
-                            // This will resume with __stack_yield_fin = true
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-                            __stack_fin <- __stack_yield_fin
-
-                        if __stack_fin then
-                            let result = awaiter.GetResult()
-                            (continuation result).Invoke(&sm)
-                        else
-                            sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
-                            false
-                    else
-                        ColdTaskBuilderBase.BindDynamic(&sm, task, continuation)
-                //-- RESUMABLE CODE END
-                )
-
-
-            /// <summary>Creates an ColdTask that runs <c>computation</c>, and when
-            /// <c>computation</c> generates a result <c>T</c>, runs <c>binder res</c>.</summary>
-            ///
-            /// <remarks>
-            /// The existence of this method permits the use of <c>let!</c> in the
-            /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="task">The computation to provide an unbound result.</param>
-            /// <param name="continuation">The function to bind the result of <c>computation</c>.</param>
-            ///
-            /// <returns>An ColdTask that performs a monadic bind on the result
-            /// of <c>computation</c>.</returns>
-            member inline this.Bind
-                (
-                    task: ColdTask<'TResult1>,
-                    continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
-                ) : ColdTaskCode<'TOverall, 'TResult2> =
-                this.Bind(task (), continuation)
-
-
-            /// <summary>Delegates to the input computation.</summary>
-            ///
-            /// <remarks>The existence of this method permits the use of <c>return!</c> in the
-            /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="task">The input computation.</param>
-            ///
-            /// <returns>The input computation.</returns>
-            member inline this.ReturnFrom(task: Task<'T>) : ColdTaskCode<'T, 'T> =
-                this.Bind(task, (fun v -> this.Return v))
-
-
-            /// <summary>Delegates to the input computation.</summary>
-            ///
-            /// <remarks>The existence of this method permits the use of <c>return!</c> in the
-            /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="task">The input computation.</param>
-            ///
-            /// <returns>The input computation.</returns>
-            member inline this.ReturnFrom(task: ColdTask<'T>) : ColdTaskCode<'T, 'T> =
-                this.ReturnFrom(task ())
-
-    [<AutoOpen>]
-    module MediumPriority =
-        open HighPriority
-
-        // Medium priority extensions
-        type ColdTaskBuilderBase with
-
-
-            /// <summary>Creates an ColdTask that runs <c>computation</c>, and when
-            /// <c>computation</c> generates a result <c>T</c>, runs <c>binder res</c>.</summary>
-            ///
-            /// <remarks>
-            ///
-            /// The existence of this method permits the use of <c>let!</c> in the
-            /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="coldTask">A ColdTask to provide an unbound result.</param>
-            /// <param name="continuation">The function to bind the result of <c>computation</c>.</param>
-            ///
-            /// <returns>An ColdTask that performs a monadic bind on the result
-            /// of <c>computation</c>.</returns>
-            member inline this.Bind
-                (
-                    computation: Async<'TResult1>,
                     [<InlineIfLambda>] continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
                 ) : ColdTaskCode<'TOverall, 'TResult2> =
-                this.Bind(Async.AsColdTask computation, continuation)
+                this.Bind((fun () -> task.GetAwaiter()), continuation)
 
+            member inline this.ReturnFrom(task: Task<_>) =
+                this.Bind(task, (fun v -> this.Return v))
 
-            /// <summary>Delegates to the input computation.</summary>
-            ///
-            /// <remarks>The existence of this method permits the use of <c>return!</c> in the
-            /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="coldTask">The input computation.</param>
-            ///
-            /// <returns>The input computation.</returns>
-            member inline this.ReturnFrom(computation: Async<'T>) : ColdTaskCode<'T, 'T> =
-                this.ReturnFrom(Async.AsColdTask computation)
+            member inline _.Source(s: #seq<_>) : #seq<_> = s
+
+            member inline _.Source(task: Task<'TResult1>) = task
+
+            member _.Source(task: ColdTask<'TResult1>) = task ()
+
+            member inline this.Source(computation: Async<'TResult1>) =
+                this.Source(Async.AsColdTask(computation))
 
     [<AutoOpen>]
     module AsyncExtenions =
-
 
         type Microsoft.FSharp.Control.AsyncBuilder with
 
             member inline this.Bind
                 (
                     [<InlineIfLambda>] coldTask: ColdTask<'T>,
-                    binder: ('T -> Async<'U>)
+                    [<InlineIfLambda>] binder: ('T -> Async<'U>)
                 ) : Async<'U> =
                 this.Bind(Async.AwaitColdTask coldTask, binder)
 
@@ -832,7 +704,7 @@ module ColdTasks =
             member inline this.Bind
                 (
                     [<InlineIfLambda>] coldTask: ColdTask,
-                    binder: (unit -> Async<'U>)
+                    [<InlineIfLambda>] binder: (unit -> Async<'U>)
                 ) : Async<'U> =
                 this.Bind(Async.AwaitColdTask coldTask, binder)
 
