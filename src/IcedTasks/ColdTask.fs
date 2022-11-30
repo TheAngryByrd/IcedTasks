@@ -533,6 +533,13 @@ module ColdTasks =
                 //-- RESUMABLE CODE END
                 )
 
+            [<NoEagerConstraintApplication>]
+            member inline this.ReturnFrom
+                ([<InlineIfLambda>] getAwaiter: unit -> ^Awaiter)
+                : ColdTaskCode<_, _> =
+                this.Bind((fun () -> getAwaiter ()), (fun v -> this.Return v))
+
+            [<NoEagerConstraintApplication>]
             member inline _.Source<'TResult1, 'TResult2, ^Awaiter, 'TOverall
                 when ^Awaiter :> ICriticalNotifyCompletion
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
@@ -540,13 +547,6 @@ module ColdTasks =
                 ([<InlineIfLambda>] getAwaiter: unit -> ^Awaiter)
                 : unit -> ^Awaiter =
                 getAwaiter
-
-            [<NoEagerConstraintApplication>]
-            member inline this.ReturnFrom
-                ([<InlineIfLambda>] getAwaiter: unit -> ^Awaiter)
-                : ColdTaskCode<_, _> =
-                this.Bind((fun () -> getAwaiter ()), (fun v -> this.Return v))
-
 
             [<NoEagerConstraintApplication>]
             member inline this.Source< ^TaskLike, ^Awaiter, 'T
@@ -618,34 +618,12 @@ module ColdTasks =
 
         type ColdTaskBuilderBase with
 
-            /// <summary>Creates an ColdTask that runs <c>computation</c>, and when
-            /// <c>computation</c> generates a result <c>T</c>, runs <c>binder res</c>.</summary>
-            ///
-            /// <remarks>
-            ///
-            /// The existence of this method permits the use of <c>let!</c> in the
-            /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="task">The computation to provide an unbound result.</param>
-            /// <param name="continuation">The function to bind the result of <c>computation</c>.</param>
-            ///
-            /// <returns>An ColdTask that performs a monadic bind on the result
-            /// of <c>computation</c>.</returns>
-            member inline this.Bind
-                (
-                    task: Task<'TResult1>,
-                    [<InlineIfLambda>] continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
-                ) : ColdTaskCode<'TOverall, 'TResult2> =
-                this.Bind((fun () -> task.GetAwaiter()), continuation)
-
-            member inline this.ReturnFrom(task: Task<_>) =
-                this.Bind(task, (fun v -> this.Return v))
-
             member inline _.Source(s: #seq<_>) : #seq<_> = s
 
-            member inline _.Source(task: Task<'TResult1>) = task
+            member inline _.Source(task: Task<'TResult1>) = (fun () -> task.GetAwaiter())
 
-            member _.Source(task: ColdTask<'TResult1>) = task ()
+            member inline _.Source([<InlineIfLambda>] task: ColdTask<'TResult1>) =
+                (fun () -> (task ()).GetAwaiter())
 
             member inline this.Source(computation: Async<'TResult1>) =
                 this.Source(Async.AsColdTask(computation))
@@ -698,10 +676,8 @@ module ColdTasks =
             member inline this.ReturnFrom([<InlineIfLambda>] coldTask: ColdTask) =
                 this.ReturnFrom(coldTask ())
 
-
     [<RequireQualifiedAccess>]
     module ColdTask =
-
 
         /// <summary>Lifts an item to a ColdTask.</summary>
         /// <param name="item">The item to be the result of the ColdTask.</param>

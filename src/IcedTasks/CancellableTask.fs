@@ -739,52 +739,20 @@ module CancellableTasks =
         // High priority extensions
         type CancellableTaskBuilderBase with
 
-            /// <summary>Creates an CancellableTask that runs <c>computation</c>, and when
-            /// <c>computation</c> generates a result <c>T</c>, runs <c>binder res</c>.</summary>
-            ///
-            /// <remarks>A cancellation check is performed when the computation is executed.
-            ///
-            /// The existence of this method permits the use of <c>let!</c> in the
-            /// <c>cancellableTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="task">The computation to provide an unbound result.</param>
-            /// <param name="continuation">The function to bind the result of <c>computation</c>.</param>
-            ///
-            /// <returns>An CancellableTask that performs a monadic bind on the result
-            /// of <c>computation</c>.</returns>
-            member inline this.Bind
-                (
-                    [<InlineIfLambda>] task: CancellableTask<'TResult1>,
-                    [<InlineIfLambda>] continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
-                ) : CancellableTaskCode<'TOverall, 'TResult2> =
-                this.Bind((fun ct -> (task ct).GetAwaiter()), continuation)
-
-            /// <summary>Delegates to the input computation.</summary>
-            ///
-            /// <remarks>The existence of this method permits the use of <c>return!</c> in the
-            /// <c>cancellationTask { ... }</c> computation expression syntax.</remarks>
-            ///
-            /// <param name="task">The input computation.</param>
-            ///
-            /// <returns>The input computation.</returns>
-            member inline this.ReturnFrom
-                ([<InlineIfLambda>] task: CancellableTask<'T>)
-                : CancellableTaskCode<'T, 'T> =
-                this.Bind((task), (fun v -> this.Return v))
-
-
-            member inline _.Source(task: CancellableTask<'TResult1>) = task
-
             member inline _.Source(s: #seq<_>) : #seq<_> = s
 
-            member inline _.Source(task: ColdTask<'TResult1>) : CancellableTask<'TResult1> =
-                (fun (ct: CancellationToken) -> task ())
+            member inline _.Source(task: Task<'T>) =
+                (fun (ct: CancellationToken) -> task.GetAwaiter())
+
+            member inline _.Source(task: ColdTask<'TResult1>) =
+                (fun (ct: CancellationToken) -> (task ()).GetAwaiter())
+
+            member inline _.Source(task: CancellableTask<'TResult1>) =
+                (fun ct -> (task ct).GetAwaiter())
 
             member inline this.Source(computation: Async<'TResult1>) =
-                Async.AsCancellableTask computation
+                this.Source(Async.AsCancellableTask(computation))
 
-            member inline _.Source(task: Task<'T>) : CancellableTask<'T> =
-                (fun (ct: CancellationToken) -> task)
 
     [<AutoOpen>]
     module AsyncExtenions =
