@@ -517,11 +517,11 @@ module ValueTasks =
                 and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 (
                     sm: byref<ResumableStateMachine<ValueTaskStateMachineData<'TOverall>>>,
-                    getAwaiter: unit -> ^Awaiter,
+                    getAwaiter: ^Awaiter,
                     continuation: ('TResult1 -> ValueTaskCode<'TOverall, 'TResult2>)
                 ) : bool =
 
-                let mutable awaiter = getAwaiter ()
+                let mutable awaiter = getAwaiter
 
                 let cont =
                     (ValueTaskResumptionFunc<'TOverall>(fun sm ->
@@ -558,7 +558,7 @@ module ValueTasks =
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
                 and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 (
-                    getAwaiter: unit -> ^Awaiter,
+                    getAwaiter: ^Awaiter,
                     continuation: ('TResult1 -> ValueTaskCode<'TOverall, 'TResult2>)
                 ) : ValueTaskCode<'TOverall, 'TResult2> =
 
@@ -566,7 +566,7 @@ module ValueTasks =
                     if __useResumableCode then
                         //-- RESUMABLE CODE START
                         // Get an awaiter from the awaitable
-                        let mutable awaiter = getAwaiter ()
+                        let mutable awaiter = getAwaiter
 
                         let mutable __stack_fin = true
 
@@ -605,9 +605,9 @@ module ValueTasks =
                 when ^Awaiter :> ICriticalNotifyCompletion
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
                 and ^Awaiter: (member GetResult: unit -> 'TResult1)>
-                (getAwaiter: unit -> ^Awaiter)
+                (getAwaiter: ^Awaiter)
                 : ValueTaskCode<_, _> =
-                this.Bind((fun () -> getAwaiter ()), (fun v -> this.Return v))
+                this.Bind(getAwaiter, (fun v -> this.Return v))
 
 
             /// <summary>Allows the computation expression to turn other types into <c>CancellationToken -> ^Awaiter</c></summary>
@@ -620,8 +620,8 @@ module ValueTasks =
                 when ^Awaiter :> ICriticalNotifyCompletion
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
                 and ^Awaiter: (member GetResult: unit -> 'TResult1)>
-                (getAwaiter: CancellationToken -> ^Awaiter)
-                : CancellationToken -> ^Awaiter =
+                (getAwaiter: ^Awaiter)
+                : ^Awaiter =
                 getAwaiter
 
 
@@ -637,8 +637,8 @@ module ValueTasks =
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
                 and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 (task: ^TaskLike)
-                : unit -> ^Awaiter =
-                (fun () -> (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task)))
+                : ^Awaiter =
+                (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))
 
 
             /// <summary>Creates an ValueTask that runs <c>binder(resource)</c>.
@@ -681,7 +681,7 @@ module ValueTasks =
             /// <remarks>This turns a <c>Task&lt;'T&gt;</c> into a <c>CancellationToken -> ^Awaiter</c>.</remarks>
             ///
             /// <returns><c>CancellationToken -> ^Awaiter</c></returns>
-            member inline _.Source(task: Task<'T>) = (fun () -> task.GetAwaiter())
+            member inline _.Source(task: Task<'T>) = task.GetAwaiter()
 
             /// <summary>Allows the computation expression to turn other types into <c>CancellationToken -> ^Awaiter</c></summary>
             ///
@@ -689,7 +689,7 @@ module ValueTasks =
             ///
             /// <returns><c>CancellationToken -> ^Awaiter</c></returns>
             member inline this.Source(computation: Async<'TResult1>) =
-                this.Source(Async.AsValueTask(computation))
+                this.Source(Async.StartAsTask(computation))
 
 module ValueTask =
     open System.Threading.Tasks
