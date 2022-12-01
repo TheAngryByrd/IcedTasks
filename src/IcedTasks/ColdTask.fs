@@ -492,9 +492,20 @@ module ColdTasks =
                     sm.ResumptionDynamicInfo.ResumptionFunc <- cont
                     false
 
-            /// <summary>
-            /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
-            /// </summary>
+
+            /// <summary>Creates an ColdTask that runs <c>computation</c>, and when
+            /// <c>computation</c> generates a result <c>T</c>, runs <c>binder res</c>.</summary>
+            ///
+            /// <remarks>A cancellation check is performed when the computation is executed.
+            ///
+            /// The existence of this method permits the use of <c>let!</c> in the
+            /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
+            ///
+            /// <param name="getAwaiter">The computation to provide an unbound result.</param>
+            /// <param name="continuation">The function to bind the result of <c>computation</c>.</param>
+            ///
+            /// <returns>An ColdTask that performs a monadic bind on the result
+            /// of <c>computation</c>.</returns>
             [<NoEagerConstraintApplication>]
             member inline _.Bind<'TResult1, 'TResult2, ^Awaiter, 'TOverall
                 when ^Awaiter :> ICriticalNotifyCompletion
@@ -533,12 +544,29 @@ module ColdTasks =
                 //-- RESUMABLE CODE END
                 )
 
+            /// <summary>Delegates to the input computation.</summary>
+            ///
+            /// <remarks>The existence of this method permits the use of <c>return!</c> in the
+            /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
+            ///
+            /// <param name="getAwaiter">The input computation.</param>
+            ///
+            /// <returns>The input computation.</returns>
             [<NoEagerConstraintApplication>]
-            member inline this.ReturnFrom
+            member inline this.ReturnFrom<'TResult1, 'TResult2, ^Awaiter, 'TOverall
+                when ^Awaiter :> ICriticalNotifyCompletion
+                and ^Awaiter: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 ([<InlineIfLambda>] getAwaiter: unit -> ^Awaiter)
                 : ColdTaskCode<_, _> =
                 this.Bind((fun () -> getAwaiter ()), (fun v -> this.Return v))
 
+
+            /// <summary>Allows the computation expression to turn other types into <c>unit -> ^Awaiter</c></summary>
+            ///
+            /// <remarks>This is the identify function.</remarks>
+            ///
+            /// <returns><c>unit -> ^Awaiter</c></returns>
             [<NoEagerConstraintApplication>]
             member inline _.Source<'TResult1, 'TResult2, ^Awaiter, 'TOverall
                 when ^Awaiter :> ICriticalNotifyCompletion
@@ -548,6 +576,11 @@ module ColdTasks =
                 : unit -> ^Awaiter =
                 getAwaiter
 
+            /// <summary>Allows the computation expression to turn other types into <c>unit -> ^Awaiter</c></summary>
+            ///
+            /// <remarks>This turns a <c>^TaskLike</c> into a <c>unit -> ^Awaiter</c>.</remarks>
+            ///
+            /// <returns><c>unit -> ^Awaiter</c></returns>
             [<NoEagerConstraintApplication>]
             member inline this.Source< ^TaskLike, ^Awaiter, 'T
                 when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
@@ -558,6 +591,11 @@ module ColdTasks =
                 : unit -> ^Awaiter =
                 (fun () -> (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task)))
 
+            /// <summary>Allows the computation expression to turn other types into <c>unit -> ^Awaiter</c></summary>
+            ///
+            /// <remarks>This turns a <c>unit -> ^TaskLike</c> into a <c>unit -> ^Awaiter</c>.</remarks>
+            ///
+            /// <returns><c>unit -> ^Awaiter</c></returns>
             [<NoEagerConstraintApplication>]
             member inline this.Source< ^TaskLike, ^Awaiter, 'T
                 when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
@@ -618,13 +656,34 @@ module ColdTasks =
 
         type ColdTaskBuilderBase with
 
+            /// <summary>Allows the computation expression to turn other types into other types</summary>
+            ///
+            /// <remarks>This is the identify function for For binds.</remarks>
+            ///
+            /// <returns><c>IEnumerable</c></returns>
             member inline _.Source(s: #seq<_>) : #seq<_> = s
 
+
+            /// <summary>Allows the computation expression to turn other types into <c>unit -> ^Awaiter</c></summary>
+            ///
+            /// <remarks>This turns a <c>Task&lt;'T&gt;</c> into a <c>unit -> ^Awaiter</c>.</remarks>
+            ///
+            /// <returns><c>unit -> ^Awaiter</c></returns>
             member inline _.Source(task: Task<'TResult1>) = (fun () -> task.GetAwaiter())
 
+            /// <summary>Allows the computation expression to turn other types into <c>unit -> ^Awaiter</c></summary>
+            ///
+            /// <remarks>This turns a <c>ColdTask&lt;'T&gt;</c> into a <c>unit -> ^Awaiter</c>.</remarks>
+            ///
+            /// <returns><c>unit -> ^Awaiter</c></returns>
             member inline _.Source([<InlineIfLambda>] task: ColdTask<'TResult1>) =
                 (fun () -> (task ()).GetAwaiter())
 
+            /// <summary>Allows the computation expression to turn other types into <c>unit -> ^Awaiter</c></summary>
+            ///
+            /// <remarks>This turns a <c>Async&lt;'T&gt;</c> into a <c>unit -> ^Awaiter</c>.</remarks>
+            ///
+            /// <returns><c>unit -> ^Awaiter</c></returns>
             member inline this.Source(computation: Async<'TResult1>) =
                 this.Source(Async.AsColdTask(computation))
 
