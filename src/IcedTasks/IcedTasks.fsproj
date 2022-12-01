@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.1; netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0; netstandard2.1; </TargetFrameworks>
     <LangVersion>preview</LangVersion>
     <NoWarn>FS3513</NoWarn>
   </PropertyGroup>
@@ -15,8 +15,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="ValueTasks.fs" />
     <Compile Include="ParallelAsync.fs" />
     <Compile Include="ColdTask.fs" />
+    <Compile Include="CancellableValueTask.fs" />
     <Compile Include="CancellableTask.fs" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
