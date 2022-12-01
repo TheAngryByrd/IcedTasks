@@ -11,7 +11,6 @@ module ColdTaskHelpers =
         return mapper i
     }
 
-
 module ColdTaskTests =
     open System.Threading
 
@@ -32,7 +31,7 @@ module ColdTaskTests =
             testList "ReturnFrom" [
                 testCaseAsync "Can ReturnFrom ColdTask"
                 <| async {
-                    let fooTask: ColdTask = fun () -> Task.FromResult()
+                    let fooTask: ColdTask = fun () -> Task.CompletedTask
                     let outerTask = coldTask { return! fooTask }
 
                     do!
@@ -55,7 +54,7 @@ module ColdTaskTests =
                 }
                 testCaseAsync "Can ReturnFrom Task"
                 <| async {
-                    let outerTask = coldTask { return! Task.FromResult() }
+                    let outerTask = coldTask { return! Task.CompletedTask }
 
                     do!
                         outerTask ()
@@ -74,6 +73,70 @@ module ColdTaskTests =
                     Expect.equal actual expected "Should be able to Return! value"
                 }
 
+
+                testCaseAsync "Can ReturnFrom ValueTask"
+                <| async {
+                    let fooTask = ValueTask.CompletedTask
+
+                    let outerTask = coldTask { return! fooTask }
+
+                    do!
+                        outerTask ()
+                        |> Async.AwaitTask
+
+                // Compiling is a sufficient Expect
+                }
+                testCaseAsync "Can ReturnFrom ValueTask<T>"
+                <| async {
+                    let expected = "lol"
+                    let fooTask = ValueTask.FromResult expected
+
+                    let outerTask = coldTask { return! fooTask }
+
+                    let! actual =
+                        outerTask ()
+                        |> Async.AwaitTask
+
+                    Expect.equal actual expected ""
+                }
+
+
+                testCaseAsync "Can ReturnFrom Cold ValueTask"
+                <| async {
+                    let fooTask = fun () -> ValueTask.CompletedTask
+
+                    let outerTask = coldTask { return! fooTask }
+
+                    do!
+                        outerTask ()
+                        |> Async.AwaitTask
+
+                // Compiling is a sufficient Expect
+                }
+                testCaseAsync "Can ReturnFrom Cold ValueTask<T>"
+                <| async {
+                    let expected = "lol"
+                    let fooTask = fun () -> ValueTask.FromResult expected
+
+                    let outerTask = coldTask { return! fooTask }
+
+                    let! actual =
+                        outerTask ()
+                        |> Async.AwaitTask
+
+                    Expect.equal actual expected ""
+                }
+
+                testCaseAsync "Can ReturnFrom TaskLike"
+                <| async {
+                    let fooTask = Task.Yield()
+                    let outerTask = coldTask { return! fooTask }
+
+                    do!
+                        outerTask ()
+                        |> Async.AwaitTask
+                // Compiling is sufficient expect
+                }
                 testCaseAsync "Can ReturnFrom cold TaskLike"
                 <| async {
                     let fooTask = fun () -> Task.Yield()
@@ -102,7 +165,7 @@ module ColdTaskTests =
             testList "Binds" [
                 testCaseAsync "Can Bind ColdTask"
                 <| async {
-                    let fooTask: ColdTask = fun () -> Task.FromResult()
+                    let fooTask: ColdTask = fun () -> Task.CompletedTask
                     let outerTask = coldTask { do! fooTask }
 
                     do!
@@ -128,7 +191,7 @@ module ColdTaskTests =
                 }
                 testCaseAsync "Can Bind Task"
                 <| async {
-                    let outerTask = coldTask { do! Task.FromResult() }
+                    let outerTask = coldTask { do! Task.CompletedTask }
 
                     do!
                         outerTask ()
@@ -145,6 +208,38 @@ module ColdTaskTests =
                         return result
                     }
 
+                    let! actual =
+                        outerTask ()
+                        |> Async.AwaitTask
+
+                    Expect.equal actual expected ""
+                }
+
+
+                testCaseAsync "Can Bind ValueTask"
+                <| async {
+                    let fooTask = ValueTask.CompletedTask
+
+                    let outerTask = coldTask {
+                        let! result = fooTask
+                        return result
+                    }
+
+                    do!
+                        outerTask ()
+                        |> Async.AwaitTask
+
+                // Compiling is a sufficient Expect
+                }
+                testCaseAsync "Can Bind ValueTask<T>"
+                <| async {
+                    let expected = "lol"
+                    let fooTask = ValueTask.FromResult expected
+
+                    let outerTask = coldTask {
+                        let! result = fooTask
+                        return result
+                    }
 
                     let! actual =
                         outerTask ()
@@ -153,6 +248,38 @@ module ColdTaskTests =
                     Expect.equal actual expected ""
                 }
 
+
+                testCaseAsync "Can Bind ColdValueTask"
+                <| async {
+                    let fooTask = fun () -> ValueTask.CompletedTask
+
+                    let outerTask = coldTask {
+                        let! result = fooTask
+                        return result
+                    }
+
+                    do!
+                        outerTask ()
+                        |> Async.AwaitTask
+
+                // Compiling is a sufficient Expect
+                }
+                testCaseAsync "Can Bind ColdValueTask<T>"
+                <| async {
+                    let expected = "lol"
+                    let fooTask = fun () -> ValueTask.FromResult expected
+
+                    let outerTask = coldTask {
+                        let! result = fooTask
+                        return result
+                    }
+
+                    let! actual =
+                        outerTask ()
+                        |> Async.AwaitTask
+
+                    Expect.equal actual expected ""
+                }
 
                 testCaseAsync "Can Bind cold TaskLike"
                 <| async {
@@ -178,8 +305,6 @@ module ColdTaskTests =
                         let! result = fooTask
                         return result
                     }
-
-                    use cts = new CancellationTokenSource()
 
                     let! actual =
                         outerTask ()
@@ -249,7 +374,7 @@ module ColdTaskTests =
             ]
 
             testList "Using" [
-                testCaseAsync "use"
+                testCaseAsync "use IDisposable"
                 <| async {
                     let data = 42
 
@@ -260,7 +385,7 @@ module ColdTaskTests =
 
                     Expect.equal actual data "Should be able to use use"
                 }
-                testCaseAsync "use!"
+                testCaseAsync "use! IDisposable"
                 <| async {
                     let data = 42
 
@@ -276,7 +401,7 @@ module ColdTaskTests =
                 }
 
 
-                testCaseAsync "use async"
+                testCaseAsync "use IAsyncDisposable"
                 <| async {
                     let data = 42
 
@@ -288,7 +413,7 @@ module ColdTaskTests =
 
                     Expect.equal actual data "Should be able to use use"
                 }
-                testCaseAsync "use! async"
+                testCaseAsync "use! IAsyncDisposable"
                 <| async {
                     let data = 42
 
@@ -381,6 +506,23 @@ module ColdTaskTests =
                 }
             ]
 
+            // testList "MergeSources" [
+            //     testCaseAsync "and! "
+            //     <| async {
+            //         let foo = coldTask {
+            //             let! r1 = Task.FromResult(1)
+            //             and! r2 = Task.FromResult(2)
+            //             return r1 + r2
+            //         }
+
+            //         let! actual =
+            //             foo
+            //             |> Async.AwaitColdTask
+
+            //         Expect.equal actual 1 ""
+            //     }
+            // ]
+
             testList "Cold Semantics" [
 
                 testCaseAsync "Task run immediately"
@@ -392,6 +534,7 @@ module ColdTaskTests =
 
                     Expect.equal someValue "lol" ""
                 }
+
                 testCaseAsync "ColdTask are lazily evaluated"
                 <| async {
                     let mutable someValue = null
@@ -410,7 +553,6 @@ module ColdTaskTests =
 
                     Expect.equal someValue "lol" ""
                 }
-
 
                 testCaseAsync "wont run immediately with binding innerTask"
                 <| async {
@@ -431,7 +573,6 @@ module ColdTaskTests =
                     Expect.equal someValue "lol" ""
                 }
 
-
                 testCaseAsync "Multi start task"
                 <| async {
                     let values = ResizeArray<_>()
@@ -447,6 +588,7 @@ module ColdTaskTests =
 
                     Expect.hasLength values 1 ""
                 }
+
                 testCaseAsync "Multi start async"
                 <| async {
                     let values = ResizeArray<_>()
@@ -455,6 +597,7 @@ module ColdTaskTests =
                     do! someTask
                     Expect.hasLength values 2 ""
                 }
+
                 testCaseAsync "Multi start coldTask"
                 <| async {
                     let values = ResizeArray<_>()
@@ -501,7 +644,7 @@ module ColdTaskTests =
 
             testCase "AsyncBuilder can Bind ColdTask"
             <| fun () ->
-                let innerTask: ColdTask = fun () -> Task.FromResult()
+                let innerTask: ColdTask = fun () -> Task.CompletedTask
 
                 let outerAsync = async {
                     let! result = innerTask
@@ -513,7 +656,7 @@ module ColdTaskTests =
 
             testCase "AsyncBuilder can ReturnFrom ColdTask"
             <| fun () ->
-                let innerTask: ColdTask = fun () -> Task.FromResult()
+                let innerTask: ColdTask = fun () -> Task.CompletedTask
 
                 let outerAsync = async { return! innerTask }
 
@@ -549,7 +692,7 @@ module ColdTaskTests =
 
             testCase "TaskBuilder can Bind ColdTask"
             <| fun () ->
-                let innerTask: ColdTask = fun () -> Task.FromResult()
+                let innerTask: ColdTask = fun () -> Task.CompletedTask
 
                 let outerAsync = task {
                     let! result = innerTask
@@ -561,7 +704,7 @@ module ColdTaskTests =
 
             testCase "TaskBuilder can ReturnFrom ColdTask"
             <| fun () ->
-                let innerTask: ColdTask = fun () -> Task.FromResult()
+                let innerTask: ColdTask = fun () -> Task.CompletedTask
 
                 let outerAsync = task { return! innerTask }
 
@@ -622,26 +765,22 @@ module ColdTaskTests =
             testList "zip" [
                 testCaseAsync "Simple"
                 <| async {
-                    let innerCall = coldTask { return "fooo" }
-                    let innerCall2 = coldTask { return "lol" }
+                    let leftCall = coldTask { return "lol" }
+                    let rightCall = coldTask { return "fooo" }
 
-                    let! someTask =
-                        innerCall
-                        |> ColdTask.zip innerCall2
+                    let! someTask = ColdTask.zip leftCall rightCall
 
                     Expect.equal ("lol", "fooo") someTask ""
                 }
             ]
 
-            testList "parZip" [
+            testList "parallelZip" [
                 testCaseAsync "Simple"
                 <| async {
-                    let innerCall = coldTask { return "fooo" }
-                    let innerCall2 = coldTask { return "lol" }
+                    let leftCall = coldTask { return "lol" }
+                    let rightCall = coldTask { return "fooo" }
 
-                    let! someTask =
-                        innerCall
-                        |> ColdTask.parallelZip innerCall2
+                    let! someTask = ColdTask.parallelZip leftCall rightCall
 
                     Expect.equal ("lol", "fooo") someTask ""
                 }
