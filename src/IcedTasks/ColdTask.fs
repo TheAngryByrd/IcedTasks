@@ -190,7 +190,7 @@ module ColdTasks =
             ) : ColdTaskCode<'TOverall, unit> =
             ResumableCode.For(sequence, body)
 
-
+#if NETSTANDARD2_1
         /// <summary>Creates an ColdTask that runs <c>computation</c>. The action <c>compensation</c> is executed
         /// after <c>computation</c> completes, whether <c>computation</c> exits normally or by an exception. If <c>compensation</c> raises an exception itself
         /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
@@ -281,6 +281,7 @@ module ColdTasks =
                 )
             )
 
+#endif
 
     type ColdTaskBuilder() =
 
