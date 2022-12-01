@@ -115,7 +115,7 @@ module ColdTasks =
         /// <returns>An ColdTask that behaves similarly to a while loop when run.</returns>
         member inline _.While
             (
-                [<InlineIfLambda>] guard: unit -> bool,
+                guard: unit -> bool,
                 body: ColdTaskCode<'TOverall, unit>
             ) : ColdTaskCode<'TOverall, unit> =
             ResumableCode.While(guard, body)
@@ -159,7 +159,7 @@ module ColdTasks =
         member inline _.TryFinally
             (
                 body: ColdTaskCode<'TOverall, 'T>,
-                [<InlineIfLambda>] compensation: unit -> unit
+                compensation: unit -> unit
             ) : ColdTaskCode<'TOverall, 'T> =
             ResumableCode.TryFinally(
                 body,
@@ -471,8 +471,8 @@ module ColdTasks =
                 and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 (
                     sm: byref<_>,
-                    [<InlineIfLambda>] getAwaiter: unit -> ^Awaiter,
-                    [<InlineIfLambda>] continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
+                    getAwaiter: unit -> ^Awaiter,
+                    continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
                 ) : bool =
 
                 let mutable awaiter = getAwaiter ()
@@ -513,8 +513,8 @@ module ColdTasks =
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
                 and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 (
-                    [<InlineIfLambda>] getAwaiter: unit -> ^Awaiter,
-                    [<InlineIfLambda>] continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
+                    getAwaiter: unit -> ^Awaiter,
+                    continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
                 ) : ColdTaskCode<'TOverall, 'TResult2> =
 
                 ColdTaskCode<'TOverall, _>(fun sm ->
@@ -558,7 +558,7 @@ module ColdTasks =
                 when ^Awaiter :> ICriticalNotifyCompletion
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
                 and ^Awaiter: (member GetResult: unit -> 'TResult1)>
-                ([<InlineIfLambda>] getAwaiter: unit -> ^Awaiter)
+                (getAwaiter: unit -> ^Awaiter)
                 : ColdTaskCode<_, _> =
                 this.Bind((fun () -> getAwaiter ()), (fun v -> this.Return v))
 
@@ -573,7 +573,7 @@ module ColdTasks =
                 when ^Awaiter :> ICriticalNotifyCompletion
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
                 and ^Awaiter: (member GetResult: unit -> 'TResult1)>
-                ([<InlineIfLambda>] getAwaiter: unit -> ^Awaiter)
+                (getAwaiter: unit -> ^Awaiter)
                 : unit -> ^Awaiter =
                 getAwaiter
 
@@ -637,7 +637,7 @@ module ColdTasks =
 
             /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
             /// its result.</summary>
-            static member inline AwaitColdTask([<InlineIfLambda>] t: ColdTask<'T>) =
+            static member inline AwaitColdTask(t: ColdTask<'T>) =
                 async.Delay(fun () ->
                     t ()
                     |> Async.AwaitTask
@@ -645,7 +645,7 @@ module ColdTasks =
 
             /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
             /// its result.</summary>
-            static member inline AwaitColdTask([<InlineIfLambda>] t: ColdTask) =
+            static member inline AwaitColdTask(t: ColdTask) =
                 async.Delay(fun () ->
                     t ()
                     |> Async.AwaitTask
@@ -693,48 +693,30 @@ module ColdTasks =
 
         type Microsoft.FSharp.Control.AsyncBuilder with
 
-            member inline this.Bind
-                (
-                    [<InlineIfLambda>] coldTask: ColdTask<'T>,
-                    [<InlineIfLambda>] binder: ('T -> Async<'U>)
-                ) : Async<'U> =
+            member inline this.Bind(coldTask: ColdTask<'T>, binder: ('T -> Async<'U>)) : Async<'U> =
                 this.Bind(Async.AwaitColdTask coldTask, binder)
 
-            member inline this.ReturnFrom([<InlineIfLambda>] coldTask: ColdTask<'T>) : Async<'T> =
+            member inline this.ReturnFrom(coldTask: ColdTask<'T>) : Async<'T> =
                 this.ReturnFrom(Async.AwaitColdTask coldTask)
 
-            member inline this.Bind
-                (
-                    [<InlineIfLambda>] coldTask: ColdTask,
-                    [<InlineIfLambda>] binder: (unit -> Async<'U>)
-                ) : Async<'U> =
+            member inline this.Bind(coldTask: ColdTask, binder: (unit -> Async<'U>)) : Async<'U> =
                 this.Bind(Async.AwaitColdTask coldTask, binder)
 
-            member inline this.ReturnFrom([<InlineIfLambda>] coldTask: ColdTask) : Async<unit> =
+            member inline this.ReturnFrom(coldTask: ColdTask) : Async<unit> =
                 this.ReturnFrom(Async.AwaitColdTask coldTask)
 
 
         type Microsoft.FSharp.Control.TaskBuilderBase with
 
-            member inline this.Bind
-                (
-                    [<InlineIfLambda>] coldTask: ColdTask<'T>,
-                    [<InlineIfLambda>] binder: ('T -> _)
-                ) =
+            member inline this.Bind(coldTask: ColdTask<'T>, binder: ('T -> _)) =
                 this.Bind(coldTask (), binder)
 
-            member inline this.ReturnFrom([<InlineIfLambda>] coldTask: ColdTask<'T>) =
-                this.ReturnFrom(coldTask ())
+            member inline this.ReturnFrom(coldTask: ColdTask<'T>) = this.ReturnFrom(coldTask ())
 
-            member inline this.Bind
-                (
-                    [<InlineIfLambda>] coldTask: ColdTask,
-                    [<InlineIfLambda>] binder: (_ -> _)
-                ) =
+            member inline this.Bind(coldTask: ColdTask, binder: (_ -> _)) =
                 this.Bind(coldTask (), binder)
 
-            member inline this.ReturnFrom([<InlineIfLambda>] coldTask: ColdTask) =
-                this.ReturnFrom(coldTask ())
+            member inline this.ReturnFrom(coldTask: ColdTask) = this.ReturnFrom(coldTask ())
 
     [<RequireQualifiedAccess>]
     module ColdTask =
