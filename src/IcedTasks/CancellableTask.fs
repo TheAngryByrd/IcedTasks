@@ -242,7 +242,7 @@ module CancellableTasks =
                     )
             )
 
-
+#if NETSTANDARD2_1
         /// <summary>Creates an CancellableTask that runs <c>computation</c>. The action <c>compensation</c> is executed
         /// after <c>computation</c> completes, whether <c>computation</c> exits normally or by an exception. If <c>compensation</c> raises an exception itself
         /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
@@ -334,9 +334,10 @@ module CancellableTasks =
                     if not (isNull (box resource)) then
                         resource.DisposeAsync()
                     else
-                        ValueTask.CompletedTask
+                        ValueTask()
                 )
             )
+#endif
 
     type CancellableTaskBuilder() =
 
@@ -778,7 +779,6 @@ module CancellableTasks =
             ///
             /// <returns><c>IEnumerable</c></returns>
             member inline _.Source(s: #seq<_>) : #seq<_> = s
-
 
             /// <summary>Allows the computation expression to turn other types into <c>CancellationToken -> ^Awaiter</c></summary>
             ///
