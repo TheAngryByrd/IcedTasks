@@ -31,31 +31,30 @@ module Helpers =
     let asyncTask () = Task.Yield()
     let asyncTaskCt (ct: CancellationToken) = Task.Yield()
 
-    let tenBindSync_ply () =
-        FSharp.Control.Tasks.Affine.task {
-            let! res1 = syncTask ()
-            let! res2 = syncTask ()
-            let! res3 = syncTask ()
-            let! res4 = syncTask ()
-            let! res5 = syncTask ()
-            let! res6 = syncTask ()
-            let! res7 = syncTask ()
-            let! res8 = syncTask ()
-            let! res9 = syncTask ()
-            let! res10 = syncTask ()
+    let tenBindSync_ply () = FSharp.Control.Tasks.Affine.task {
+        let! res1 = syncTask ()
+        let! res2 = syncTask ()
+        let! res3 = syncTask ()
+        let! res4 = syncTask ()
+        let! res5 = syncTask ()
+        let! res6 = syncTask ()
+        let! res7 = syncTask ()
+        let! res8 = syncTask ()
+        let! res9 = syncTask ()
+        let! res10 = syncTask ()
 
-            return
-                res1
-                + res2
-                + res3
-                + res4
-                + res5
-                + res6
-                + res7
-                + res8
-                + res9
-                + res10
-        }
+        return
+            res1
+            + res2
+            + res3
+            + res4
+            + res5
+            + res6
+            + res7
+            + res8
+            + res9
+            + res10
+    }
 
     let tenBindSync_async () = async {
         let! res1 = syncTask_async ()
@@ -291,19 +290,18 @@ module Helpers =
     }
 
 
-    let tenBindAsync_ply () =
-        FSharp.Control.Tasks.Affine.task {
-            do! asyncTask ()
-            do! asyncTask ()
-            do! asyncTask ()
-            do! asyncTask ()
-            do! asyncTask ()
-            do! asyncTask ()
-            do! asyncTask ()
-            do! asyncTask ()
-            do! asyncTask ()
-            do! asyncTask ()
-        }
+    let tenBindAsync_ply () = FSharp.Control.Tasks.Affine.task {
+        do! asyncTask ()
+        do! asyncTask ()
+        do! asyncTask ()
+        do! asyncTask ()
+        do! asyncTask ()
+        do! asyncTask ()
+        do! asyncTask ()
+        do! asyncTask ()
+        do! asyncTask ()
+        do! asyncTask ()
+    }
 
     let tenBindAsync_async () = async {
         do! asyncYield ()

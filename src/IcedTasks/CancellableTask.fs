@@ -42,9 +42,8 @@ module CancellableTasks =
         [<DefaultValue(false)>]
         val mutable MethodBuilder: AsyncTaskMethodBuilder<'T>
 
-        with
-            member inline this.ThrowIfCancellationRequested() =
-                this.CancellationToken.ThrowIfCancellationRequested()
+        member inline this.ThrowIfCancellationRequested() =
+            this.CancellationToken.ThrowIfCancellationRequested()
 
     and CancellableTaskStateMachine<'TOverall> =
         ResumableStateMachine<CancellableTaskStateMachineData<'TOverall>>

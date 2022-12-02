@@ -43,9 +43,8 @@ module CancellableValueTasks =
         [<DefaultValue(false)>]
         val mutable MethodBuilder: AsyncValueTaskMethodBuilder<'T>
 
-        with
-            member inline this.ThrowIfCancellationRequested() =
-                this.CancellationToken.ThrowIfCancellationRequested()
+        member inline this.ThrowIfCancellationRequested() =
+            this.CancellationToken.ThrowIfCancellationRequested()
 
     and CancellableValueTaskStateMachine<'TOverall> =
         ResumableStateMachine<CancellableValueTaskStateMachineData<'TOverall>>
@@ -564,7 +563,8 @@ module CancellableValueTasks =
                 and ^Awaiter: (member get_IsCompleted: unit -> bool)
                 and ^Awaiter: (member GetResult: unit -> 'TResult1)>
                 (
-                    sm: byref<ResumableStateMachine<CancellableValueTaskStateMachineData<'TOverall>>>,
+                    sm:
+                        byref<ResumableStateMachine<CancellableValueTaskStateMachineData<'TOverall>>>,
                     getAwaiter: CancellationToken -> ^Awaiter,
                     continuation: ('TResult1 -> CancellableValueTaskCode<'TOverall, 'TResult2>)
                 ) : bool =
