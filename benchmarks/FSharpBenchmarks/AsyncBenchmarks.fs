@@ -22,6 +22,7 @@ module Helpers =
         / 10
 
     let syncTask () = Task.FromResult 100
+    let syncValueTask () = ValueTask.FromResult 100
     let syncCtTask (ct: CancellationToken) = Task.FromResult 100
     let syncTask_async () = async.Return 100
     let syncTask_async2 () = Task.FromResult 100
@@ -104,6 +105,86 @@ module Helpers =
             + res8
             + res9
             + res10
+    }
+
+
+    let tenBindSync_task_bindValueTask () = task {
+        let! res1 = syncValueTask ()
+        let! res2 = syncValueTask ()
+        let! res3 = syncValueTask ()
+        let! res4 = syncValueTask ()
+        let! res5 = syncValueTask ()
+        let! res6 = syncValueTask ()
+        let! res7 = syncValueTask ()
+        let! res8 = syncValueTask ()
+        let! res9 = syncValueTask ()
+        let! res10 = syncValueTask ()
+
+        return
+            res1
+            + res2
+            + res3
+            + res4
+            + res5
+            + res6
+            + res7
+            + res8
+            + res9
+            + res10
+
+    }
+
+
+    let tenBindSync_valueTask () = valueTask {
+        let! res1 = syncValueTask ()
+        let! res2 = syncValueTask ()
+        let! res3 = syncValueTask ()
+        let! res4 = syncValueTask ()
+        let! res5 = syncValueTask ()
+        let! res6 = syncValueTask ()
+        let! res7 = syncValueTask ()
+        let! res8 = syncValueTask ()
+        let! res9 = syncValueTask ()
+        let! res10 = syncValueTask ()
+
+        return
+            res1
+            + res2
+            + res3
+            + res4
+            + res5
+            + res6
+            + res7
+            + res8
+            + res9
+            + res10
+
+    }
+
+    let tenBindSync_valueTask_bindTask () = valueTask {
+        let! res1 = syncTask ()
+        let! res2 = syncTask ()
+        let! res3 = syncTask ()
+        let! res4 = syncTask ()
+        let! res5 = syncTask ()
+        let! res6 = syncTask ()
+        let! res7 = syncTask ()
+        let! res8 = syncTask ()
+        let! res9 = syncTask ()
+        let! res10 = syncTask ()
+
+        return
+            res1
+            + res2
+            + res3
+            + res4
+            + res5
+            + res6
+            + res7
+            + res8
+            + res9
+            + res10
+
     }
 
 
@@ -250,6 +331,19 @@ module Helpers =
         do! asyncTask ()
     }
 
+    let tenBindAsync_valueTask () = valueTask {
+        do! asyncTask ()
+        do! asyncTask ()
+        do! asyncTask ()
+        do! asyncTask ()
+        do! asyncTask ()
+        do! asyncTask ()
+        do! asyncTask ()
+        do! asyncTask ()
+        do! asyncTask ()
+        do! asyncTask ()
+    }
+
 
     let tenBindAsync_coldTask_bindTask () = coldTask {
         do! asyncTask ()
@@ -381,6 +475,22 @@ type AsyncBenchmarks() =
 
 
     [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
+    member _.ManyWriteFile_valueTask() =
+        let path = getTempFileName ()
+
+        valueTask {
+            let junk = Array.zeroCreate bufferSize
+            use file = File.Create(path)
+
+            for i = 1 to manyIterations do
+                do! file.WriteAsync(junk, 0, junk.Length)
+        }
+        |> fun t -> t.Result
+
+        File.Delete(path)
+
+
+    [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
     member _.ManyWriteFile_coldTask() =
         let path = getTempFileName ()
 
@@ -490,6 +600,31 @@ type AsyncBenchmarks() =
                  * 100 do
             tenBindSync_task().Wait()
 
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.NonAsyncBinds_task_bindValueTask() =
+        for i in
+            1 .. manyIterations
+                 * 100 do
+            tenBindSync_task_bindValueTask().Wait()
+
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.NonAsyncBinds_valueTask() =
+        for i in
+            1 .. manyIterations
+                 * 100 do
+            tenBindSync_valueTask().Result
+            |> ignore
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.tenBindSync_valueTask_bindTask() =
+        for i in
+            1 .. manyIterations
+                 * 100 do
+            tenBindSync_valueTask_bindTask().Result
+            |> ignore
+
     [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
     member _.NonAsyncBinds_coldTask_bindTask() =
         for i in
@@ -542,6 +677,11 @@ type AsyncBenchmarks() =
     member _.AsyncBinds_task() =
         for i in 1..manyIterations do
             tenBindAsync_task().Wait()
+
+    [<BenchmarkCategory("AsyncBinds"); Benchmark>]
+    member _.AsyncBinds_valueTask() =
+        for i in 1..manyIterations do
+            tenBindAsync_valueTask().Result
 
     [<BenchmarkCategory("AsyncBinds"); Benchmark>]
     member _.AsyncBinds_coldTask_bindTask() =

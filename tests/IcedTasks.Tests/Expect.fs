@@ -48,6 +48,9 @@ type Expect =
             (fun () -> operation)
             "Should have been cancelled"
 
+    static member CancellationRequested(operation: ValueTask<_>) =
+        Expect.CancellationRequested(Async.AwaitValueTask operation)
+        |> Async.StartAsTask
 
     static member CancellationRequested(operation: Task<_>) =
         Expect.CancellationRequested(Async.AwaitTask operation)
@@ -59,4 +62,8 @@ type Expect =
 
     static member CancellationRequested(operation: CancellableTask<_>) =
         Expect.CancellationRequested(Async.AwaitCancellableTask operation)
+        |> Async.AsCancellableTask
+
+    static member CancellationRequested(operation: CancellableValueTask<_>) =
+        Expect.CancellationRequested(Async.AwaitCancellableValueTask operation)
         |> Async.AsCancellableTask

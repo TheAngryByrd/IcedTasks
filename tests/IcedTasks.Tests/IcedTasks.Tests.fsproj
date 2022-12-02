@@ -11,7 +11,9 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Expect.fs" />
+    <Compile Include="ValueTaskTests.fs" />
     <Compile Include="CancellableTaskTests.fs" />
+    <Compile Include="CancellableValueTaskTests.fs" />
     <Compile Include="ColdTaskTests.fs" />
     <Compile Include="ParallelAsyncTests.fs" />
     <Compile Include="Main.fs" />
