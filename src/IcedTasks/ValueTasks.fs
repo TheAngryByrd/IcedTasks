@@ -577,7 +577,9 @@ module ValueTasks =
                             __stack_fin <- __stack_yield_fin
 
                         if __stack_fin then
-                            let result = (^Awaiter: (member GetResult: unit -> 'TResult1) (awaiter))
+                            let result =
+                                (^Awaiter: (member GetResult: unit -> 'TResult1) (awaiter))
+
                             (continuation result).Invoke(&sm)
                         else
                             sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
@@ -608,6 +610,17 @@ module ValueTasks =
                 (getAwaiter: ^Awaiter)
                 : ValueTaskCode<_, _> =
                 this.Bind(getAwaiter, (fun v -> this.Return v))
+
+            [<NoEagerConstraintApplication>]
+            member inline this.BindReturn<'TResult1, 'TResult2, ^Awaiter, 'TOverall
+                when ^Awaiter :> ICriticalNotifyCompletion
+                and ^Awaiter: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
+                (
+                    getAwaiter: ^Awaiter,
+                    f
+                ) : ValueTaskCode<'TResult2, 'TResult2> =
+                this.Bind(getAwaiter, (fun v -> this.Return(f v)))
 
 
             /// <summary>Allows the computation expression to turn other types into <c>CancellationToken -> ^Awaiter</c></summary>
@@ -691,76 +704,138 @@ module ValueTasks =
             member inline this.Source(computation: Async<'TResult1>) =
                 this.Source(Async.StartAsTask(computation))
 
-module ValueTask =
-    open System.Threading.Tasks
 
-    /// <summary>Lifts an item to a ValueTask.</summary>
-    /// <param name="item">The item to be the result of the ValueTask.</param>
-    /// <returns>A ValueTask with the item as the result.</returns>
-    let inline singleton (item: 'item) : ValueTask<'item> = valueTask { return item }
+            /// <summary>Allows the computation expression to turn other types into <c>CancellationToken -> ^Awaiter</c></summary>
+            ///
+            /// <remarks>This turns a <c>Async&lt;'T&gt;</c> into a <c>CancellationToken -> ^Awaiter</c>.</remarks>
+            ///
+            /// <returns><c>CancellationToken -> ^Awaiter</c></returns>
+            member inline this.Source(awaiter: TaskAwaiter<'TResult1>) = awaiter
+
+    [<RequireQualifiedAccess>]
+    module ValueTask =
+        open System.Threading.Tasks
+
+        /// <summary>Lifts an item to a ValueTask.</summary>
+        /// <param name="item">The item to be the result of the ValueTask.</param>
+        /// <returns>A ValueTask with the item as the result.</returns>
+        let inline singleton (item: 'item) : ValueTask<'item> = ValueTask<'item> item
 
 
-    /// <summary>Allows chaining of ValueTasks.</summary>
-    /// <param name="binder">The continuation.</param>
-    /// <param name="cTask">The value.</param>
-    /// <returns>The result of the binder.</returns>
-    let inline bind
-        ([<InlineIfLambda>] binder: 'input -> ValueTask<'output>)
-        (cTask: ValueTask<'input>)
-        =
-        valueTask {
+        /// <summary>Allows chaining of ValueTasks.</summary>
+        /// <param name="binder">The continuation.</param>
+        /// <param name="cTask">The value.</param>
+        /// <returns>The result of the binder.</returns>
+        let inline bind
+            ([<InlineIfLambda>] binder: 'input -> ValueTask<'output>)
+            (cTask: ValueTask<'input>)
+            =
+            valueTask {
+                let! cResult = cTask
+                return! binder cResult
+            }
+
+        /// <summary>Allows chaining of ValueTasks.</summary>
+        /// <param name="mapper">The continuation.</param>
+        /// <param name="cTask">The value.</param>
+        /// <returns>The result of the mapper wrapped in a ValueTasks.</returns>
+        let inline map ([<InlineIfLambda>] mapper: 'input -> 'output) (cTask: ValueTask<'input>) = valueTask {
             let! cResult = cTask
-            return! binder cResult
+            return mapper cResult
         }
 
-    /// <summary>Allows chaining of ValueTasks.</summary>
-    /// <param name="mapper">The continuation.</param>
-    /// <param name="cTask">The value.</param>
-    /// <returns>The result of the mapper wrapped in a ValueTasks.</returns>
-    let inline map ([<InlineIfLambda>] mapper: 'input -> 'output) (cTask: ValueTask<'input>) = valueTask {
-        let! cResult = cTask
-        return mapper cResult
-    }
+        /// <summary>Allows chaining of ValueTasks.</summary>
+        /// <param name="applicable">A function wrapped in a ValueTasks</param>
+        /// <param name="cTask">The value.</param>
+        /// <returns>The result of the applicable.</returns>
+        let inline apply (applicable: ValueTask<'input -> 'output>) (cTask: ValueTask<'input>) = valueTask {
+            let! applier = applicable
+            let! cResult = cTask
+            return applier cResult
+        }
 
-    /// <summary>Allows chaining of ValueTasks.</summary>
-    /// <param name="applicable">A function wrapped in a ValueTasks</param>
-    /// <param name="cTask">The value.</param>
-    /// <returns>The result of the applicable.</returns>
-    let inline apply (applicable: ValueTask<'input -> 'output>) (cTask: ValueTask<'input>) = valueTask {
-        let! applier = applicable
-        let! cResult = cTask
-        return applier cResult
-    }
+        /// <summary>Takes two ValueTasks, starts them serially in order of left to right, and returns a tuple of the pair.</summary>
+        /// <param name="left">The left value.</param>
+        /// <param name="right">The right value.</param>
+        /// <returns>A tuple of the parameters passed in</returns>
+        let inline zip (left: ValueTask<'left>) (right: ValueTask<'right>) = valueTask {
+            let! r1 = left
+            let! r2 = right
+            return r1, r2
+        }
 
-    /// <summary>Takes two ValueTasks, starts them serially in order of left to right, and returns a tuple of the pair.</summary>
-    /// <param name="left">The left value.</param>
-    /// <param name="right">The right value.</param>
-    /// <returns>A tuple of the parameters passed in</returns>
-    let inline zip (left: ValueTask<'left>) (right: ValueTask<'right>) = valueTask {
-        let! r1 = left
-        let! r2 = right
-        return r1, r2
-    }
+        let inline ofUnit (vtask: ValueTask) : ValueTask<unit> =
+            // this implementation follows Stephen Toub's advice, see:
+            // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
+            if vtask.IsCompletedSuccessfully then
+                ValueTask<unit>()
+            else
+                valueTask { return! vtask }
 
-    let ofUnit (vtask: ValueTask) : ValueTask<unit> =
-        // this implementation follows Stephen Toub's advice, see:
-        // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
-        if vtask.IsCompletedSuccessfully then
-            ValueTask<unit>()
-        else
-            task { return! vtask }
-            |> ValueTask<unit>
+        /// <summary>Initializes a new instance of the <c>System.Threading.Tasks.ValueTask</c> class using the supplied task that represents the operation.</summary>
+        /// <param name="task">The task.</param>
+        let inline ofTask (task: Task<'T>) = ValueTask<'T> task
 
-    let inline toUnit (vtask: ValueTask<'T>) : ValueTask =
-        // this implementation follows Stephen Toub's advice, see:
-        // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
-        if vtask.IsCompletedSuccessfully then
-            // ensure any side effect executes
-            vtask.Result
-            |> ignore
+        /// <summary>Initializes a new instance of the <c>System.Threading.Tasks.ValueTask</c> class using the supplied task that represents the operation.</summary>
+        /// <param name="task"> The task that represents the operation</param>
+        /// <returns></returns>
+        let inline ofTaskUnit (task: Task) = ValueTask task
 
-            ValueTask()
-        else
-            ValueTask(vtask.AsTask())
+        /// <summary>Retrieves a <c>System.Threading.Tasks.Task</c> object that represents this <c>System.Threading.Tasks.ValueTask`1</c></summary>
+        /// <param name="vtask"></param>
+        /// <typeparam name="'T"></typeparam>
+        /// <returns>
+        /// The <c>System.Threading.Tasks.Task</c> object that is wrapped in this  <c>System.Threading.Tasks.ValueTask if one exists,
+        /// or a new  <c>System.Threading.Tasks.Task</c> object that represents the result.
+        /// </returns>
+        let inline toTask (vtask: ValueTask<'T>) = vtask.AsTask()
+
+        /// <summary>Retrieves a <c>System.Threading.Tasks.Task</c> object that represents this <c>System.Threading.Tasks.ValueTask.</c></summary>
+        let inline toTaskUnit (vtask: ValueTask) = vtask.AsTask()
+
+        /// <summary>Converts a <c>ValueTask&lt;T&gt;</c> to its non-generic counterpart.</summary>
+        /// <param name="vtask"></param>
+        /// <typeparam name="'T"></typeparam>
+        /// <returns></returns>
+        let inline toUnit (vtask: ValueTask<'T>) : ValueTask =
+            // this implementation follows Stephen Toub's advice, see:
+            // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
+            if vtask.IsCompletedSuccessfully then
+                // ensure any side effect executes
+                vtask.Result
+                |> ignore
+
+                ValueTask()
+            else
+                ValueTask(vtask.AsTask())
+
+        let inline internal getAwaiter (ctask: ValueTask<_>) = (ctask).GetAwaiter()
+
+    [<AutoOpen>]
+    module Moreextensions =
+
+        type ValueTaskBuilderBase with
+
+            [<NoEagerConstraintApplication>]
+            member inline this.MergeSources<'TResult1, 'TResult2, ^Awaiter1, ^Awaiter2
+                when ^Awaiter1 :> ICriticalNotifyCompletion
+                and ^Awaiter1: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter1: (member GetResult: unit -> 'TResult1)
+                and ^Awaiter2 :> ICriticalNotifyCompletion
+                and ^Awaiter2: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter2: (member GetResult: unit -> 'TResult2)>
+                (
+                    left: ^Awaiter1,
+                    right: ^Awaiter2
+                ) : ValueTaskAwaiter<'TResult1 * 'TResult2> =
+
+                valueTask {
+                    let leftStarted = left
+                    let rightStarted = right
+                    let! leftResult = leftStarted
+                    let! rightResult = rightStarted
+                    return leftResult, rightResult
+                }
+                |> ValueTask.getAwaiter
 
 #endif

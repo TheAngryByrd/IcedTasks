@@ -381,6 +381,25 @@ module ValueTaskTests =
                     Expect.equal actual index "Should be ok"
                 }
             ]
+            testList "MergeSources" [
+                testCaseAsync "and! 5"
+                <| async {
+                    let! actual =
+                        valueTask {
+                            let! a = ValueTask.FromResult 1
+                            and! b = Task.FromResult 2
+                            and! c = coldTask { return 3 }
+                            and! _ = Task.Yield()
+                            and! _ = ValueTask.CompletedTask
+                            // and! c = fun () -> ValueTask.FromResult(3)
+                            return a + b + c
+                        }
+                        |> Async.AwaitValueTask
+
+                    Expect.equal actual 6 ""
+
+                }
+            ]
         ]
 
 

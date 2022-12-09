@@ -3,7 +3,6 @@
         <!-- summary is not migrated from project.json, but you can use the <Description> property for that if needed. -->
         <PackageTags>f#, fsharp</PackageTags>
         <PackageProjectUrl>https://github.com/TheAngryByrd/IcedTasks</PackageProjectUrl>
-        <PackageLicenseUrl>https://github.com/TheAngryByrd/IcedTasks/blob/master/LICENSE.md</PackageLicenseUrl>
         <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
         <RepositoryType>git</RepositoryType>
         <Authors>TheAngryByrd</Authors>

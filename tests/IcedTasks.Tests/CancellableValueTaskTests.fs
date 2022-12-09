@@ -47,6 +47,43 @@ module CancellableValueTaskTests =
 
                     Expect.equal actual expected "Should be able to Return! value"
                 }
+
+                testCaseAsync "Can ReturnFrom CancellableTask"
+                <| async {
+                    let fooTask: CancellableTask = fun ct -> Task.CompletedTask
+                    let outerTask = cancellableValueTask { return! fooTask }
+                    use cts = new CancellationTokenSource()
+
+                    do!
+                        outerTask cts.Token
+                        |> Async.AwaitValueTask
+                // Compiling is sufficient expect
+                }
+                testCaseAsync "Can ReturnFrom CancellableTask<T>"
+                <| async {
+                    let expected = "lol"
+                    let fooTask: CancellableTask<_> = fun ct -> Task.FromResult expected
+                    let outerTask = cancellableValueTask { return! fooTask }
+                    use cts = new CancellationTokenSource()
+
+                    let! actual =
+                        outerTask cts.Token
+                        |> Async.AwaitValueTask
+
+                    Expect.equal actual expected "Should be able to Return! value"
+                }
+
+                testCaseAsync "Can ReturnFrom Cancellable TaskLike"
+                <| async {
+                    let fooTask = fun (ct: CancellationToken) -> Task.Yield()
+                    let outerTask = cancellableTask { return! fooTask }
+                    use cts = new CancellationTokenSource()
+
+                    do!
+                        outerTask cts.Token
+                        |> Async.AwaitTask
+                // Compiling is sufficient expect
+                }
                 testCaseAsync "Can ReturnFrom Task"
                 <| async {
                     let outerTask = cancellableValueTask { return! Task.CompletedTask }
@@ -151,6 +188,54 @@ module CancellableValueTaskTests =
 
                     Expect.equal actual expected ""
                 }
+
+                testCaseAsync "Can Bind CancellableTask"
+                <| async {
+                    let fooTask: CancellableTask = fun ct -> Task.CompletedTask
+                    let outerTask = cancellableValueTask { do! fooTask }
+                    use cts = new CancellationTokenSource()
+
+                    do!
+                        outerTask cts.Token
+                        |> Async.AwaitValueTask
+                // Compiling is a sufficient Expect
+                }
+                testCaseAsync "Can Bind CancellableTask<T>"
+                <| async {
+                    let expected = "lol"
+                    let fooTask: CancellableTask<_> = fun ct -> Task.FromResult expected
+
+                    let outerTask = cancellableValueTask {
+                        let! result = fooTask
+                        return result
+                    }
+
+                    use cts = new CancellationTokenSource()
+
+                    let! actual =
+                        outerTask cts.Token
+                        |> Async.AwaitValueTask
+
+                    Expect.equal actual expected ""
+                }
+
+                testCaseAsync "Can Bind Cancellable TaskLike"
+                <| async {
+                    let fooTask = fun (ct: CancellationToken) -> Task.Yield()
+
+                    let outerTask = cancellableValueTask {
+                        let! result = fooTask
+                        return result
+                    }
+
+                    use cts = new CancellationTokenSource()
+
+                    do!
+                        outerTask cts.Token
+                        |> Async.AwaitValueTask
+                // Compiling is sufficient expect
+                }
+
                 testCaseAsync "Can Bind Task"
                 <| async {
                     let outerTask = cancellableValueTask { do! Task.CompletedTask }
@@ -442,6 +527,23 @@ module CancellableValueTaskTests =
                     }
 
                     Expect.equal actual index "Should be ok"
+                }
+            ]
+
+            testList "MergeSources" [
+                testCaseAsync "and! 6"
+                <| async {
+                    let! actual = cancellableValueTask {
+                        let! a = cancellableValueTask { return 1 }
+                        and! b = coldTask { return 2 }
+                        and! _ = Task.Yield()
+                        and! _ = ValueTask.CompletedTask
+                        and! c = fun () -> ValueTask.FromResult(3)
+                        return a + b + c
+                    }
+
+                    Expect.equal actual 6 ""
+
                 }
             ]
 
