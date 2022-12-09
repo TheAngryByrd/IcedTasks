@@ -506,22 +506,22 @@ module ColdTaskTests =
                 }
             ]
 
-            // testList "MergeSources" [
-            //     testCaseAsync "and! "
-            //     <| async {
-            //         let foo = coldTask {
-            //             let! r1 = Task.FromResult(1)
-            //             and! r2 = Task.FromResult(2)
-            //             return r1 + r2
-            //         }
+            testList "MergeSources" [
+                testCaseAsync "and! 5"
+                <| async {
+                    let! actual = coldTask {
+                        let! a = fun () -> Task.FromResult 1
+                        and! b = coldTask { return 2 }
+                        and! _ = Task.Yield()
+                        and! _ = ValueTask.CompletedTask
+                        and! c = fun () -> ValueTask.FromResult(3)
+                        return a + b + c
+                    }
 
-            //         let! actual =
-            //             foo
-            //             |> Async.AwaitColdTask
+                    Expect.equal actual 6 ""
 
-            //         Expect.equal actual 1 ""
-            //     }
-            // ]
+                }
+            ]
 
             testList "Cold Semantics" [
 

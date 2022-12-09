@@ -531,7 +531,9 @@ module ColdTasks =
                             __stack_fin <- __stack_yield_fin
 
                         if __stack_fin then
-                            let result = (^Awaiter: (member GetResult: unit -> 'TResult1) (awaiter))
+                            let result =
+                                (^Awaiter: (member GetResult: unit -> 'TResult1) (awaiter))
+
                             (continuation result).Invoke(&sm)
                         else
                             sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
@@ -562,6 +564,31 @@ module ColdTasks =
                 : ColdTaskCode<_, _> =
                 this.Bind((fun () -> getAwaiter ()), (fun v -> this.Return v))
 
+            [<NoEagerConstraintApplication>]
+            member inline this.BindReturn<'TResult1, 'TResult2, ^Awaiter, 'TOverall
+                when ^Awaiter :> ICriticalNotifyCompletion
+                and ^Awaiter: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
+                (
+                    getAwaiter: unit -> ^Awaiter,
+                    f
+                ) : ColdTaskCode<'TResult2, 'TResult2> =
+                this.Bind((fun () -> getAwaiter ()), (fun v -> this.Return(f v)))
+
+
+            /// <summary>Allows the computation expression to turn other types into <c>CancellationToken -> ^Awaiter</c></summary>
+            ///
+            /// <remarks>This is the identify function.</remarks>
+            ///
+            /// <returns><c>CancellationToken -> ^Awaiter</c></returns>
+            [<NoEagerConstraintApplication>]
+            member inline _.Source<'TResult1, 'TResult2, ^Awaiter, 'TOverall
+                when ^Awaiter :> ICriticalNotifyCompletion
+                and ^Awaiter: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
+                (getAwaiter: ^Awaiter)
+                : unit -> ^Awaiter =
+                (fun () -> getAwaiter)
 
             /// <summary>Allows the computation expression to turn other types into <c>unit -> ^Awaiter</c></summary>
             ///
@@ -718,13 +745,21 @@ module ColdTasks =
 
             member inline this.ReturnFrom(coldTask: ColdTask) = this.ReturnFrom(coldTask ())
 
+#if NETSTANDARD2_1
+        type ValueTaskBuilderBase with
+
+            member inline this.Source(coldTask: ColdTask<'T>) = (coldTask ()).GetAwaiter()
+
+            member inline this.Source(coldTask: ColdTask) = (coldTask ()).GetAwaiter()
+#endif
+
     [<RequireQualifiedAccess>]
     module ColdTask =
 
         /// <summary>Lifts an item to a ColdTask.</summary>
         /// <param name="item">The item to be the result of the ColdTask.</param>
         /// <returns>A ColdTask with the item as the result.</returns>
-        let inline singleton (result: 'item) : ColdTask<'item> = coldTask { return result }
+        let inline singleton (result: 'item) : ColdTask<'item> = fun () -> Task.FromResult result
 
         /// <summary>Allows chaining of ColdTasks.</summary>
         /// <param name="binder">The continuation.</param>
@@ -808,3 +843,33 @@ module ColdTasks =
         /// <returns>a ColdTask.</returns>
         let inline toUnit ([<InlineIfLambda>] coldTask: ColdTask<_>) : ColdTask =
             fun () -> coldTask () :> Task
+
+        let inline internal getAwaiter ([<InlineIfLambda>] ctask: ColdTask<_>) =
+            fun () -> (ctask ()).GetAwaiter()
+
+    [<AutoOpen>]
+    module Moreextensions =
+
+        type ColdTaskBuilderBase with
+
+            [<NoEagerConstraintApplication>]
+            member inline this.MergeSources<'TResult1, 'TResult2, ^Awaiter1, ^Awaiter2
+                when ^Awaiter1 :> ICriticalNotifyCompletion
+                and ^Awaiter1: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter1: (member GetResult: unit -> 'TResult1)
+                and ^Awaiter2 :> ICriticalNotifyCompletion
+                and ^Awaiter2: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter2: (member GetResult: unit -> 'TResult2)>
+                (
+                    [<InlineIfLambda>] left: unit -> ^Awaiter1,
+                    [<InlineIfLambda>] right: unit -> ^Awaiter2
+                ) : unit -> TaskAwaiter<'TResult1 * 'TResult2> =
+
+                coldTask {
+                    let leftStarted = left ()
+                    let rightStarted = right ()
+                    let! leftResult = leftStarted
+                    let! rightResult = rightStarted
+                    return leftResult, rightResult
+                }
+                |> ColdTask.getAwaiter

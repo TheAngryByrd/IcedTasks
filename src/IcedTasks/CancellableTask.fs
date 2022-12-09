@@ -613,7 +613,9 @@ module CancellableTasks =
                             __stack_fin <- __stack_yield_fin
 
                         if __stack_fin then
-                            let result = (^Awaiter: (member GetResult: unit -> 'TResult1) (awaiter))
+                            let result =
+                                (^Awaiter: (member GetResult: unit -> 'TResult1) (awaiter))
+
                             (continuation result).Invoke(&sm)
                         else
                             sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
@@ -646,6 +648,17 @@ module CancellableTasks =
                 this.Bind((fun ct -> getAwaiter ct), (fun v -> this.Return v))
 
 
+            [<NoEagerConstraintApplication>]
+            member inline this.BindReturn<'TResult1, 'TResult2, ^Awaiter, 'TOverall
+                when ^Awaiter :> ICriticalNotifyCompletion
+                and ^Awaiter: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
+                (
+                    getAwaiter: CancellationToken -> ^Awaiter,
+                    f
+                ) : CancellableTaskCode<'TResult2, 'TResult2> =
+                this.Bind((fun ct -> getAwaiter ct), (fun v -> this.Return(f v)))
+
             /// <summary>Allows the computation expression to turn other types into <c>CancellationToken -> ^Awaiter</c></summary>
             ///
             /// <remarks>This is the identify function.</remarks>
@@ -659,6 +672,21 @@ module CancellableTasks =
                 (getAwaiter: CancellationToken -> ^Awaiter)
                 : CancellationToken -> ^Awaiter =
                 getAwaiter
+
+
+            /// <summary>Allows the computation expression to turn other types into <c>CancellationToken -> ^Awaiter</c></summary>
+            ///
+            /// <remarks>This is the identify function.</remarks>
+            ///
+            /// <returns><c>CancellationToken -> ^Awaiter</c></returns>
+            [<NoEagerConstraintApplication>]
+            member inline _.Source<'TResult1, 'TResult2, ^Awaiter, 'TOverall
+                when ^Awaiter :> ICriticalNotifyCompletion
+                and ^Awaiter: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
+                (getAwaiter: ^Awaiter)
+                : CancellationToken -> ^Awaiter =
+                (fun ct -> getAwaiter)
 
 
             /// <summary>Allows the computation expression to turn other types into <c>CancellationToken -> ^Awaiter</c></summary>
@@ -811,6 +839,12 @@ module CancellableTasks =
             member inline this.Source(computation: Async<'TResult1>) =
                 this.Source(Async.AsCancellableTask(computation))
 
+            /// <summary>Allows the computation expression to turn other types into <c>CancellationToken -> ^Awaiter</c></summary>
+            ///
+            /// <remarks>This turns a <c>CancellableTask&lt;'T&gt;</c> into a <c>CancellationToken -> ^Awaiter</c>.</remarks>
+            ///
+            /// <returns><c>CancellationToken -> ^Awaiter</c></returns>
+            member inline _.Source(awaiter: TaskAwaiter<'TResult1>) = (fun ct -> awaiter)
 
     [<AutoOpen>]
     module AsyncExtenions =
@@ -872,9 +906,7 @@ module CancellableTasks =
         /// <summary>Lifts an item to a CancellableTask.</summary>
         /// <param name="item">The item to be the result of the CancellableTask.</param>
         /// <returns>A CancellableTask with the item as the result.</returns>
-        let inline singleton (item: 'item) : CancellableTask<'item> = cancellableTask {
-            return item
-        }
+        let inline singleton (item: 'item) : CancellableTask<'item> = fun _ -> Task.FromResult(item)
 
 
         /// <summary>Allows chaining of CancellableTasks.</summary>
@@ -957,9 +989,38 @@ module CancellableTasks =
         }
 
         /// <summary>Coverts a CancellableTask\&lt;_\&gt; to a CancellableTask.</summary>
-        /// <param name="cancellabletTask">The CancellableTask to convert.</param>
+        /// <param name="ctask">The CancellableTask to convert.</param>
         /// <returns>a CancellableTask.</returns>
-        let inline toUnit
-            ([<InlineIfLambda>] cancellabletTask: CancellableTask<_>)
-            : CancellableTask =
-            fun ct -> cancellabletTask ct :> Task
+        let inline toUnit ([<InlineIfLambda>] ctask: CancellableTask<_>) : CancellableTask =
+            fun ct -> ctask ct
+
+        let inline internal getAwaiter ([<InlineIfLambda>] ctask: CancellableTask<_>) =
+            fun ct -> (ctask ct).GetAwaiter()
+
+    [<AutoOpen>]
+    module Moreextensions =
+
+        type CancellableTaskBuilderBase with
+
+            [<NoEagerConstraintApplication>]
+            member inline this.MergeSources<'TResult1, 'TResult2, ^Awaiter1, ^Awaiter2
+                when ^Awaiter1 :> ICriticalNotifyCompletion
+                and ^Awaiter1: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter1: (member GetResult: unit -> 'TResult1)
+                and ^Awaiter2 :> ICriticalNotifyCompletion
+                and ^Awaiter2: (member get_IsCompleted: unit -> bool)
+                and ^Awaiter2: (member GetResult: unit -> 'TResult2)>
+                (
+                    [<InlineIfLambda>] left: CancellationToken -> ^Awaiter1,
+                    [<InlineIfLambda>] right: CancellationToken -> ^Awaiter2
+                ) : CancellationToken -> TaskAwaiter<'TResult1 * 'TResult2> =
+
+                cancellableTask {
+                    let! ct = CancellableTask.getCancellationToken ()
+                    let leftStarted = left ct
+                    let rightStarted = right ct
+                    let! leftResult = leftStarted
+                    let! rightResult = rightStarted
+                    return leftResult, rightResult
+                }
+                |> CancellableTask.getAwaiter
