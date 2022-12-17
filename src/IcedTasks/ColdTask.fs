@@ -678,9 +678,9 @@ module ColdTasks =
                     |> Async.AwaitTask
                 )
 
-            /// <summary>Executes a computation in the thread pool.</summary>
+            /// <summary>Runs an asynchronous computation, starting on the current operating system thread.</summary>
             static member inline AsColdTask(computation: Async<'T>) : ColdTask<_> =
-                fun () -> Async.StartAsTask(computation)
+                fun () -> Async.StartImmediateAsTask(computation)
 
         type ColdTaskBuilderBase with
 

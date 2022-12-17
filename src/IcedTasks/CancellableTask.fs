@@ -792,9 +792,9 @@ module CancellableTasks =
                     |> Async.AwaitTask
             }
 
-            /// <summary>Executes a computation in the thread pool.</summary>
+            /// <summary>Runs an asynchronous computation, starting on the current operating system thread.</summary>
             static member inline AsCancellableTask(computation: Async<'T>) : CancellableTask<_> =
-                fun ct -> Async.StartAsTask(computation, cancellationToken = ct)
+                fun ct -> Async.StartImmediateAsTask(computation, cancellationToken = ct)
 
         // High priority extensions
         type CancellableTaskBuilderBase with
@@ -820,7 +820,7 @@ module CancellableTasks =
             /// <remarks>This turns a <c>ColdTask&lt;'T&gt;</c> into a <c>CancellationToken -> ^Awaiter</c>.</remarks>
             ///
             /// <returns><c>CancellationToken -> ^Awaiter</c></returns>
-            member inline _.Source([<InlineIfLambda>] task: ColdTask<'TResult1>) =
+            member inline _.Source([<InlineIfLambda>] task: unit -> Task<'TResult1>) =
                 (fun (ct: CancellationToken) -> (task ()).GetAwaiter())
 
             /// <summary>Allows the computation expression to turn other types into <c>CancellationToken -> ^Awaiter</c></summary>
