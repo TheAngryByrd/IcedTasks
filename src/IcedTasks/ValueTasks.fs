@@ -19,26 +19,24 @@ module ValueTaskExtensions =
 
     type Microsoft.FSharp.Control.Async with
 
-        static member inline AwaitValueTask(v: ValueTask<_>) : Async<_> = async {
+        static member inline AwaitValueTask(v: ValueTask<_>) : Async<_> =
             // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
             if v.IsCompletedSuccessfully then
-                return v.Result
+                async.Return v.Result
             else
-                return! Async.AwaitTask(v.AsTask())
-        }
+                Async.AwaitTask(v.AsTask())
 
-        static member inline AwaitValueTask(v: ValueTask) : Async<unit> = async {
+        static member inline AwaitValueTask(v: ValueTask) : Async<unit> =
             // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
             if v.IsCompletedSuccessfully then
-                return ()
+                async.Return()
             else
-                return! Async.AwaitTask(v.AsTask())
-        }
+                Async.AwaitTask(v.AsTask())
 
 
-        /// <summary>Executes a computation in the thread pool.</summary>
+        /// <summary>Runs an asynchronous computation, starting immediately on the current operating system thread.</summary>
         static member inline AsValueTask(computation: Async<'T>) : ValueTask<_> =
-            Async.StartAsTask(computation)
+            Async.StartImmediateAsTask(computation)
             |> ValueTask<'T>
 
 
@@ -235,7 +233,6 @@ module ValueTasks =
             ) : ValueTaskCode<'TOverall, unit> =
             ResumableCode.For(sequence, body)
 
-#if NETSTANDARD2_1
         /// <summary>Creates an ValueTask that runs <c>computation</c>. The action <c>compensation</c> is executed
         /// after <c>computation</c> completes, whether <c>computation</c> exits normally or by an exception. If <c>compensation</c> raises an exception itself
         /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
@@ -326,7 +323,6 @@ module ValueTasks =
                         ValueTask()
                 )
             )
-#endif
 
     type ValueTaskBuilder() =
 
@@ -451,6 +447,7 @@ module ValueTasks =
                                 sm.Data.MethodBuilder.SetResult(sm.Data.Result)
                         with exn ->
                             sm.Data.MethodBuilder.SetException exn
+
                     //-- RESUMABLE CODE END
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
@@ -627,7 +624,7 @@ module ValueTasks =
             ///
             /// <remarks>This is the identify function.</remarks>
             ///
-            /// <returns><c>CancellationToken -> ^Awaiter</c></returns>
+            /// <returns><c>^Awaiter</c></returns>
             [<NoEagerConstraintApplication>]
             member inline _.Source<'TResult1, 'TResult2, ^Awaiter, 'TOverall
                 when ^Awaiter :> ICriticalNotifyCompletion
@@ -638,11 +635,11 @@ module ValueTasks =
                 getAwaiter
 
 
-            /// <summary>Allows the computation expression to turn other types into <c>CancellationToken -> ^Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into <c>^Awaiter</c></summary>
             ///
-            /// <remarks>This turns a <c>^TaskLike</c> into a <c>CancellationToken -> ^Awaiter</c>.</remarks>
+            /// <remarks>This turns a <c>^TaskLike</c> into a <c>^Awaiter</c>.</remarks>
             ///
-            /// <returns><c>CancellationToken -> ^Awaiter</c></returns>
+            /// <returns><c>^Awaiter</c></returns>
             [<NoEagerConstraintApplication>]
             member inline _.Source< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall
                 when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
@@ -689,27 +686,27 @@ module ValueTasks =
             /// <returns><c>IEnumerable</c></returns>
             member inline _.Source(s: #seq<_>) : #seq<_> = s
 
-            /// <summary>Allows the computation expression to turn other types into <c>CancellationToken -> ^Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into <c>^Awaiter</c></summary>
             ///
-            /// <remarks>This turns a <c>Task&lt;'T&gt;</c> into a <c>CancellationToken -> ^Awaiter</c>.</remarks>
+            /// <remarks>This turns a <c>Task&lt;'T&gt;</c> into a <c>^Awaiter</c>.</remarks>
             ///
-            /// <returns><c>CancellationToken -> ^Awaiter</c></returns>
+            /// <returns><c>^Awaiter</c></returns>
             member inline _.Source(task: Task<'T>) = task.GetAwaiter()
 
-            /// <summary>Allows the computation expression to turn other types into <c>CancellationToken -> ^Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into <c>^Awaiter</c></summary>
             ///
-            /// <remarks>This turns a <c>Async&lt;'T&gt;</c> into a <c>CancellationToken -> ^Awaiter</c>.</remarks>
+            /// <remarks>This turns a <c>Async&lt;'T&gt;</c> into a <c>^Awaiter</c>.</remarks>
             ///
-            /// <returns><c>CancellationToken -> ^Awaiter</c></returns>
+            /// <returns><c>^Awaiter</c></returns>
             member inline this.Source(computation: Async<'TResult1>) =
-                this.Source(Async.StartAsTask(computation))
+                this.Source(Async.StartImmediateAsTask(computation))
 
 
-            /// <summary>Allows the computation expression to turn other types into <c>CancellationToken -> ^Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into <c>^Awaiter</c></summary>
             ///
-            /// <remarks>This turns a <c>Async&lt;'T&gt;</c> into a <c>CancellationToken -> ^Awaiter</c>.</remarks>
+            /// <remarks>This turns a <c>Async&lt;'T&gt;</c> into a <c>^Awaiter</c>.</remarks>
             ///
-            /// <returns><c>CancellationToken -> ^Awaiter</c></returns>
+            /// <returns><c>^Awaiter</c></returns>
             member inline this.Source(awaiter: TaskAwaiter<'TResult1>) = awaiter
 
     [<RequireQualifiedAccess>]
