@@ -35,7 +35,7 @@ module ValueTaskExtensions =
 
 
         /// <summary>Runs an asynchronous computation, starting immediately on the current operating system thread.</summary>
-        static member inline AsValueTask(computation: Async<'T>) : ValueTask<_> =
+        static member inline AsValueTask(computation: Async<'T>) : ValueTask<'T> =
             Async.StartImmediateAsTask(computation)
             |> ValueTask<'T>
 
@@ -45,7 +45,7 @@ module ValueTaskExtensions =
 // Originally written in 2016 by Robert Peele (humbobst@gmail.com)
 // New operator-based overload resolution for F# 4.0 compatibility by Gustavo Leon in 2018.
 // Revised for insertion into FSharp.Core by Microsoft, 2019.
-// Revised to implement CancellationToken semantics
+// Revised to implement ValueTask semantics
 //
 // Original notice:
 // To the extent possible under law, the author(s) have dedicated all copyright and related and neighboring rights
@@ -56,7 +56,6 @@ namespace IcedTasks
 
 [<AutoOpen>]
 module ValueTasks =
-
     open System
     open System.Runtime.CompilerServices
     open System.Threading
