@@ -400,57 +400,125 @@ module CancellableValueTaskTests =
             ]
 
             testList "Using" [
-                testCaseAsync "use"
+                testCaseAsync "use IDisposable"
                 <| async {
                     let data = 42
+                    let mutable wasDisposed = false
+                    let doDispose () = wasDisposed <- true
 
                     let! actual = cancellableValueTask {
-                        use d = TestHelpers.makeDisposable ()
+                        use d = TestHelpers.makeDisposable doDispose
                         return data
                     }
 
                     Expect.equal actual data "Should be able to use use"
+                    Expect.isTrue wasDisposed ""
                 }
-                testCaseAsync "use!"
+                testCaseAsync "use! IDisposable"
                 <| async {
                     let data = 42
+                    let mutable wasDisposed = false
+                    let doDispose () = wasDisposed <- true
 
                     let! actual = cancellableValueTask {
                         use! d =
-                            TestHelpers.makeDisposable ()
+                            TestHelpers.makeDisposable doDispose
                             |> async.Return
 
                         return data
                     }
 
                     Expect.equal actual data "Should be able to use use"
+                    Expect.isTrue wasDisposed ""
                 }
 
-                testCaseAsync "use async"
+                testCaseAsync "use IAsyncDisposable sync"
                 <| async {
                     let data = 42
+                    let mutable wasDisposed = false
+
+                    let doDispose () =
+                        wasDisposed <- true
+                        ValueTask.CompletedTask
 
                     let! actual = cancellableValueTask {
-                        use d = TestHelpers.makeAsyncDisposable ()
+                        use d = TestHelpers.makeAsyncDisposable (doDispose)
 
                         return data
                     }
 
                     Expect.equal actual data "Should be able to use use"
+                    Expect.isTrue wasDisposed ""
                 }
-                testCaseAsync "use! async"
+                testCaseAsync "use! IAsyncDisposable sync "
                 <| async {
                     let data = 42
+                    let mutable wasDisposed = false
+
+                    let doDispose () =
+                        wasDisposed <- true
+                        ValueTask.CompletedTask
 
                     let! actual = cancellableValueTask {
                         use! d =
-                            TestHelpers.makeAsyncDisposable ()
+                            TestHelpers.makeAsyncDisposable (doDispose)
                             |> async.Return
 
                         return data
                     }
 
                     Expect.equal actual data "Should be able to use use"
+                    Expect.isTrue wasDisposed ""
+                }
+
+
+                testCaseAsync "use IAsyncDisposable async"
+                <| async {
+                    let data = 42
+                    let mutable wasDisposed = false
+
+                    let doDispose () =
+                        task {
+                            Expect.isFalse wasDisposed ""
+                            do! Task.Yield()
+                            wasDisposed <- true
+                        }
+                        |> ValueTask
+
+                    let! actual = cancellableValueTask {
+                        use d = TestHelpers.makeAsyncDisposable (doDispose)
+                        Expect.isFalse wasDisposed ""
+
+                        return data
+                    }
+
+                    Expect.equal actual data "Should be able to use use"
+                    Expect.isTrue wasDisposed ""
+                }
+                testCaseAsync "use! IAsyncDisposable async"
+                <| async {
+                    let data = 42
+                    let mutable wasDisposed = false
+
+                    let doDispose () =
+                        task {
+                            Expect.isFalse wasDisposed ""
+                            do! Task.Yield()
+                            wasDisposed <- true
+                        }
+                        |> ValueTask
+
+                    let! actual = cancellableValueTask {
+                        use! d =
+                            TestHelpers.makeAsyncDisposable (doDispose)
+                            |> async.Return
+
+                        Expect.isFalse wasDisposed ""
+                        return data
+                    }
+
+                    Expect.equal actual data "Should be able to use use"
+                    Expect.isTrue wasDisposed ""
                 }
 
                 testCaseAsync "null"
@@ -466,68 +534,149 @@ module CancellableValueTaskTests =
                 }
             ]
 
+
             testList "While" [
-                testCaseAsync "while to 10"
-                <| async {
-                    let loops = 10
-                    let mutable index = 0
+                yield!
+                    [
+                        10
+                        10000
+                        1000000
+                    ]
+                    |> List.map (fun loops ->
+                        testCaseAsync $"while to {loops}"
+                        <| async {
+                            let mutable index = 0
 
-                    let! actual = cancellableValueTask {
-                        while index < loops do
-                            index <- index + 1
+                            let! actual = cancellableValueTask {
+                                while index < loops do
+                                    index <- index + 1
 
-                        return index
-                    }
+                                return index
+                            }
 
-                    Expect.equal actual loops "Should be ok"
-                }
-                testCaseAsync "while to 1000000"
-                <| async {
-                    let loops = 1000000
-                    let mutable index = 0
+                            Expect.equal actual loops "Should be ok"
+                        }
+                    )
 
-                    let! actual = cancellableValueTask {
-                        while index < loops do
-                            index <- index + 1
 
-                        return index
-                    }
+                yield!
+                    [
+                        10
+                        10000
+                        1000000
+                    ]
+                    |> List.map (fun loops ->
+                        testCaseAsync $"while bind to {loops}"
+                        <| async {
+                            let mutable index = 0
 
-                    Expect.equal actual loops "Should be ok"
-                }
+                            let! actual = cancellableValueTask {
+                                while index < loops do
+                                    do! Task.Yield()
+                                    index <- index + 1
+
+                                return index
+                            }
+
+                            Expect.equal actual loops "Should be ok"
+                        }
+                    )
             ]
 
+
             testList "For" [
-                testCaseAsync "for in"
-                <| async {
-                    let loops = 10
-                    let mutable index = 0
 
-                    let! actual = cancellableValueTask {
-                        for i in [ 1..10 ] do
-                            index <- i + i
+                yield!
+                    [
+                        10
+                        10000
+                        1000000
+                    ]
+                    |> List.map (fun loops ->
+                        testCaseAsync $"for in {loops}"
+                        <| async {
+                            let mutable index = 0
 
-                        return index
-                    }
+                            let! actual = cancellableValueTask {
+                                for i in [ 1..10 ] do
+                                    index <- i + i
 
-                    Expect.equal actual index "Should be ok"
-                }
+                                return index
+                            }
+
+                            Expect.equal actual index "Should be ok"
+                        }
+                    )
 
 
-                testCaseAsync "for to"
-                <| async {
-                    let loops = 10
-                    let mutable index = 0
+                yield!
+                    [
+                        10
+                        10000
+                        1000000
+                    ]
+                    |> List.map (fun loops ->
+                        testCaseAsync $"for to {loops}"
+                        <| async {
+                            let mutable index = 0
 
-                    let! actual = cancellableValueTask {
-                        for i = 1 to loops do
-                            index <- i + i
+                            let! actual = cancellableValueTask {
+                                for i = 1 to loops do
+                                    index <- i + i
 
-                        return index
-                    }
+                                return index
+                            }
 
-                    Expect.equal actual index "Should be ok"
-                }
+                            Expect.equal actual index "Should be ok"
+                        }
+                    )
+
+                yield!
+                    [
+                        10
+                        10000
+                        1000000
+                    ]
+                    |> List.map (fun loops ->
+                        testCaseAsync $"for bind in {loops}"
+                        <| async {
+                            let mutable index = 0
+
+                            let! actual = cancellableValueTask {
+                                for i in [ 1..10 ] do
+                                    do! Task.Yield()
+                                    index <- i + i
+
+                                return index
+                            }
+
+                            Expect.equal actual index "Should be ok"
+                        }
+                    )
+
+
+                yield!
+                    [
+                        10
+                        10000
+                        1000000
+                    ]
+                    |> List.map (fun loops ->
+                        testCaseAsync $"for bind to {loops}"
+                        <| async {
+                            let mutable index = 0
+
+                            let! actual = cancellableValueTask {
+                                for i = 1 to loops do
+                                    do! Task.Yield()
+                                    index <- i + i
+
+                                return index
+                            }
+
+                            Expect.equal actual index "Should be ok"
+                        }
+                    )
             ]
 
             testList "MergeSources" [

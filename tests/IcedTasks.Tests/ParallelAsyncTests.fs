@@ -105,27 +105,33 @@ module ParallelAsyncTests =
                 testCaseAsync "use"
                 <| async {
                     let data = 42
+                    let mutable wasDisposed = false
+                    let doDispose () = wasDisposed <- true
 
                     let! actual = parallelAsync {
-                        use d = TestHelpers.makeDisposable ()
+                        use d = TestHelpers.makeDisposable (doDispose)
                         return data
                     }
 
                     Expect.equal actual data "Should be able to use use"
+                    Expect.isTrue wasDisposed ""
                 }
                 testCaseAsync "use!"
                 <| async {
                     let data = 42
+                    let mutable wasDisposed = false
+                    let doDispose () = wasDisposed <- true
 
                     let! actual = parallelAsync {
                         use! d =
-                            TestHelpers.makeDisposable ()
+                            TestHelpers.makeDisposable (doDispose)
                             |> async.Return
 
                         return data
                     }
 
                     Expect.equal actual data "Should be able to use use"
+                    Expect.isTrue wasDisposed ""
                 }
                 testCaseAsync "null"
                 <| async {
