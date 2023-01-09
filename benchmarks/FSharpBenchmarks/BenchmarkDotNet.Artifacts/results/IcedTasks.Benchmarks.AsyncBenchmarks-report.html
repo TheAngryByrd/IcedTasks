@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>IcedTasks.Benchmarks.AsyncBenchmarks-20221130-232158</title>
+<title>IcedTasks.Benchmarks.AsyncBenchmarks-20221220-095552</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -13,7 +13,7 @@
 </head>
 <body>
 <pre><code>
-BenchmarkDotNet=v0.13.2, OS=Windows 11 (10.0.22000.1219/21H2)
+BenchmarkDotNet=v0.13.2, OS=Windows 11 (10.0.22000.1335/21H2)
 12th Gen Intel Core i9-12900F, 1 CPU, 24 logical and 16 physical cores
 .NET SDK=7.0.100
   [Host]     : .NET 7.0.0 (7.0.22.51805), X64 RyuJIT AVX2 DEBUG
@@ -22,39 +22,58 @@ BenchmarkDotNet=v0.13.2, OS=Windows 11 (10.0.22000.1219/21H2)
 <pre><code></code></pre>
 
 <table>
-<thead><tr><th>                                   Method</th><th>Categories</th><th>  Mean</th><th> Error</th><th>StdDev</th><th>Median</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+<thead><tr><th>                                               Method</th><th>Categories</th><th>  Mean</th><th> Error</th><th>StdDev</th><th>Median</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>AsyncBinds_CSharpTasks</td><td>AsyncBinds</td><td>3,325.9 &mu;s</td><td>17.90 &mu;s</td><td>16.75 &mu;s</td><td>3,329.0 &mu;s</td><td>1.00</td><td>0.00</td><td>3.9063</td><td>-</td><td>112011 B</td><td>1.00</td>
-</tr><tr><td>AsyncBinds_ply</td><td>AsyncBinds</td><td>4,028.4 &mu;s</td><td>16.22 &mu;s</td><td>13.54 &mu;s</td><td>4,025.2 &mu;s</td><td>1.21</td><td>0.01</td><td>39.0625</td><td>-</td><td>672036 B</td><td>6.00</td>
-</tr><tr><td>AsyncBinds_async</td><td>AsyncBinds</td><td>61,266.5 &mu;s</td><td>687.39 &mu;s</td><td>574.00 &mu;s</td><td>61,297.2 &mu;s</td><td>18.44</td><td>0.18</td><td>444.4444</td><td>-</td><td>8224085 B</td><td>73.42</td>
-</tr><tr><td>AsyncBinds_task</td><td>AsyncBinds</td><td>3,540.1 &mu;s</td><td>16.54 &mu;s</td><td>13.81 &mu;s</td><td>3,539.1 &mu;s</td><td>1.07</td><td>0.00</td><td>7.8125</td><td>-</td><td>128015 B</td><td>1.14</td>
-</tr><tr><td>AsyncBinds_valueTask</td><td>AsyncBinds</td><td>3,547.2 &mu;s</td><td>11.49 &mu;s</td><td>9.59 &mu;s</td><td>3,543.7 &mu;s</td><td>1.07</td><td>0.01</td><td>7.8125</td><td>-</td><td>136021 B</td><td>1.21</td>
-</tr><tr><td>AsyncBinds_coldTask_bindTask</td><td>AsyncBinds</td><td>3,741.0 &mu;s</td><td>23.27 &mu;s</td><td>21.77 &mu;s</td><td>3,744.1 &mu;s</td><td>1.12</td><td>0.01</td><td>23.4375</td><td>-</td><td>424016 B</td><td>3.79</td>
-</tr><tr><td>AsyncBinds_coldTask_bindColdTask</td><td>AsyncBinds</td><td>3,593.0 &mu;s</td><td>27.79 &mu;s</td><td>24.63 &mu;s</td><td>3,586.9 &mu;s</td><td>1.08</td><td>0.01</td><td>11.7188</td><td>-</td><td>184017 B</td><td>1.64</td>
-</tr><tr><td>AsyncBinds_cancellableTask_bindTask</td><td>AsyncBinds</td><td>3,606.1 &mu;s</td><td>16.99 &mu;s</td><td>15.06 &mu;s</td><td>3,602.2 &mu;s</td><td>1.08</td><td>0.01</td><td>27.3438</td><td>-</td><td>440021 B</td><td>3.93</td>
-</tr><tr><td>AsyncBinds_cancellableTask_bindColdTask</td><td>AsyncBinds</td><td>3,534.9 &mu;s</td><td>48.84 &mu;s</td><td>45.69 &mu;s</td><td>3,540.6 &mu;s</td><td>1.06</td><td>0.02</td><td>11.7188</td><td>-</td><td>200015 B</td><td>1.79</td>
-</tr><tr><td>AsyncBinds_cancellableTask_bindCancellableTask</td><td>AsyncBinds</td><td>3,624.9 &mu;s</td><td>29.66 &mu;s</td><td>27.75 &mu;s</td><td>3,621.8 &mu;s</td><td>1.09</td><td>0.01</td><td>7.8125</td><td>-</td><td>200023 B</td><td>1.79</td>
-</tr><tr><td>ManyWriteFile_CSharpTasks</td><td>ManyWriteFile</td><td>493.9 &mu;s</td><td>9.08 &mu;s</td><td>7.58 &mu;s</td><td>492.9 &mu;s</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>8239 B</td><td>1.00</td>
-</tr><tr><td>ManyWriteFile_ply</td><td>ManyWriteFile</td><td>577.1 &mu;s</td><td>13.05 &mu;s</td><td>37.24 &mu;s</td><td>567.9 &mu;s</td><td>1.16</td><td>0.07</td><td>-</td><td>-</td><td>10130 B</td><td>1.23</td>
-</tr><tr><td>ManyWriteFile_async</td><td>ManyWriteFile</td><td>696.6 &mu;s</td><td>15.91 &mu;s</td><td>45.64 &mu;s</td><td>677.7 &mu;s</td><td>1.41</td><td>0.10</td><td>18.5547</td><td>-</td><td>298849 B</td><td>36.27</td>
-</tr><tr><td>ManyWriteFile_task</td><td>ManyWriteFile</td><td>512.5 &mu;s</td><td>13.52 &mu;s</td><td>39.44 &mu;s</td><td>497.7 &mu;s</td><td>1.06</td><td>0.07</td><td>-</td><td>-</td><td>8407 B</td><td>1.02</td>
-</tr><tr><td>ManyWriteFile_valueTask</td><td>ManyWriteFile</td><td>512.3 &mu;s</td><td>10.22 &mu;s</td><td>22.64 &mu;s</td><td>509.7 &mu;s</td><td>1.03</td><td>0.02</td><td>0.4883</td><td>-</td><td>8414 B</td><td>1.02</td>
-</tr><tr><td>ManyWriteFile_coldTask</td><td>ManyWriteFile</td><td>517.0 &mu;s</td><td>14.86 &mu;s</td><td>42.39 &mu;s</td><td>509.2 &mu;s</td><td>1.03</td><td>0.10</td><td>1.9531</td><td>-</td><td>32518 B</td><td>3.95</td>
-</tr><tr><td>ManyWriteFile_cancellableTask</td><td>ManyWriteFile</td><td>546.0 &mu;s</td><td>13.20 &mu;s</td><td>38.29 &mu;s</td><td>544.6 &mu;s</td><td>1.05</td><td>0.05</td><td>1.9531</td><td>-</td><td>32545 B</td><td>3.95</td>
-</tr><tr><td>ManyWriteFile_cancellableTask_withCancellation</td><td>ManyWriteFile</td><td>530.0 &mu;s</td><td>17.92 &mu;s</td><td>51.42 &mu;s</td><td>521.0 &mu;s</td><td>1.12</td><td>0.10</td><td>1.9531</td><td>-</td><td>32721 B</td><td>3.97</td>
-</tr><tr><td>ManyWriteFile_cancellableTask_withCancellation2</td><td>ManyWriteFile</td><td>432.4 &mu;s</td><td>16.31 &mu;s</td><td>46.01 &mu;s</td><td>413.1 &mu;s</td><td>0.89</td><td>0.09</td><td>-</td><td>-</td><td>8537 B</td><td>1.04</td>
-</tr><tr><td>ManyWriteFile_cancellableTask_withCancellation3</td><td>ManyWriteFile</td><td>572.7 &mu;s</td><td>14.51 &mu;s</td><td>42.79 &mu;s</td><td>561.7 &mu;s</td><td>1.21</td><td>0.09</td><td>10.7422</td><td>-</td><td>176552 B</td><td>21.43</td>
-</tr><tr><td>NonAsyncBinds_CSharpTasks</td><td>NonAsyncBinds</td><td>5,467.4 &mu;s</td><td>160.22 &mu;s</td><td>472.41 &mu;s</td><td>5,204.7 &mu;s</td><td>1.00</td><td>0.00</td><td>5046.8750</td><td>-</td><td>79200004 B</td><td>1.000</td>
-</tr><tr><td>NonAsyncBinds_ply</td><td>NonAsyncBinds</td><td>6,987.4 &mu;s</td><td>196.55 &mu;s</td><td>573.33 &mu;s</td><td>6,676.6 &mu;s</td><td>1.29</td><td>0.15</td><td>5046.8750</td><td>-</td><td>79200004 B</td><td>1.000</td>
-</tr><tr><td>NonAsyncBinds_async</td><td>NonAsyncBinds</td><td>615,834.3 &mu;s</td><td>11,060.72 &mu;s</td><td>10,346.21 &mu;s</td><td>612,380.5 &mu;s</td><td>113.37</td><td>11.30</td><td>16000.0000</td><td>-</td><td>251200432 B</td><td>3.172</td>
-</tr><tr><td>NonAsyncBinds_task</td><td>NonAsyncBinds</td><td>6,048.6 &mu;s</td><td>163.35 &mu;s</td><td>473.91 &mu;s</td><td>5,774.8 &mu;s</td><td>1.12</td><td>0.13</td><td>5046.8750</td><td>7.8125</td><td>79200004 B</td><td>1.000</td>
-</tr><tr><td>NonAsyncBinds_task_bindValueTask</td><td>NonAsyncBinds</td><td>6,835.5 &mu;s</td><td>63.71 &mu;s</td><td>56.47 &mu;s</td><td>6,822.1 &mu;s</td><td>1.25</td><td>0.11</td><td>453.1250</td><td>-</td><td>7200004 B</td><td>0.091</td>
-</tr><tr><td>NonAsyncBinds_valueTask</td><td>NonAsyncBinds</td><td>6,403.7 &mu;s</td><td>121.95 &mu;s</td><td>125.24 &mu;s</td><td>6,356.0 &mu;s</td><td>1.19</td><td>0.09</td><td>-</td><td>-</td><td>4 B</td><td>0.000</td>
-</tr><tr><td>tenBindSync_valueTask_bindTask</td><td>NonAsyncBinds</td><td>5,790.0 &mu;s</td><td>164.19 &mu;s</td><td>478.94 &mu;s</td><td>5,584.0 &mu;s</td><td>1.07</td><td>0.13</td><td>4585.9375</td><td>-</td><td>72000004 B</td><td>0.909</td>
-</tr><tr><td>NonAsyncBinds_coldTask_bindTask</td><td>NonAsyncBinds</td><td>13,081.5 &mu;s</td><td>348.32 &mu;s</td><td>1,021.57 &mu;s</td><td>12,666.3 &mu;s</td><td>2.41</td><td>0.26</td><td>7546.8750</td><td>-</td><td>118400008 B</td><td>1.495</td>
-</tr><tr><td>NonAsyncBinds_coldTask_bindColdTask</td><td>NonAsyncBinds</td><td>10,000.6 &mu;s</td><td>233.68 &mu;s</td><td>685.35 &mu;s</td><td>9,662.6 &mu;s</td><td>1.84</td><td>0.20</td><td>6015.6250</td><td>-</td><td>94400008 B</td><td>1.192</td>
-</tr><tr><td>NonAsyncBinds_cancellableTask_bindTask</td><td>NonAsyncBinds</td><td>14,202.6 &mu;s</td><td>371.16 &mu;s</td><td>1,076.80 &mu;s</td><td>13,883.6 &mu;s</td><td>2.62</td><td>0.31</td><td>7593.7500</td><td>-</td><td>119200008 B</td><td>1.505</td>
-</tr><tr><td>NonAsyncBinds_cancellableTask</td><td>NonAsyncBinds</td><td>10,382.8 &mu;s</td><td>281.62 &mu;s</td><td>830.35 &mu;s</td><td>9,894.2 &mu;s</td><td>1.92</td><td>0.25</td><td>6062.5000</td><td>-</td><td>95200008 B</td><td>1.202</td>
+</thead><tbody><tr><td>AsyncBinds_CSharpTasks</td><td>AsyncBinds</td><td>3,385.0 &mu;s</td><td>65.91 &mu;s</td><td>90.22 &mu;s</td><td>3,361.8 &mu;s</td><td>1.00</td><td>0.00</td><td>3.9063</td><td>112015 B</td><td>1.00</td>
+</tr><tr><td>AsyncBinds_ply</td><td>AsyncBinds</td><td>3,898.9 &mu;s</td><td>21.31 &mu;s</td><td>19.93 &mu;s</td><td>3,899.0 &mu;s</td><td>1.13</td><td>0.03</td><td>39.0625</td><td>672110 B</td><td>6.00</td>
+</tr><tr><td>AsyncBinds_async</td><td>AsyncBinds</td><td>56,078.1 &mu;s</td><td>1,094.30 &mu;s</td><td>1,123.77 &mu;s</td><td>56,059.3 &mu;s</td><td>16.37</td><td>0.45</td><td>444.4444</td><td>8224085 B</td><td>73.42</td>
+</tr><tr><td>AsyncBinds_task</td><td>AsyncBinds</td><td>3,428.8 &mu;s</td><td>37.05 &mu;s</td><td>34.65 &mu;s</td><td>3,431.5 &mu;s</td><td>1.00</td><td>0.03</td><td>7.8125</td><td>128009 B</td><td>1.14</td>
+</tr><tr><td>AsyncBinds_valueTask</td><td>AsyncBinds</td><td>3,638.3 &mu;s</td><td>25.87 &mu;s</td><td>24.20 &mu;s</td><td>3,642.3 &mu;s</td><td>1.06</td><td>0.03</td><td>7.8125</td><td>136012 B</td><td>1.21</td>
+</tr><tr><td>AsyncBinds_coldTask_bindTask</td><td>AsyncBinds</td><td>3,471.3 &mu;s</td><td>25.18 &mu;s</td><td>23.55 &mu;s</td><td>3,472.1 &mu;s</td><td>1.01</td><td>0.03</td><td>23.4375</td><td>424016 B</td><td>3.79</td>
+</tr><tr><td>AsyncBinds_coldTask_bindColdTask</td><td>AsyncBinds</td><td>3,604.3 &mu;s</td><td>21.80 &mu;s</td><td>20.40 &mu;s</td><td>3,600.0 &mu;s</td><td>1.05</td><td>0.02</td><td>11.7188</td><td>184011 B</td><td>1.64</td>
+</tr><tr><td>AsyncBinds_cancellableTask_bindTask</td><td>AsyncBinds</td><td>3,713.3 &mu;s</td><td>32.59 &mu;s</td><td>30.48 &mu;s</td><td>3,706.2 &mu;s</td><td>1.08</td><td>0.03</td><td>27.3438</td><td>440011 B</td><td>3.93</td>
+</tr><tr><td>AsyncBinds_cancellableTask_bindColdTask</td><td>AsyncBinds</td><td>3,485.8 &mu;s</td><td>37.14 &mu;s</td><td>32.92 &mu;s</td><td>3,483.7 &mu;s</td><td>1.01</td><td>0.02</td><td>7.8125</td><td>200016 B</td><td>1.79</td>
+</tr><tr><td>AsyncBinds_cancellableTask_bindCancellableTask</td><td>AsyncBinds</td><td>3,530.2 &mu;s</td><td>34.36 &mu;s</td><td>32.14 &mu;s</td><td>3,525.6 &mu;s</td><td>1.03</td><td>0.03</td><td>11.7188</td><td>200011 B</td><td>1.79</td>
+</tr><tr><td>AsyncBinds_cancellableValueTask_bindTask</td><td>AsyncBinds</td><td>3,593.4 &mu;s</td><td>15.48 &mu;s</td><td>14.48 &mu;s</td><td>3,591.0 &mu;s</td><td>1.05</td><td>0.02</td><td>27.3438</td><td>456010 B</td><td>4.07</td>
+</tr><tr><td>AsyncBinds_cancellableValueTask_bindColdTask</td><td>AsyncBinds</td><td>3,588.8 &mu;s</td><td>23.80 &mu;s</td><td>21.09 &mu;s</td><td>3,582.0 &mu;s</td><td>1.04</td><td>0.02</td><td>11.7188</td><td>216014 B</td><td>1.93</td>
+</tr><tr><td>AsyncBinds_cancellableValueTask_bindCancellableTask</td><td>AsyncBinds</td><td>3,590.1 &mu;s</td><td>40.27 &mu;s</td><td>37.67 &mu;s</td><td>3,602.7 &mu;s</td><td>1.04</td><td>0.03</td><td>11.7188</td><td>216011 B</td><td>1.93</td>
+</tr><tr><td>ManyWriteFile_CSharpTasks</td><td>ManyWriteFile</td><td>479.7 &mu;s</td><td>9.10 &mu;s</td><td>12.15 &mu;s</td><td>478.9 &mu;s</td><td>1.00</td><td>0.00</td><td>-</td><td>8248 B</td><td>1.00</td>
+</tr><tr><td>ManyWriteFile_ply</td><td>ManyWriteFile</td><td>737.1 &mu;s</td><td>41.42 &mu;s</td><td>119.50 &mu;s</td><td>707.7 &mu;s</td><td>1.64</td><td>0.33</td><td>-</td><td>10132 B</td><td>1.23</td>
+</tr><tr><td>ManyWriteFile_async</td><td>ManyWriteFile</td><td>720.4 &mu;s</td><td>17.28 &mu;s</td><td>49.86 &mu;s</td><td>717.8 &mu;s</td><td>1.55</td><td>0.11</td><td>18.5547</td><td>298849 B</td><td>36.23</td>
+</tr><tr><td>ManyWriteFile_task</td><td>ManyWriteFile</td><td>557.8 &mu;s</td><td>15.99 &mu;s</td><td>46.64 &mu;s</td><td>559.8 &mu;s</td><td>1.16</td><td>0.09</td><td>-</td><td>8411 B</td><td>1.02</td>
+</tr><tr><td>ManyWriteFile_valueTask</td><td>ManyWriteFile</td><td>546.6 &mu;s</td><td>16.96 &mu;s</td><td>48.95 &mu;s</td><td>543.6 &mu;s</td><td>1.15</td><td>0.10</td><td>-</td><td>8422 B</td><td>1.02</td>
+</tr><tr><td>ManyWriteFile_coldTask</td><td>ManyWriteFile</td><td>560.0 &mu;s</td><td>16.84 &mu;s</td><td>48.86 &mu;s</td><td>545.7 &mu;s</td><td>1.16</td><td>0.10</td><td>1.9531</td><td>32531 B</td><td>3.94</td>
+</tr><tr><td>ManyWriteFile_cancellableTask</td><td>ManyWriteFile</td><td>562.6 &mu;s</td><td>17.71 &mu;s</td><td>51.09 &mu;s</td><td>553.2 &mu;s</td><td>1.15</td><td>0.12</td><td>1.9531</td><td>32557 B</td><td>3.95</td>
+</tr><tr><td>ManyWriteFile_cancellableTask_withCancellation</td><td>ManyWriteFile</td><td>593.1 &mu;s</td><td>24.93 &mu;s</td><td>71.93 &mu;s</td><td>580.7 &mu;s</td><td>1.19</td><td>0.09</td><td>1.9531</td><td>32731 B</td><td>3.97</td>
+</tr><tr><td>ManyWriteFile_cancellableTask_withCancellation2</td><td>ManyWriteFile</td><td>558.4 &mu;s</td><td>32.15 &mu;s</td><td>90.67 &mu;s</td><td>537.6 &mu;s</td><td>1.09</td><td>0.12</td><td>0.4883</td><td>8584 B</td><td>1.04</td>
+</tr><tr><td>ManyWriteFile_cancellableTask_withCancellation3</td><td>ManyWriteFile</td><td>635.2 &mu;s</td><td>18.46 &mu;s</td><td>54.42 &mu;s</td><td>624.4 &mu;s</td><td>1.33</td><td>0.12</td><td>10.7422</td><td>176587 B</td><td>21.41</td>
+</tr><tr><td>ManyWriteFile_cancellableValueTask</td><td>ManyWriteFile</td><td>560.4 &mu;s</td><td>21.41 &mu;s</td><td>62.45 &mu;s</td><td>560.4 &mu;s</td><td>1.21</td><td>0.11</td><td>1.9531</td><td>32572 B</td><td>3.95</td>
+</tr><tr><td>ManyWriteFile_cancellableValueTask_withCancellation</td><td>ManyWriteFile</td><td>547.6 &mu;s</td><td>20.47 &mu;s</td><td>60.03 &mu;s</td><td>541.4 &mu;s</td><td>1.21</td><td>0.12</td><td>1.9531</td><td>32717 B</td><td>3.97</td>
+</tr><tr><td>ManyWriteFile_cancellableValueTask_withCancellation2</td><td>ManyWriteFile</td><td>695.4 &mu;s</td><td>66.01 &mu;s</td><td>194.64 &mu;s</td><td>665.0 &mu;s</td><td>1.20</td><td>0.37</td><td>0.4883</td><td>8603 B</td><td>1.04</td>
+</tr><tr><td>ManyWriteFile_cancellableValueTask_withCancellation3</td><td>ManyWriteFile</td><td>652.9 &mu;s</td><td>23.95 &mu;s</td><td>69.11 &mu;s</td><td>628.7 &mu;s</td><td>1.37</td><td>0.12</td><td>5.8594</td><td>112658 B</td><td>13.66</td>
+</tr><tr><td>NonAsyncBinds_CSharpTasks</td><td>NonAsyncBinds</td><td>8,140.8 &mu;s</td><td>565.08 &mu;s</td><td>1,666.16 &mu;s</td><td>8,457.5 &mu;s</td><td>1.00</td><td>0.00</td><td>5046.8750</td><td>79200004 B</td><td>1.000</td>
+</tr><tr><td>NonAsyncBinds_ply</td><td>NonAsyncBinds</td><td>10,471.5 &mu;s</td><td>638.78 &mu;s</td><td>1,883.46 &mu;s</td><td>10,983.8 &mu;s</td><td>1.35</td><td>0.39</td><td>5046.8750</td><td>79200004 B</td><td>1.000</td>
+</tr><tr><td>NonAsyncBinds_async</td><td>NonAsyncBinds</td><td>598,409.9 &mu;s</td><td>11,794.73 &mu;s</td><td>30,021.34 &mu;s</td><td>588,853.6 &mu;s</td><td>76.61</td><td>20.45</td><td>16000.0000</td><td>251200656 B</td><td>3.172</td>
+</tr><tr><td>NonAsyncBinds_task</td><td>NonAsyncBinds</td><td>8,572.2 &mu;s</td><td>799.47 &mu;s</td><td>2,357.27 &mu;s</td><td>8,957.5 &mu;s</td><td>1.10</td><td>0.41</td><td>5046.8750</td><td>79200004 B</td><td>1.000</td>
+</tr><tr><td>NonAsyncBinds_task_bindValueTask</td><td>NonAsyncBinds</td><td>6,691.3 &mu;s</td><td>74.58 &mu;s</td><td>58.23 &mu;s</td><td>6,715.6 &mu;s</td><td>0.84</td><td>0.22</td><td>453.1250</td><td>7200004 B</td><td>0.091</td>
+</tr><tr><td>NonAsyncBinds_valueTask</td><td>NonAsyncBinds</td><td>6,313.3 &mu;s</td><td>108.69 &mu;s</td><td>101.66 &mu;s</td><td>6,298.5 &mu;s</td><td>0.79</td><td>0.19</td><td>-</td><td>4 B</td><td>0.000</td>
+</tr><tr><td>tenBindSync_valueTask_bindTask</td><td>NonAsyncBinds</td><td>8,236.7 &mu;s</td><td>657.82 &mu;s</td><td>1,939.59 &mu;s</td><td>8,622.7 &mu;s</td><td>1.07</td><td>0.39</td><td>4585.9375</td><td>72000004 B</td><td>0.909</td>
+</tr><tr><td>NonAsyncBinds_coldTask_bindTask</td><td>NonAsyncBinds</td><td>20,548.4 &mu;s</td><td>1,369.49 &mu;s</td><td>4,037.96 &mu;s</td><td>21,832.5 &mu;s</td><td>2.65</td><td>0.82</td><td>7546.8750</td><td>118400008 B</td><td>1.495</td>
+</tr><tr><td>NonAsyncBinds_coldTask_bindValueTask</td><td>NonAsyncBinds</td><td>22,335.9 &mu;s</td><td>1,013.72 &mu;s</td><td>2,988.98 &mu;s</td><td>23,480.6 &mu;s</td><td>2.88</td><td>0.81</td><td>3968.7500</td><td>62400015 B</td><td>0.788</td>
+</tr><tr><td>NonAsyncBinds_coldTask_bindColdTask</td><td>NonAsyncBinds</td><td>16,665.4 &mu;s</td><td>1,234.63 &mu;s</td><td>3,640.34 &mu;s</td><td>18,076.6 &mu;s</td><td>2.15</td><td>0.72</td><td>6015.6250</td><td>94400008 B</td><td>1.192</td>
+</tr><tr><td>NonAsyncBinds_coldTask_bindColdValueTask</td><td>NonAsyncBinds</td><td>15,643.5 &mu;s</td><td>1,163.78 &mu;s</td><td>3,431.44 &mu;s</td><td>15,919.5 &mu;s</td><td>2.03</td><td>0.73</td><td>6015.6250</td><td>94400008 B</td><td>1.192</td>
+</tr><tr><td>NonAsyncBinds_cancellableTask_bindTask</td><td>NonAsyncBinds</td><td>21,686.1 &mu;s</td><td>1,650.04 &mu;s</td><td>4,865.19 &mu;s</td><td>23,892.2 &mu;s</td><td>2.83</td><td>1.05</td><td>7593.7500</td><td>119200015 B</td><td>1.505</td>
+</tr><tr><td>NonAsyncBinds_cancellableTask_bindValueTask</td><td>NonAsyncBinds</td><td>21,971.4 &mu;s</td><td>1,095.62 &mu;s</td><td>3,230.46 &mu;s</td><td>23,484.7 &mu;s</td><td>2.84</td><td>0.82</td><td>4000.0000</td><td>63200015 B</td><td>0.798</td>
+</tr><tr><td>NonAsyncBinds_cancellableTask_bindColdTask</td><td>NonAsyncBinds</td><td>12,565.2 &mu;s</td><td>903.07 &mu;s</td><td>2,662.72 &mu;s</td><td>11,672.1 &mu;s</td><td>1.63</td><td>0.54</td><td>6062.5000</td><td>95200008 B</td><td>1.202</td>
+</tr><tr><td>NonAsyncBinds_cancellableTask_bindColdValueTask</td><td>NonAsyncBinds</td><td>11,256.3 &mu;s</td><td>218.53 &mu;s</td><td>233.82 &mu;s</td><td>11,133.1 &mu;s</td><td>1.38</td><td>0.32</td><td>1984.3750</td><td>31200008 B</td><td>0.394</td>
+</tr><tr><td>NonAsyncBinds_cancellableTask_bindCancellableTask</td><td>NonAsyncBinds</td><td>15,703.0 &mu;s</td><td>1,108.91 &mu;s</td><td>3,269.64 &mu;s</td><td>16,219.9 &mu;s</td><td>2.04</td><td>0.72</td><td>6062.5000</td><td>95200008 B</td><td>1.202</td>
+</tr><tr><td>NonAsyncBinds_cancellableTask_bindCancellableValueTask</td><td>NonAsyncBinds</td><td>14,496.7 &mu;s</td><td>822.77 &mu;s</td><td>2,425.97 &mu;s</td><td>15,816.5 &mu;s</td><td>1.88</td><td>0.59</td><td>1984.3750</td><td>31200008 B</td><td>0.394</td>
+</tr><tr><td>NonAsyncBinds_cancellableValueTask_bindTask</td><td>NonAsyncBinds</td><td>22,346.1 &mu;s</td><td>1,434.08 &mu;s</td><td>4,228.43 &mu;s</td><td>23,328.3 &mu;s</td><td>2.90</td><td>0.97</td><td>7187.5000</td><td>112800008 B</td><td>1.424</td>
+</tr><tr><td>NonAsyncBinds_cancellableValueTask_bindValueTask</td><td>NonAsyncBinds</td><td>22,763.6 &mu;s</td><td>942.17 &mu;s</td><td>2,778.01 &mu;s</td><td>23,546.9 &mu;s</td><td>2.94</td><td>0.81</td><td>3593.7500</td><td>56800015 B</td><td>0.717</td>
+</tr><tr><td>NonAsyncBinds_cancellableValueTask_bindColdTask</td><td>NonAsyncBinds</td><td>14,966.2 &mu;s</td><td>1,197.24 &mu;s</td><td>3,530.08 &mu;s</td><td>15,480.6 &mu;s</td><td>1.92</td><td>0.61</td><td>5656.2500</td><td>88800008 B</td><td>1.121</td>
+</tr><tr><td>NonAsyncBinds_cancellableValueTask_bindColdValueTask</td><td>NonAsyncBinds</td><td>14,462.5 &mu;s</td><td>764.38 &mu;s</td><td>2,253.80 &mu;s</td><td>15,417.9 &mu;s</td><td>1.88</td><td>0.61</td><td>1578.1250</td><td>24800008 B</td><td>0.313</td>
+</tr><tr><td>NonAsyncBinds_cancellableValueTask_bindCancellableTask</td><td>NonAsyncBinds</td><td>16,601.6 &mu;s</td><td>966.09 &mu;s</td><td>2,848.53 &mu;s</td><td>17,177.9 &mu;s</td><td>2.13</td><td>0.58</td><td>5656.2500</td><td>88800008 B</td><td>1.121</td>
+</tr><tr><td>NonAsyncBinds_cancellableValueTask_bindCancellableValueTask</td><td>NonAsyncBinds</td><td>14,322.8 &mu;s</td><td>781.12 &mu;s</td><td>2,303.14 &mu;s</td><td>14,876.6 &mu;s</td><td>1.85</td><td>0.57</td><td>1578.1250</td><td>24800008 B</td><td>0.313</td>
 </tr></tbody></table>
 </body>
 </html>

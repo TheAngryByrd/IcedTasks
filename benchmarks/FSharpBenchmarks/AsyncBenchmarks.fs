@@ -24,12 +24,12 @@ module Helpers =
     let syncTask () = Task.FromResult 100
     let syncValueTask () = ValueTask.FromResult 100
     let syncCtTask (ct: CancellationToken) = Task.FromResult 100
+    let syncCtValueTask (ct: CancellationToken) = ValueTask.FromResult 100
     let syncTask_async () = async.Return 100
-    let syncTask_async2 () = Task.FromResult 100
     let asyncYield () = Async.Sleep(0)
     let asyncYieldLong () = Async.Sleep(10)
-    let asyncTask () = Task.Yield()
-    let asyncTaskCt (ct: CancellationToken) = Task.Yield()
+    let taskYield () = Task.Yield()
+    let taskCTYield (ct: CancellationToken) = Task.Yield()
 
     let tenBindSync_ply () =
         FSharp.Control.Tasks.Affine.task {
@@ -213,7 +213,59 @@ module Helpers =
             + res10
     }
 
+
+    let tenBindSync_coldTask_bindValueTask () = coldTask {
+        let! res1 = syncValueTask ()
+        let! res2 = syncValueTask ()
+        let! res3 = syncValueTask ()
+        let! res4 = syncValueTask ()
+        let! res5 = syncValueTask ()
+        let! res6 = syncValueTask ()
+        let! res7 = syncValueTask ()
+        let! res8 = syncValueTask ()
+        let! res9 = syncValueTask ()
+        let! res10 = syncValueTask ()
+
+        return
+            res1
+            + res2
+            + res3
+            + res4
+            + res5
+            + res6
+            + res7
+            + res8
+            + res9
+            + res10
+    }
+
     let tenBindSync_coldTask_bindColdTask () = coldTask {
+        let! res1 = syncTask
+        let! res2 = syncTask
+        let! res3 = syncTask
+        let! res4 = syncTask
+        let! res5 = syncTask
+        let! res6 = syncTask
+        let! res7 = syncTask
+        let! res8 = syncTask
+        let! res9 = syncTask
+        let! res10 = syncTask
+
+        return
+            res1
+            + res2
+            + res3
+            + res4
+            + res5
+            + res6
+            + res7
+            + res8
+            + res9
+            + res10
+    }
+
+
+    let tenBindSync_coldTask_bindColdValueTask () = coldTask {
         let! res1 = syncTask
         let! res2 = syncTask
         let! res3 = syncTask
@@ -265,6 +317,84 @@ module Helpers =
     }
 
 
+    let tenBindSync_cancellableTask_bindValueTask () = cancellableTask {
+        let! res1 = syncValueTask ()
+        let! res2 = syncValueTask ()
+        let! res3 = syncValueTask ()
+        let! res4 = syncValueTask ()
+        let! res5 = syncValueTask ()
+        let! res6 = syncValueTask ()
+        let! res7 = syncValueTask ()
+        let! res8 = syncValueTask ()
+        let! res9 = syncValueTask ()
+        let! res10 = syncValueTask ()
+
+        return
+            res1
+            + res2
+            + res3
+            + res4
+            + res5
+            + res6
+            + res7
+            + res8
+            + res9
+            + res10
+    }
+
+
+    let tenBindSync_cancellableTask_bindColdTask () = cancellableTask {
+        let! res1 = syncTask
+        let! res2 = syncTask
+        let! res3 = syncTask
+        let! res4 = syncTask
+        let! res5 = syncTask
+        let! res6 = syncTask
+        let! res7 = syncTask
+        let! res8 = syncTask
+        let! res9 = syncTask
+        let! res10 = syncTask
+
+        return
+            res1
+            + res2
+            + res3
+            + res4
+            + res5
+            + res6
+            + res7
+            + res8
+            + res9
+            + res10
+    }
+
+
+    let tenBindSync_cancellableTask_bindColdValueTask () = cancellableTask {
+        let! res1 = syncValueTask
+        let! res2 = syncValueTask
+        let! res3 = syncValueTask
+        let! res4 = syncValueTask
+        let! res5 = syncValueTask
+        let! res6 = syncValueTask
+        let! res7 = syncValueTask
+        let! res8 = syncValueTask
+        let! res9 = syncValueTask
+        let! res10 = syncValueTask
+
+        return
+            res1
+            + res2
+            + res3
+            + res4
+            + res5
+            + res6
+            + res7
+            + res8
+            + res9
+            + res10
+    }
+
+
     let tenBindSync_cancellableTask_bindCancellableTask () = cancellableTask {
         let! res1 = syncCtTask
         let! res2 = syncCtTask
@@ -291,18 +421,200 @@ module Helpers =
     }
 
 
+    let tenBindSync_cancellableTask_bindCancellableValueTask () = cancellableTask {
+        let! res1 = syncCtValueTask
+        let! res2 = syncCtValueTask
+        let! res3 = syncCtValueTask
+        let! res4 = syncCtValueTask
+        let! res5 = syncCtValueTask
+        let! res6 = syncCtValueTask
+        let! res7 = syncCtValueTask
+        let! res8 = syncCtValueTask
+        let! res9 = syncCtValueTask
+        let! res10 = syncCtValueTask
+
+        return
+            res1
+            + res2
+            + res3
+            + res4
+            + res5
+            + res6
+            + res7
+            + res8
+            + res9
+            + res10
+    }
+
+
+    let tenBindSync_cancellableValueTask_bindTask () = cancellableValueTask {
+        let! res1 = syncTask ()
+        let! res2 = syncTask ()
+        let! res3 = syncTask ()
+        let! res4 = syncTask ()
+        let! res5 = syncTask ()
+        let! res6 = syncTask ()
+        let! res7 = syncTask ()
+        let! res8 = syncTask ()
+        let! res9 = syncTask ()
+        let! res10 = syncTask ()
+
+        return
+            res1
+            + res2
+            + res3
+            + res4
+            + res5
+            + res6
+            + res7
+            + res8
+            + res9
+            + res10
+    }
+
+
+    let tenBindSync_cancellableValueTask_bindValueTask () = cancellableValueTask {
+        let! res1 = syncValueTask ()
+        let! res2 = syncValueTask ()
+        let! res3 = syncValueTask ()
+        let! res4 = syncValueTask ()
+        let! res5 = syncValueTask ()
+        let! res6 = syncValueTask ()
+        let! res7 = syncValueTask ()
+        let! res8 = syncValueTask ()
+        let! res9 = syncValueTask ()
+        let! res10 = syncValueTask ()
+
+        return
+            res1
+            + res2
+            + res3
+            + res4
+            + res5
+            + res6
+            + res7
+            + res8
+            + res9
+            + res10
+    }
+
+
+    let tenBindSync_cancellableValueTask_bindColdTask () = cancellableValueTask {
+        let! res1 = syncTask
+        let! res2 = syncTask
+        let! res3 = syncTask
+        let! res4 = syncTask
+        let! res5 = syncTask
+        let! res6 = syncTask
+        let! res7 = syncTask
+        let! res8 = syncTask
+        let! res9 = syncTask
+        let! res10 = syncTask
+
+        return
+            res1
+            + res2
+            + res3
+            + res4
+            + res5
+            + res6
+            + res7
+            + res8
+            + res9
+            + res10
+    }
+
+
+    let tenBindSync_cancellableValueTask_bindColdValueTask () = cancellableValueTask {
+        let! res1 = syncValueTask
+        let! res2 = syncValueTask
+        let! res3 = syncValueTask
+        let! res4 = syncValueTask
+        let! res5 = syncValueTask
+        let! res6 = syncValueTask
+        let! res7 = syncValueTask
+        let! res8 = syncValueTask
+        let! res9 = syncValueTask
+        let! res10 = syncValueTask
+
+        return
+            res1
+            + res2
+            + res3
+            + res4
+            + res5
+            + res6
+            + res7
+            + res8
+            + res9
+            + res10
+    }
+
+
+    let tenBindSync_cancellableValueTask_bindCancellableTask () = cancellableValueTask {
+        let! res1 = syncCtTask
+        let! res2 = syncCtTask
+        let! res3 = syncCtTask
+        let! res4 = syncCtTask
+        let! res5 = syncCtTask
+        let! res6 = syncCtTask
+        let! res7 = syncCtTask
+        let! res8 = syncCtTask
+        let! res9 = syncCtTask
+        let! res10 = syncCtTask
+
+        return
+            res1
+            + res2
+            + res3
+            + res4
+            + res5
+            + res6
+            + res7
+            + res8
+            + res9
+            + res10
+    }
+
+
+    let tenBindSync_cancellableValueTask_bindCancellableValueTask () = cancellableValueTask {
+        let! res1 = syncCtValueTask
+        let! res2 = syncCtValueTask
+        let! res3 = syncCtValueTask
+        let! res4 = syncCtValueTask
+        let! res5 = syncCtValueTask
+        let! res6 = syncCtValueTask
+        let! res7 = syncCtValueTask
+        let! res8 = syncCtValueTask
+        let! res9 = syncCtValueTask
+        let! res10 = syncCtValueTask
+
+        return
+            res1
+            + res2
+            + res3
+            + res4
+            + res5
+            + res6
+            + res7
+            + res8
+            + res9
+            + res10
+    }
+
+
     let tenBindAsync_ply () =
         FSharp.Control.Tasks.Affine.task {
-            do! asyncTask ()
-            do! asyncTask ()
-            do! asyncTask ()
-            do! asyncTask ()
-            do! asyncTask ()
-            do! asyncTask ()
-            do! asyncTask ()
-            do! asyncTask ()
-            do! asyncTask ()
-            do! asyncTask ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
         }
 
     let tenBindAsync_async () = async {
@@ -319,98 +631,139 @@ module Helpers =
     }
 
     let tenBindAsync_task () = task {
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
     }
 
     let tenBindAsync_valueTask () = valueTask {
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
     }
 
 
     let tenBindAsync_coldTask_bindTask () = coldTask {
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
     }
 
 
     let tenBindAsync_coldTask_bindColdTask () = coldTask {
-        do! asyncTask
-        do! asyncTask
-        do! asyncTask
-        do! asyncTask
-        do! asyncTask
-        do! asyncTask
-        do! asyncTask
-        do! asyncTask
-        do! asyncTask
-        do! asyncTask
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
     }
 
 
     let tenBindAsync_cancellableTask_bindTask () = cancellableTask {
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
-        do! asyncTask ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
     }
 
 
     let tenBindAsync_cancellableTask_bindColdTask () = cancellableTask {
-        do! asyncTask
-        do! asyncTask
-        do! asyncTask
-        do! asyncTask
-        do! asyncTask
-        do! asyncTask
-        do! asyncTask
-        do! asyncTask
-        do! asyncTask
-        do! asyncTask
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
     }
 
     let tenBindAsync_cancellableTask_bindCancellableTask () = cancellableTask {
-        do! asyncTaskCt
-        do! asyncTaskCt
-        do! asyncTaskCt
-        do! asyncTaskCt
-        do! asyncTaskCt
-        do! asyncTaskCt
-        do! asyncTaskCt
-        do! asyncTaskCt
-        do! asyncTaskCt
-        do! asyncTaskCt
+        do! taskCTYield
+        do! taskCTYield
+        do! taskCTYield
+        do! taskCTYield
+        do! taskCTYield
+        do! taskCTYield
+        do! taskCTYield
+        do! taskCTYield
+        do! taskCTYield
+        do! taskCTYield
+    }
+
+
+    let tenBindAsync_cancellableValueTask_bindTask () = cancellableValueTask {
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+        do! taskYield ()
+    }
+
+
+    let tenBindAsync_cancellableValueTask_bindColdTask () = cancellableValueTask {
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
+        do! taskYield
+    }
+
+    let tenBindAsync_cancellableValueTask_bindCancellableTask () = cancellableValueTask {
+        do! taskCTYield
+        do! taskCTYield
+        do! taskCTYield
+        do! taskCTYield
+        do! taskCTYield
+        do! taskCTYield
+        do! taskCTYield
+        do! taskCTYield
+        do! taskCTYield
+        do! taskCTYield
     }
 
 [<MemoryDiagnoser>]
@@ -567,6 +920,77 @@ type AsyncBenchmarks() =
 
         File.Delete(path)
 
+
+    [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
+    member _.ManyWriteFile_cancellableValueTask() =
+        let path = getTempFileName ()
+
+        cancellableValueTask {
+            let junk = Array.zeroCreate bufferSize
+            use file = File.Create(path)
+
+            for i = 1 to manyIterations do
+                do! file.WriteAsync(junk, 0, junk.Length)
+        }
+        |> fun t ->
+            t(CancellationToken.None).Result
+            |> ignore
+
+        File.Delete(path)
+
+
+    [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
+    member _.ManyWriteFile_cancellableValueTask_withCancellation() =
+        let path = getTempFileName ()
+
+        cancellableValueTask {
+            let junk = Array.zeroCreate bufferSize
+            use file = File.Create(path)
+            let! ct = CancellableValueTask.getCancellationToken ()
+
+            for i = 1 to manyIterations do
+                do! file.WriteAsync(junk, 0, junk.Length, ct)
+        }
+        |> fun t ->
+            t(CancellationToken.None).Result
+            |> ignore
+
+        File.Delete(path)
+
+    [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
+    member _.ManyWriteFile_cancellableValueTask_withCancellation2() =
+        let path = getTempFileName ()
+
+        cancellableValueTask {
+            let junk = Array.zeroCreate bufferSize
+            use file = File.Create(path)
+
+            for i = 1 to manyIterations do
+                do! fun ct -> file.WriteAsync(junk, 0, junk.Length, ct)
+        }
+        |> fun t ->
+            t(CancellationToken.None).Result
+            |> ignore
+
+    [<BenchmarkCategory("ManyWriteFile"); Benchmark>]
+    member _.ManyWriteFile_cancellableValueTask_withCancellation3() =
+        let path = getTempFileName ()
+
+        cancellableValueTask {
+            let junk = Array.zeroCreate bufferSize
+            use file = File.Create(path)
+
+            for i = 1 to manyIterations do
+                let! ct = CancellableValueTask.getCancellationToken ()
+                do! file.WriteAsync(junk, 0, junk.Length, ct)
+        }
+        |> fun t ->
+            t(CancellationToken.None).Result
+            |> ignore
+
+        File.Delete(path)
+
+
     // NonAsyncBinds
 
 
@@ -633,11 +1057,25 @@ type AsyncBenchmarks() =
             (tenBindSync_coldTask_bindTask () ()).Wait()
 
     [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.NonAsyncBinds_coldTask_bindValueTask() =
+        for i in
+            1 .. manyIterations
+                 * 100 do
+            (tenBindSync_coldTask_bindValueTask () ()).Wait()
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
     member _.NonAsyncBinds_coldTask_bindColdTask() =
         for i in
             1 .. manyIterations
                  * 100 do
             (tenBindSync_coldTask_bindColdTask () ()).Wait()
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.NonAsyncBinds_coldTask_bindColdValueTask() =
+        for i in
+            1 .. manyIterations
+                 * 100 do
+            (tenBindSync_coldTask_bindColdValueTask () ()).Wait()
 
     [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
     member _.NonAsyncBinds_cancellableTask_bindTask() =
@@ -647,12 +1085,98 @@ type AsyncBenchmarks() =
             (tenBindSync_cancellableTask_bindTask () CancellationToken.None).Wait()
 
     [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
-    member _.NonAsyncBinds_cancellableTask() =
+    member _.NonAsyncBinds_cancellableTask_bindValueTask() =
+        for i in
+            1 .. manyIterations
+                 * 100 do
+            (tenBindSync_cancellableTask_bindValueTask () CancellationToken.None).Wait()
+
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.NonAsyncBinds_cancellableTask_bindColdTask() =
+        for i in
+            1 .. manyIterations
+                 * 100 do
+            (tenBindSync_cancellableTask_bindColdTask () CancellationToken.None).Wait()
+
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.NonAsyncBinds_cancellableTask_bindColdValueTask() =
+        for i in
+            1 .. manyIterations
+                 * 100 do
+            (tenBindSync_cancellableTask_bindColdValueTask () CancellationToken.None).Wait()
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.NonAsyncBinds_cancellableTask_bindCancellableTask() =
         for i in
             1 .. manyIterations
                  * 100 do
             (tenBindSync_cancellableTask_bindCancellableTask () CancellationToken.None)
                 .Wait()
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.NonAsyncBinds_cancellableTask_bindCancellableValueTask() =
+        for i in
+            1 .. manyIterations
+                 * 100 do
+            (tenBindSync_cancellableTask_bindCancellableValueTask () CancellationToken.None)
+                .Wait()
+
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.NonAsyncBinds_cancellableValueTask_bindTask() =
+        for i in
+            1 .. manyIterations
+                 * 100 do
+            (tenBindSync_cancellableValueTask_bindTask () CancellationToken.None).Result
+            |> ignore
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.NonAsyncBinds_cancellableValueTask_bindValueTask() =
+        for i in
+            1 .. manyIterations
+                 * 100 do
+            (tenBindSync_cancellableValueTask_bindValueTask () CancellationToken.None)
+                .Result
+            |> ignore
+
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.NonAsyncBinds_cancellableValueTask_bindColdTask() =
+        for i in
+            1 .. manyIterations
+                 * 100 do
+            (tenBindSync_cancellableValueTask_bindColdTask () CancellationToken.None).Result
+            |> ignore
+
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.NonAsyncBinds_cancellableValueTask_bindColdValueTask() =
+        for i in
+            1 .. manyIterations
+                 * 100 do
+            (tenBindSync_cancellableValueTask_bindColdValueTask () CancellationToken.None)
+                .Result
+            |> ignore
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.NonAsyncBinds_cancellableValueTask_bindCancellableTask() =
+        for i in
+            1 .. manyIterations
+                 * 100 do
+            (tenBindSync_cancellableValueTask_bindCancellableTask () CancellationToken.None)
+                .Result
+            |> ignore
+
+    [<BenchmarkCategory("NonAsyncBinds"); Benchmark>]
+    member _.NonAsyncBinds_cancellableValueTask_bindCancellableValueTask() =
+        for i in
+            1 .. manyIterations
+                 * 100 do
+            (tenBindSync_cancellableValueTask_bindCancellableValueTask () CancellationToken.None)
+                .Result
+            |> ignore
 
     //AsyncBinds
 
@@ -710,6 +1234,27 @@ type AsyncBenchmarks() =
             (tenBindAsync_cancellableTask_bindCancellableTask () (CancellationToken.None))
                 .Wait()
 
+
+    [<BenchmarkCategory("AsyncBinds"); Benchmark>]
+    member _.AsyncBinds_cancellableValueTask_bindTask() =
+        for i in 1..manyIterations do
+            (tenBindAsync_cancellableValueTask_bindTask () (CancellationToken.None)).Result
+            |> ignore
+
+
+    [<BenchmarkCategory("AsyncBinds"); Benchmark>]
+    member _.AsyncBinds_cancellableValueTask_bindColdTask() =
+        for i in 1..manyIterations do
+            (tenBindAsync_cancellableValueTask_bindColdTask () (CancellationToken.None))
+                .Result
+            |> ignore
+
+    [<BenchmarkCategory("AsyncBinds"); Benchmark>]
+    member _.AsyncBinds_cancellableValueTask_bindCancellableTask() =
+        for i in 1..manyIterations do
+            (tenBindAsync_cancellableValueTask_bindCancellableTask () (CancellationToken.None))
+                .Result
+            |> ignore
 
 module AsyncExns =
 
