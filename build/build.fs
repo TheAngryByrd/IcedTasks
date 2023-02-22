@@ -825,7 +825,7 @@ let dotnetPack ctx =
     let args = [
         $"/p:PackageVersion={latestEntry.NuGetVersion}"
         $"/p:PackageReleaseNotes=\"{releaseNotes}\""
-        $"/p:OutputPath={distDir}" // https://learn.microsoft.com/en-us/dotnet/core/compatibility/sdk/7.0/solution-level-output-no-longer-valid
+        $"/p:PackageOutputPath={distDir}" // https://learn.microsoft.com/en-us/dotnet/core/compatibility/sdk/7.0/solution-level-output-no-longer-valid
     ]
 
     DotNet.pack
