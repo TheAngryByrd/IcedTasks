@@ -5,14 +5,14 @@ open System.Threading.Tasks
 open IcedTasks
 
 module TestHelpers =
-    let makeDisposable () =
+    let makeDisposable (callback) =
         { new System.IDisposable with
-            member this.Dispose() = ()
+            member this.Dispose() = callback ()
         }
 
-    let makeAsyncDisposable () =
+    let makeAsyncDisposable (callback) =
         { new System.IAsyncDisposable with
-            member this.DisposeAsync() = ValueTask.CompletedTask
+            member this.DisposeAsync() = callback ()
         }
 
 module Expect =
@@ -24,19 +24,19 @@ module Expect =
         let! thrown = async {
             try
                 do! f ()
-                return None
+                return ValueNone
             with e ->
-                return Some e
+                return ValueSome e
         }
 
         match thrown with
-        | Some e when e.GetType().IsAssignableFrom typeof<'texn> ->
+        | ValueSome e when e.GetType().IsAssignableFrom typeof<'texn> ->
             failtestf
                 "%s. Expected f to throw an exn of type %s, but one of type %s was thrown."
                 message
                 (typeof<'texn>.FullName)
                 (e.GetType().FullName)
-        | Some _ -> ()
+        | ValueSome _ -> ()
         | _ -> failtestf "%s. Expected f to throw." message
     }
 
@@ -48,13 +48,13 @@ type Expect =
             (fun () -> operation)
             "Should have been cancelled"
 
-    static member CancellationRequested(operation: ValueTask<_>) =
+    static member CancellationRequested(operation: ValueTask<unit>) =
         Expect.CancellationRequested(Async.AwaitValueTask operation)
-        |> Async.StartAsTask
+        |> Async.AsValueTask
 
     static member CancellationRequested(operation: Task<_>) =
         Expect.CancellationRequested(Async.AwaitTask operation)
-        |> Async.StartAsTask
+        |> Async.StartImmediateAsTask
 
     static member CancellationRequested(operation: ColdTask<_>) =
         Expect.CancellationRequested(Async.AwaitColdTask operation)

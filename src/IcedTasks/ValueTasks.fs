@@ -35,7 +35,7 @@ module ValueTaskExtensions =
 
 
         /// <summary>Runs an asynchronous computation, starting immediately on the current operating system thread.</summary>
-        static member inline AsValueTask(computation: Async<'T>) : ValueTask<_> =
+        static member inline AsValueTask(computation: Async<'T>) : ValueTask<'T> =
             Async.StartImmediateAsTask(computation)
             |> ValueTask<'T>
 
@@ -45,7 +45,7 @@ module ValueTaskExtensions =
 // Originally written in 2016 by Robert Peele (humbobst@gmail.com)
 // New operator-based overload resolution for F# 4.0 compatibility by Gustavo Leon in 2018.
 // Revised for insertion into FSharp.Core by Microsoft, 2019.
-// Revised to implement CancellationToken semantics
+// Revised to implement ValueTask semantics
 //
 // Original notice:
 // To the extent possible under law, the author(s) have dedicated all copyright and related and neighboring rights
@@ -56,7 +56,6 @@ namespace IcedTasks
 
 [<AutoOpen>]
 module ValueTasks =
-
     open System
     open System.Runtime.CompilerServices
     open System.Threading
@@ -276,8 +275,8 @@ module ValueTasks =
 
                         let cont =
                             ValueTaskResumptionFunc<'TOverall>(fun sm ->
-                                awaiter.GetResult()
-                                |> ignore
+                                awaiter
+                                |> Awaiter.getResult
 
                                 true
                             )
@@ -374,7 +373,7 @@ module ValueTasks =
                 }
 
             sm.ResumptionDynamicInfo <- resumptionInfo
-            sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create ()
+            sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
             sm.Data.MethodBuilder.Start(&sm)
             sm.Data.MethodBuilder.Task
 
@@ -404,7 +403,7 @@ module ValueTasks =
                         sm.Data.MethodBuilder.SetStateMachine(state)
                     ))
                     (AfterCode<_, _>(fun sm ->
-                        sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create ()
+                        sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
                         sm.Data.MethodBuilder.Start(&sm)
                         sm.Data.MethodBuilder.Task
                     ))
@@ -461,7 +460,7 @@ module ValueTasks =
                             && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
                         then
 
-                            sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create ()
+                            sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
 
                             sm.Data.MethodBuilder.Start(&sm)
                             sm.Data.MethodBuilder.Task
@@ -473,7 +472,7 @@ module ValueTasks =
                                     let mutable sm = sm // host local mutable copy of contents of state machine on this thread pool thread
 
                                     sm.Data.MethodBuilder <-
-                                        AsyncValueTaskMethodBuilder<'T>.Create ()
+                                        AsyncValueTaskMethodBuilder<'T>.Create()
 
                                     sm.Data.MethodBuilder.Start(&sm)
                                     sm.Data.MethodBuilder.Task.AsTask()
@@ -508,13 +507,11 @@ module ValueTasks =
             /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
             /// </summary>
             [<NoEagerConstraintApplication>]
-            static member inline BindDynamic<'TResult1, 'TResult2, ^Awaiter, 'TOverall
-                when ^Awaiter :> ICriticalNotifyCompletion
-                and ^Awaiter: (member get_IsCompleted: unit -> bool)
-                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
+            static member inline BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall
+                when Awaiter<'Awaiter, 'TResult1>>
                 (
                     sm: byref<ResumableStateMachine<ValueTaskStateMachineData<'TOverall>>>,
-                    getAwaiter: ^Awaiter,
+                    getAwaiter: 'Awaiter,
                     continuation: ('TResult1 -> ValueTaskCode<'TOverall, 'TResult2>)
                 ) : bool =
 
@@ -522,12 +519,15 @@ module ValueTasks =
 
                 let cont =
                     (ValueTaskResumptionFunc<'TOverall>(fun sm ->
-                        let result = (^Awaiter: (member GetResult: unit -> 'TResult1) (awaiter))
+                        let result =
+                            awaiter
+                            |> Awaiter.getResult
+
                         (continuation result).Invoke(&sm)
                     ))
 
                 // shortcut to continue immediately
-                if (^Awaiter: (member get_IsCompleted: unit -> bool) (awaiter)) then
+                if Awaiter.isCompleted awaiter then
                     cont.Invoke(&sm)
                 else
                     sm.ResumptionDynamicInfo.ResumptionData <-
@@ -550,24 +550,22 @@ module ValueTasks =
             /// <returns>An ValueTask that performs a monadic bind on the result
             /// of <c>computation</c>.</returns>
             [<NoEagerConstraintApplication>]
-            member inline _.Bind<'TResult1, 'TResult2, ^Awaiter, 'TOverall
-                when ^Awaiter :> ICriticalNotifyCompletion
-                and ^Awaiter: (member get_IsCompleted: unit -> bool)
-                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
+            member inline _.Bind<'TResult1, 'TResult2, 'Awaiter, 'TOverall
+                when Awaiter<'Awaiter, 'TResult1>>
                 (
-                    getAwaiter: ^Awaiter,
+                    getAwaiter: 'Awaiter,
                     continuation: ('TResult1 -> ValueTaskCode<'TOverall, 'TResult2>)
                 ) : ValueTaskCode<'TOverall, 'TResult2> =
 
                 ValueTaskCode<'TOverall, _>(fun sm ->
                     if __useResumableCode then
                         //-- RESUMABLE CODE START
-                        // Get an awaiter from the awaitable
+                        // Get an awaiter from the Awaiter
                         let mutable awaiter = getAwaiter
 
                         let mutable __stack_fin = true
 
-                        if not (^Awaiter: (member get_IsCompleted: unit -> bool) (awaiter)) then
+                        if not (Awaiter.isCompleted awaiter) then
                             // This will yield with __stack_yield_fin = false
                             // This will resume with __stack_yield_fin = true
                             let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
@@ -575,14 +573,15 @@ module ValueTasks =
 
                         if __stack_fin then
                             let result =
-                                (^Awaiter: (member GetResult: unit -> 'TResult1) (awaiter))
+                                awaiter
+                                |> Awaiter.getResult
 
                             (continuation result).Invoke(&sm)
                         else
                             sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
                             false
                     else
-                        ValueTaskBuilderBase.BindDynamic<'TResult1, 'TResult2, ^Awaiter, 'TOverall>(
+                        ValueTaskBuilderBase.BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall>(
                             &sm,
                             getAwaiter,
                             continuation
@@ -600,55 +599,47 @@ module ValueTasks =
             ///
             /// <returns>The input computation.</returns>
             [<NoEagerConstraintApplication>]
-            member inline this.ReturnFrom<'TResult1, 'TResult2, ^Awaiter, 'TOverall
-                when ^Awaiter :> ICriticalNotifyCompletion
-                and ^Awaiter: (member get_IsCompleted: unit -> bool)
-                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
-                (getAwaiter: ^Awaiter)
+            member inline this.ReturnFrom<'TResult1, 'TResult2, 'Awaiter, 'TOverall
+                when Awaiter<'Awaiter, 'TResult1>>
+                (getAwaiter: 'Awaiter)
                 : ValueTaskCode<_, _> =
                 this.Bind(getAwaiter, (fun v -> this.Return v))
 
             [<NoEagerConstraintApplication>]
-            member inline this.BindReturn<'TResult1, 'TResult2, ^Awaiter, 'TOverall
-                when ^Awaiter :> ICriticalNotifyCompletion
-                and ^Awaiter: (member get_IsCompleted: unit -> bool)
-                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
+            member inline this.BindReturn<'TResult1, 'TResult2, 'Awaiter, 'TOverall
+                when Awaiter<'Awaiter, 'TResult1>>
                 (
-                    getAwaiter: ^Awaiter,
+                    getAwaiter: 'Awaiter,
                     f
                 ) : ValueTaskCode<'TResult2, 'TResult2> =
                 this.Bind(getAwaiter, (fun v -> this.Return(f v)))
 
 
-            /// <summary>Allows the computation expression to turn other types into <c>CancellationToken -> ^Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into <c>CancellationToken -> 'Awaiter</c></summary>
             ///
             /// <remarks>This is the identify function.</remarks>
             ///
-            /// <returns><c>^Awaiter</c></returns>
+            /// <returns><c>'Awaiter</c></returns>
             [<NoEagerConstraintApplication>]
-            member inline _.Source<'TResult1, 'TResult2, ^Awaiter, 'TOverall
-                when ^Awaiter :> ICriticalNotifyCompletion
-                and ^Awaiter: (member get_IsCompleted: unit -> bool)
-                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
-                (getAwaiter: ^Awaiter)
-                : ^Awaiter =
+            member inline _.Source<'TResult1, 'TResult2, 'Awaiter, 'TOverall
+                when Awaiter<'Awaiter, 'TResult1>>
+                (getAwaiter: 'Awaiter)
+                : 'Awaiter =
                 getAwaiter
 
 
-            /// <summary>Allows the computation expression to turn other types into <c>^Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into <c>'Awaiter</c></summary>
             ///
-            /// <remarks>This turns a <c>^TaskLike</c> into a <c>^Awaiter</c>.</remarks>
+            /// <remarks>This turns a <c>^Awaitable</c> into a <c>'Awaiter</c>.</remarks>
             ///
-            /// <returns><c>^Awaiter</c></returns>
+            /// <returns><c>'Awaiter</c></returns>
             [<NoEagerConstraintApplication>]
-            member inline _.Source< ^TaskLike, 'TResult1, 'TResult2, ^Awaiter, 'TOverall
-                when ^TaskLike: (member GetAwaiter: unit -> ^Awaiter)
-                and ^Awaiter :> ICriticalNotifyCompletion
-                and ^Awaiter: (member get_IsCompleted: unit -> bool)
-                and ^Awaiter: (member GetResult: unit -> 'TResult1)>
-                (task: ^TaskLike)
-                : ^Awaiter =
-                (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))
+            member inline _.Source<'Awaitable, 'TResult1, 'TResult2, 'Awaiter, 'TOverall
+                when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
+                (task: 'Awaitable)
+                : 'Awaiter =
+                task
+                |> Awaitable.getAwaiter
 
 
             /// <summary>Creates an ValueTask that runs <c>binder(resource)</c>.
@@ -686,27 +677,27 @@ module ValueTasks =
             /// <returns><c>IEnumerable</c></returns>
             member inline _.Source(s: #seq<_>) : #seq<_> = s
 
-            /// <summary>Allows the computation expression to turn other types into <c>^Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into <c>'Awaiter</c></summary>
             ///
-            /// <remarks>This turns a <c>Task&lt;'T&gt;</c> into a <c>^Awaiter</c>.</remarks>
+            /// <remarks>This turns a <c>Task&lt;'T&gt;</c> into a <c>'Awaiter</c>.</remarks>
             ///
-            /// <returns><c>^Awaiter</c></returns>
+            /// <returns><c>'Awaiter</c></returns>
             member inline _.Source(task: Task<'T>) = task.GetAwaiter()
 
-            /// <summary>Allows the computation expression to turn other types into <c>^Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into <c>'Awaiter</c></summary>
             ///
-            /// <remarks>This turns a <c>Async&lt;'T&gt;</c> into a <c>^Awaiter</c>.</remarks>
+            /// <remarks>This turns a <c>Async&lt;'T&gt;</c> into a <c>'Awaiter</c>.</remarks>
             ///
-            /// <returns><c>^Awaiter</c></returns>
+            /// <returns><c>'Awaiter</c></returns>
             member inline this.Source(computation: Async<'TResult1>) =
                 this.Source(Async.StartImmediateAsTask(computation))
 
 
-            /// <summary>Allows the computation expression to turn other types into <c>^Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into <c>'Awaiter</c></summary>
             ///
-            /// <remarks>This turns a <c>Async&lt;'T&gt;</c> into a <c>^Awaiter</c>.</remarks>
+            /// <remarks>This turns a <c>Async&lt;'T&gt;</c> into a <c>'Awaiter</c>.</remarks>
             ///
-            /// <returns><c>^Awaiter</c></returns>
+            /// <returns><c>'Awaiter</c></returns>
             member inline this.Source(awaiter: TaskAwaiter<'TResult1>) = awaiter
 
     [<RequireQualifiedAccess>]
@@ -814,16 +805,11 @@ module ValueTasks =
         type ValueTaskBuilderBase with
 
             [<NoEagerConstraintApplication>]
-            member inline this.MergeSources<'TResult1, 'TResult2, ^Awaiter1, ^Awaiter2
-                when ^Awaiter1 :> ICriticalNotifyCompletion
-                and ^Awaiter1: (member get_IsCompleted: unit -> bool)
-                and ^Awaiter1: (member GetResult: unit -> 'TResult1)
-                and ^Awaiter2 :> ICriticalNotifyCompletion
-                and ^Awaiter2: (member get_IsCompleted: unit -> bool)
-                and ^Awaiter2: (member GetResult: unit -> 'TResult2)>
+            member inline this.MergeSources<'TResult1, 'TResult2, 'Awaiter1, 'Awaiter2
+                when Awaiter<'Awaiter1, 'TResult1> and Awaiter<'Awaiter2, 'TResult2>>
                 (
-                    left: ^Awaiter1,
-                    right: ^Awaiter2
+                    left: 'Awaiter1,
+                    right: 'Awaiter2
                 ) : ValueTaskAwaiter<'TResult1 * 'TResult2> =
 
                 valueTask {
@@ -833,6 +819,6 @@ module ValueTasks =
                     let! rightResult = rightStarted
                     return leftResult, rightResult
                 }
-                |> ValueTask.getAwaiter
+                |> Awaitable.getAwaiter
 
 #endif

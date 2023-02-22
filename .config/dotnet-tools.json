@@ -1,36 +1,36 @@
 {
-    "version": 1,
-    "isRoot": true,
-    "tools": {
-        "sourcelink": {
-            "version": "3.1.1",
-            "commands": [
-                "sourcelink"
-            ]
-        },
-        "dotnet-reportgenerator-globaltool": {
-            "version": "4.8.13",
-            "commands": [
-                "reportgenerator"
-            ]
-        },
-        "paket": {
-            "version": "7.1.5",
-            "commands": [
-                "paket"
-            ]
-        },
-        "fsharp-analyzers": {
-            "version": "0.11.0",
-            "commands": [
-                "fsharp-analyzers"
-            ]
-        },
-        "fantomas": {
-            "version": "5.2.0-alpha-004",
-            "commands": [
-                "fantomas"
-            ]
-        }
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "sourcelink": {
+      "version": "3.1.1",
+      "commands": [
+        "sourcelink"
+      ]
+    },
+    "dotnet-reportgenerator-globaltool": {
+      "version": "4.8.13",
+      "commands": [
+        "reportgenerator"
+      ]
+    },
+    "paket": {
+      "version": "7.1.5",
+      "commands": [
+        "paket"
+      ]
+    },
+    "fsharp-analyzers": {
+      "version": "0.11.0",
+      "commands": [
+        "fsharp-analyzers"
+      ]
+    },
+    "fantomas": {
+      "version": "5.2.2",
+      "commands": [
+        "fantomas"
+      ]
     }
+  }
 }
