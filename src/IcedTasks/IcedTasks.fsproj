@@ -15,11 +15,13 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="TaskLike.fs" />
     <Compile Include="ValueTasks.fs" />
     <Compile Include="ParallelAsync.fs" />
     <Compile Include="ColdTask.fs" />
     <Compile Include="CancellableValueTask.fs" />
     <Compile Include="CancellableTask.fs" />
+    <!-- <Compile Include="CancellableEffect.fs" /> -->
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

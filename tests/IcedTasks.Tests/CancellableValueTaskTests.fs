@@ -923,8 +923,7 @@ module CancellableValueTaskTests =
                         innerCall
                         |> CancellableValueTask.bind (fun x -> cancellableValueTask {
                             return x + "fooo"
-                        }
-                        )
+                        })
 
                     Expect.equal "lolfooo" someTask ""
                 }
