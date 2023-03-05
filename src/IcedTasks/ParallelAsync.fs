@@ -3,13 +3,14 @@ namespace IcedTasks
 open System
 open System.Threading
 
-type Async =
+type private Async =
     static member inline map f x =
         async.Bind(x, (fun v -> async.Return(f v)))
 
+/// Contains different implementations for parallel zip functions.
 type ParallelAsync =
     /// <summary>
-    /// Executes two asyncs concurrently and returns a tuple of the values
+    /// Executes two asyncs concurrently <see cref='M:Microsoft.FSharp.Control.FSharpAsync.StartChild``1'/> and returns a tuple of the values using
     /// </summary>
     /// <param name="a1">An async to execute</param>
     /// <param name="a2">An async to execute</param>
@@ -36,7 +37,7 @@ type ParallelAsync =
 
 
     /// <summary>
-    /// Executes two asyncs concurrently and returns a tuple of the values
+    /// Executes two asyncs concurrently using <see cref='M:Microsoft.FSharp.Control.FSharpAsync.StartImmediateAsTask``1'/> and returns a tuple of the values
     /// </summary>
     /// <param name="a1">An async to execute</param>
     /// <param name="a2">An async to execute</param>
@@ -66,6 +67,7 @@ type ParallelAsync =
                 )
         )
 
+/// Base class for ParallelAsync functionality
 type ParallelAsyncBuilderBase() =
 
     member inline _.Zero() = async.Zero()
@@ -95,36 +97,41 @@ type ParallelAsyncBuilderBase() =
 
     member inline _.BindReturn(x: Async<'T>, f) = Async.map f x
 
+/// <summary>
+/// Async computation expression which allows for parallel execution of asyncs with the applicative (and!) syntax.  This uses <see cref='M:Microsoft.FSharp.Control.FSharpAsync.StartChild``1'/> to start async computations in parallel.
+/// </summary>
 type ParallelAsyncBuilderUsingStartChild() =
     inherit ParallelAsyncBuilderBase()
 
+    /// Called for <a href="https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/computation-expressions#and">and!</a> in computation expressions.
     member inline _.MergeSources(t1: Async<'T>, t2: Async<'T1>) =
         ParallelAsync.zipWithStartChild t1 t2
 
-
+/// <summary>
+/// Async computation expression which allows for parallel execution of asyncs with the applicative (and!) syntax.  This this <see cref='M:Microsoft.FSharp.Control.FSharpAsync.StartImmediateAsTask``1'/> to start  async computations in parallel.
+/// </summary>
 type ParallelAsyncBuilderUsingStartImmediateAsTask() =
     inherit ParallelAsyncBuilderBase()
 
+    /// Called for <a href="https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/computation-expressions#and">and!</a> in computation expressions.
     member inline _.MergeSources(t1: Async<'T>, t2: Async<'T1>) =
         ParallelAsync.zipUsingStartImmediateAsTask t1 t2
 
+/// Contains the different parallelAsync type builders.
 [<AutoOpen>]
-module Asyncs =
+module ParallelAsyncs =
     /// <summary>
-    /// Async computation expression which allows for parallel execution of asyncs with the applicative (and!) syntax.  This uses <c>Async.StartChild</c> to start async computations in parallel.
+    /// Async computation expression which allows for parallel execution of asyncs with the applicative (and!) syntax.  This uses <see cref='M:Microsoft.FSharp.Control.FSharpAsync.StartChild``1'/> to start async computations in parallel.
     /// </summary>
-    /// <returns></returns>
     let parallelAsyncUsingStartChild = ParallelAsyncBuilderUsingStartChild()
 
     /// <summary>
-    /// Async computation expression which allows for parallel execution of asyncs with the applicative (and!) syntax.  This this <c>Async.StartImmediateAsTask</c> to start  async computations in parallel.
+    /// Async computation expression which allows for parallel execution of asyncs with the applicative (and!) syntax.  This this <see cref='M:Microsoft.FSharp.Control.FSharpAsync.StartImmediateAsTask``1'/> to start  async computations in parallel.
     /// </summary>
-    /// <returns></returns>
     let parallelAsyncUsingStartImmediateAsTask =
         ParallelAsyncBuilderUsingStartImmediateAsTask()
 
     /// <summary>
-    /// Async computation expression which allows for parallel execution of asyncs with the applicative (and!) syntax.  This this <c>Async.StartImmediateAsTask</c> to start async computations in parallel.
+    /// Async computation expression which allows for parallel execution of asyncs with the applicative (and!) syntax.  This this <see cref='M:Microsoft.FSharp.Control.FSharpAsync.StartImmediateAsTask``1'/> to start async computations in parallel.
     /// </summary>
-    /// <returns></returns>
     let parallelAsync = parallelAsyncUsingStartImmediateAsTask

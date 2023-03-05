@@ -6,26 +6,49 @@ open System.Threading.Tasks
 
 #if NETSTANDARD2_1
 
+/// <summary>
+/// Module with extension methods for <see cref="T:System.Threading.Tasks.ValueTask`1"/>.
+/// </summary>
 [<AutoOpen>]
 module ValueTaskExtensions =
 
     type ValueTask with
 
+        /// <summary>Creates a <see cref="T:System.Threading.Tasks.ValueTask" /> that's completed due to cancellation with a specified cancellation token.</summary>
+        /// <param name="cancellationToken">The cancellation token with which to complete the task.</param>
+        /// <returns>The canceled task.</returns>
+        /// <exception cref="T:System.ArgumentOutOfRangeException">Cancellation has not been requested for <paramref name="cancellationToken" />; its <see cref="P:System.Threading.CancellationToken.IsCancellationRequested" /> property is <see langword="false" />.</exception>
         static member FromCanceled(cancellationToken) =
             new ValueTask(Task.FromCanceled(cancellationToken))
 
+        /// <summary>Creates a <see cref="T:System.Threading.Tasks.ValueTask`1" /> that's completed due to cancellation with a specified cancellation token.</summary>
+        /// <param name="cancellationToken">The cancellation token with which to complete the task.</param>
+        /// <typeparam name="TResult">The type of the result returned by the task.</typeparam>
+        /// <returns>The canceled task.</returns>
+        /// <exception cref="T:System.ArgumentOutOfRangeException">Cancellation has not been requested for <paramref name="cancellationToken" />; its <see cref="P:System.Threading.CancellationToken.IsCancellationRequested" /> property is <see langword="false" />.</exception>
         static member FromCanceled<'T>(cancellationToken) =
             new ValueTask<'T>(Task.FromCanceled<'T>(cancellationToken))
 
     type Microsoft.FSharp.Control.Async with
 
-        static member inline AwaitValueTask(v: ValueTask<_>) : Async<_> =
+        /// <summary>
+        /// Return an asynchronous computation that will check if ValueTask is completed or wait for
+        /// the given task to complete and return its result.
+        /// </summary>
+        /// <param name="vTask">The task to await.</param>
+        static member inline AwaitValueTask(vTask: ValueTask<_>) : Async<_> =
             // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
-            if v.IsCompletedSuccessfully then
-                async.Return v.Result
+            if vTask.IsCompletedSuccessfully then
+                async.Return vTask.Result
             else
-                Async.AwaitTask(v.AsTask())
+                Async.AwaitTask(vTask.AsTask())
 
+
+        /// <summary>
+        /// Return an asynchronous computation that will check if ValueTask is completed or wait for
+        /// the given task to complete and return its result.
+        /// </summary>
+        /// <param name="vTask">The task to await.</param>
         static member inline AwaitValueTask(v: ValueTask) : Async<unit> =
             // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
             if v.IsCompletedSuccessfully then
@@ -34,7 +57,10 @@ module ValueTaskExtensions =
                 Async.AwaitTask(v.AsTask())
 
 
-        /// <summary>Runs an asynchronous computation, starting immediately on the current operating system thread.</summary>
+        /// <summary>
+        /// Runs an asynchronous computation, starting immediately on the current operating system thread,
+        /// but also returns the execution as <see cref="T:System.Threading.Tasks.ValueTask`1" />.
+        /// </summary>
         static member inline AsValueTask(computation: Async<'T>) : ValueTask<'T> =
             Async.StartImmediateAsTask(computation)
             |> ValueTask<'T>
@@ -53,7 +79,7 @@ module ValueTaskExtensions =
 
 namespace IcedTasks
 
-
+/// Contains methods to build ValueTasks using the F# computation expression syntax
 [<AutoOpen>]
 module ValueTasks =
     open System
@@ -76,61 +102,67 @@ module ValueTasks =
         [<DefaultValue(false)>]
         val mutable MethodBuilder: AsyncValueTaskMethodBuilder<'T>
 
-
+    /// This is used by the compiler as a template for creating state machine structs
     and ValueTaskStateMachine<'TOverall> =
         ResumableStateMachine<ValueTaskStateMachineData<'TOverall>>
 
+    /// Represents the runtime continuation of a valueTask state machine created dynamically
     and ValueTaskResumptionFunc<'TOverall> = ResumptionFunc<ValueTaskStateMachineData<'TOverall>>
 
+    /// Represents the runtime continuation of a valueTask state machine created dynamically
     and ValueTaskResumptionDynamicInfo<'TOverall> =
         ResumptionDynamicInfo<ValueTaskStateMachineData<'TOverall>>
 
+    /// A special compiler-recognised delegate type for specifying blocks of valueTask code with access to the state machine
     and ValueTaskCode<'TOverall, 'T> = ResumableCode<ValueTaskStateMachineData<'TOverall>, 'T>
 
+    /// <summary>
+    /// Contains methods to build ValueTasks using the F# computation expression syntax
+    /// </summary>
     type ValueTaskBuilderBase() =
 
 
-        /// <summary>Creates a ValueTask that runs <c>generator</c></summary>
+        /// <summary>Creates a ValueTask that runs generator</summary>
         /// <param name="generator">The function to run</param>
-        /// <returns>A valueTask that runs <c>generator</c></returns>
+        /// <returns>A valueTask that runs generator</returns>
         member inline _.Delay
             ([<InlineIfLambdaAttribute>] generator: unit -> ValueTaskCode<'TOverall, 'T>)
             : ValueTaskCode<'TOverall, 'T> =
             ResumableCode.Delay(fun () -> generator ())
 
 
-        /// <summary>Creates an ValueTask that just returns <c>()</c>.</summary>
+        /// <summary>Creates an ValueTask that just returns ().</summary>
         /// <remarks>
-        /// The existence of this method permits the use of empty <c>else</c> branches in the
-        /// <c>valueTask { ... }</c> computation expression syntax.
+        /// The existence of this method permits the use of empty else branches in the
+        /// valueTask { ... } computation expression syntax.
         /// </remarks>
-        /// <returns>An ValueTask that returns <c>()</c>.</returns>
+        /// <returns>An ValueTask that returns ().</returns>
         [<DefaultValue>]
         member inline _.Zero() : ValueTaskCode<'TOverall, unit> = ResumableCode.Zero()
 
-        /// <summary>Creates an computation that returns the result <c>v</c>.</summary>
+        /// <summary>Creates an computation that returns the result v.</summary>
         ///
         /// <remarks>A cancellation check is performed when the computation is executed.
         ///
-        /// The existence of this method permits the use of <c>return</c> in the
-        /// <c>valueTask { ... }</c> computation expression syntax.</remarks>
+        /// The existence of this method permits the use of return in the
+        /// valueTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="value">The value to return from the computation.</param>
         ///
-        /// <returns>An ValueTask that returns <c>value</c> when executed.</returns>
+        /// <returns>An ValueTask that returns value when executed.</returns>
         member inline _.Return(value: 'T) : ValueTaskCode<'T, 'T> =
             ValueTaskCode<'T, _>(fun sm ->
                 sm.Data.Result <- value
                 true
             )
 
-        /// <summary>Creates an ValueTask that first runs <c>task1</c>
-        /// and then runs <c>computation2</c>, returning the result of <c>computation2</c>.</summary>
+        /// <summary>Creates an ValueTask that first runs task1
+        /// and then runs computation2, returning the result of computation2.</summary>
         ///
         /// <remarks>
         ///
         /// The existence of this method permits the use of expression sequencing in the
-        /// <c>valueTask { ... }</c> computation expression syntax.</remarks>
+        /// valueTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="task1">The first part of the sequenced computation.</param>
         /// <param name="task2">The second part of the sequenced computation.</param>
@@ -143,17 +175,17 @@ module ValueTasks =
             ) : ValueTaskCode<'TOverall, 'T> =
             ResumableCode.Combine(task1, task2)
 
-        /// <summary>Creates an ValueTask that runs <c>computation</c> repeatedly
-        /// until <c>guard()</c> becomes false.</summary>
+        /// <summary>Creates an ValueTask that runs computation repeatedly
+        /// until guard() becomes false.</summary>
         ///
         /// <remarks>
         ///
-        /// The existence of this method permits the use of <c>while</c> in the
-        /// <c>valueTask { ... }</c> computation expression syntax.</remarks>
+        /// The existence of this method permits the use of while in the
+        /// valueTask { ... } computation expression syntax.</remarks>
         ///
-        /// <param name="guard">The function to determine when to stop executing <c>computation</c>.</param>
+        /// <param name="guard">The function to determine when to stop executing computation.</param>
         /// <param name="computation">The function to be executed.  Equivalent to the body
-        /// of a <c>while</c> expression.</param>
+        /// of a while expression.</param>
         ///
         /// <returns>An ValueTask that behaves similarly to a while loop when run.</returns>
         member inline _.While
@@ -163,18 +195,18 @@ module ValueTasks =
             ) : ValueTaskCode<'TOverall, unit> =
             ResumableCode.While(guard, computation)
 
-        /// <summary>Creates an ValueTask that runs <c>computation</c> and returns its result.
-        /// If an exception happens then <c>catchHandler(exn)</c> is called and the resulting computation executed instead.</summary>
+        /// <summary>Creates an ValueTask that runs computation and returns its result.
+        /// If an exception happens then catchHandler(exn) is called and the resulting computation executed instead.</summary>
         ///
         /// <remarks>
         ///
-        /// The existence of this method permits the use of <c>try/with</c> in the
-        /// <c>valueTask { ... }</c> computation expression syntax.</remarks>
+        /// The existence of this method permits the use of try/with in the
+        /// valueTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="computation">The input computation.</param>
-        /// <param name="catchHandler">The function to run when <c>computation</c> throws an exception.</param>
+        /// <param name="catchHandler">The function to run when computation throws an exception.</param>
         ///
-        /// <returns>An ValueTask that executes <c>computation</c> and calls <c>catchHandler</c> if an
+        /// <returns>An ValueTask that executes computation and calls catchHandler if an
         /// exception is thrown.</returns>
         member inline _.TryWith
             (
@@ -183,17 +215,17 @@ module ValueTasks =
             ) : ValueTaskCode<'TOverall, 'T> =
             ResumableCode.TryWith(computation, catchHandler)
 
-        /// <summary>Creates an ValueTask that runs <c>computation</c>. The action <c>compensation</c> is executed
-        /// after <c>computation</c> completes, whether <c>computation</c> exits normally or by an exception. If <c>compensation</c> raises an exception itself
+        /// <summary>Creates an ValueTask that runs computation. The action compensation is executed
+        /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
         /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
         ///
         /// <remarks>
         ///
-        /// The existence of this method permits the use of <c>try/finally</c> in the
-        /// <c>valueTask { ... }</c> computation expression syntax.</remarks>
+        /// The existence of this method permits the use of try/finally in the
+        /// valueTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="computation">The input computation.</param>
-        /// <param name="compensation">The action to be run after <c>computation</c> completes or raises an
+        /// <param name="compensation">The action to be run after computation completes or raises an
         /// exception (including cancellation).</param>
         ///
         /// <returns>An ValueTask that executes computation and compensation afterwards or
@@ -211,19 +243,19 @@ module ValueTasks =
                 )
             )
 
-        /// <summary>Creates an ValueTask that enumerates the sequence <c>seq</c>
-        /// on demand and runs <c>body</c> for each element.</summary>
+        /// <summary>Creates an ValueTask that enumerates the sequence seq
+        /// on demand and runs body for each element.</summary>
         ///
         /// <remarks>A cancellation check is performed on each iteration of the loop.
         ///
-        /// The existence of this method permits the use of <c>for</c> in the
-        /// <c>valueTask { ... }</c> computation expression syntax.</remarks>
+        /// The existence of this method permits the use of for in the
+        /// valueTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="sequence">The sequence to enumerate.</param>
         /// <param name="body">A function to take an item from the sequence and create
-        /// an ValueTask.  Can be seen as the body of the <c>for</c> expression.</param>
+        /// an ValueTask.  Can be seen as the body of the for expression.</param>
         ///
-        /// <returns>An ValueTask that will enumerate the sequence and run <c>body</c>
+        /// <returns>An ValueTask that will enumerate the sequence and run body
         /// for each element.</returns>
         member inline _.For
             (
@@ -232,17 +264,17 @@ module ValueTasks =
             ) : ValueTaskCode<'TOverall, unit> =
             ResumableCode.For(sequence, body)
 
-        /// <summary>Creates an ValueTask that runs <c>computation</c>. The action <c>compensation</c> is executed
-        /// after <c>computation</c> completes, whether <c>computation</c> exits normally or by an exception. If <c>compensation</c> raises an exception itself
+        /// <summary>Creates an ValueTask that runs computation. The action compensation is executed
+        /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
         /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
         ///
         /// <remarks>
         ///
-        /// The existence of this method permits the use of <c>try/finally</c> in the
-        /// <c>valueTask { ... }</c> computation expression syntax.</remarks>
+        /// The existence of this method permits the use of try/finally in the
+        /// valueTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="computation">The input computation.</param>
-        /// <param name="compensation">The action to be run after <c>computation</c> completes or raises an
+        /// <param name="compensation">The action to be run after computation completes or raises an
         /// exception.</param>
         ///
         /// <returns>An ValueTask that executes computation and compensation afterwards or
@@ -293,20 +325,20 @@ module ValueTasks =
                 )
             )
 
-        /// <summary>Creates an ValueTask that runs <c>binder(resource)</c>.
-        /// The action <c>resource.DisposeAsync()</c> is executed as this computation yields its result
+        /// <summary>Creates an ValueTask that runs binder(resource).
+        /// The action resource.DisposeAsync() is executed as this computation yields its result
         /// or if the ValueTask exits by an exception or by cancellation.</summary>
         ///
         /// <remarks>
         ///
-        /// The existence of this method permits the use of <c>use</c> and <c>use!</c> in the
-        /// <c>valueTask { ... }</c> computation expression syntax.</remarks>
+        /// The existence of this method permits the use of use and use! in the
+        /// valueTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="resource">The resource to be used and disposed.</param>
         /// <param name="binder">The function that takes the resource and returns an asynchronous
         /// computation.</param>
         ///
-        /// <returns>An ValueTask that binds and eventually disposes <c>resource</c>.</returns>
+        /// <returns>An ValueTask that binds and eventually disposes resource.</returns>
         ///
         member inline this.Using<'Resource, 'TOverall, 'T when 'Resource :> IAsyncDisposable>
             (
@@ -323,6 +355,9 @@ module ValueTasks =
                 )
             )
 
+    ///<summary>
+    /// Contains methods to build ValueTasks using the F# computation expression syntax
+    /// </summary>
     type ValueTaskBuilder() =
 
         inherit ValueTaskBuilderBase()
@@ -410,6 +445,7 @@ module ValueTasks =
             else
                 ValueTaskBuilder.RunDynamic(code)
 
+    /// Contains methods to build ValueTasks using the F# computation expression syntax
     type BackgroundValueTaskBuilder() =
 
         inherit ValueTaskBuilderBase()
@@ -485,6 +521,7 @@ module ValueTasks =
                 BackgroundValueTaskBuilder.RunDynamic(code)
 
 
+    /// Contains the valueTask computation expression builder.
     [<AutoOpen>]
     module ValueTaskBuilder =
 
@@ -498,6 +535,7 @@ module ValueTasks =
         /// </summary>
         let backgroundValueTask = BackgroundValueTaskBuilder()
 
+    /// <exclude/>
     [<AutoOpen>]
     module LowPriority =
         // Low priority extensions
@@ -536,19 +574,19 @@ module ValueTasks =
                     sm.ResumptionDynamicInfo.ResumptionFunc <- cont
                     false
 
-            /// <summary>Creates an ValueTask that runs <c>computation</c>, and when
-            /// <c>computation</c> generates a result <c>T</c>, runs <c>binder res</c>.</summary>
+            /// <summary>Creates an ValueTask that runs computation, and when
+            /// computation generates a result T, runs binder res.</summary>
             ///
             /// <remarks>A cancellation check is performed when the computation is executed.
             ///
-            /// The existence of this method permits the use of <c>let!</c> in the
-            /// <c>valueTask { ... }</c> computation expression syntax.</remarks>
+            /// The existence of this method permits the use of let! in the
+            /// valueTask { ... } computation expression syntax.</remarks>
             ///
             /// <param name="getAwaiter">The computation to provide an unbound result.</param>
-            /// <param name="continuation">The function to bind the result of <c>computation</c>.</param>
+            /// <param name="continuation">The function to bind the result of computation.</param>
             ///
             /// <returns>An ValueTask that performs a monadic bind on the result
-            /// of <c>computation</c>.</returns>
+            /// of computation.</returns>
             [<NoEagerConstraintApplication>]
             member inline _.Bind<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
@@ -592,8 +630,8 @@ module ValueTasks =
 
             /// <summary>Delegates to the input computation.</summary>
             ///
-            /// <remarks>The existence of this method permits the use of <c>return!</c> in the
-            /// <c>valueTask { ... }</c> computation expression syntax.</remarks>
+            /// <remarks>The existence of this method permits the use of return! in the
+            /// valueTask { ... } computation expression syntax.</remarks>
             ///
             /// <param name="getAwaiter">The input computation.</param>
             ///
@@ -615,11 +653,11 @@ module ValueTasks =
                 this.Bind(getAwaiter, (fun v -> this.Return(f v)))
 
 
-            /// <summary>Allows the computation expression to turn other types into <c>CancellationToken -> 'Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This is the identify function.</remarks>
             ///
-            /// <returns><c>'Awaiter</c></returns>
+            /// <returns>'Awaiter</returns>
             [<NoEagerConstraintApplication>]
             member inline _.Source<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
@@ -628,11 +666,11 @@ module ValueTasks =
                 getAwaiter
 
 
-            /// <summary>Allows the computation expression to turn other types into <c>'Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>
             ///
-            /// <remarks>This turns a <c>^Awaitable</c> into a <c>'Awaiter</c>.</remarks>
+            /// <remarks>This turns a ^Awaitable into a 'Awaiter.</remarks>
             ///
-            /// <returns><c>'Awaiter</c></returns>
+            /// <returns>'Awaiter</returns>
             [<NoEagerConstraintApplication>]
             member inline _.Source<'Awaitable, 'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
@@ -642,20 +680,20 @@ module ValueTasks =
                 |> Awaitable.getAwaiter
 
 
-            /// <summary>Creates an ValueTask that runs <c>binder(resource)</c>.
-            /// The action <c>resource.Dispose()</c> is executed as this computation yields its result
+            /// <summary>Creates an ValueTask that runs binder(resource).
+            /// The action resource.Dispose() is executed as this computation yields its result
             /// or if the ValueTask exits by an exception or by cancellation.</summary>
             ///
             /// <remarks>
             ///
-            /// The existence of this method permits the use of <c>use</c> and <c>use!</c> in the
-            /// <c>valueTask { ... }</c> computation expression syntax.</remarks>
+            /// The existence of this method permits the use of use and use! in the
+            /// valueTask { ... } computation expression syntax.</remarks>
             ///
             /// <param name="resource">The resource to be used and disposed.</param>
             /// <param name="binder">The function that takes the resource and returns an asynchronous
             /// computation.</param>
             ///
-            /// <returns>An ValueTask that binds and eventually disposes <c>resource</c>.</returns>
+            /// <returns>An ValueTask that binds and eventually disposes resource.</returns>
             ///
             member inline _.Using<'Resource, 'TOverall, 'T when 'Resource :> IDisposable>
                 (
@@ -664,6 +702,7 @@ module ValueTasks =
                 ) =
                 ResumableCode.Using(resource, binder)
 
+    /// <exclude/>
     [<AutoOpen>]
     module HighPriority =
 
@@ -674,32 +713,33 @@ module ValueTasks =
             ///
             /// <remarks>This is the identify function for For binds.</remarks>
             ///
-            /// <returns><c>IEnumerable</c></returns>
+            /// <returns>IEnumerable</returns>
             member inline _.Source(s: #seq<_>) : #seq<_> = s
 
-            /// <summary>Allows the computation expression to turn other types into <c>'Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>
             ///
-            /// <remarks>This turns a <c>Task&lt;'T&gt;</c> into a <c>'Awaiter</c>.</remarks>
+            /// <remarks>This turns a Task&lt;'T&gt; into a 'Awaiter.</remarks>
             ///
-            /// <returns><c>'Awaiter</c></returns>
+            /// <returns>'Awaiter</returns>
             member inline _.Source(task: Task<'T>) = task.GetAwaiter()
 
-            /// <summary>Allows the computation expression to turn other types into <c>'Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>
             ///
-            /// <remarks>This turns a <c>Async&lt;'T&gt;</c> into a <c>'Awaiter</c>.</remarks>
+            /// <remarks>This turns a Async&lt;'T&gt; into a 'Awaiter.</remarks>
             ///
-            /// <returns><c>'Awaiter</c></returns>
+            /// <returns>'Awaiter</returns>
             member inline this.Source(computation: Async<'TResult1>) =
                 this.Source(Async.StartImmediateAsTask(computation))
 
 
-            /// <summary>Allows the computation expression to turn other types into <c>'Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>
             ///
-            /// <remarks>This turns a <c>Async&lt;'T&gt;</c> into a <c>'Awaiter</c>.</remarks>
+            /// <remarks>This turns a Async&lt;'T&gt; into a 'Awaiter.</remarks>
             ///
-            /// <returns><c>'Awaiter</c></returns>
+            /// <returns>'Awaiter</returns>
             member inline this.Source(awaiter: TaskAwaiter<'TResult1>) = awaiter
 
+    /// Contains a set of standard functional helper function
     [<RequireQualifiedAccess>]
     module ValueTask =
         open System.Threading.Tasks
@@ -760,28 +800,28 @@ module ValueTasks =
             else
                 valueTask { return! vtask }
 
-        /// <summary>Initializes a new instance of the <c>System.Threading.Tasks.ValueTask</c> class using the supplied task that represents the operation.</summary>
+        /// <summary>Initializes a new instance of the System.Threading.Tasks.ValueTask class using the supplied task that represents the operation.</summary>
         /// <param name="task">The task.</param>
         let inline ofTask (task: Task<'T>) = ValueTask<'T> task
 
-        /// <summary>Initializes a new instance of the <c>System.Threading.Tasks.ValueTask</c> class using the supplied task that represents the operation.</summary>
+        /// <summary>Initializes a new instance of the System.Threading.Tasks.ValueTask class using the supplied task that represents the operation.</summary>
         /// <param name="task"> The task that represents the operation</param>
         /// <returns></returns>
         let inline ofTaskUnit (task: Task) = ValueTask task
 
-        /// <summary>Retrieves a <c>System.Threading.Tasks.Task</c> object that represents this <c>System.Threading.Tasks.ValueTask`1</c></summary>
+        /// <summary>Retrieves a System.Threading.Tasks.Task object that represents this System.Threading.Tasks.ValueTask`1</summary>
         /// <param name="vtask"></param>
         /// <typeparam name="'T"></typeparam>
         /// <returns>
-        /// The <c>System.Threading.Tasks.Task</c> object that is wrapped in this  <c>System.Threading.Tasks.ValueTask if one exists,
-        /// or a new  <c>System.Threading.Tasks.Task</c> object that represents the result.
+        /// The System.Threading.Tasks.Task object that is wrapped in this  System.Threading.Tasks.ValueTask if one exists,
+        /// or a new  System.Threading.Tasks.Task object that represents the result.
         /// </returns>
         let inline toTask (vtask: ValueTask<'T>) = vtask.AsTask()
 
-        /// <summary>Retrieves a <c>System.Threading.Tasks.Task</c> object that represents this <c>System.Threading.Tasks.ValueTask.</c></summary>
+        /// <summary>Retrieves a System.Threading.Tasks.Task object that represents this System.Threading.Tasks.ValueTask.</summary>
         let inline toTaskUnit (vtask: ValueTask) = vtask.AsTask()
 
-        /// <summary>Converts a <c>ValueTask&lt;T&gt;</c> to its non-generic counterpart.</summary>
+        /// <summary>Converts a ValueTask&lt;T&gt; to its non-generic counterpart.</summary>
         /// <param name="vtask"></param>
         /// <typeparam name="'T"></typeparam>
         /// <returns></returns>
@@ -799,8 +839,9 @@ module ValueTasks =
 
         let inline internal getAwaiter (ctask: ValueTask<_>) = (ctask).GetAwaiter()
 
+    /// <exclude/>
     [<AutoOpen>]
-    module Moreextensions =
+    module MergeSourcesExtensions =
 
         type ValueTaskBuilderBase with
 

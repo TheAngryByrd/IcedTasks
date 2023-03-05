@@ -106,20 +106,33 @@ let docsToolDir =
     rootDirectory
     </> "docsTool"
 
+let temp =
+    rootDirectory
+    </> "temp"
+
+let watchDocsDir =
+    temp
+    </> "watch-docs"
+
 let gitOwner = "TheAngryByrd"
 let gitRepoName = "IcedTasks"
 
 let gitHubRepoUrl = sprintf "https://github.com/%s/%s" gitOwner gitRepoName
 
 let releaseBranch = "master"
+let readme = "README.md"
+let changelogFile = "CHANGELOG.md"
 
 let tagFromVersionNumber versionNumber = sprintf "v%s" versionNumber
 
-let changelogFilename =
-    rootDirectory
-    </> "CHANGELOG.md"
+let READMElink = Uri(Uri(gitHubRepoUrl), $"blob/{releaseBranch}/{readme}")
+let CHANGELOGlink = Uri(Uri(gitHubRepoUrl), $"blob/{releaseBranch}/{changelogFile}")
 
-let changelog = Fake.Core.Changelog.load changelogFilename
+let changelogPath =
+    rootDirectory
+    </> changelogFile
+
+let changelog = Fake.Core.Changelog.load changelogPath
 
 let mutable latestEntry =
     if Seq.isEmpty changelog.Entries then
@@ -136,7 +149,6 @@ let docsSiteBaseUrl = sprintf "https://%s.github.io/%s" gitOwner gitRepoName
 let disableCodeCoverage = environVarAsBoolOrDefault "DISABLE_COVERAGE" true
 
 let githubToken = Environment.environVarOrNone "GITHUB_TOKEN"
-
 
 let nugetToken = Environment.environVarOrNone "NUGET_TOKEN"
 
@@ -347,57 +359,56 @@ module FSharpAnalyzers =
             member s.Usage = ""
 
 
-open DocsTool.CLIArgs
-
 module DocsTool =
-    open Argu
-    let buildparser = ArgumentParser.Create<BuildArgs>(programName = "docstool")
+    let quoted s = $"\"%s{s}\""
 
-    let buildCLI () =
-        [
-            BuildArgs.SiteBaseUrl docsSiteBaseUrl
-            BuildArgs.ProjectGlob srcGlob
-            BuildArgs.DocsOutputDirectory docsDir
-            BuildArgs.DocsSourceDirectory docsSrcDir
-            BuildArgs.GitHubRepoUrl gitHubRepoUrl
-            BuildArgs.ProjectName gitRepoName
-            BuildArgs.ReleaseVersion latestEntry.NuGetVersion
-        ]
-        |> buildparser.PrintCommandLineArgumentsFlat
+    let fsDocsDotnetOptions (o: DotNet.Options) =
+        { o with
+            WorkingDirectory = rootDirectory
+        }
+
+    let fsDocsBuildParams (p: Fsdocs.BuildCommandParams) =
+        { p with
+            Clean = Some true
+            Input = Some(quoted docsSrcDir)
+            Output = Some(quoted docsDir)
+            Eval = Some true
+            Projects = Some(Seq.map quoted (!!srcGlob))
+            // Properties = Some ($"Version={version} PackageVersion={version}")
+            Parameters =
+                Some [
+                    // https://fsprojects.github.io/FSharp.Formatting/content.html#Templates-and-Substitutions
+                    "root", quoted gitHubRepoUrl
+                    "fsdocs-collection-name", quoted productName
+                    "fsdocs-repository-branch", quoted releaseBranch
+                    "fsdocs-repository-link", quoted (productName)
+                    "fsdocs-package-version", quoted latestEntry.NuGetVersion
+                    "fsdocs-readme-link", quoted (READMElink.ToString())
+                    "fsdocs-release-notes-link", quoted (CHANGELOGlink.ToString())
+                ]
+            Strict = Some true
+        }
+
 
     let build () =
-        dotnet.run
-            (fun args ->
-                { args with
-                    WorkingDirectory = docsToolDir
-                }
-            )
-            (sprintf " -- build %s" (buildCLI ()))
-        |> failOnBadExitAndPrint
+        Fsdocs.build fsDocsDotnetOptions (fsDocsBuildParams)
 
-    let watchparser = ArgumentParser.Create<WatchArgs>(programName = "docstool")
-
-    let watchCLI () =
-        [
-            WatchArgs.ProjectGlob srcGlob
-            WatchArgs.DocsSourceDirectory docsSrcDir
-            WatchArgs.GitHubRepoUrl gitHubRepoUrl
-            WatchArgs.ProjectName gitRepoName
-            WatchArgs.ReleaseVersion latestEntry.NuGetVersion
-        ]
-        |> watchparser.PrintCommandLineArgumentsFlat
 
     let watch () =
-        dotnet.watch
-            (fun args ->
-                { args with
-                    WorkingDirectory = docsToolDir
+        let buildParams bp =
+            let bp =
+                Option.defaultValue Fsdocs.BuildCommandParams.Default bp
+                |> fsDocsBuildParams
+
+            { bp with Output = Some watchDocsDir }
+
+        Fsdocs.watch
+            fsDocsDotnetOptions
+            (fun p ->
+                { p with
+                    BuildCommandParams = Some(buildParams p.BuildCommandParams)
                 }
             )
-            "run"
-            (sprintf "-- watch %s" (watchCLI ()))
-        |> failOnBadExitAndPrint
-
 
 let allReleaseChecks () =
     isReleaseBranchCheck ()
@@ -481,7 +492,7 @@ let updateChangelog ctx =
         Trace.traceErrorfn
             "Version %s already exists in %s, released on %s"
             verStr
-            changelogFilename
+            changelogPath
             (if entry.Date.IsSome then
                  entry.Date.Value.ToString("yyyy-MM-dd")
              else
@@ -553,13 +564,13 @@ let updateChangelog ctx =
     // Save changelog to temporary file before making any edits
     changelogBackupFilename <- System.IO.Path.GetTempFileName()
 
-    changelogFilename
+    changelogPath
     |> Shell.copyFile changelogBackupFilename
 
     Target.activateFinal "DeleteChangelogBackupFile"
 
     newChangelog
-    |> Changelog.save changelogFilename
+    |> Changelog.save changelogPath
 
     // Now update the link references at the end of the file
     let linkReferenceForLatestEntry = Changelog.mkLinkReference newVersion changelog
@@ -572,7 +583,7 @@ let updateChangelog ctx =
             "HEAD"
 
     let tailLines =
-        File.read changelogFilename
+        File.read changelogPath
         |> List.ofSeq
         |> List.rev
 
@@ -624,7 +635,7 @@ let updateChangelog ctx =
         )
         @ newLinkReferenceTargets
 
-    File.write false changelogFilename updatedLines
+    File.write false changelogPath updatedLines
 
     // If build fails after this point but before we push the release out, undo our modifications
     Target.activateBuildFailure "RevertChangelog"
@@ -632,7 +643,7 @@ let updateChangelog ctx =
 let revertChangelog _ =
     if String.isNotNullOrEmpty changelogBackupFilename then
         changelogBackupFilename
-        |> Shell.copyFile changelogFilename
+        |> Shell.copyFile changelogPath
 
 let deleteChangelogBackupFile _ =
     if String.isNotNullOrEmpty changelogBackupFilename then

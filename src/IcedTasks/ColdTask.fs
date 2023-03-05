@@ -11,6 +11,7 @@
 
 namespace IcedTasks
 
+/// Contains methods to build ColdTasks using the F# computation expression syntax
 [<AutoOpen>]
 module ColdTasks =
     open System
@@ -37,43 +38,48 @@ module ColdTasks =
         [<DefaultValue(false)>]
         val mutable MethodBuilder: AsyncTaskMethodBuilder<'T>
 
+    /// This is used by the compiler as a template for creating state machine structs
     and ColdTaskStateMachine<'TOverall> = ResumableStateMachine<ColdTaskStateMachineData<'TOverall>>
+    /// Represents the runtime continuation of a ColdTask state machine created dynamically
     and ColdTaskResumptionFunc<'TOverall> = ResumptionFunc<ColdTaskStateMachineData<'TOverall>>
 
+    /// Represents the runtime continuation of a ColdTask state machine created dynamically
     and ColdTaskResumptionDynamicInfo<'TOverall> =
         ResumptionDynamicInfo<ColdTaskStateMachineData<'TOverall>>
 
+    /// A special compiler-recognised delegate type for specifying blocks of ColdTask code with access to the state machine
     and ColdTaskCode<'TOverall, 'T> = ResumableCode<ColdTaskStateMachineData<'TOverall>, 'T>
 
+    /// Contains the coldTask computation expression builder.
     type ColdTaskBuilderBase() =
 
-        /// <summary>Creates a ColdTask that runs <c>generator</c></summary>
+        /// <summary>Creates a ColdTask that runs generator</summary>
         /// <param name="generator">The function to run</param>
-        /// <returns>A coldTask that runs <c>generator</c></returns>
+        /// <returns>A coldTask that runs generator</returns>
         member inline _.Delay
             (generator: unit -> ColdTaskCode<'TOverall, 'T>)
             : ColdTaskCode<'TOverall, 'T> =
             ColdTaskCode<'TOverall, 'T>(fun sm -> (generator ()).Invoke(&sm))
 
-        /// <summary>Creates an ColdTask that just returns <c>()</c>.</summary>
+        /// <summary>Creates an ColdTask that just returns ().</summary>
         /// <remarks>
-        /// The existence of this method permits the use of empty <c>else</c> branches in the
-        /// <c>coldTask { ... }</c> computation expression syntax.
+        /// The existence of this method permits the use of empty else branches in the
+        /// coldTask { ... } computation expression syntax.
         /// </remarks>
-        /// <returns>An ColdTask that returns <c>()</c>.</returns>
+        /// <returns>An ColdTask that returns ().</returns>
         [<DefaultValue>]
         member inline _.Zero() : ColdTaskCode<'TOverall, unit> = ResumableCode.Zero()
 
-        /// <summary>Creates an computation that returns the result <c>v</c>.</summary>
+        /// <summary>Creates an computation that returns the result v.</summary>
         ///
         /// <remarks>
         ///
-        /// The existence of this method permits the use of <c>return</c> in the
-        /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
+        /// The existence of this method permits the use of return in the
+        /// coldTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="value">The value to return from the computation.</param>
         ///
-        /// <returns>An ColdTask that returns <c>value</c> when executed.</returns>
+        /// <returns>An ColdTask that returns value when executed.</returns>
         member inline _.Return(value: 'T) : ColdTaskCode<'T, 'T> =
             ColdTaskCode<'T, _>(fun sm ->
                 sm.Data.Result <- value
@@ -81,13 +87,13 @@ module ColdTasks =
             )
 
 
-        /// <summary>Creates an ColdTask that first runs <c>task1</c>
-        /// and then runs <c>computation2</c>, returning the result of <c>computation2</c>.</summary>
+        /// <summary>Creates an ColdTask that first runs task1
+        /// and then runs computation2, returning the result of computation2.</summary>
         ///
         /// <remarks>
         ///
         /// The existence of this method permits the use of expression sequencing in the
-        /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
+        /// coldTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="task1">The first part of the sequenced computation.</param>
         /// <param name="task2">The second part of the sequenced computation.</param>
@@ -100,17 +106,17 @@ module ColdTasks =
             ) : ColdTaskCode<'TOverall, 'T> =
             ResumableCode.Combine(task1, task2)
 
-        /// <summary>Creates an ColdTask that runs <c>computation</c> repeatedly
-        /// until <c>guard()</c> becomes false.</summary>
+        /// <summary>Creates an ColdTask that runs computation repeatedly
+        /// until guard() becomes false.</summary>
         ///
         /// <remarks>
         ///
-        /// The existence of this method permits the use of <c>while</c> in the
-        /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
+        /// The existence of this method permits the use of while in the
+        /// coldTask { ... } computation expression syntax.</remarks>
         ///
-        /// <param name="guard">The function to determine when to stop executing <c>computation</c>.</param>
+        /// <param name="guard">The function to determine when to stop executing computation.</param>
         /// <param name="computation">The function to be executed.  Equivalent to the body
-        /// of a <c>while</c> expression.</param>
+        /// of a while expression.</param>
         ///
         /// <returns>An ColdTask that behaves similarly to a while loop when run.</returns>
         member inline _.While
@@ -121,18 +127,18 @@ module ColdTasks =
             ResumableCode.While(guard, body)
 
 
-        /// <summary>Creates an ColdTask that runs <c>computation</c> and returns its result.
-        /// If an exception happens then <c>catchHandler(exn)</c> is called and the resulting computation executed instead.</summary>
+        /// <summary>Creates an ColdTask that runs computation and returns its result.
+        /// If an exception happens then catchHandler(exn) is called and the resulting computation executed instead.</summary>
         ///
         /// <remarks>
         ///
-        /// The existence of this method permits the use of <c>try/with</c> in the
-        /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
+        /// The existence of this method permits the use of try/with in the
+        /// coldTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="computation">The input computation.</param>
-        /// <param name="catchHandler">The function to run when <c>computation</c> throws an exception.</param>
+        /// <param name="catchHandler">The function to run when computation throws an exception.</param>
         ///
-        /// <returns>An ColdTask that executes <c>computation</c> and calls <c>catchHandler</c> if an
+        /// <returns>An ColdTask that executes computation and calls catchHandler if an
         /// exception is thrown.</returns>
         member inline _.TryWith
             (
@@ -141,17 +147,17 @@ module ColdTasks =
             ) : ColdTaskCode<'TOverall, 'T> =
             ResumableCode.TryWith(body, catch)
 
-        /// <summary>Creates an ColdTask that runs <c>computation</c>. The action <c>compensation</c> is executed
-        /// after <c>computation</c> completes, whether <c>computation</c> exits normally or by an exception. If <c>compensation</c> raises an exception itself
+        /// <summary>Creates an ColdTask that runs computation. The action compensation is executed
+        /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
         /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
         ///
         /// <remarks>
         ///
-        /// The existence of this method permits the use of <c>try/finally</c> in the
-        /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
+        /// The existence of this method permits the use of try/finally in the
+        /// coldTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="computation">The input computation.</param>
-        /// <param name="compensation">The action to be run after <c>computation</c> completes or raises an
+        /// <param name="compensation">The action to be run after computation completes or raises an
         /// exception (including cancellation).</param>
         ///
         /// <returns>An ColdTask that executes computation and compensation afterwards or
@@ -169,19 +175,19 @@ module ColdTasks =
                 )
             )
 
-        /// <summary>Creates an ColdTask that enumerates the sequence <c>seq</c>
-        /// on demand and runs <c>body</c> for each element.</summary>
+        /// <summary>Creates an ColdTask that enumerates the sequence seq
+        /// on demand and runs body for each element.</summary>
         ///
         /// <remarks>
         ///
-        /// The existence of this method permits the use of <c>for</c> in the
-        /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
+        /// The existence of this method permits the use of for in the
+        /// coldTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="sequence">The sequence to enumerate.</param>
         /// <param name="body">A function to take an item from the sequence and create
-        /// an ColdTask.  Can be seen as the body of the <c>for</c> expression.</param>
+        /// an ColdTask.  Can be seen as the body of the for expression.</param>
         ///
-        /// <returns>An ColdTask that will enumerate the sequence and run <c>body</c>
+        /// <returns>An ColdTask that will enumerate the sequence and run body
         /// for each element.</returns>
         member inline _.For
             (
@@ -191,17 +197,17 @@ module ColdTasks =
             ResumableCode.For(sequence, body)
 
 #if NETSTANDARD2_1
-        /// <summary>Creates an ColdTask that runs <c>computation</c>. The action <c>compensation</c> is executed
-        /// after <c>computation</c> completes, whether <c>computation</c> exits normally or by an exception. If <c>compensation</c> raises an exception itself
+        /// <summary>Creates an ColdTask that runs computation. The action compensation is executed
+        /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
         /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
         ///
         /// <remarks>
         ///
-        /// The existence of this method permits the use of <c>try/finally</c> in the
-        /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
+        /// The existence of this method permits the use of try/finally in the
+        /// coldTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="computation">The input computation.</param>
-        /// <param name="compensation">The action to be run after <c>computation</c> completes or raises an
+        /// <param name="compensation">The action to be run after computation completes or raises an
         /// exception.</param>
         ///
         /// <returns>An ColdTask that executes computation and compensation afterwards or
@@ -251,20 +257,20 @@ module ColdTasks =
                 )
             )
 
-        /// <summary>Creates an ColdTask that runs <c>binder(resource)</c>.
-        /// The action <c>resource.DisposeAsync()</c> is executed as this computation yields its result
+        /// <summary>Creates an ColdTask that runs binder(resource).
+        /// The action resource.DisposeAsync() is executed as this computation yields its result
         /// or if the ColdTask exits by an exception or by cancellation.</summary>
         ///
         /// <remarks>
         ///
-        /// The existence of this method permits the use of <c>use</c> and <c>use!</c> in the
-        /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
+        /// The existence of this method permits the use of use and use! in the
+        /// coldTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="resource">The resource to be used and disposed.</param>
         /// <param name="binder">The function that takes the resource and returns an asynchronous
         /// computation.</param>
         ///
-        /// <returns>An ColdTask that binds and eventually disposes <c>resource</c>.</returns>
+        /// <returns>An ColdTask that binds and eventually disposes resource.</returns>
         ///
         member inline this.Using<'Resource, 'TOverall, 'T when 'Resource :> IAsyncDisposable>
             (
@@ -282,7 +288,7 @@ module ColdTasks =
             )
 
 #endif
-
+    /// Contains methods to build ColdTasks using the F# computation expression syntax
     type ColdTaskBuilder() =
 
         inherit ColdTaskBuilderBase()
@@ -374,6 +380,7 @@ module ColdTasks =
             else
                 ColdTaskBuilder.RunDynamic(code)
 
+    /// Contains methods to build ColdTasks using the F# computation expression syntax
     type BackgroundColdTaskBuilder() =
 
         inherit ColdTaskBuilderBase()
@@ -442,6 +449,7 @@ module ColdTasks =
             else
                 BackgroundColdTaskBuilder.RunDynamic(code)
 
+    /// Contains the coldTasks computation expression builder.
     [<AutoOpen>]
     module ColdTaskBuilder =
 
@@ -455,7 +463,7 @@ module ColdTasks =
         /// </summary>
         let backgroundColdTask = BackgroundColdTaskBuilder()
 
-
+    /// <exclude />
     [<AutoOpen>]
     module LowPriority =
         // Low priority extensions
@@ -495,19 +503,19 @@ module ColdTasks =
                     false
 
 
-            /// <summary>Creates an ColdTask that runs <c>computation</c>, and when
-            /// <c>computation</c> generates a result <c>T</c>, runs <c>binder res</c>.</summary>
+            /// <summary>Creates an ColdTask that runs computation, and when
+            /// computation generates a result T, runs binder res.</summary>
             ///
             /// <remarks>A cancellation check is performed when the computation is executed.
             ///
-            /// The existence of this method permits the use of <c>let!</c> in the
-            /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
+            /// The existence of this method permits the use of let! in the
+            /// coldTask { ... } computation expression syntax.</remarks>
             ///
             /// <param name="getAwaiter">The computation to provide an unbound result.</param>
-            /// <param name="continuation">The function to bind the result of <c>computation</c>.</param>
+            /// <param name="continuation">The function to bind the result of computation.</param>
             ///
             /// <returns>An ColdTask that performs a monadic bind on the result
-            /// of <c>computation</c>.</returns>
+            /// of computation.</returns>
             [<NoEagerConstraintApplication>]
             member inline _.Bind<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
@@ -549,8 +557,8 @@ module ColdTasks =
 
             /// <summary>Delegates to the input computation.</summary>
             ///
-            /// <remarks>The existence of this method permits the use of <c>return!</c> in the
-            /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
+            /// <remarks>The existence of this method permits the use of return! in the
+            /// coldTask { ... } computation expression syntax.</remarks>
             ///
             /// <param name="getAwaiter">The input computation.</param>
             ///
@@ -572,11 +580,11 @@ module ColdTasks =
                 this.Bind((fun () -> getAwaiter ()), (fun v -> this.Return(f v)))
 
 
-            /// <summary>Allows the computation expression to turn other types into <c>CancellationToken -> 'Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This is the identify function.</remarks>
             ///
-            /// <returns><c>CancellationToken -> 'Awaiter</c></returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             [<NoEagerConstraintApplication>]
             member inline _.Source<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
@@ -584,11 +592,11 @@ module ColdTasks =
                 : unit -> 'Awaiter =
                 (fun () -> getAwaiter)
 
-            /// <summary>Allows the computation expression to turn other types into <c>unit -> 'Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into unit -> 'Awaiter</summary>
             ///
             /// <remarks>This is the identify function.</remarks>
             ///
-            /// <returns><c>unit -> 'Awaiter</c></returns>
+            /// <returns>unit -> 'Awaiter</returns>
             [<NoEagerConstraintApplication>]
             member inline _.Source<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
@@ -596,11 +604,11 @@ module ColdTasks =
                 : unit -> 'Awaiter =
                 getAwaiter
 
-            /// <summary>Allows the computation expression to turn other types into <c>unit -> 'Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into unit -> 'Awaiter</summary>
             ///
-            /// <remarks>This turns a <c>'Awaitable</c> into a <c>unit -> 'Awaiter</c>.</remarks>
+            /// <remarks>This turns a 'Awaitable into a unit -> 'Awaiter.</remarks>
             ///
-            /// <returns><c>unit -> 'Awaiter</c></returns>
+            /// <returns>unit -> 'Awaiter</returns>
             [<NoEagerConstraintApplication>]
             member inline this.Source<'Awaitable, 'Awaiter, 'TResult1
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
@@ -611,11 +619,11 @@ module ColdTasks =
                     |> Awaitable.getAwaiter
                 )
 
-            /// <summary>Allows the computation expression to turn other types into <c>unit -> 'Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into unit -> 'Awaiter</summary>
             ///
-            /// <remarks>This turns a <c>unit -> 'Awaitable</c> into a <c>unit -> 'Awaiter</c>.</remarks>
+            /// <remarks>This turns a unit -> 'Awaitable into a unit -> 'Awaiter.</remarks>
             ///
-            /// <returns><c>unit -> 'Awaiter</c></returns>
+            /// <returns>unit -> 'Awaiter</returns>
             [<NoEagerConstraintApplication>]
             member inline this.Source<'Awaitable, 'Awaiter, 'TResult
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult>>
@@ -627,20 +635,20 @@ module ColdTasks =
                 )
 
 
-            /// <summary>Creates an ColdTask that runs <c>binder(resource)</c>.
-            /// The action <c>resource.Dispose()</c> is executed as this computation yields its result
+            /// <summary>Creates an ColdTask that runs binder(resource).
+            /// The action resource.Dispose() is executed as this computation yields its result
             /// or if the ColdTask exits by an exception or by cancellation.</summary>
             ///
             /// <remarks>
             ///
-            /// The existence of this method permits the use of <c>use</c> and <c>use!</c> in the
-            /// <c>coldTask { ... }</c> computation expression syntax.</remarks>
+            /// The existence of this method permits the use of use and use! in the
+            /// coldTask { ... } computation expression syntax.</remarks>
             ///
             /// <param name="resource">The resource to be used and disposed.</param>
             /// <param name="binder">The function that takes the resource and returns an asynchronous
             /// computation.</param>
             ///
-            /// <returns>An ColdTask that binds and eventually disposes <c>resource</c>.</returns>
+            /// <returns>An ColdTask that binds and eventually disposes resource.</returns>
             ///
             member inline _.Using<'Resource, 'TOverall, 'T when 'Resource :> IDisposable>
                 (
@@ -649,6 +657,7 @@ module ColdTasks =
                 ) =
                 ResumableCode.Using(resource, body)
 
+    /// <exclude />
     [<AutoOpen>]
     module HighPriority =
         // High priority extensions
@@ -680,33 +689,36 @@ module ColdTasks =
             ///
             /// <remarks>This is the identify function for For binds.</remarks>
             ///
-            /// <returns><c>IEnumerable</c></returns>
+            /// <returns>IEnumerable</returns>
             member inline _.Source(s: #seq<_>) : #seq<_> = s
 
 
-            /// <summary>Allows the computation expression to turn other types into <c>unit -> 'Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into unit -> 'Awaiter</summary>
             ///
-            /// <remarks>This turns a <c>Task&lt;'T&gt;</c> into a <c>unit -> 'Awaiter</c>.</remarks>
+            /// <remarks>This turns a Task&lt;'T&gt; into a unit -> 'Awaiter.</remarks>
             ///
-            /// <returns><c>unit -> 'Awaiter</c></returns>
+            /// <returns>unit -> 'Awaiter</returns>
             member inline _.Source(task: Task<'TResult1>) = (fun () -> task.GetAwaiter())
 
-            /// <summary>Allows the computation expression to turn other types into <c>unit -> 'Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into unit -> 'Awaiter</summary>
             ///
-            /// <remarks>This turns a <c>ColdTask&lt;'T&gt;</c> into a <c>unit -> 'Awaiter</c>.</remarks>
+            /// <remarks>This turns a ColdTask&lt;'T&gt; into a unit -> 'Awaiter.</remarks>
             ///
-            /// <returns><c>unit -> 'Awaiter</c></returns>
+            /// <returns>unit -> 'Awaiter</returns>
             member inline _.Source([<InlineIfLambda>] task: ColdTask<'TResult1>) =
                 (fun () -> (task ()).GetAwaiter())
 
-            /// <summary>Allows the computation expression to turn other types into <c>unit -> 'Awaiter</c></summary>
+            /// <summary>Allows the computation expression to turn other types into unit -> 'Awaiter</summary>
             ///
-            /// <remarks>This turns a <c>Async&lt;'T&gt;</c> into a <c>unit -> 'Awaiter</c>.</remarks>
+            /// <remarks>This turns a Async&lt;'T&gt; into a unit -> 'Awaiter.</remarks>
             ///
-            /// <returns><c>unit -> 'Awaiter</c></returns>
+            /// <returns>unit -> 'Awaiter</returns>
             member inline this.Source(computation: Async<'TResult1>) =
                 this.Source(Async.AsColdTask(computation))
 
+    /// <summary>
+    /// A set of extension methods making it possible to bind against <see cref='T:IcedTasks.ColdTasks.ColdTask`1'/> in async computations.
+    /// </summary>
     [<AutoOpen>]
     module AsyncExtenions =
 
@@ -744,7 +756,7 @@ module ColdTasks =
 
             member inline this.Source(coldTask: ColdTask) = (coldTask ()).GetAwaiter()
 #endif
-
+    /// Contains a set of standard functional helper function
     [<RequireQualifiedAccess>]
     module ColdTask =
 
@@ -839,8 +851,9 @@ module ColdTasks =
         let inline internal getAwaiter ([<InlineIfLambda>] ctask: ColdTask<_>) =
             fun () -> (ctask ()).GetAwaiter()
 
+    /// <exclude />
     [<AutoOpen>]
-    module Moreextensions =
+    module MergeSourcesExtensions =
 
         type ColdTaskBuilderBase with
 
