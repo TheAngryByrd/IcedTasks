@@ -119,7 +119,7 @@ let gitRepoName = "IcedTasks"
 
 let gitHubRepoUrl = sprintf "https://github.com/%s/%s" gitOwner gitRepoName
 
-let documetationUrl = "https://jimmybyrd.me/IcedTask/"
+let documetationUrl = "https://www.jimmybyrd.me/IcedTasks/"
 
 let releaseBranch = "master"
 let readme = "README.md"
