@@ -108,7 +108,6 @@
   </a>
   <ul class="dropdown-menu" aria-labelledby="other-links">
     <li><a class="dropdown-item" href="https://www.jimmybyrd.me/IcedTasks/Explanations/Explanation-1.html">Explanation 1</a></li>
-<li><a class="dropdown-item" href="https://www.jimmybyrd.me/IcedTasks/Explanations/Explanation-2.html">Explanation 2</a></li>
   </ul>
 </li>
                     <li class="nav-item dropdown">
@@ -173,7 +172,113 @@
     </div>
     <div class="container" id="fsdocs-content">
         
-<h1><a name="Explanation-1" class="anchor" href="#Explanation-1">Explanation 1</a></h1>
+<h1><a name="Comparison-between-different-Async-types" class="anchor" href="#Comparison-between-different-Async-types">Comparison between different Async types</a></h1>
+<table>
+<thead>
+<tr class="header">
+<th><p>Computation Expression<sup>1</sup></p></th>
+<th><p>Library<sup>2</sup></p></th>
+<th><p>TFM<sup>3</sup></p></th>
+<th><p>Hot/Cold<sup>4</sup></p></th>
+<th><p>Multi-start<sup>5</sup></p></th>
+<th><p>Tailcalls<sup>6</sup></p></th>
+<th><p>CancellationToken propagation<sup>7</sup></p></th>
+<th><p>Cancellation checks<sup>8</sup></p></th>
+<th><p>Parallel when using and!<sup>9</sup></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p>F# Async</p></td>
+<td><p>FSharp.Core</p></td>
+<td><p>netstandard2.0</p></td>
+<td><p>Cold</p></td>
+<td><p>multiple</p></td>
+<td><p>tailcalls</p></td>
+<td><p>implicit</p></td>
+<td><p>implicit</p></td>
+<td><p>No</p></td>
+</tr>
+<tr class="even">
+<td><p>F# ParallelAsync</p></td>
+<td><p>IcedTasks</p></td>
+<td><p>netstandard2.0</p></td>
+<td><p>Cold</p></td>
+<td><p>multiple</p></td>
+<td><p>tailcalls</p></td>
+<td><p>implicit</p></td>
+<td><p>implicit</p></td>
+<td><p>Yes</p></td>
+</tr>
+<tr class="odd">
+<td><p>F# Task/C# Task</p></td>
+<td><p>FSharp.Core</p></td>
+<td><p>netstandard2.0</p></td>
+<td><p>Hot</p></td>
+<td><p>once-start</p></td>
+<td><p>no tailcalls</p></td>
+<td><p>explicit</p></td>
+<td><p>explicit</p></td>
+<td><p>No</p></td>
+</tr>
+<tr class="even">
+<td><p>F# ValueTask</p></td>
+<td><p>IcedTasks</p></td>
+<td><p>netstandard2.1</p></td>
+<td><p>Hot</p></td>
+<td><p>once-start</p></td>
+<td><p>no tailcalls</p></td>
+<td><p>explicit</p></td>
+<td><p>explicit</p></td>
+<td><p>Yes</p></td>
+</tr>
+<tr class="odd">
+<td><p>F# ColdTask</p></td>
+<td><p>IcedTasks</p></td>
+<td><p>netstandard2.0</p></td>
+<td><p>Cold</p></td>
+<td><p>multiple</p></td>
+<td><p>no tailcalls</p></td>
+<td><p>explicit</p></td>
+<td><p>explicit</p></td>
+<td><p>Yes</p></td>
+</tr>
+<tr class="even">
+<td><p>F# CancellableTask</p></td>
+<td><p>IcedTasks</p></td>
+<td><p>netstandard2.0</p></td>
+<td><p>Cold</p></td>
+<td><p>multiple</p></td>
+<td><p>no tailcalls</p></td>
+<td><p>implicit</p></td>
+<td><p>implicit</p></td>
+<td><p>Yes</p></td>
+</tr>
+<tr class="odd">
+<td><p>F# CancellableValueTask</p></td>
+<td><p>IcedTasks</p></td>
+<td><p>netstandard2.1</p></td>
+<td><p>Cold</p></td>
+<td><p>multiple</p></td>
+<td><p>no tailcalls</p></td>
+<td><p>implicit</p></td>
+<td><p>implicit</p></td>
+<td><p>Yes</p></td>
+</tr>
+</tbody>
+</table>
+
+<ul>
+<li><sup>1</sup> - <a href="https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/computation-expressions">Computation Expression</a></li>
+<li><sup>2</sup> - Which <a href="https://www.nuget.org/">Nuget</a> package do they come from</li>
+<li><sup>3</sup> - Which <a href="https://learn.microsoft.com/en-us/dotnet/standard/frameworks">Target Framework Moniker</a> these are available in</li>
+<li><sup>4</sup> - Hot refers to the asynchronous code block already been started and will eventually produce a value. Cold refers to the asynchronous code block that is not started and must be started explicitly by caller code. See <a href="https://learn.microsoft.com/en-us/dotnet/fsharp/tutorials/async#core-concepts-of-async">F# Async Tutorial</a> and <a href="http://tomasp.net/blog/async-csharp-differences.aspx/">Asynchronous C# and F# (II.): How do they differ?</a> for more info.</li>
+<li><sup>5</sup> - Multi-start refers to being able to start the asynchronous code block again.  See <a href="https://devblogs.microsoft.com/pfxteam/faq-on-task-start/#:~:text=Question%3A%20Can%20I%20call%20Start,will%20result%20in%20an%20exception.">FAQ on Task Start</a> for more info.</li>
+<li><sup>6</sup> - Allows use of <code>let rec</code> with the computation expression. See <a href="https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/functions/recursive-functions-the-rec-keyword#tail-recursion">Tail call Recursion</a> for more info.</li>
+<li><sup>7</sup> - <code>CancellationToken</code> is propagated to all types the support implicit <code>CancellatationToken</code> passing. Calling <code>cancellableTask { ... }</code> nested inside <code>async { ... }</code> (or any of those combinations) will use the <code>CancellationToken</code> from when the code was started.</li>
+<li><sup>8</sup> - Cancellation will be checked before binds and runs.</li>
+<li><sup>9</sup> - Allows parallel execution of the asynchronous code using the <a href="https://docs.microsoft.com/en-us/dotnet/fsharp/whats-new/fsharp-50#applicative-computation-expressions">Applicative Syntax</a> in computation expressions.</li>
+</ul>
 
         
     </div>
