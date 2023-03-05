@@ -404,7 +404,10 @@ module DocsTool =
                 Option.defaultValue Fsdocs.BuildCommandParams.Default bp
                 |> fsDocsBuildParams
 
-            { bp with Output = Some watchDocsDir }
+            { bp with
+                Output = Some watchDocsDir
+                Strict = None
+            }
 
         Fsdocs.watch
             fsDocsDotnetOptions
