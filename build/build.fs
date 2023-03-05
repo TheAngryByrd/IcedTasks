@@ -390,6 +390,8 @@ module DocsTool =
         }
 
 
+    let cleanDocsCache () = Fsdocs.cleanCache rootDirectory
+
     let build () =
         Fsdocs.build fsDocsDotnetOptions (fsDocsBuildParams)
 
@@ -970,6 +972,8 @@ let checkFormatCode _ =
     else
         Trace.logf "Errors while formatting: %A" result.Errors
 
+let cleanDocsCache _ = DocsTool.cleanDocsCache ()
+
 let buildDocs _ = DocsTool.build ()
 
 let watchDocs _ = DocsTool.watch ()
@@ -1030,6 +1034,7 @@ let initTargets () =
     Target.create "CheckFormatCode" checkFormatCode
     Target.create "Release" ignore // For local
     Target.create "Publish" ignore //For CI
+    Target.create "CleanDocsCache" cleanDocsCache
     Target.create "BuildDocs" buildDocs
     Target.create "WatchDocs" watchDocs
     Target.create "ReleaseDocs" releaseDocs
@@ -1066,8 +1071,11 @@ let initTargets () =
     "UpdateChangelog"
     ?=>! "GenerateAssemblyInfo"
 
+    "CleanDocsCache"
+    ==>! "BuildDocs"
 
-    // "BuildDocs" ==>! "ReleaseDocs"
+    "BuildDocs"
+    ==>! "ReleaseDocs"
     // "BuildDocs" ?=>! "PublishToNuget"
     // "DotnetPack" ?=>! "BuildDocs"
     // "GenerateCoverageReport" ?=>! "ReleaseDocs"
@@ -1080,9 +1088,7 @@ let initTargets () =
     "DotnetRestore"
     ==> "CheckFormatCode"
     ==> "DotnetBuild"
-    // ==> "FSharpAnalyzers"
     ==> "DotnetTest"
-    // =?> ("GenerateCoverageReport", not disableCodeCoverage)
     ==> "DotnetPack"
     ==> "PublishToNuGet"
     ==> "GitHubRelease"
