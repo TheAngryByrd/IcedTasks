@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="auto">
+
+<head>
+    <meta charset="utf-8">
+    <title>ValueTask (IcedTasks)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="author" content="TheAngryByrd">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+
+    <link rel="shortcut icon" type="image/x-icon" href="https://github.com/TheAngryByrd/IcedTasksimg/favicon.ico">
+    <link id="fsdocs-theme" type="text/css" rel="stylesheet" href="https://github.com/TheAngryByrd/IcedTaskscontent/fsdocs-dark.css" />
+    <link type="text/css" rel="stylesheet" href="https://github.com/TheAngryByrd/IcedTaskscontent/fsdocs-main.css" />
+    <link type="text/css" rel="stylesheet" href="https://github.com/TheAngryByrd/IcedTaskscontent/fsdocs-custom.css" />
+
+    <script type="text/javascript" src="https://github.com/TheAngryByrd/IcedTaskscontent/theme-toggle.js">
+        <!-- Placed in head to prevent flicker -->
+    </script>
+
+    <link type="text/css" rel="stylesheet" href="https://github.com/TheAngryByrd/IcedTaskscontent/navbar-fixed-left.css" />
+    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.css" />
+    <!-- END SEARCH BOX: this adds support for the search box -->
+    
+</head>
+
+<body>
+    <nav class="navbar sticky-top navbar-expand-lg bg-body">
+        <div class="container">
+            <a class="navbar-brand" href="https://github.com/TheAngryByrd/IcedTasks"><img id="fsdocs-logo" src="https://github.com/TheAngryByrd/IcedTasksimg/logo.png" /></a>
+            <div id="header">
+                <div class="searchbox">
+                    <input data-search-input="" class="m-3" id="search-by" type="search" placeholder="Search..." />
+                </div>
+            </div>
+            <div class="nav-item dropdown">
+                <button class="btn btn-link nav-link py-2 px-0 px-lg-2 dropdown-toggle d-flex align-items-center"
+                    id="bd-theme" type="button" aria-expanded="false" data-bs-toggle="dropdown"
+                    data-bs-display="static">
+
+                    <i id="theme-icon-active" class="fa-solid fa-circle-half-stroke"></i>
+                    <span class="d-none d-sm-none d-md-block ms-2">Toggle theme</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="bd-theme"
+                    style="--bs-dropdown-min-width: 8rem;">
+                    <li>
+                        <button type="button" class="dropdown-item d-flex align-items-center"
+                            data-bs-theme-value="light">
+                            <i class="me-2  fa-solid fa-sun"></i>
+                            Light
+                            <i class="bi ms-auto d-none fa-solid fa-check"></i>
+                        </button>
+                    </li>
+                    <li>
+                        <button type="button" class="dropdown-item d-flex align-items-center active"
+                            data-bs-theme-value="dark">
+                            <i class="me-2  fa-regular fa-moon"></i>
+                            Dark
+                            <i class="bi ms-auto d-none fa-solid fa-check"></i>
+                        </button>
+                    </li>
+                    <li>
+                        <button type="button" class="dropdown-item d-flex align-items-center"
+                            data-bs-theme-value="auto">
+                            <i class="me-2 fa-solid fa-circle-half-stroke"></i>
+                            Auto
+                            <i class="bi ms-auto d-none fa-solid fa-check"></i>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+                aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+
+                <ul class="navbar-nav flex-wrap">
+                    <li class="nav-item dropdown">
+  <a class="nav-link dropdown-toggle" href="#" id="other-links" role="button" data-bs-toggle="dropdown"
+    aria-expanded="false">
+    Tutorials
+  </a>
+  <ul class="dropdown-menu" aria-labelledby="other-links">
+    <li><a class="dropdown-item" href="https://github.com/TheAngryByrd/IcedTasksTutorials/Tutorial-1.html">Tutorial 1</a></li>
+<li><a class="dropdown-item" href="https://github.com/TheAngryByrd/IcedTasksTutorials/Tutorial-3.html">A Literate Script</a></li>
+<li><a class="dropdown-item" href="https://github.com/TheAngryByrd/IcedTasksTutorials/Tutorial-2.html">Tutorial 2</a></li>
+  </ul>
+</li>
+<li class="nav-item dropdown">
+  <a class="nav-link dropdown-toggle" href="#" id="other-links" role="button" data-bs-toggle="dropdown"
+    aria-expanded="false">
+    How To Guides
+  </a>
+  <ul class="dropdown-menu" aria-labelledby="other-links">
+    <li><a class="dropdown-item" href="https://github.com/TheAngryByrd/IcedTasksHow-To-Guides/How-to-1.html">How To 1</a></li>
+<li><a class="dropdown-item" href="https://github.com/TheAngryByrd/IcedTasksHow-To-Guides/How-to-2.html">How To 2</a></li>
+  </ul>
+</li>
+<li class="nav-item dropdown">
+  <a class="nav-link dropdown-toggle" href="#" id="other-links" role="button" data-bs-toggle="dropdown"
+    aria-expanded="false">
+    Explanations
+  </a>
+  <ul class="dropdown-menu" aria-labelledby="other-links">
+    <li><a class="dropdown-item" href="https://github.com/TheAngryByrd/IcedTasksExplanations/Explanation-1.html">Explanation 1</a></li>
+<li><a class="dropdown-item" href="https://github.com/TheAngryByrd/IcedTasksExplanations/Explanation-2.html">Explanation 2</a></li>
+  </ul>
+</li>
+                    <li class="nav-item dropdown">
+  <a class="nav-link dropdown-toggle" href="#" id="other-links" role="button" data-bs-toggle="dropdown"
+    aria-expanded="false">
+    API Reference
+  </a>
+  <ul class="dropdown-menu" aria-labelledby="other-links">
+    <li><a class="dropdown-item" href="https://github.com/TheAngryByrd/IcedTasksreference/index.html">All Namespaces</a></li>
+  </ul>
+</li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="project-references" role="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            Project References
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="other-links">
+                            <li><a class="dropdown-item" href="https://github.com/TheAngryByrd/blob/master/README.md"><i
+                                        class="fa-brands fa-readme  pe-2"></i>README</a></li>
+                            <li><a class="dropdown-item" href="https://github.com/TheAngryByrd/IcedTasks/blob/master/LICENSE.md"><i
+                                        class="fa-regular  fa-id-card pe-2"></i>LICENSE</a></li>
+                            <li><a class="dropdown-item" href="https://github.com/TheAngryByrd/blob/master/CHANGELOG.md"><i
+                                        class="fa-regular  fa-sticky-note pe-2"></i>CHANGELOG/Release
+                                    Notes</a></li>
+                            <li><a class="dropdown-item" href="IcedTasks"><i
+                                        class="fa-brands fa-github pe-2"></i>Source Repository</a></li>
+
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="other-links" role="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            Other Links
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="other-links">
+                            <li><a class="dropdown-item" href="https://docs.microsoft.com/en-us/dotnet/fsharp/"><i
+                                        class="fa-brands fa-microsoft pe-2"></i>F# Documentation</a></li>
+                            <li><a class="dropdown-item" href="https://fsharp.org/guides/slack/"><i
+                                        class="fa-brands fa-slack pe-2"></i>F# Slack</a></li>
+                            <li><a class="dropdown-item" href="https://discord.gg/R6n7c54/"><i
+                                        class="fa-brands fa-discord pe-2"></i>F# Discord</a></li>
+                            <li><a class="dropdown-item" href="http://foundation.fsharp.org/"><img
+                                        src="https://fsharp.org/img/logo/fsharp.svg" Alt="FSharp Logo"
+                                        class="fsharp-icon-logo pe-2"></i>F# Software Foundation</a></li>
+
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="masthead">
+            <h3 class="muted"><a href="https://github.com/TheAngryByrd/IcedTasks">IcedTasks <small  
+                        class="muted">0.5.3</small></a></h3>
+        </div>
+        <div class="float-right" id="edit-this-page"><span><a class="nav-link"
+                    href="IcedTasksedit/master/{{fsdocs-page-source}}"><i
+                        class="fa-regular fa-pen-to-square pe-2"></i>Edit this page</a></span></div>
+        <hr />
+    </div>
+    <div class="container" id="fsdocs-content">
+        <div>
+  <h2>
+    ValueTask Module
+  </h2>
+  <dl class="fsdocs-metadata">
+    <dt>
+      Namespace: 
+      <a href="https://github.com/TheAngryByrd/IcedTasksreference/icedtasks.html">
+        IcedTasks
+      </a>
+    </dt>
+    <dt>
+      Assembly: IcedTasks.dll
+    </dt>
+    <dt>
+      Parent Module: 
+      <a href="https://github.com/TheAngryByrd/IcedTasksreference/icedtasks-valuetasks.html">
+        ValueTasks
+      </a>
+    </dt>
+  </dl>
+  <div class="fsdocs-xmldoc">
+    <div>
+      <p class="fsdocs-summary">
+        
+ Contains a set of standard functional helper function
+
+      </p>
+    </div>
+  </div>
+  <div>
+    <h3>
+      Functions and values
+    </h3>
+    <table class="table outer-list fsdocs-member-list">
+      <thead>
+        <tr>
+          <td class="fsdocs-member-list-header">
+            Function or value
+          </td>
+          <td class="fsdocs-member-list-header">
+            Description
+          </td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '62', 62)" onmouseover="showTip(event, '62', 62)">
+                <p>
+                  <a id="apply">
+                    <a href="#apply">
+                      <code><span>ValueTask.apply&#32;<span>applicable&#32;cTask</span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="62">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>ValueTask.apply&#32;<span>applicable&#32;cTask</span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        applicable
+                      </b>
+                      :
+                      <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;<span>(<span>'input&#32;->&#32;'output</span>)</span>&gt;</span></code>
+                       - 
+                      A function wrapped in a ValueTasks
+                    </span>
+                    <br/>
+                    <span>
+                      <b>
+                        cTask
+                      </b>
+                      :
+                      <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'input&gt;</span></code>
+                       - 
+                      The value.
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                  <span>
+                    Returns: 
+                    <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'output&gt;</span></code>
+                  </span>
+                  The result of the applicable.
+                  <br/>
+                  Modifiers: 
+                  inline
+                  <br/>
+                  Type parameters: 
+                  &#39;input, &#39;output
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('```cref:M:IcedTasks.ValueTasks.ValueTask.apply``2```')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:IcedTasks.ValueTasks.ValueTask.apply``2\'/>')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/TheAngryByrd/IcedTasks/tree/master/src/IcedTasks/ValueTasks.fs#L779-779" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                Allows chaining of ValueTasks.
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  applicable
+                </span>
+                :
+                <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;<span>(<span>'input&#32;->&#32;'output</span>)</span>&gt;</span></code>
+              </dt>
+              <dd class="fsdocs-param-docs">
+                <p>
+                  A function wrapped in a ValueTasks
+                </p>
+              </dd>
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  cTask
+                </span>
+                :
+                <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'input&gt;</span></code>
+              </dt>
+              <dd class="fsdocs-param-docs">
+                <p>
+                  The value.
+                </p>
+              </dd>
+            </dl>
+            <dl class="fsdocs-returns">
+              <dt>
+                <span class="fsdocs-return-name">
+                  Returns: 
+                </span>
+                <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'output&gt;</span></code>
+              </dt>
+              <dd class="fsdocs-return-docs">
+                <p>
+                  The result of the applicable.
+                </p>
+              </dd>
+            </dl>
+          </td>
+        </tr>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '63', 63)" onmouseover="showTip(event, '63', 63)">
+                <p>
+                  <a id="bind">
+                    <a href="#bind">
+                      <code><span>ValueTask.bind&#32;<span>binder&#32;cTask</span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="63">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>ValueTask.bind&#32;<span>binder&#32;cTask</span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        binder
+                      </b>
+                      :
+                      <code><span>'input&#32;->&#32;<span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'output&gt;</span></span></code>
+                       - 
+                      The continuation.
+                    </span>
+                    <br/>
+                    <span>
+                      <b>
+                        cTask
+                      </b>
+                      :
+                      <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'input&gt;</span></code>
+                       - 
+                      The value.
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                  <span>
+                    Returns: 
+                    <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'output&gt;</span></code>
+                  </span>
+                  The result of the binder.
+                  <br/>
+                  Modifiers: 
+                  inline
+                  <br/>
+                  Type parameters: 
+                  &#39;input, &#39;output
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('```cref:M:IcedTasks.ValueTasks.ValueTask.bind``2```')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:IcedTasks.ValueTasks.ValueTask.bind``2\'/>')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/TheAngryByrd/IcedTasks/tree/master/src/IcedTasks/ValueTasks.fs#L757-757" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                Allows chaining of ValueTasks.
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  binder
+                </span>
+                :
+                <code><span>'input&#32;->&#32;<span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'output&gt;</span></span></code>
+              </dt>
+              <dd class="fsdocs-param-docs">
+                <p>
+                  The continuation.
+                </p>
+              </dd>
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  cTask
+                </span>
+                :
+                <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'input&gt;</span></code>
+              </dt>
+              <dd class="fsdocs-param-docs">
+                <p>
+                  The value.
+                </p>
+              </dd>
+            </dl>
+            <dl class="fsdocs-returns">
+              <dt>
+                <span class="fsdocs-return-name">
+                  Returns: 
+                </span>
+                <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'output&gt;</span></code>
+              </dt>
+              <dd class="fsdocs-return-docs">
+                <p>
+                  The result of the binder.
+                </p>
+              </dd>
+            </dl>
+          </td>
+        </tr>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '64', 64)" onmouseover="showTip(event, '64', 64)">
+                <p>
+                  <a id="map">
+                    <a href="#map">
+                      <code><span>ValueTask.map&#32;<span>mapper&#32;cTask</span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="64">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>ValueTask.map&#32;<span>mapper&#32;cTask</span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        mapper
+                      </b>
+                      :
+                      <code><span>'input&#32;->&#32;'output</span></code>
+                       - 
+                      The continuation.
+                    </span>
+                    <br/>
+                    <span>
+                      <b>
+                        cTask
+                      </b>
+                      :
+                      <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'input&gt;</span></code>
+                       - 
+                      The value.
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                  <span>
+                    Returns: 
+                    <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'output&gt;</span></code>
+                  </span>
+                  The result of the mapper wrapped in a ValueTasks.
+                  <br/>
+                  Modifiers: 
+                  inline
+                  <br/>
+                  Type parameters: 
+                  &#39;input, &#39;output
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('```cref:M:IcedTasks.ValueTasks.ValueTask.map``2```')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:IcedTasks.ValueTasks.ValueTask.map``2\'/>')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/TheAngryByrd/IcedTasks/tree/master/src/IcedTasks/ValueTasks.fs#L770-770" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                Allows chaining of ValueTasks.
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  mapper
+                </span>
+                :
+                <code><span>'input&#32;->&#32;'output</span></code>
+              </dt>
+              <dd class="fsdocs-param-docs">
+                <p>
+                  The continuation.
+                </p>
+              </dd>
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  cTask
+                </span>
+                :
+                <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'input&gt;</span></code>
+              </dt>
+              <dd class="fsdocs-param-docs">
+                <p>
+                  The value.
+                </p>
+              </dd>
+            </dl>
+            <dl class="fsdocs-returns">
+              <dt>
+                <span class="fsdocs-return-name">
+                  Returns: 
+                </span>
+                <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'output&gt;</span></code>
+              </dt>
+              <dd class="fsdocs-return-docs">
+                <p>
+                  The result of the mapper wrapped in a ValueTasks.
+                </p>
+              </dd>
+            </dl>
+          </td>
+        </tr>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '65', 65)" onmouseover="showTip(event, '65', 65)">
+                <p>
+                  <a id="ofTask">
+                    <a href="#ofTask">
+                      <code><span>ValueTask.ofTask&#32;<span>task</span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="65">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>ValueTask.ofTask&#32;<span>task</span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        task
+                      </b>
+                      :
+                      <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;'T&gt;</span></code>
+                       - 
+                      The task.
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                  <span>
+                    Returns: 
+                    <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'T&gt;</span></code>
+                  </span>
+                  <br/>
+                  Modifiers: 
+                  inline
+                  <br/>
+                  Type parameters: 
+                  &#39;T
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('```cref:M:IcedTasks.ValueTasks.ValueTask.ofTask``1```')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:IcedTasks.ValueTasks.ValueTask.ofTask``1\'/>')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/TheAngryByrd/IcedTasks/tree/master/src/IcedTasks/ValueTasks.fs#L805-805" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                Initializes a new instance of the System.Threading.Tasks.ValueTask class using the supplied task that represents the operation.
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  task
+                </span>
+                :
+                <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;'T&gt;</span></code>
+              </dt>
+              <dd class="fsdocs-param-docs">
+                <p>
+                  The task.
+                </p>
+              </dd>
+            </dl>
+            <dl class="fsdocs-returns">
+              <dt>
+                <span class="fsdocs-return-name">
+                  Returns: 
+                </span>
+                <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'T&gt;</span></code>
+              </dt>
+              <dd class="fsdocs-return-docs"></dd>
+            </dl>
+          </td>
+        </tr>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '66', 66)" onmouseover="showTip(event, '66', 66)">
+                <p>
+                  <a id="ofTaskUnit">
+                    <a href="#ofTaskUnit">
+                      <code><span>ValueTask.ofTaskUnit&#32;<span>task</span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="66">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>ValueTask.ofTaskUnit&#32;<span>task</span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        task
+                      </b>
+                      :
+                      <code><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task">Task</a></code>
+                       - 
+                       The task that represents the operation
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                  <span>
+                    Returns: 
+                    <code><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask">ValueTask</a></code>
+                  </span>
+                  
+                  <br/>
+                  Modifiers: 
+                  inline
+                  <br/>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('`cref:M:IcedTasks.ValueTasks.ValueTask.ofTaskUnit`')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:IcedTasks.ValueTasks.ValueTask.ofTaskUnit\'/>')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/TheAngryByrd/IcedTasks/tree/master/src/IcedTasks/ValueTasks.fs#L810-810" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                Initializes a new instance of the System.Threading.Tasks.ValueTask class using the supplied task that represents the operation.
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  task
+                </span>
+                :
+                <code><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task">Task</a></code>
+              </dt>
+              <dd class="fsdocs-param-docs">
+                <p>
+                   The task that represents the operation
+                </p>
+              </dd>
+            </dl>
+            <dl class="fsdocs-returns">
+              <dt>
+                <span class="fsdocs-return-name">
+                  Returns: 
+                </span>
+                <code><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask">ValueTask</a></code>
+              </dt>
+              <dd class="fsdocs-return-docs">
+                <p>
+                  
+                </p>
+              </dd>
+            </dl>
+          </td>
+        </tr>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '67', 67)" onmouseover="showTip(event, '67', 67)">
+                <p>
+                  <a id="ofUnit">
+                    <a href="#ofUnit">
+                      <code><span>ValueTask.ofUnit&#32;<span>vtask</span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="67">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>ValueTask.ofUnit&#32;<span>vtask</span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        vtask
+                      </b>
+                      :
+                      <code><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask">ValueTask</a></code>
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                  <span>
+                    Returns: 
+                    <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;unit&gt;</span></code>
+                  </span>
+                  <br/>
+                  Modifiers: 
+                  inline
+                  <br/>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('`cref:M:IcedTasks.ValueTasks.ValueTask.ofUnit`')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:IcedTasks.ValueTasks.ValueTask.ofUnit\'/>')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/TheAngryByrd/IcedTasks/tree/master/src/IcedTasks/ValueTasks.fs#L795-795" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  vtask
+                </span>
+                :
+                <code><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask">ValueTask</a></code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+            </dl>
+            <dl class="fsdocs-returns">
+              <dt>
+                <span class="fsdocs-return-name">
+                  Returns: 
+                </span>
+                <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;unit&gt;</span></code>
+              </dt>
+              <dd class="fsdocs-return-docs"></dd>
+            </dl>
+          </td>
+        </tr>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '68', 68)" onmouseover="showTip(event, '68', 68)">
+                <p>
+                  <a id="singleton">
+                    <a href="#singleton">
+                      <code><span>ValueTask.singleton&#32;<span>item</span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="68">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>ValueTask.singleton&#32;<span>item</span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        item
+                      </b>
+                      :
+                      <code>'item</code>
+                       - 
+                      The item to be the result of the ValueTask.
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                  <span>
+                    Returns: 
+                    <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'item&gt;</span></code>
+                  </span>
+                  A ValueTask with the item as the result.
+                  <br/>
+                  Modifiers: 
+                  inline
+                  <br/>
+                  Type parameters: 
+                  &#39;item
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('```cref:M:IcedTasks.ValueTasks.ValueTask.singleton``1```')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:IcedTasks.ValueTasks.ValueTask.singleton``1\'/>')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/TheAngryByrd/IcedTasks/tree/master/src/IcedTasks/ValueTasks.fs#L750-750" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                Lifts an item to a ValueTask.
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  item
+                </span>
+                :
+                <code>'item</code>
+              </dt>
+              <dd class="fsdocs-param-docs">
+                <p>
+                  The item to be the result of the ValueTask.
+                </p>
+              </dd>
+            </dl>
+            <dl class="fsdocs-returns">
+              <dt>
+                <span class="fsdocs-return-name">
+                  Returns: 
+                </span>
+                <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'item&gt;</span></code>
+              </dt>
+              <dd class="fsdocs-return-docs">
+                <p>
+                  A ValueTask with the item as the result.
+                </p>
+              </dd>
+            </dl>
+          </td>
+        </tr>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '69', 69)" onmouseover="showTip(event, '69', 69)">
+                <p>
+                  <a id="toTask">
+                    <a href="#toTask">
+                      <code><span>ValueTask.toTask&#32;<span>vtask</span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="69">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>ValueTask.toTask&#32;<span>vtask</span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        vtask
+                      </b>
+                      :
+                      <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'T&gt;</span></code>
+                       - 
+                      
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                  <span>
+                    Returns: 
+                    <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;'T&gt;</span></code>
+                  </span>
+                  
+ The System.Threading.Tasks.Task object that is wrapped in this  System.Threading.Tasks.ValueTask if one exists,
+ or a new  System.Threading.Tasks.Task object that represents the result.
+ 
+                  <br/>
+                  Modifiers: 
+                  inline
+                  <br/>
+                  Type parameters: 
+                  &#39;T
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('```cref:M:IcedTasks.ValueTasks.ValueTask.toTask``1```')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:IcedTasks.ValueTasks.ValueTask.toTask``1\'/>')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/TheAngryByrd/IcedTasks/tree/master/src/IcedTasks/ValueTasks.fs#L819-819" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                Retrieves a System.Threading.Tasks.Task object that represents this System.Threading.Tasks.ValueTask`1
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  vtask
+                </span>
+                :
+                <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'T&gt;</span></code>
+              </dt>
+              <dd class="fsdocs-param-docs">
+                <p>
+                  
+                </p>
+              </dd>
+            </dl>
+            <dl class="fsdocs-returns">
+              <dt>
+                <span class="fsdocs-return-name">
+                  Returns: 
+                </span>
+                <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;'T&gt;</span></code>
+              </dt>
+              <dd class="fsdocs-return-docs">
+                <p>
+                  
+ The System.Threading.Tasks.Task object that is wrapped in this  System.Threading.Tasks.ValueTask if one exists,
+ or a new  System.Threading.Tasks.Task object that represents the result.
+ 
+                </p>
+              </dd>
+            </dl>
+          </td>
+        </tr>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '70', 70)" onmouseover="showTip(event, '70', 70)">
+                <p>
+                  <a id="toTaskUnit">
+                    <a href="#toTaskUnit">
+                      <code><span>ValueTask.toTaskUnit&#32;<span>vtask</span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="70">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>ValueTask.toTaskUnit&#32;<span>vtask</span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        vtask
+                      </b>
+                      :
+                      <code><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask">ValueTask</a></code>
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                  <span>
+                    Returns: 
+                    <code><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task">Task</a></code>
+                  </span>
+                  <br/>
+                  Modifiers: 
+                  inline
+                  <br/>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('`cref:M:IcedTasks.ValueTasks.ValueTask.toTaskUnit`')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:IcedTasks.ValueTasks.ValueTask.toTaskUnit\'/>')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/TheAngryByrd/IcedTasks/tree/master/src/IcedTasks/ValueTasks.fs#L822-822" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                Retrieves a System.Threading.Tasks.Task object that represents this System.Threading.Tasks.ValueTask.
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  vtask
+                </span>
+                :
+                <code><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask">ValueTask</a></code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+            </dl>
+            <dl class="fsdocs-returns">
+              <dt>
+                <span class="fsdocs-return-name">
+                  Returns: 
+                </span>
+                <code><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task">Task</a></code>
+              </dt>
+              <dd class="fsdocs-return-docs"></dd>
+            </dl>
+          </td>
+        </tr>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '71', 71)" onmouseover="showTip(event, '71', 71)">
+                <p>
+                  <a id="toUnit">
+                    <a href="#toUnit">
+                      <code><span>ValueTask.toUnit&#32;<span>vtask</span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="71">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>ValueTask.toUnit&#32;<span>vtask</span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        vtask
+                      </b>
+                      :
+                      <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'T&gt;</span></code>
+                       - 
+                      
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                  <span>
+                    Returns: 
+                    <code><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask">ValueTask</a></code>
+                  </span>
+                  
+                  <br/>
+                  Modifiers: 
+                  inline
+                  <br/>
+                  Type parameters: 
+                  &#39;T
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('```cref:M:IcedTasks.ValueTasks.ValueTask.toUnit``1```')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:IcedTasks.ValueTasks.ValueTask.toUnit``1\'/>')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/TheAngryByrd/IcedTasks/tree/master/src/IcedTasks/ValueTasks.fs#L828-828" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                Converts a ValueTask<T> to its non-generic counterpart.
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  vtask
+                </span>
+                :
+                <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'T&gt;</span></code>
+              </dt>
+              <dd class="fsdocs-param-docs">
+                <p>
+                  
+                </p>
+              </dd>
+            </dl>
+            <dl class="fsdocs-returns">
+              <dt>
+                <span class="fsdocs-return-name">
+                  Returns: 
+                </span>
+                <code><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask">ValueTask</a></code>
+              </dt>
+              <dd class="fsdocs-return-docs">
+                <p>
+                  
+                </p>
+              </dd>
+            </dl>
+          </td>
+        </tr>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '72', 72)" onmouseover="showTip(event, '72', 72)">
+                <p>
+                  <a id="zip">
+                    <a href="#zip">
+                      <code><span>ValueTask.zip&#32;<span>left&#32;right</span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="72">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>ValueTask.zip&#32;<span>left&#32;right</span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        left
+                      </b>
+                      :
+                      <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'left&gt;</span></code>
+                       - 
+                      The left value.
+                    </span>
+                    <br/>
+                    <span>
+                      <b>
+                        right
+                      </b>
+                      :
+                      <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'right&gt;</span></code>
+                       - 
+                      The right value.
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                  <span>
+                    Returns: 
+                    <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;<span>'left&#32;*&#32;'right</span>&gt;</span></code>
+                  </span>
+                  A tuple of the parameters passed in
+                  <br/>
+                  Modifiers: 
+                  inline
+                  <br/>
+                  Type parameters: 
+                  &#39;left, &#39;right
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('```cref:M:IcedTasks.ValueTasks.ValueTask.zip``2```')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:IcedTasks.ValueTasks.ValueTask.zip``2\'/>')">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/TheAngryByrd/IcedTasks/tree/master/src/IcedTasks/ValueTasks.fs#L789-789" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github.png" class="normal"/>
+                <img src="https://github.com/TheAngryByrd/IcedTaskscontent/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                Takes two ValueTasks, starts them serially in order of left to right, and returns a tuple of the pair.
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  left
+                </span>
+                :
+                <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'left&gt;</span></code>
+              </dt>
+              <dd class="fsdocs-param-docs">
+                <p>
+                  The left value.
+                </p>
+              </dd>
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  right
+                </span>
+                :
+                <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;'right&gt;</span></code>
+              </dt>
+              <dd class="fsdocs-param-docs">
+                <p>
+                  The right value.
+                </p>
+              </dd>
+            </dl>
+            <dl class="fsdocs-returns">
+              <dt>
+                <span class="fsdocs-return-name">
+                  Returns: 
+                </span>
+                <code><span><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.valuetask-1">ValueTask</a>&lt;<span>'left&#32;*&#32;'right</span>&gt;</span></code>
+              </dt>
+              <dd class="fsdocs-return-docs">
+                <p>
+                  A tuple of the parameters passed in
+                </p>
+              </dd>
+            </dl>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div></div>
+  <div></div>
+  <div></div>
+  <div></div>
+  <div></div>
+  <div></div>
+  <div></div>
+  <div></div>
+</div>
+        
+    </div>
+
+    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css"
+        integrity="sha512-SzlrxWUlpfuzQ+pcUCosxcglQRNAq/DZjVsC0lE40xsADsfeQoEypE+enwcOiGjk/bSuGGKHEyjSoQ1zVisanQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script type="text/javascript">var fsdocs_search_baseurl = 'https://github.com/TheAngryByrd/IcedTasks';</script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lunr.js/2.3.8/lunr.min.js"></script>
+    <script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN"
+        crossorigin="anonymous"></script>
+
+    <script type="text/javascript" async
+        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+    <script type="text/javascript" src="https://github.com/TheAngryByrd/IcedTaskscontent/fsdocs-search.js"></script>
+    <script type="text/javascript" src="https://github.com/TheAngryByrd/IcedTaskscontent/fsdocs-tips.js"></script>
+
+    <!-- END SEARCH BOX: this adds support for the search box -->
+    </div>
+</body>
+
+</html>
