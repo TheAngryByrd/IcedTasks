@@ -117,7 +117,7 @@ let watchDocsDir =
 let gitOwner = "TheAngryByrd"
 let gitRepoName = "IcedTasks"
 
-let gitHubRepoUrl = sprintf "https://github.com/%s/%s" gitOwner gitRepoName
+let gitHubRepoUrl = sprintf "https://github.com/%s/%s/" gitOwner gitRepoName
 
 let documetationUrl = "https://www.jimmybyrd.me/IcedTasks/"
 
