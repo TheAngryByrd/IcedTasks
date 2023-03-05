@@ -272,3 +272,4 @@ coverage.*.xml
 
 tmp/
 temp/
+.fsdocs

@@ -119,6 +119,8 @@ let gitRepoName = "IcedTasks"
 
 let gitHubRepoUrl = sprintf "https://github.com/%s/%s" gitOwner gitRepoName
 
+let documetationUrl = "https://jimmybyrd.me/IcedTask/"
+
 let releaseBranch = "master"
 let readme = "README.md"
 let changelogFile = "CHANGELOG.md"
@@ -378,7 +380,7 @@ module DocsTool =
             Parameters =
                 Some [
                     // https://fsprojects.github.io/FSharp.Formatting/content.html#Templates-and-Substitutions
-                    "root", quoted gitHubRepoUrl
+                    "root", quoted documetationUrl
                     "fsdocs-collection-name", quoted productName
                     "fsdocs-repository-branch", quoted releaseBranch
                     "fsdocs-repository-link", quoted (productName)
