@@ -1080,6 +1080,9 @@ let initTargets () =
     "CleanDocsCache"
     ==>! "BuildDocs"
 
+    "DotnetBuild"
+    ?=>! "BuildDocs"
+
     "BuildDocs"
     ==>! "ReleaseDocs"
     // "BuildDocs" ?=>! "PublishToNuget"
