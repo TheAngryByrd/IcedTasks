@@ -158,10 +158,11 @@ let nugetToken = Environment.environVarOrNone "NUGET_TOKEN"
 // Helpers
 //-----------------------------------------------------------------------------
 
+
 let isRelease (targets: Target list) =
     targets
     |> Seq.map (fun t -> t.Name)
-    |> Seq.exists ((=) "Release")
+    |> Seq.exists ((=) "Publish")
 
 let invokeAsync f = async { f () }
 
@@ -1097,6 +1098,7 @@ let initTargets () =
     ==> "DotnetPack"
     ==> "PublishToNuGet"
     ==> "GitHubRelease"
+    ==> "ReleaseDocs"
     ==>! "Publish"
 
     "DotnetRestore"

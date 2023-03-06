@@ -1,6 +1,12 @@
 name: Build master
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
 
 jobs:
   build:
@@ -10,26 +16,23 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Setup necessary dotnet SDKs
-      uses: actions/setup-dotnet@v3
-      with:
-        global-json-file: global.json
-        dotnet-version: |
-          2.1.x
-          3.1.x
-          5.x
-          6.x
+      - uses: actions/checkout@v3
+      - name: Setup necessary dotnet SDKs
+        uses: actions/setup-dotnet@v3
+        with:
+          global-json-file: global.json
+          dotnet-version: |
+            6.x
 
-    - name: Build via Bash
-      if: runner.os != 'Windows'
-      run: |
-        chmod +x ./build.sh
-        ./build.sh
-      env:
-        CI: true
-    - name: Build via Windows
-      if: runner.os == 'Windows'
-      run: ./build.cmd
-      env:
-        CI: true
+      - name: Build via Bash
+        if: runner.os != 'Windows'
+        run: |
+          chmod +x ./build.sh
+          ./build.sh
+        env:
+          CI: true
+      - name: Build via Windows
+        if: runner.os == 'Windows'
+        run: ./build.cmd
+        env:
+          CI: true
