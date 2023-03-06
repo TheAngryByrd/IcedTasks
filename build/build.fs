@@ -370,14 +370,14 @@ module DocsTool =
             WorkingDirectory = rootDirectory
         }
 
-    let fsDocsBuildParams (p: Fsdocs.BuildCommandParams) =
+    let fsDocsBuildParams configuration (p: Fsdocs.BuildCommandParams) =
         { p with
             Clean = Some true
             Input = Some(quoted docsSrcDir)
             Output = Some(quoted docsDir)
             Eval = Some true
             Projects = Some(Seq.map quoted (!!srcGlob))
-            // Properties = Some ($"Version={version} PackageVersion={version}")
+            Properties = Some($"Configuration=%s{configuration}")
             Parameters =
                 Some [
                     // https://fsprojects.github.io/FSharp.Formatting/content.html#Templates-and-Substitutions
@@ -395,15 +395,15 @@ module DocsTool =
 
     let cleanDocsCache () = Fsdocs.cleanCache rootDirectory
 
-    let build () =
-        Fsdocs.build fsDocsDotnetOptions (fsDocsBuildParams)
+    let build (configuration) =
+        Fsdocs.build fsDocsDotnetOptions (fsDocsBuildParams configuration)
 
 
-    let watch () =
+    let watch (configuration) =
         let buildParams bp =
             let bp =
                 Option.defaultValue Fsdocs.BuildCommandParams.Default bp
-                |> fsDocsBuildParams
+                |> fsDocsBuildParams configuration
 
             { bp with
                 Output = Some watchDocsDir
@@ -844,14 +844,13 @@ let dotnetPack ctx =
     let args = [
         $"/p:PackageVersion={latestEntry.NuGetVersion}"
         $"/p:PackageReleaseNotes=\"{releaseNotes}\""
-        $"/p:PackageOutputPath={distDir}" // https://learn.microsoft.com/en-us/dotnet/core/compatibility/sdk/7.0/solution-level-output-no-longer-valid
     ]
 
     DotNet.pack
         (fun c ->
             { c with
                 Configuration = configuration (ctx.Context.AllExecutingTargets)
-
+                OutputPath = Some distDir
                 Common =
                     c.Common
                     |> DotNet.Options.withAdditionalArgs args
@@ -980,9 +979,14 @@ let checkFormatCode _ =
 
 let cleanDocsCache _ = DocsTool.cleanDocsCache ()
 
-let buildDocs _ = DocsTool.build ()
+let buildDocs ctx =
+    let configuration = configuration (ctx.Context.AllExecutingTargets)
+    DocsTool.build (string configuration)
 
-let watchDocs _ = DocsTool.watch ()
+let watchDocs ctx =
+
+    let configuration = configuration (ctx.Context.AllExecutingTargets)
+    DocsTool.watch (string configuration)
 
 let releaseDocs ctx =
     isReleaseBranchCheck () // Docs changes don't need a full release to the library
