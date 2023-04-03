@@ -19,12 +19,7 @@ We'll start off with a slightly longer version but then make a helper for this.
 *)
 // This just the dance to get Giraffe to compile for this example.
 // Really you'd set up these references in an fsproj
-#I @"C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\7.0.3"
-#r "Microsoft.AspNetCore.Http.Abstractions.dll"
-#r "Microsoft.Extensions.Logging.Abstractions.dll"
-#r "Microsoft.AspNetCore.Hosting.Abstractions.dll"
-#r "Microsoft.Extensions.DependencyInjection.Abstractions.dll"
-#r "Microsoft.Net.Http.Headers.dll"
+#load "../../runtime-scripts/Microsoft.AspNetCore.App-latest-7.fsx"
 #r "nuget: Giraffe"
 #r "nuget: IcedTasks"
 
