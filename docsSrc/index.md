@@ -15,9 +15,9 @@ This library contains additional [computation expressions](https://docs.microsof
 
 ## Why should I use IcedTasks?
 
-### For ValueTasks
+### For [ValueTasks](https://devblogs.microsoft.com/dotnet/understanding-the-whys-whats-and-whens-of-valuetask/)
 
-F# doesn't currently have a `valueTask` computation expression.
+- F# doesn't currently have a `valueTask` computation expression. [Until this PR is merged.](https://github.com/dotnet/fsharp/pull/14755)
 
 ### For Cold & CancellableTasks
 - You want control over when your tasks are started

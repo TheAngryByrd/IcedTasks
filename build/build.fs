@@ -1082,6 +1082,10 @@ let initTargets () =
     "DotnetBuild"
     ==>! "BuildDocs"
 
+
+    "DotnetBuild"
+    ==>! "WatchDocs"
+
     "UpdateChangelog"
     ==> "GitRelease"
     ==>! "Release"
