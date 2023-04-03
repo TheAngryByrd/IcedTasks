@@ -1093,7 +1093,7 @@ let initTargets () =
     "DotnetBuild"
     ?=>! "BuildDocs"
 
-    "DotnetRestore"
+    "DotnetBuild"
     ==>! "BuildDocs"
     // "BuildDocs"
     // ==>! "ReleaseDocs"
