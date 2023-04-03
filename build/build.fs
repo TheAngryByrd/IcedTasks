@@ -979,34 +979,21 @@ let checkFormatCode _ =
 
 let cleanDocsCache _ = DocsTool.cleanDocsCache ()
 
-
-let buildDocs ctx =
+let generateSdkReferences () =
 
     dotnet.tool id "fsi" "generate-sdk-references.fsx"
 
+let buildDocs ctx =
+
+    generateSdkReferences ()
     let configuration = configuration (ctx.Context.AllExecutingTargets)
     DocsTool.build (string configuration)
 
 let watchDocs ctx =
 
-    dotnet.tool id "fsi" "generate-sdk-references.fsx"
-
+    generateSdkReferences ()
     let configuration = configuration (ctx.Context.AllExecutingTargets)
     DocsTool.watch (string configuration)
-
-// let releaseDocs ctx =
-//     isReleaseBranchCheck () // Docs changes don't need a full release to the library
-
-//     Git.Staging.stageAll docsDir
-//     Git.Commit.exec "" (sprintf "Documentation release of version %s" latestEntry.NuGetVersion)
-
-//     if
-//         isRelease (ctx.Context.AllExecutingTargets)
-//         |> not
-//     then
-//         // We only want to push if we're only calling "ReleaseDocs" target
-//         // If we're calling "Release" target, we'll let the "GitRelease" target do the git push
-//         Git.Branches.push ""
 
 
 let initTargets () =
@@ -1053,7 +1040,6 @@ let initTargets () =
     Target.create "CleanDocsCache" cleanDocsCache
     Target.create "BuildDocs" buildDocs
     Target.create "WatchDocs" watchDocs
-    // Target.create "ReleaseDocs" releaseDocs
 
     //-----------------------------------------------------------------------------
     // Target Dependencies
@@ -1095,11 +1081,6 @@ let initTargets () =
 
     "DotnetBuild"
     ==>! "BuildDocs"
-    // "BuildDocs"
-    // ==>! "ReleaseDocs"
-    // "BuildDocs" ?=>! "PublishToNuget"
-    // "DotnetPack" ?=>! "BuildDocs"
-    // "GenerateCoverageReport" ?=>! "ReleaseDocs"
 
     "UpdateChangelog"
     ==> "GitRelease"
@@ -1113,7 +1094,6 @@ let initTargets () =
     ==> "DotnetPack"
     ==> "PublishToNuGet"
     ==> "GitHubRelease"
-    // ==> "ReleaseDocs"
     ==>! "Publish"
 
     "DotnetRestore"
