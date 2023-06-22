@@ -308,7 +308,7 @@ module ValueTasks =
                         let cont =
                             ValueTaskResumptionFunc<'TOverall>(fun sm ->
                                 awaiter
-                                |> Awaiter.getResult
+                                |> Awaiter.GetResult
 
                                 true
                             )
@@ -559,13 +559,13 @@ module ValueTasks =
                     (ValueTaskResumptionFunc<'TOverall>(fun sm ->
                         let result =
                             awaiter
-                            |> Awaiter.getResult
+                            |> Awaiter.GetResult
 
                         (continuation result).Invoke(&sm)
                     ))
 
                 // shortcut to continue immediately
-                if Awaiter.isCompleted awaiter then
+                if Awaiter.IsCompleted awaiter then
                     cont.Invoke(&sm)
                 else
                     sm.ResumptionDynamicInfo.ResumptionData <-
@@ -603,7 +603,7 @@ module ValueTasks =
 
                         let mutable __stack_fin = true
 
-                        if not (Awaiter.isCompleted awaiter) then
+                        if not (Awaiter.IsCompleted awaiter) then
                             // This will yield with __stack_yield_fin = false
                             // This will resume with __stack_yield_fin = true
                             let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
@@ -612,7 +612,7 @@ module ValueTasks =
                         if __stack_fin then
                             let result =
                                 awaiter
-                                |> Awaiter.getResult
+                                |> Awaiter.GetResult
 
                             (continuation result).Invoke(&sm)
                         else
@@ -677,7 +677,7 @@ module ValueTasks =
                 (task: 'Awaitable)
                 : 'Awaiter =
                 task
-                |> Awaitable.getAwaiter
+                |> Awaitable.GetAwaiter
 
 
             /// <summary>Creates an ValueTask that runs binder(resource).
@@ -860,6 +860,6 @@ module ValueTasks =
                     let! rightResult = rightStarted
                     return leftResult, rightResult
                 }
-                |> Awaitable.getAwaiter
+                |> Awaitable.GetAwaiter
 
 #endif

@@ -293,7 +293,7 @@ module CancellableTasks =
                         let cont =
                             CancellableTaskResumptionFunc<'TOverall>(fun sm ->
                                 awaiter
-                                |> Awaiter.getResult
+                                |> Awaiter.GetResult
 
                                 true
                             )
@@ -566,12 +566,12 @@ module CancellableTasks =
 
                 let cont =
                     (CancellableTaskResumptionFunc<'TOverall>(fun sm ->
-                        let result = Awaiter.getResult awaiter
+                        let result = Awaiter.GetResult awaiter
                         (continuation result).Invoke(&sm)
                     ))
 
                 // shortcut to continue immediately
-                if Awaiter.isCompleted awaiter then
+                if Awaiter.IsCompleted awaiter then
                     cont.Invoke(&sm)
                 else
                     sm.ResumptionDynamicInfo.ResumptionData <-
@@ -610,7 +610,7 @@ module CancellableTasks =
 
                         let mutable __stack_fin = true
 
-                        if not (Awaiter.isCompleted awaiter) then
+                        if not (Awaiter.IsCompleted awaiter) then
                             // This will yield with __stack_yield_fin = false
                             // This will resume with __stack_yield_fin = true
                             let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
@@ -619,7 +619,7 @@ module CancellableTasks =
                         if __stack_fin then
                             let result =
                                 awaiter
-                                |> Awaiter.getResult
+                                |> Awaiter.GetResult
 
                             (continuation result).Invoke(&sm)
                         else
@@ -698,7 +698,7 @@ module CancellableTasks =
                 : CancellationToken -> 'Awaiter =
                 (fun (ct: CancellationToken) ->
                     task
-                    |> Awaitable.getAwaiter
+                    |> Awaitable.GetAwaiter
                 )
 
 
@@ -714,7 +714,7 @@ module CancellableTasks =
                 : CancellationToken -> 'Awaiter =
                 (fun ct ->
                     task ct
-                    |> Awaitable.getAwaiter
+                    |> Awaitable.GetAwaiter
                 )
 
 
@@ -730,7 +730,7 @@ module CancellableTasks =
                 : CancellationToken -> 'Awaiter =
                 (fun ct ->
                     task ()
-                    |> Awaitable.getAwaiter
+                    |> Awaitable.GetAwaiter
                 )
 
 
