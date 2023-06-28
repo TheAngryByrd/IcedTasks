@@ -10,7 +10,6 @@ type private Async =
         async.Bind(x, (fun v -> async.Return(f v)))
 
 type AsyncEx =
-
     static member inline AwaitAwaiter(awaiter: 'Awaiter) =
         Async.FromContinuations(fun (cont, econt, ccont) ->
             Awaiter.OnCompleted(
@@ -122,12 +121,12 @@ type AsyncEx =
     /// the given task to complete and return its result.
     /// </summary>
     /// <param name="vTask">The task to await.</param>
-    static member inline AwaitValueTask(v: ValueTask) : Async<unit> =
+    static member inline AwaitValueTask(vTask: ValueTask) : Async<unit> =
         // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
-        if v.IsCompletedSuccessfully then
+        if vTask.IsCompletedSuccessfully then
             async.Return()
         else
-            AsyncEx.AwaitTask(v.AsTask())
+            AsyncEx.AwaitTask(vTask.AsTask())
 
 #endif
 
@@ -247,15 +246,11 @@ type AsyncExBuilder() =
 
     member inline _.Source(seq: #seq<_>) = seq
 
+    // Required because SRTP can't determine the type of the awaiter
+    //     Candidates:
+    //  - Task.GetAwaiter() : Runtime.CompilerServices.TaskAwaiter
+    //  - Task.GetAwaiter() : Runtime.CompilerServices.TaskAwaiter<string>F# Compiler43
     member inline _.Source(task: Task<_>) = AsyncEx.AwaitTask task
-
-    member inline _.Source(task: Task) = AsyncEx.AwaitTask task
-
-#if NETSTANDARD2_1
-    member inline _.Source(vTask: ValueTask<_>) = AsyncEx.AwaitValueTask vTask
-
-    member inline _.Source(vTask: ValueTask) = AsyncEx.AwaitValueTask vTask
-#endif
 
 [<AutoOpen>]
 module Extensions =
@@ -292,10 +287,19 @@ module Tests =
         interface IAsyncDisposable with
             member this.DisposeAsync() = ValueTask()
 
-    let foo = asyncEx {
+    let disposeAsyncTest = asyncEx {
         use foo = new DisposableAsync()
-
         return ()
+    }
+
+    let valueTaskTest = asyncEx {
+        let! ct = ValueTask<string> "LOL"
+        return ct
+    }
+
+    let valueTaskTest2 = asyncEx {
+        let! ct = ValueTask()
+        return ct
     }
 #endif
 
@@ -305,49 +309,25 @@ module Tests =
 
     let disposeTest = asyncEx {
         use foo = new Disposable()
-
         return ()
     }
 
-
     let taskTest = asyncEx {
         let! ct = Task.FromResult "LOL"
-
         return ct
     }
 
     let taskTest2 = asyncEx {
         let! ct = (Task.FromResult() :> Task)
-
         return ct
     }
-
-#if NETSTANDARD2_1
-
-    let valueTaskTest = asyncEx {
-        let! ct = ValueTask<string> "LOL"
-
-        return ct
-    }
-
-
-    let valueTaskTest2 = asyncEx {
-        let! ct = ValueTask()
-
-        let lol = Task.FromResult().GetAwaiter()
-
-        return ct
-    }
-#endif
 
     let yieldTasktest = asyncEx {
         let! ct = Task.Yield()
-
         return ct
     }
 
     let awaiterTest = asyncEx {
         let! ct = (Task.FromResult "LOL").GetAwaiter()
-
         return ct
     }

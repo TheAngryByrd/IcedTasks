@@ -679,11 +679,11 @@ module CancellableValueTasks =
                 this.Bind((fun ct -> getAwaiter ct), (fun v -> this.Return(f v)))
 
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This is the identify function.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             [<NoEagerConstraintApplication>]
             member inline _.Source<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
@@ -692,11 +692,11 @@ module CancellableValueTasks =
                 (fun ct -> getAwaiter)
 
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This is the identify function.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             [<NoEagerConstraintApplication>]
             member inline _.Source<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
@@ -705,11 +705,11 @@ module CancellableValueTasks =
                 getAwaiter
 
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This turns a aitable into a CancellonToken -> 'Awaiter.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             [<NoEagerConstraintApplication>]
             member inline _.Source<'Awaitable, 'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
@@ -721,11 +721,11 @@ module CancellableValueTasks =
                 )
 
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
-            /// <remarks>This turns a cellationToken -> 'Awaitable into a CancellonToken -> 'Awaiter.</remarks>
+            /// <remarks>This turns a CancellationToken -> 'Awaitable into a CancellonToken -> 'Awaiter.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             [<NoEagerConstraintApplication>]
             member inline _.Source<'Awaitable, 'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
@@ -737,11 +737,11 @@ module CancellableValueTasks =
                 )
 
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This turns a t -> 'Awaitable into a CancellonToken -> 'Awaiter.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             [<NoEagerConstraintApplication>]
             member inline _.Source<'Awaitable, 'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
@@ -826,44 +826,44 @@ module CancellableValueTasks =
             /// <returns>umerable</returns>
             member inline _.Source(s: #seq<_>) : #seq<_> = s
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This turns a k&lt;'T&gt; into a CancellonToken -> 'Awaiter.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             member inline _.Source(task: Task<'T>) =
                 (fun (ct: CancellationToken) -> task.GetAwaiter())
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This turns a dTask&lt;'T&gt; into a CancellonToken -> 'Awaiter.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             member inline _.Source([<InlineIfLambda>] task: ColdTask<'TResult1>) =
                 (fun (ct: CancellationToken) -> (task ()).GetAwaiter())
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This turns a cellableValueTask&lt;'T&gt; into a CancellonToken -> 'Awaiter.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             member inline _.Source([<InlineIfLambda>] task: CancellationToken -> Task<'TResult1>) =
                 (fun ct -> (task ct).GetAwaiter())
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This turns a nc&lt;'T&gt; into a CancellonToken -> 'Awaiter.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             member inline this.Source(computation: Async<'TResult1>) =
                 this.Source(Async.AsCancellableValueTask(computation))
 
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This turns a cellableTask&lt;'T&gt; into a CancellonToken -> 'Awaiter.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             member inline _.Source(awaiter: TaskAwaiter<'TResult1>) = (fun ct -> awaiter)
 
     /// <summary>

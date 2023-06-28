@@ -49,12 +49,12 @@ module ValueTaskExtensions =
         /// the given task to complete and return its result.
         /// </summary>
         /// <param name="vTask">The task to await.</param>
-        static member inline AwaitValueTask(v: ValueTask) : Async<unit> =
+        static member inline AwaitValueTask(vTask: ValueTask) : Async<unit> =
             // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
-            if v.IsCompletedSuccessfully then
+            if vTask.IsCompletedSuccessfully then
                 async.Return()
             else
-                Async.AwaitTask(v.AsTask())
+                Async.AwaitTask(vTask.AsTask())
 
 
         /// <summary>
@@ -836,8 +836,6 @@ module ValueTasks =
                 ValueTask()
             else
                 ValueTask(vtask.AsTask())
-
-        let inline internal getAwaiter (ctask: ValueTask<_>) = (ctask).GetAwaiter()
 
     /// <exclude/>
     [<AutoOpen>]

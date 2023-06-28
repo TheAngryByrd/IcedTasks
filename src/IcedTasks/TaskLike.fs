@@ -21,32 +21,34 @@ type Awaiter<'Awaiter, 'TResult
 type Awaiter =
     /// Gets a value that indicates whether the asynchronous task has completed
     static member inline IsCompleted<'Awaiter, 'TResult when Awaiter<'Awaiter, 'TResult>>
-        (x: 'Awaiter)
+        (awaiter: 'Awaiter)
         =
-        x.get_IsCompleted ()
+        awaiter.get_IsCompleted ()
 
     /// Ends the wait for the completion of the asynchronous task.
     static member inline GetResult<'Awaiter, 'TResult when Awaiter<'Awaiter, 'TResult>>
-        (x: 'Awaiter)
+        (awaiter: 'Awaiter)
         =
-        x.GetResult()
+        awaiter.GetResult()
 
 
+    /// Schedules the continuation action that's invoked when the instance completes
     static member inline OnCompleted<'Awaiter, 'TResult, 'Continuation
         when Awaiter<'Awaiter, 'TResult>>
         (
-            x: 'Awaiter,
-            continuation
+            awaiter: 'Awaiter,
+            continuation: System.Action
         ) =
-        x.OnCompleted(continuation)
+        awaiter.OnCompleted(continuation)
 
+    /// Schedules the continuation action that's invoked when the instance completes.
     static member inline UnsafeOnCompleted<'Awaiter, 'TResult, 'Continuation
         when Awaiter<'Awaiter, 'TResult>>
         (
-            x: 'Awaiter,
-            continuation
+            awaiter: 'Awaiter,
+            continuation: System.Action
         ) =
-        x.UnsafeOnCompleted(continuation)
+        awaiter.UnsafeOnCompleted(continuation)
 
 /// A structure looks like an Awaitable
 type Awaitable<'Awaitable, 'Awaiter, 'TResult
@@ -57,6 +59,6 @@ type Awaitable =
     /// Creates an awaiter for this value.
     static member inline GetAwaiter<'Awaitable, 'Awaiter, 'TResult
         when Awaitable<'Awaitable, 'Awaiter, 'TResult>>
-        (x: 'Awaitable)
+        (awaitable: 'Awaitable)
         =
-        x.GetAwaiter()
+        awaitable.GetAwaiter()
