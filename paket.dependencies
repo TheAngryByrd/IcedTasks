@@ -9,6 +9,7 @@ nuget Microsoft.NET.Test.Sdk 17.1.0-preview-20211109-03
 nuget altcover ~> 8.2.825
 nuget BenchmarkDotNet
 nuget Ply
+nuget TimeProviderExtensions
 
 // [ FAKE GROUP ]
 group Build

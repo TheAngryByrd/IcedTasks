@@ -867,6 +867,7 @@ module CancellableTasks =
     // Similar reasoning for `IcedTasks.ColdTasks.ColdTaskBuilderBase`.
 
     /// Contains a set of standard functional helper function
+
     [<RequireQualifiedAccess>]
     module CancellableTask =
 
@@ -979,6 +980,68 @@ module CancellableTasks =
                 let! r2 = r2
                 return r1, r2
             }
+
+
+        /// <summary>Creates a task that will complete when all of the <see cref='T:IcedTasks.CancellableTasks.CancellableTask`1'/> in an enumerable collection have completed.</summary>
+        /// <param name="tasks">The tasks to wait on for completion</param>
+        /// <returns>A CancellableTask that represents the completion of all of the supplied tasks.</returns>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="tasks" /> argument was <see langword="null" />.</exception>
+        /// <exception cref="T:System.ArgumentException">The <paramref name="tasks" /> collection contained a <see langword="null" /> task.</exception>
+        let inline whenAll (tasks: CancellableTask<_> seq) = cancellableTask {
+            let! ct = getCancellationToken ()
+
+            let! results =
+                tasks
+                |> Seq.map (fun t -> t ct)
+                |> Task.WhenAll
+
+            return results
+        }
+
+        /// <summary>Creates a task that will complete when all of the <see cref='T:IcedTasks.CancellableTasks.CancellableTask`1'/> in an enumerable collection have completed.</summary>
+        /// <param name="tasks">The tasks to wait on for completion</param>
+        /// <param name="maxDegreeOfParallelism">The maximum number of tasks to run concurrently.</param>
+        /// <returns>A CancellableTask that represents the completion of all of the supplied tasks.</returns>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="tasks" /> argument was <see langword="null" />.</exception>
+        /// <exception cref="T:System.ArgumentException">The <paramref name="tasks" /> collection contained a <see langword="null" /> task.</exception>
+        let inline whenAllThrottled (maxDegreeOfParallelism: int) (tasks: CancellableTask<_> seq) = cancellableTask {
+            let! ct = getCancellationToken ()
+
+            use semaphore =
+                new SemaphoreSlim(
+                    initialCount = maxDegreeOfParallelism,
+                    maxCount = maxDegreeOfParallelism
+                )
+
+            let! results =
+                tasks
+                |> Seq.map (fun t -> task {
+                    do! semaphore.WaitAsync ct
+
+                    try
+                        return! t ct
+                    finally
+                        semaphore.Release()
+                        |> ignore
+
+                })
+                |> Task.WhenAll
+
+            return results
+        }
+
+        /// <summary>Creates a <see cref='T:IcedTasks.CancellableTasks.CancellableTask`1'/> that will complete when all of the <see cref='T:IcedTasks.CancellableTasks.CancellableTask`1'/>s in an enumerable collection have completed sequentially.</summary>
+        /// <param name="tasks">The tasks to wait on for completion</param>
+        /// <returns>A CancellableTask that represents the completion of all of the supplied tasks.</returns>
+        let inline sequential (tasks: CancellableTask<'a> seq) = cancellableTask {
+            let mutable results = ArrayCollector<'a>()
+
+            for t in tasks do
+                let! result = t
+                results.Add result
+
+            return results.Close()
+        }
 
 
         /// <summary>Coverts a CancellableTask to a CancellableTask\&lt;unit\&gt;.</summary>

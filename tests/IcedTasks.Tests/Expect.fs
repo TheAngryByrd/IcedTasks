@@ -67,3 +67,18 @@ type Expect =
     static member CancellationRequested(operation: CancellableValueTask<_>) =
         Expect.CancellationRequested(Async.AwaitCancellableValueTask operation)
         |> Async.AsCancellableTask
+
+
+open TimeProviderExtensions
+open System.Runtime.CompilerServices
+
+[<Extension>]
+type ManualTimeProviderExtensions =
+
+    [<Extension>]
+    static member ForwardTimeAsync(this: ManualTimeProvider, time) = task {
+        this.ForwardTime(time)
+        //https://github.com/dotnet/runtime/issues/85326
+        do! Task.Yield()
+        do! Task.Delay(5)
+    }
