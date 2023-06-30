@@ -3,3 +3,4 @@ FSharp.Core
 Microsoft.NET.Test.Sdk
 YoloDev.Expecto.TestSdk
 altcover
+TimeProviderExtensions
