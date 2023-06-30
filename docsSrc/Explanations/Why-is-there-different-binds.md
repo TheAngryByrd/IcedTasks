@@ -12,8 +12,6 @@ index: 2
 
 You may have browsed around the F# codebase for [Resumable Tasks](https://github.com/dotnet/fsharp/blob/b9685e8f62bb573adec221cce7e62a71f7f430f4/src/FSharp.Core/tasks.fs#L335) or this one have noticed this `Bind` method:
 
-```fsharp
-[<NoEagerConstraintApplication>]
 
 ```fsharp
 [<NoEagerConstraintApplication>]
