@@ -995,7 +995,7 @@ module CancellableTaskTests =
                     let result = CancellableTask.whenAll tasks ct
 
                     do!
-                        timeProvider.ForwardTimeAsync(TimeSpan.FromSeconds(16.))
+                        timeProvider.ForwardTimeAsync(TimeSpan.FromSeconds(15.))
                         |> Async.AwaitTask
 
                     let! result =
