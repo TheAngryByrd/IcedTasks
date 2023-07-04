@@ -869,6 +869,55 @@ module CancellableTaskTests =
                 Expect.equal actual cts.Token ""
         ]
 
+
+    let asyncExBuilderTests =
+        testList "AsyncExBuilder" [
+
+            testCase "AsyncExBuilder can Bind CancellableTask<T>"
+            <| fun () ->
+                let innerTask = cancellableTask { return! CancellableTask.getCancellationToken () }
+
+                let outerAsync = asyncEx {
+                    let! result = innerTask
+                    return result
+                }
+
+                use cts = new CancellationTokenSource()
+                let actual = Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
+                Expect.equal actual cts.Token ""
+
+
+            testCase "AsyncBuilder can ReturnFrom CancellableTask<T>"
+            <| fun () ->
+                let innerTask = cancellableTask { return! CancellableTask.getCancellationToken () }
+                let outerAsync = asyncEx { return! innerTask }
+
+                use cts = new CancellationTokenSource()
+                let actual = Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
+                Expect.equal actual cts.Token ""
+
+
+            testCase "AsyncBuilder can Bind CancellableTask"
+            <| fun () ->
+                let mutable actual = CancellationToken.None
+                let innerTask: CancellableTask = fun ct -> task { actual <- ct } :> Task
+                let outerAsync = asyncEx { do! innerTask }
+
+                use cts = new CancellationTokenSource()
+                Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
+                Expect.equal actual cts.Token ""
+
+            testCase "AsyncBuilder can ReturnFrom CancellableTask"
+            <| fun () ->
+                let mutable actual = CancellationToken.None
+                let innerTask: CancellableTask = fun ct -> task { actual <- ct } :> Task
+                let outerAsync = asyncEx { return! innerTask }
+
+                use cts = new CancellationTokenSource()
+                Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
+                Expect.equal actual cts.Token ""
+        ]
+
     let functionTests =
         testList "functions" [
             testList "singleton" [
@@ -1154,5 +1203,6 @@ module CancellableTaskTests =
         testList "IcedTasks.CancellableTask" [
             builderTests
             asyncBuilderTests
+            asyncExBuilderTests
             functionTests
         ]

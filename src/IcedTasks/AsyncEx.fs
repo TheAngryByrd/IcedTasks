@@ -9,6 +9,9 @@ type private Async =
     static member inline map f x =
         async.Bind(x, (fun v -> async.Return(f v)))
 
+/// <summary>
+/// This contains many functions that implement Task throwing semantics differently than the current FSharp.Core. See <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
+/// </summary>
 type AsyncEx =
 
     /// <summary>

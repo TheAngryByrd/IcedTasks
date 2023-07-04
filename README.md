@@ -1,6 +1,6 @@
 # IcedTasks
 
-## What
+## What is IcedTasks?
 
 This library contains additional [computation expressions](https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/computation-expressions) for the [task CE](https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/task-expressions) utilizing the [Resumable Code](https://github.com/fsharp/fslang-design/blob/main/FSharp-6.0/FS-1087-resumable-code.md) introduced [in F# 6.0](https://devblogs.microsoft.com/dotnet/whats-new-in-fsharp-6/#making-f-faster-and-more-interopable-with-task).
 
@@ -14,16 +14,21 @@ This library contains additional [computation expressions](https://docs.microsof
 
 - `ParallelAsync<'T>` - Utilizes the [applicative syntax](https://docs.microsoft.com/en-us/dotnet/fsharp/whats-new/fsharp-50#applicative-computation-expressions) to allow parallel execution of [Async<'T> expressions](https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/async-expressions). See [this discussion](https://github.com/dotnet/fsharp/discussions/11043) as to why this is a separate computation expression.
 
+- `AsyncEx<'T>` - Slight variation of F# async semantics described further below with examples.
 
-| Computation Expression<sup>1</sup> | Library<sup>2</sup> | TFM<sup>3</sup> | Hot/Cold<sup>4</sup> | Multiple-Awaits<sup>5</sup> | Multi-start<sup>6</sup> | Tailcalls<sup>7</sup> | CancellationToken propagation<sup>8</sup> | Cancellation checks<sup>9</sup> | Parallel when using and!<sup>10</sup> |
-|------------------------------------|---------------------|-----------------|----------------------|-----------------------------|-------------------------|-----------------------|-------------------------------------------|---------------------------------|--------------------------------------|
-| F# Async                           | FSharp.Core         | netstandard2.0  | Cold                 | multiple                    | multiple                | tailcalls             | implicit                                  | implicit                        | No                                   |
-| F# ParallelAsync                   | IcedTasks           | netstandard2.0  | Cold                 | multiple                    | multiple                | tailcalls             | implicit                                  | implicit                        | Yes                                  |
-| F# Task/C# Task                    | FSharp.Core         | netstandard2.0  | Hot                  | multiple                    | once-start              | no tailcalls          | explicit                                  | explicit                        | No                                   |
-| F# ValueTask                       | IcedTasks           | netstandard2.1  | Hot                  | once                        | once-start              | no tailcalls          | explicit                                  | explicit                        | Yes                                  |
-| F# ColdTask                        | IcedTasks           | netstandard2.0  | Cold                 | multiple                    | multiple                | no tailcalls          | explicit                                  | explicit                        | Yes                                  |
-| F# CancellableTask                 | IcedTasks           | netstandard2.0  | Cold                 | multiple                    | multiple                | no tailcalls          | implicit                                  | implicit                        | Yes                                  |
-| F# CancellableValueTask            | IcedTasks           | netstandard2.1  | Cold                 | one                          | multiple                | no tailcalls          | implicit                                  | implicit                        | Yes                                  |
+
+### Differences at a glance
+
+| Computation Expression<sup>1</sup> | Library<sup>2</sup> | TFM<sup>3</sup> | Hot/Cold<sup>4</sup> | Multiple Awaits <sup>5</sup> | Multi-start<sup>6</sup> | Tailcalls<sup>7</sup> | CancellationToken propagation<sup>8</sup> | Cancellation checks<sup>9</sup> | Parallel when using and!<sup>10</sup> | use IAsyncDisposable <sup>11</sup> |
+|------------------------------------|---------------------|-----------------|----------------------|------------------------------|-------------------------|-----------------------|-------------------------------------------|---------------------------------|---------------------------------------|------------------------------------|
+| F# Async                           | FSharp.Core         | netstandard2.0  | Cold                 | Multiple                     | multiple                | tailcalls             | implicit                                  | implicit                        | No                                    | No                                 |
+| F# AsyncEx                         | IcedTasks           | netstandard2.0  | Cold                 | Multiple                     | multiple                | tailcalls             | implicit                                  | implicit                        | No                                    | Yes                                |
+| F# ParallelAsync                   | IcedTasks           | netstandard2.0  | Cold                 | Multiple                     | multiple                | tailcalls             | implicit                                  | implicit                        | Yes                                   | No                                 |
+| F# Task/C# Task                    | FSharp.Core         | netstandard2.0  | Hot                  | Multiple                     | once-start              | no tailcalls          | explicit                                  | explicit                        | No                                    | Yes                                |
+| F# ValueTask                       | IcedTasks           | netstandard2.1  | Hot                  | Once                         | once-start              | no tailcalls          | explicit                                  | explicit                        | Yes                                   | Yes                                |
+| F# ColdTask                        | IcedTasks           | netstandard2.0  | Cold                 | Multiple                     | multiple                | no tailcalls          | explicit                                  | explicit                        | Yes                                   | Yes                                |
+| F# CancellableTask                 | IcedTasks           | netstandard2.0  | Cold                 | Multiple                     | multiple                | no tailcalls          | implicit                                  | implicit                        | Yes                                   | Yes                                |
+| F# CancellableValueTask            | IcedTasks           | netstandard2.1  | Cold                 | Once                         | multiple                | no tailcalls          | implicit                                  | implicit                        | Yes                                   | Yes                                |
 
 - <sup>1</sup> - [Computation Expression](https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/computation-expressions)
 - <sup>2</sup> - Which [Nuget](https://www.nuget.org/) package do they come from
@@ -35,11 +40,71 @@ This library contains additional [computation expressions](https://docs.microsof
 - <sup>8</sup> - `CancellationToken` is propagated to all types the support implicit `CancellatationToken` passing. Calling `cancellableTask { ... }` nested inside `async { ... }` (or any of those combinations) will use the `CancellationToken` from when the code was started.
 - <sup>9</sup> - Cancellation will be checked before binds and runs.
 - <sup>10</sup> - Allows parallel execution of the asynchronous code using the [Applicative Syntax](https://docs.microsoft.com/en-us/dotnet/fsharp/whats-new/fsharp-50#applicative-computation-expressions) in computation expressions. 
+- <sup>11</sup> - Allows `use` of `IAsyncDisposable` with the computation expression. See [IAsyncDisposable](https://docs.microsoft.com/en-us/dotnet/api/system.iasyncdisposable) for more info.
+
+## Why should I use this?
 
 
-## How
+### AsyncEx
 
-### ValueTask 
+AsyncEx is similar to Async except in the following ways:
+
+1. Allows `use` for [IAsyncDisposable](https://docs.microsoft.com/en-us/dotnet/api/system.iasyncdisposable)
+
+    ```fsharp
+    open IcedTasks
+    let fakeDisposable = { new IAsyncDisposable with member __.DisposeAsync() = ValueTask.CompletedTask }
+
+    let myAsyncEx = asyncEx {
+        use! _ = fakeDisposable
+        return 42
+    }
+    ````
+2. Allows `let!/do!` against Tasks/ValueTasks/[any Awaitable](https://devblogs.microsoft.com/pfxteam/await-anything/)
+
+    ```fsharp
+    open IcedTasks
+    let myAsyncEx = asyncEx {
+        let! _ = task { return 42 } // Task<T>
+        let! _ = valueTask { return 42 } // ValueTask<T>
+        let! _ = Task.Yield() // YieldAwaitable
+        return 42
+    }
+    ```
+3. When Tasks throw exceptions they will use the behavior described in [Async.Await overload (esp. AwaitTask without throwing AggregateException](https://github.com/fsharp/fslang-suggestions/issues/840)
+
+
+    ```fsharp
+    let data = "lol"
+
+    let inner = asyncEx {
+        do!
+            task {
+                do! Task.Yield()
+                raise (ArgumentException "foo")
+                return data
+            }
+            :> Task
+    }
+
+    let outer = asyncEx {
+        try
+            do! inner
+            return ()
+        with
+        | :? ArgumentException ->
+            // Should be this exception and not AggregationException
+            return ()
+        | ex ->
+            return raise (Exception("Should not throw this type of exception", ex))
+    }
+    ```
+
+
+### For [ValueTasks](https://devblogs.microsoft.com/dotnet/understanding-the-whys-whats-and-whens-of-valuetask/)
+
+- F# doesn't currently have a `valueTask` computation expression. [Until this PR is merged.](https://github.com/dotnet/fsharp/pull/14755)
+
 
 ```fsharp
 open IcedTasks
@@ -49,6 +114,12 @@ let myValueTask = task {
     return theAnswer
 }
 ```
+
+### For Cold & CancellableTasks
+- You want control over when your tasks are started
+- You want to be able to re-run these executable tasks
+- You don't want to pollute your methods/functions with extra CancellationToken parameters
+- You want the computation to handle checking cancellation before every bind.
 
 
 ### ColdTask
@@ -124,6 +195,8 @@ let executeWriting = task {
 ```
 
 ### ParallelAsync
+
+- When you want to execute multiple asyncs in parallel and wait for all of them to complete.
 
 Short example:
 

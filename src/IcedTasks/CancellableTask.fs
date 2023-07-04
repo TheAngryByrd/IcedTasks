@@ -766,6 +766,37 @@ module CancellableTasks =
     /// <exclude />
     [<AutoOpen>]
     module HighPriority =
+
+        type AsyncEx with
+
+            /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
+            /// its result.</summary>
+            ///
+            /// <remarks>
+            /// This is based on <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
+            /// </remarks>
+            static member inline AwaitCancellableTask(t: CancellableTask<'T>) = async {
+                let! ct = Async.CancellationToken
+
+                return!
+                    t ct
+                    |> AsyncEx.AwaitTask
+            }
+
+            /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
+            /// its result.</summary>
+            ///
+            /// <remarks>
+            /// This is based on <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
+            /// </remarks>
+            static member inline AwaitCancellableTask(t: CancellableTask) = async {
+                let! ct = Async.CancellationToken
+
+                return!
+                    t ct
+                    |> AsyncEx.AwaitTask
+            }
+
         type Microsoft.FSharp.Control.Async with
 
             /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
@@ -846,7 +877,16 @@ module CancellableTasks =
     /// A set of extension methods making it possible to bind against <see cref='T:IcedTasks.CancellableTasks.CancellableTask`1'/> in async computations.
     /// </summary>
     [<AutoOpen>]
-    module AsyncExtenions =
+    module AsyncExtensions =
+
+        type AsyncExBuilder with
+
+            member inline this.Source(t: CancellableTask<'T>) : Async<'T> =
+                AsyncEx.AwaitCancellableTask t
+
+            member inline this.Source(t: CancellableTask) : Async<unit> =
+                AsyncEx.AwaitCancellableTask t
+
         type Microsoft.FSharp.Control.AsyncBuilder with
 
             member inline this.Bind(t: CancellableTask<'T>, binder: ('T -> Async<'U>)) : Async<'U> =
