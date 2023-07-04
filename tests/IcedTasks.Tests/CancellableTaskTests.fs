@@ -1110,8 +1110,10 @@ module CancellableTaskTests =
                                 do!
                                     timeProvider.ForwardTimeAsync(pauseTimeTS)
                                     |> Async.AwaitTask
-
-                                Expect.equal (Seq.length times) (min i items.Length) ""
+                                // times isn't guaranteed to be populated because these tasks still
+                                // run in realtime kind of, so we need to check
+                                // that is at least wasn't executing more than we'd expect
+                                Expect.isLessThanOrEqual (Seq.length times) (min i items.Length) ""
 
                         }
                         |> Async.AwaitTask
