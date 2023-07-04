@@ -10,43 +10,84 @@ type private Async =
         async.Bind(x, (fun v -> async.Return(f v)))
 
 type AsyncEx =
+
+    /// <summary>
+    /// Return an asynchronous computation that will wait for the given Awaiter to complete and return
+    /// its result.
+    /// </summary>
+    /// <param name="awaiter">The Awaiter to await</param>
+    ///
+    /// <remarks>
+    /// This is based on <see href="https://stackoverflow.com/a/66815960">How to use awaitable inside async?</see> and <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
+    /// </remarks>
     static member inline AwaitAwaiter(awaiter: 'Awaiter) =
-        Async.FromContinuations(fun (cont, econt, ccont) ->
-            Awaiter.OnCompleted(
-                awaiter,
-                (fun () ->
-                    try
-                        cont (Awaiter.GetResult awaiter)
-                    with
-                    | :? TaskCanceledException as ce -> ccont ce
-                    | :? OperationCanceledException as ce -> ccont ce
-                    | :? AggregateException as ae ->
-                        if ae.InnerExceptions.Count = 1 then
-                            econt ae.InnerExceptions.[0]
-                        else
-                            econt ae
-                    | e -> econt e
+        Async.FromContinuations(fun (onNext, onError, onCancel) ->
+            if Awaiter.IsCompleted awaiter then
+                try
+                    onNext (Awaiter.GetResult awaiter)
+                with
+                | :? TaskCanceledException as ce -> onCancel ce
+                | :? OperationCanceledException as ce -> onCancel ce
+                | :? AggregateException as ae ->
+                    if ae.InnerExceptions.Count = 1 then
+                        onError ae.InnerExceptions.[0]
+                    else
+                        onError ae
+                | e -> onError e
+            else
+                Awaiter.OnCompleted(
+                    awaiter,
+                    (fun () ->
+                        try
+                            onNext (Awaiter.GetResult awaiter)
+                        with
+                        | :? TaskCanceledException as ce -> onCancel ce
+                        | :? OperationCanceledException as ce -> onCancel ce
+                        | :? AggregateException as ae ->
+                            if ae.InnerExceptions.Count = 1 then
+                                onError ae.InnerExceptions.[0]
+                            else
+                                onError ae
+                        | e -> onError e
+                    )
                 )
-            )
         )
 
+    /// <summary>
+    /// Return an asynchronous computation that will wait for the given Awaitable to complete and return
+    /// its result.
+    /// </summary>
+    /// <param name="awaiter">The Awaitable to await</param>
+    ///
+    /// <remarks>
+    /// This is based on <see href="https://stackoverflow.com/a/66815960">How to use awaitable inside async?</see> and <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
+    /// </remarks>
     static member inline AwaitAwaitable(awaitable: 'Awaitable) =
         AsyncEx.AwaitAwaiter(Awaitable.GetAwaiter awaitable)
 
+    /// <summary>
+    /// Return an asynchronous computation that will wait for the given Task to complete and return
+    /// its result.
+    /// </summary>
+    /// <param name="awaiter">The Awaitable to await</param>
+    ///
+    /// <remarks>
+    /// This is based on <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
+    /// </remarks>
     static member AwaitTask(task: Task) : Async<unit> =
-        Async.FromContinuations(fun (cont, econt, ccont) ->
+        Async.FromContinuations(fun (onNext, onError, onCancel) ->
             if task.IsCompleted then
                 if task.IsFaulted then
                     let e = task.Exception
 
                     if e.InnerExceptions.Count = 1 then
-                        econt e.InnerExceptions.[0]
+                        onError e.InnerExceptions.[0]
                     else
-                        econt e
+                        onError e
                 elif task.IsCanceled then
-                    ccont (TaskCanceledException(task))
+                    onCancel (TaskCanceledException(task))
                 else
-                    cont ()
+                    onNext ()
             else
                 task.ContinueWith(
                     (fun (task: Task) ->
@@ -54,34 +95,43 @@ type AsyncEx =
                             let e = task.Exception
 
                             if e.InnerExceptions.Count = 1 then
-                                econt e.InnerExceptions.[0]
+                                onError e.InnerExceptions.[0]
                             else
-                                econt e
+                                onError e
                         elif task.IsCanceled then
-                            ccont (TaskCanceledException(task))
+                            onCancel (TaskCanceledException(task))
                         else
-                            cont ()
+                            onNext ()
                     ),
                     TaskContinuationOptions.ExecuteSynchronously
                 )
                 |> ignore
         )
 
+    /// <summary>
+    /// Return an asynchronous computation that will wait for the given Task to complete and return
+    /// its result.
+    /// </summary>
+    /// <param name="awaiter">The Awaitable to await</param>
+    ///
+    /// <remarks>
+    /// This is based on <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
+    /// </remarks>
     static member AwaitTask(task: Task<'T>) : Async<'T> =
-        Async.FromContinuations(fun (cont, econt, ccont) ->
+        Async.FromContinuations(fun (onNext, onError, onCancel) ->
 
             if task.IsCompleted then
                 if task.IsFaulted then
                     let e = task.Exception
 
                     if e.InnerExceptions.Count = 1 then
-                        econt e.InnerExceptions.[0]
+                        onError e.InnerExceptions.[0]
                     else
-                        econt e
+                        onError e
                 elif task.IsCanceled then
-                    ccont (TaskCanceledException(task))
+                    onCancel (TaskCanceledException(task))
                 else
-                    cont task.Result
+                    onNext task.Result
             else
                 task.ContinueWith(
                     (fun (task: Task<'T>) ->
@@ -89,13 +139,13 @@ type AsyncEx =
                             let e = task.Exception
 
                             if e.InnerExceptions.Count = 1 then
-                                econt e.InnerExceptions.[0]
+                                onError e.InnerExceptions.[0]
                             else
-                                econt e
+                                onError e
                         elif task.IsCanceled then
-                            ccont (TaskCanceledException(task))
+                            onCancel (TaskCanceledException(task))
                         else
-                            cont task.Result
+                            onNext task.Result
                     ),
                     TaskContinuationOptions.ExecuteSynchronously
                 )
@@ -103,11 +153,16 @@ type AsyncEx =
         )
 #if NETSTANDARD2_1
 
+
     /// <summary>
-    /// Return an asynchronous computation that will check if ValueTask is completed or wait for
-    /// the given task to complete and return its result.
+    /// Return an asynchronous computation that will wait for the given ValueTask to complete and return
+    /// its result.
     /// </summary>
-    /// <param name="vTask">The task to await.</param>
+    /// <param name="awaiter">The Awaitable to await</param>
+    ///
+    /// <remarks>
+    /// This is based on <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
+    /// </remarks>
     static member inline AwaitValueTask(vTask: ValueTask<_>) : Async<_> =
         // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
         if vTask.IsCompletedSuccessfully then
@@ -117,10 +172,14 @@ type AsyncEx =
 
 
     /// <summary>
-    /// Return an asynchronous computation that will check if ValueTask is completed or wait for
-    /// the given task to complete and return its result.
+    /// Return an asynchronous computation that will wait for the given Task to complete and return
+    /// its result.
     /// </summary>
-    /// <param name="vTask">The task to await.</param>
+    /// <param name="awaiter">The Awaitable to await</param>
+    ///
+    /// <remarks>
+    /// This is based on <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
+    /// </remarks>
     static member inline AwaitValueTask(vTask: ValueTask) : Async<unit> =
         // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
         if vTask.IsCompletedSuccessfully then
@@ -135,36 +194,48 @@ module AsyncExtensions =
 
     type Microsoft.FSharp.Control.Async with
 
-        static member inline TryFinallyAsync(comp: Async<'T>, deferred) : Async<'T> =
+        /// <summary>Creates an Async that runs computation. The action compensation is executed
+        /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
+        /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
+        /// <param name="computation">The input computation.</param>
+        /// <param name="compensation">The action to be run after computation completes or raises an
+        /// exception (including cancellation).</param>
+        /// <remarks> <see href="http://www.fssnip.net/ru/title/Async-workflow-with-asynchronous-finally-clause">See this F# gist</see></remarks>
+        /// <returns>An async with the result of the computation.</returns>
+        static member inline TryFinallyAsync
+            (
+                computation: Async<'T>,
+                compensation: Async<unit>
+            ) : Async<'T> =
 
-            let finish (compResult, deferredResult) (cont, (econt: exn -> unit), ccont) =
+            let finish (compResult, deferredResult) (onNext, (onError: exn -> unit), onCancel) =
                 match (compResult, deferredResult) with
-                | (Choice1Of3 x, Choice1Of3()) -> cont x
-                | (Choice2Of3 compExn, Choice1Of3()) -> econt compExn
-                | (Choice3Of3 compExn, Choice1Of3()) -> ccont compExn
-                | (Choice1Of3 _, Choice2Of3 deferredExn) -> econt deferredExn
+                | (Choice1Of3 x, Choice1Of3()) -> onNext x
+                | (Choice2Of3 compExn, Choice1Of3()) -> onError compExn
+                | (Choice3Of3 compExn, Choice1Of3()) -> onCancel compExn
+                | (Choice1Of3 _, Choice2Of3 deferredExn) -> onError deferredExn
                 | (Choice2Of3 compExn, Choice2Of3 deferredExn) ->
-                    econt
+                    onError
                     <| new AggregateException(compExn, deferredExn)
-                | (Choice3Of3 compExn, Choice2Of3 deferredExn) -> econt deferredExn
+                | (Choice3Of3 compExn, Choice2Of3 deferredExn) -> onError deferredExn
                 | (_, Choice3Of3 deferredExn) ->
-                    econt
+                    onError
                     <| new Exception("Unexpected cancellation.", deferredExn)
 
-            let startDeferred compResult (cont, econt, ccont) =
+            let startDeferred compResult (onNext, onError, onCancel) =
                 Async.StartWithContinuations(
-                    deferred,
-                    (fun () -> finish (compResult, Choice1Of3()) (cont, econt, ccont)),
-                    (fun exn -> finish (compResult, Choice2Of3 exn) (cont, econt, ccont)),
-                    (fun exn -> finish (compResult, Choice3Of3 exn) (cont, econt, ccont))
+                    compensation,
+                    (fun () -> finish (compResult, Choice1Of3()) (onNext, onError, onCancel)),
+                    (fun exn -> finish (compResult, Choice2Of3 exn) (onNext, onError, onCancel)),
+                    (fun exn -> finish (compResult, Choice3Of3 exn) (onNext, onError, onCancel))
                 )
 
-            let startComp ct (cont, econt, ccont) =
+            let startComp ct (onNext, onError, onCancel) =
                 Async.StartWithContinuations(
-                    comp,
-                    (fun x -> startDeferred (Choice1Of3(x)) (cont, econt, ccont)),
-                    (fun exn -> startDeferred (Choice2Of3 exn) (cont, econt, ccont)),
-                    (fun exn -> startDeferred (Choice3Of3 exn) (cont, econt, ccont)),
+                    computation,
+                    (fun x -> startDeferred (Choice1Of3(x)) (onNext, onError, onCancel)),
+                    (fun exn -> startDeferred (Choice2Of3 exn) (onNext, onError, onCancel)),
+                    (fun exn -> startDeferred (Choice3Of3 exn) (onNext, onError, onCancel)),
                     ct
                 )
 
@@ -174,8 +245,18 @@ module AsyncExtensions =
             }
 
 
-/// Class for AsyncEx functionality
+/// <summary>Builds an asynchronous workflow using computation expression syntax.</summary>
+/// <remarks>
+/// The difference between the AsyncBuilder and AsyncExBuilder is follows:
+/// <list type="bullet">
+/// <item><description>Allows <c>use</c> on <see cref="T:System.IAsyncDisposable">System.IAsyncDisposable</see></description></item>
+/// <item><description>Allows <c>let!</c> for Tasks, ValueTasks, and any Awaitable Type</description></item>
+/// <item><description>When Tasks throw exceptions they will use the behavior described in <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see></description></item>
+/// </list>
+///
+/// </remarks>
 type AsyncExBuilder() =
+
 
     member inline _.Zero() = async.Zero()
 
@@ -252,8 +333,15 @@ type AsyncExBuilder() =
     //  - Task.GetAwaiter() : Runtime.CompilerServices.TaskAwaiter<string>F# Compiler43
     member inline _.Source(task: Task<_>) = AsyncEx.AwaitTask task
 
+    member inline _.Source(task: Task) = AsyncEx.AwaitTask task
+
+#if NETSTANDARD2_1
+    member inline _.Source(vtask: ValueTask<_>) = AsyncEx.AwaitValueTask vtask
+
+    member inline _.Source(vtask: ValueTask) = AsyncEx.AwaitValueTask vtask
+#endif
 [<AutoOpen>]
-module Extensions =
+module AsyncExExtensions =
     open FSharp.Core.CompilerServices
 
     type AsyncExBuilder with
@@ -275,59 +363,16 @@ module Extensions =
             (task: 'Awaitable)
             =
             task
-            |> Awaitable.GetAwaiter
-            |> AsyncEx.AwaitAwaiter
+            |> AsyncEx.AwaitAwaitable
 
+    /// <summary>Builds an asynchronous workflow using computation expression syntax.</summary>
+    /// <remarks>
+    /// The difference between the AsyncBuilder and AsyncExBuilder is follows:
+    /// <list type="bullet">
+    /// <item><description>Allows <c>use</c> on <see cref="T:System.IAsyncDisposable">System.IAsyncDisposable</see></description></item>
+    /// <item><description>Allows <c>let!</c> for Tasks, ValueTasks, and any Awaitable Type</description></item>
+    /// <item><description>When Tasks throw exceptions they will use the behavior described in <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see></description></item>
+    /// </list>
+    ///
+    /// </remarks>
     let asyncEx = new AsyncExBuilder()
-
-
-module Tests =
-#if NETSTANDARD2_1
-    type DisposableAsync() =
-        interface IAsyncDisposable with
-            member this.DisposeAsync() = ValueTask()
-
-    let disposeAsyncTest = asyncEx {
-        use foo = new DisposableAsync()
-        return ()
-    }
-
-    let valueTaskTest = asyncEx {
-        let! ct = ValueTask<string> "LOL"
-        return ct
-    }
-
-    let valueTaskTest2 = asyncEx {
-        let! ct = ValueTask()
-        return ct
-    }
-#endif
-
-    type Disposable() =
-        interface IDisposable with
-            member this.Dispose() = ()
-
-    let disposeTest = asyncEx {
-        use foo = new Disposable()
-        return ()
-    }
-
-    let taskTest = asyncEx {
-        let! ct = Task.FromResult "LOL"
-        return ct
-    }
-
-    let taskTest2 = asyncEx {
-        let! ct = (Task.FromResult() :> Task)
-        return ct
-    }
-
-    let yieldTasktest = asyncEx {
-        let! ct = Task.Yield()
-        return ct
-    }
-
-    let awaiterTest = asyncEx {
-        let! ct = (Task.FromResult "LOL").GetAwaiter()
-        return ct
-    }

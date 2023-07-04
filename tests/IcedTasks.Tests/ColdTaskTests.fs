@@ -407,6 +407,7 @@ module ColdTaskTests =
                 }
 
 
+#if NET7_0_OR_GREATER
                 testCaseAsync "use IAsyncDisposable sync"
                 <| async {
                     let data = 42
@@ -498,7 +499,7 @@ module ColdTaskTests =
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
                 }
-
+#endif
                 testCaseAsync "null"
                 <| async {
                     let data = 42

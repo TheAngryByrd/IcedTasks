@@ -5,8 +5,9 @@ open Expecto
 open System.Threading
 open System.Threading.Tasks
 open IcedTasks
+#if NET7_0_OR_GREATER
 open IcedTasks.ValueTaskExtensions
-
+#endif
 module CancellableTaskTests =
     open System.Collections.Concurrent
     open TimeProviderExtensions
@@ -180,7 +181,7 @@ module CancellableTaskTests =
 
                     Expect.equal actual expected ""
                 }
-
+#if NET7_0_OR_GREATER
                 testCaseAsync "Can Bind Cancellable TaskLike"
                 <| async {
                     let fooTask = fun (ct: CancellationToken) -> Task.Yield()
@@ -197,7 +198,7 @@ module CancellableTaskTests =
                         |> Async.AwaitValueTask
                 // Compiling is sufficient expect
                 }
-
+#endif
                 testCaseAsync "Can Bind Task"
                 <| async {
                     let outerTask = cancellableTask { do! Task.CompletedTask }
@@ -395,6 +396,7 @@ module CancellableTaskTests =
                 }
 
 
+#if NET7_0_OR_GREATER
                 testCaseAsync "use IAsyncDisposable sync"
                 <| async {
                     let data = 42
@@ -486,7 +488,7 @@ module CancellableTaskTests =
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
                 }
-
+#endif
                 testCaseAsync "null"
                 <| async {
                     let data = 42
@@ -749,11 +751,11 @@ module CancellableTaskTests =
                                         TimeSpan.FromMilliseconds(100)
                                     )
 
-                                let t = fooTask cts.Token
+                                let runningTask = fooTask cts.Token
                                 do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50))
-                                Expect.equal t.IsCanceled false ""
+                                Expect.isFalse runningTask.IsCanceled ""
                                 do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50))
-                                do! t
+                                do! runningTask
                             }
                         )
 

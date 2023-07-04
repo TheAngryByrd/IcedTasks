@@ -6,7 +6,9 @@ open System.Threading
 open System.Threading.Tasks
 open IcedTasks
 
+#if NET7_0_OR_GREATER
 module CancellableValueTaskTests =
+    open TimeProviderExtensions
 
     let builderTests =
         testList "CancellableValueTaskBuilder" [
@@ -759,6 +761,8 @@ module CancellableValueTaskTests =
                 testCaseAsync
                     "Can extract context's CancellationToken via CancellableValueTask.getCancellationToken in a deeply nested CE"
                 <| async {
+                    let timeProvider = ManualTimeProvider()
+
                     do!
                         Expect.CancellationRequested(
                             cancellableValueTask {
@@ -766,14 +770,26 @@ module CancellableValueTaskTests =
                                     return! cancellableValueTask {
                                         do! cancellableValueTask {
                                             let! ct = CancellableValueTask.getCancellationToken ()
-                                            do! Task.Delay(1000, ct)
+
+                                            do!
+                                                timeProvider.Delay(
+                                                    TimeSpan.FromMilliseconds(1000),
+                                                    ct
+                                                )
                                         }
                                     }
                                 }
 
-                                use cts = new CancellationTokenSource()
-                                cts.CancelAfter(100)
-                                do! fooTask cts.Token
+                                use cts =
+                                    timeProvider.CreateCancellationTokenSource(
+                                        TimeSpan.FromMilliseconds(100)
+                                    )
+
+                                let runningTask = fooTask cts.Token
+                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50))
+                                Expect.isFalse runningTask.IsCanceled ""
+                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50))
+                                do! runningTask
                             }
                         )
 
@@ -1016,3 +1032,4 @@ module CancellableValueTaskTests =
             asyncBuilderTests
             functionTests
         ]
+#endif
