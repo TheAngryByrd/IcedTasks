@@ -3,10 +3,6 @@ namespace IcedTasks
 open System
 open System.Threading
 
-type private Async =
-    static member inline map f x =
-        async.Bind(x, (fun v -> async.Return(f v)))
-
 /// Contains different implementations for parallel zip functions.
 type ParallelAsync =
     /// <summary>

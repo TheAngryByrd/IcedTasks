@@ -18,24 +18,47 @@ type Awaiter<'Awaiter, 'TResult
     and 'Awaiter: (member GetResult: unit -> 'TResult)> = 'Awaiter
 
 /// Functions for Awaiters
-module Awaiter =
+type Awaiter =
     /// Gets a value that indicates whether the asynchronous task has completed
-    let inline isCompleted<'Awaiter, 'TResult when Awaiter<'Awaiter, 'TResult>> (x: 'Awaiter) =
-        x.get_IsCompleted ()
+    static member inline IsCompleted<'Awaiter, 'TResult when Awaiter<'Awaiter, 'TResult>>
+        (awaiter: 'Awaiter)
+        =
+        awaiter.get_IsCompleted ()
 
     /// Ends the wait for the completion of the asynchronous task.
-    let inline getResult<'Awaiter, 'TResult when Awaiter<'Awaiter, 'TResult>> (x: 'Awaiter) =
-        x.GetResult()
+    static member inline GetResult<'Awaiter, 'TResult when Awaiter<'Awaiter, 'TResult>>
+        (awaiter: 'Awaiter)
+        =
+        awaiter.GetResult()
+
+
+    /// Schedules the continuation action that's invoked when the instance completes
+    static member inline OnCompleted<'Awaiter, 'TResult, 'Continuation
+        when Awaiter<'Awaiter, 'TResult>>
+        (
+            awaiter: 'Awaiter,
+            continuation: System.Action
+        ) =
+        awaiter.OnCompleted(continuation)
+
+    /// Schedules the continuation action that's invoked when the instance completes.
+    static member inline UnsafeOnCompleted<'Awaiter, 'TResult, 'Continuation
+        when Awaiter<'Awaiter, 'TResult>>
+        (
+            awaiter: 'Awaiter,
+            continuation: System.Action
+        ) =
+        awaiter.UnsafeOnCompleted(continuation)
 
 /// A structure looks like an Awaitable
 type Awaitable<'Awaitable, 'Awaiter, 'TResult
     when 'Awaitable: (member GetAwaiter: unit -> Awaiter<'Awaiter, 'TResult>)> = 'Awaitable
 
 /// Functions for Awaitables
-module Awaitable =
+type Awaitable =
     /// Creates an awaiter for this value.
-    let inline getAwaiter<'Awaitable, 'Awaiter, 'TResult
+    static member inline GetAwaiter<'Awaitable, 'Awaiter, 'TResult
         when Awaitable<'Awaitable, 'Awaiter, 'TResult>>
-        (x: 'Awaitable)
+        (awaitable: 'Awaitable)
         =
-        x.GetAwaiter()
+        awaitable.GetAwaiter()

@@ -48,10 +48,11 @@ type Expect =
             (fun () -> operation)
             "Should have been cancelled"
 
+#if NET7_0_OR_GREATER
     static member CancellationRequested(operation: ValueTask<unit>) =
         Expect.CancellationRequested(Async.AwaitValueTask operation)
         |> Async.AsValueTask
-
+#endif
     static member CancellationRequested(operation: Task<_>) =
         Expect.CancellationRequested(Async.AwaitTask operation)
         |> Async.StartImmediateAsTask
@@ -64,10 +65,11 @@ type Expect =
         Expect.CancellationRequested(Async.AwaitCancellableTask operation)
         |> Async.AsCancellableTask
 
+#if NET7_0_OR_GREATER
     static member CancellationRequested(operation: CancellableValueTask<_>) =
         Expect.CancellationRequested(Async.AwaitCancellableValueTask operation)
         |> Async.AsCancellableTask
-
+#endif
 
 open TimeProviderExtensions
 open System.Runtime.CompilerServices
@@ -82,3 +84,15 @@ type ManualTimeProviderExtensions =
         do! Task.Yield()
         do! Task.Delay(5)
     }
+
+
+module CustomAwaiter =
+
+    type CustomAwaiter<'T>(onGetResult, onIsCompleted) =
+
+        member this.GetResult() : 'T = onGetResult ()
+        member this.IsCompleted: bool = onIsCompleted ()
+
+        interface ICriticalNotifyCompletion with
+            member this.UnsafeOnCompleted(continuation) = failwith "Not Implemented"
+            member this.OnCompleted(continuation: Action) : unit = failwith "Not Implemented"

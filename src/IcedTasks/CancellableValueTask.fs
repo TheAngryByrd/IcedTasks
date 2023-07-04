@@ -294,7 +294,7 @@ module CancellableValueTasks =
                         let cont =
                             CancellableValueTaskResumptionFunc<'TOverall>(fun sm ->
                                 awaiter
-                                |> Awaiter.getResult
+                                |> Awaiter.GetResult
 
                                 true
                             )
@@ -583,13 +583,13 @@ module CancellableValueTasks =
                     (CancellableValueTaskResumptionFunc<'TOverall>(fun sm ->
                         let result =
                             awaiter
-                            |> Awaiter.getResult
+                            |> Awaiter.GetResult
 
                         (continuation result).Invoke(&sm)
                     ))
 
                 // shortcut to continue immediately
-                if Awaiter.isCompleted awaiter then
+                if Awaiter.IsCompleted awaiter then
                     cont.Invoke(&sm)
                 else
                     sm.ResumptionDynamicInfo.ResumptionData <-
@@ -628,7 +628,7 @@ module CancellableValueTasks =
 
                         let mutable __stack_fin = true
 
-                        if not (Awaiter.isCompleted awaiter) then
+                        if not (Awaiter.IsCompleted awaiter) then
                             // This will yield with __stack_yield_fin = false
                             // This will resume with __stack_yield_fin = true
                             let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
@@ -637,7 +637,7 @@ module CancellableValueTasks =
                         if __stack_fin then
                             let result =
                                 awaiter
-                                |> Awaiter.getResult
+                                |> Awaiter.GetResult
 
                             (continuation result).Invoke(&sm)
                         else
@@ -679,11 +679,11 @@ module CancellableValueTasks =
                 this.Bind((fun ct -> getAwaiter ct), (fun v -> this.Return(f v)))
 
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This is the identify function.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             [<NoEagerConstraintApplication>]
             member inline _.Source<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
@@ -692,11 +692,11 @@ module CancellableValueTasks =
                 (fun ct -> getAwaiter)
 
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This is the identify function.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             [<NoEagerConstraintApplication>]
             member inline _.Source<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
@@ -705,11 +705,11 @@ module CancellableValueTasks =
                 getAwaiter
 
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This turns a aitable into a CancellonToken -> 'Awaiter.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             [<NoEagerConstraintApplication>]
             member inline _.Source<'Awaitable, 'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
@@ -717,15 +717,15 @@ module CancellableValueTasks =
                 : CancellationToken -> 'Awaiter =
                 (fun (ct: CancellationToken) ->
                     task
-                    |> Awaitable.getAwaiter
+                    |> Awaitable.GetAwaiter
                 )
 
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
-            /// <remarks>This turns a cellationToken -> 'Awaitable into a CancellonToken -> 'Awaiter.</remarks>
+            /// <remarks>This turns a CancellationToken -> 'Awaitable into a CancellonToken -> 'Awaiter.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             [<NoEagerConstraintApplication>]
             member inline _.Source<'Awaitable, 'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
@@ -733,15 +733,15 @@ module CancellableValueTasks =
                 : CancellationToken -> 'Awaiter =
                 (fun ct ->
                     task ct
-                    |> Awaitable.getAwaiter
+                    |> Awaitable.GetAwaiter
                 )
 
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This turns a t -> 'Awaitable into a CancellonToken -> 'Awaiter.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             [<NoEagerConstraintApplication>]
             member inline _.Source<'Awaitable, 'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
@@ -749,7 +749,7 @@ module CancellableValueTasks =
                 : CancellationToken -> 'Awaiter =
                 (fun ct ->
                     task ()
-                    |> Awaitable.getAwaiter
+                    |> Awaitable.GetAwaiter
                 )
 
 
@@ -785,6 +785,35 @@ module CancellableValueTasks =
     /// <exclude />
     [<AutoOpen>]
     module HighPriority =
+
+        type AsyncEx with
+
+            /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
+            /// its result.</summary>
+            /// <remarks>
+            /// This is based on <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
+            /// </remarks>
+            static member inline AwaitCancellableValueTask(t: CancellableValueTask<'T>) = async {
+                let! ct = Async.CancellationToken
+
+                return!
+                    t ct
+                    |> AsyncEx.AwaitValueTask
+            }
+
+            /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
+            /// its result.</summary>
+            /// <remarks>
+            /// This is based on <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
+            /// </remarks>
+            static member inline AwaitCancellableValueTask(t: CancellableValueTask) = async {
+                let! ct = Async.CancellationToken
+
+                return!
+                    t ct
+                    |> AsyncEx.AwaitValueTask
+            }
+
         type Microsoft.FSharp.Control.Async with
 
             /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
@@ -826,51 +855,59 @@ module CancellableValueTasks =
             /// <returns>umerable</returns>
             member inline _.Source(s: #seq<_>) : #seq<_> = s
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This turns a k&lt;'T&gt; into a CancellonToken -> 'Awaiter.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             member inline _.Source(task: Task<'T>) =
                 (fun (ct: CancellationToken) -> task.GetAwaiter())
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This turns a dTask&lt;'T&gt; into a CancellonToken -> 'Awaiter.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             member inline _.Source([<InlineIfLambda>] task: ColdTask<'TResult1>) =
                 (fun (ct: CancellationToken) -> (task ()).GetAwaiter())
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This turns a cellableValueTask&lt;'T&gt; into a CancellonToken -> 'Awaiter.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             member inline _.Source([<InlineIfLambda>] task: CancellationToken -> Task<'TResult1>) =
                 (fun ct -> (task ct).GetAwaiter())
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This turns a nc&lt;'T&gt; into a CancellonToken -> 'Awaiter.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             member inline this.Source(computation: Async<'TResult1>) =
                 this.Source(Async.AsCancellableValueTask(computation))
 
 
-            /// <summary>Allows the computation expression to turn other types into cellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This turns a cellableTask&lt;'T&gt; into a CancellonToken -> 'Awaiter.</remarks>
             ///
-            /// <returns>cellationToken -> 'Awaiter</returns>
+            /// <returns>CancellationToken -> 'Awaiter</returns>
             member inline _.Source(awaiter: TaskAwaiter<'TResult1>) = (fun ct -> awaiter)
 
     /// <summary>
     /// A set of extension methods making it possible to bind against <see cref='T:IcedTasks.CancellableValueTasks.CancellableValueTask`1'/> in async computations.
     /// </summary>
     [<AutoOpen>]
-    module AsyncExtenions =
+    module AsyncExtensions =
+        type AsyncExBuilder with
+
+            member inline this.Source(t: CancellableValueTask<'T>) : Async<'T> =
+                AsyncEx.AwaitCancellableValueTask t
+
+            member inline this.Source(t: CancellableValueTask) : Async<unit> =
+                AsyncEx.AwaitCancellableValueTask t
+
         type Microsoft.FSharp.Control.AsyncBuilder with
 
             member inline this.Bind

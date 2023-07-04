@@ -240,7 +240,7 @@ module ColdTasks =
                         let cont =
                             ColdTaskResumptionFunc<'TOverall>(fun sm ->
                                 awaiter
-                                |> Awaiter.getResult
+                                |> Awaiter.GetResult
 
                                 true
                             )
@@ -487,13 +487,13 @@ module ColdTasks =
                     (ColdTaskResumptionFunc<'TOverall>(fun sm ->
                         let result =
                             awaiter
-                            |> Awaiter.getResult
+                            |> Awaiter.GetResult
 
                         (continuation result).Invoke(&sm)
                     ))
 
                 // shortcut to continue immediately
-                if Awaiter.isCompleted awaiter then
+                if Awaiter.IsCompleted awaiter then
                     cont.Invoke(&sm)
                 else
                     sm.ResumptionDynamicInfo.ResumptionData <-
@@ -531,7 +531,7 @@ module ColdTasks =
 
                         let mutable __stack_fin = true
 
-                        if not (Awaiter.isCompleted awaiter) then
+                        if not (Awaiter.IsCompleted awaiter) then
                             // This will yield with __stack_yield_fin = false
                             // This will resume with __stack_yield_fin = true
                             let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
@@ -540,7 +540,7 @@ module ColdTasks =
                         if __stack_fin then
                             let result =
                                 awaiter
-                                |> Awaiter.getResult
+                                |> Awaiter.GetResult
 
                             (continuation result).Invoke(&sm)
                         else
@@ -616,7 +616,7 @@ module ColdTasks =
                 : unit -> 'Awaiter =
                 (fun () ->
                     task
-                    |> Awaitable.getAwaiter
+                    |> Awaitable.GetAwaiter
                 )
 
             /// <summary>Allows the computation expression to turn other types into unit -> 'Awaiter</summary>
@@ -631,7 +631,7 @@ module ColdTasks =
                 : unit -> 'Awaiter =
                 (fun () ->
                     task ()
-                    |> Awaitable.getAwaiter
+                    |> Awaitable.GetAwaiter
                 )
 
 
@@ -661,6 +661,31 @@ module ColdTasks =
     [<AutoOpen>]
     module HighPriority =
         // High priority extensions
+
+        type AsyncEx with
+
+            /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
+            /// its result.</summary>
+            /// <remarks>
+            /// This is based on <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
+            /// </remarks>
+            static member inline AwaitColdTask(t: ColdTask<'T>) =
+                async.Delay(fun () ->
+                    t ()
+                    |> AsyncEx.AwaitTask
+                )
+
+            /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
+            /// its result.</summary>
+            /// <remarks>
+            /// This is based on <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
+            /// </remarks>
+            static member inline AwaitColdTask(t: ColdTask) =
+                async.Delay(fun () ->
+                    t ()
+                    |> AsyncEx.AwaitTask
+                )
+
         type Microsoft.FSharp.Control.Async with
 
             /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
@@ -720,7 +745,13 @@ module ColdTasks =
     /// A set of extension methods making it possible to bind against <see cref='T:IcedTasks.ColdTasks.ColdTask`1'/> in async computations.
     /// </summary>
     [<AutoOpen>]
-    module AsyncExtenions =
+    module AsyncExtensions =
+
+
+        type AsyncExBuilder with
+
+            member inline this.Source(task: ColdTask<'T>) : Async<'T> = AsyncEx.AwaitColdTask task
+            member inline this.Source(task: ColdTask) : Async<unit> = AsyncEx.AwaitColdTask task
 
         type Microsoft.FSharp.Control.AsyncBuilder with
 

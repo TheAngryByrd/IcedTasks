@@ -5,7 +5,7 @@ open Expecto
 open System.Threading
 open System.Threading.Tasks
 open IcedTasks
-
+#if NET7_0
 
 module ValueTaskTests =
 
@@ -720,3 +720,5 @@ module ValueTaskTests =
             // asyncBuilderTests
             functionTests
         ]
+
+#endif

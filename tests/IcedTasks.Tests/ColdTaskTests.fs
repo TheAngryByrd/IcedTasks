@@ -407,6 +407,7 @@ module ColdTaskTests =
                 }
 
 
+#if NET7_0_OR_GREATER
                 testCaseAsync "use IAsyncDisposable sync"
                 <| async {
                     let data = 42
@@ -498,7 +499,7 @@ module ColdTaskTests =
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
                 }
-
+#endif
                 testCaseAsync "null"
                 <| async {
                     let data = 42
@@ -815,6 +816,54 @@ module ColdTaskTests =
         ]
 
 
+    let asyncExBuilderTests =
+        testList "AsyncExBuilder" [
+
+            testCase "AsyncExBuilder can Bind ColdTask<T>"
+            <| fun () ->
+                let innerTask = coldTask { return! coldTask { return "lol" } }
+
+                let outerAsync = asyncEx {
+                    let! result = innerTask
+                    return result
+                }
+
+                let actual = Async.RunSynchronously(outerAsync)
+                Expect.equal actual "lol" ""
+
+
+            testCase "AsyncBuilder can ReturnFrom ColdTask<T>"
+            <| fun () ->
+                let innerTask = coldTask { return! coldTask { return "lol" } }
+
+                let outerAsync = asyncEx { return! innerTask }
+
+                let actual = Async.RunSynchronously(outerAsync)
+                Expect.equal actual "lol" ""
+
+            testCase "AsyncBuilder can Bind ColdTask"
+            <| fun () ->
+                let innerTask: ColdTask = fun () -> Task.CompletedTask
+
+                let outerAsync = asyncEx {
+                    let! result = innerTask
+                    return result
+                }
+
+                let actual = Async.RunSynchronously(outerAsync)
+                Expect.equal actual () ""
+
+            testCase "AsyncBuilder can ReturnFrom ColdTask"
+            <| fun () ->
+                let innerTask: ColdTask = fun () -> Task.CompletedTask
+
+                let outerAsync = asyncEx { return! innerTask }
+
+                let actual = Async.RunSynchronously(outerAsync)
+                Expect.equal actual () ""
+        ]
+
+
     let taskBuilderTests =
         testList "TaskBuilder" [
 
@@ -971,6 +1020,7 @@ module ColdTaskTests =
         testList "IcedTasks.ColdTask" [
             builderTests
             asyncBuilderTests
+            asyncExBuilderTests
             taskBuilderTests
             functionTests
         ]

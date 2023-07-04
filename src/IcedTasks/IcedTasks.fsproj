@@ -17,6 +17,7 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="TaskLike.fs" />
     <Compile Include="ValueTasks.fs" />
+    <Compile Include="AsyncEx.fs" />
     <Compile Include="ParallelAsync.fs" />
     <Compile Include="ColdTask.fs" />
     <Compile Include="CancellableValueTask.fs" />

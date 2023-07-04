@@ -293,7 +293,7 @@ module CancellableTasks =
                         let cont =
                             CancellableTaskResumptionFunc<'TOverall>(fun sm ->
                                 awaiter
-                                |> Awaiter.getResult
+                                |> Awaiter.GetResult
 
                                 true
                             )
@@ -566,12 +566,12 @@ module CancellableTasks =
 
                 let cont =
                     (CancellableTaskResumptionFunc<'TOverall>(fun sm ->
-                        let result = Awaiter.getResult awaiter
+                        let result = Awaiter.GetResult awaiter
                         (continuation result).Invoke(&sm)
                     ))
 
                 // shortcut to continue immediately
-                if Awaiter.isCompleted awaiter then
+                if Awaiter.IsCompleted awaiter then
                     cont.Invoke(&sm)
                 else
                     sm.ResumptionDynamicInfo.ResumptionData <-
@@ -610,7 +610,7 @@ module CancellableTasks =
 
                         let mutable __stack_fin = true
 
-                        if not (Awaiter.isCompleted awaiter) then
+                        if not (Awaiter.IsCompleted awaiter) then
                             // This will yield with __stack_yield_fin = false
                             // This will resume with __stack_yield_fin = true
                             let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
@@ -619,7 +619,7 @@ module CancellableTasks =
                         if __stack_fin then
                             let result =
                                 awaiter
-                                |> Awaiter.getResult
+                                |> Awaiter.GetResult
 
                             (continuation result).Invoke(&sm)
                         else
@@ -698,7 +698,7 @@ module CancellableTasks =
                 : CancellationToken -> 'Awaiter =
                 (fun (ct: CancellationToken) ->
                     task
-                    |> Awaitable.getAwaiter
+                    |> Awaitable.GetAwaiter
                 )
 
 
@@ -714,7 +714,7 @@ module CancellableTasks =
                 : CancellationToken -> 'Awaiter =
                 (fun ct ->
                     task ct
-                    |> Awaitable.getAwaiter
+                    |> Awaitable.GetAwaiter
                 )
 
 
@@ -730,7 +730,7 @@ module CancellableTasks =
                 : CancellationToken -> 'Awaiter =
                 (fun ct ->
                     task ()
-                    |> Awaitable.getAwaiter
+                    |> Awaitable.GetAwaiter
                 )
 
 
@@ -766,6 +766,37 @@ module CancellableTasks =
     /// <exclude />
     [<AutoOpen>]
     module HighPriority =
+
+        type AsyncEx with
+
+            /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
+            /// its result.</summary>
+            ///
+            /// <remarks>
+            /// This is based on <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
+            /// </remarks>
+            static member inline AwaitCancellableTask(t: CancellableTask<'T>) = async {
+                let! ct = Async.CancellationToken
+
+                return!
+                    t ct
+                    |> AsyncEx.AwaitTask
+            }
+
+            /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
+            /// its result.</summary>
+            ///
+            /// <remarks>
+            /// This is based on <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
+            /// </remarks>
+            static member inline AwaitCancellableTask(t: CancellableTask) = async {
+                let! ct = Async.CancellationToken
+
+                return!
+                    t ct
+                    |> AsyncEx.AwaitTask
+            }
+
         type Microsoft.FSharp.Control.Async with
 
             /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
@@ -846,7 +877,16 @@ module CancellableTasks =
     /// A set of extension methods making it possible to bind against <see cref='T:IcedTasks.CancellableTasks.CancellableTask`1'/> in async computations.
     /// </summary>
     [<AutoOpen>]
-    module AsyncExtenions =
+    module AsyncExtensions =
+
+        type AsyncExBuilder with
+
+            member inline this.Source(t: CancellableTask<'T>) : Async<'T> =
+                AsyncEx.AwaitCancellableTask t
+
+            member inline this.Source(t: CancellableTask) : Async<unit> =
+                AsyncEx.AwaitCancellableTask t
+
         type Microsoft.FSharp.Control.AsyncBuilder with
 
             member inline this.Bind(t: CancellableTask<'T>, binder: ('T -> Async<'U>)) : Async<'U> =

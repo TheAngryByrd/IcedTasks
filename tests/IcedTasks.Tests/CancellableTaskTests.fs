@@ -5,8 +5,9 @@ open Expecto
 open System.Threading
 open System.Threading.Tasks
 open IcedTasks
+#if NET7_0_OR_GREATER
 open IcedTasks.ValueTaskExtensions
-
+#endif
 module CancellableTaskTests =
     open System.Collections.Concurrent
     open TimeProviderExtensions
@@ -180,7 +181,7 @@ module CancellableTaskTests =
 
                     Expect.equal actual expected ""
                 }
-
+#if NET7_0_OR_GREATER
                 testCaseAsync "Can Bind Cancellable TaskLike"
                 <| async {
                     let fooTask = fun (ct: CancellationToken) -> Task.Yield()
@@ -197,7 +198,7 @@ module CancellableTaskTests =
                         |> Async.AwaitValueTask
                 // Compiling is sufficient expect
                 }
-
+#endif
                 testCaseAsync "Can Bind Task"
                 <| async {
                     let outerTask = cancellableTask { do! Task.CompletedTask }
@@ -395,6 +396,7 @@ module CancellableTaskTests =
                 }
 
 
+#if NET7_0_OR_GREATER
                 testCaseAsync "use IAsyncDisposable sync"
                 <| async {
                     let data = 42
@@ -486,7 +488,7 @@ module CancellableTaskTests =
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
                 }
-
+#endif
                 testCaseAsync "null"
                 <| async {
                     let data = 42
@@ -749,11 +751,11 @@ module CancellableTaskTests =
                                         TimeSpan.FromMilliseconds(100)
                                     )
 
-                                let t = fooTask cts.Token
+                                let runningTask = fooTask cts.Token
                                 do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50))
-                                Expect.equal t.IsCanceled false ""
+                                Expect.isFalse runningTask.IsCanceled ""
                                 do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50))
-                                do! t
+                                do! runningTask
                             }
                         )
 
@@ -861,6 +863,55 @@ module CancellableTaskTests =
                 let mutable actual = CancellationToken.None
                 let innerTask: CancellableTask = fun ct -> task { actual <- ct } :> Task
                 let outerAsync = async { return! innerTask }
+
+                use cts = new CancellationTokenSource()
+                Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
+                Expect.equal actual cts.Token ""
+        ]
+
+
+    let asyncExBuilderTests =
+        testList "AsyncExBuilder" [
+
+            testCase "AsyncExBuilder can Bind CancellableTask<T>"
+            <| fun () ->
+                let innerTask = cancellableTask { return! CancellableTask.getCancellationToken () }
+
+                let outerAsync = asyncEx {
+                    let! result = innerTask
+                    return result
+                }
+
+                use cts = new CancellationTokenSource()
+                let actual = Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
+                Expect.equal actual cts.Token ""
+
+
+            testCase "AsyncBuilder can ReturnFrom CancellableTask<T>"
+            <| fun () ->
+                let innerTask = cancellableTask { return! CancellableTask.getCancellationToken () }
+                let outerAsync = asyncEx { return! innerTask }
+
+                use cts = new CancellationTokenSource()
+                let actual = Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
+                Expect.equal actual cts.Token ""
+
+
+            testCase "AsyncBuilder can Bind CancellableTask"
+            <| fun () ->
+                let mutable actual = CancellationToken.None
+                let innerTask: CancellableTask = fun ct -> task { actual <- ct } :> Task
+                let outerAsync = asyncEx { do! innerTask }
+
+                use cts = new CancellationTokenSource()
+                Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
+                Expect.equal actual cts.Token ""
+
+            testCase "AsyncBuilder can ReturnFrom CancellableTask"
+            <| fun () ->
+                let mutable actual = CancellationToken.None
+                let innerTask: CancellableTask = fun ct -> task { actual <- ct } :> Task
+                let outerAsync = asyncEx { return! innerTask }
 
                 use cts = new CancellationTokenSource()
                 Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
@@ -1152,5 +1203,6 @@ module CancellableTaskTests =
         testList "IcedTasks.CancellableTask" [
             builderTests
             asyncBuilderTests
+            asyncExBuilderTests
             functionTests
         ]
