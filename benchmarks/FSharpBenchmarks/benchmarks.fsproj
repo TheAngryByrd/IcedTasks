@@ -1,10 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
   </PropertyGroup>
-
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Optimize>true</Optimize>
@@ -14,16 +12,17 @@
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <Tailcalls>true</Tailcalls>
   </PropertyGroup>
-
   <ItemGroup>
-    <Compile Include="AsyncBenchmarks.fs" />
+    <Compile Include="Consts.fs" />
+    <Compile Include="SynchonousCompletionBenchmark.fs" />
+    <Compile Include="AsynchonousCompletionBenchmark.fs" />
+    <Compile Include="FileWritingBenchmarks.fs" />
+    <Compile Include="ParallelAsyncBenchmarks.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\src\IcedTasks\IcedTasks.fsproj" />
     <ProjectReference Include="..\CSharpTaskBenchmarks\CSharpTaskBenchmarks.csproj" />
   </ItemGroup>
-
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
