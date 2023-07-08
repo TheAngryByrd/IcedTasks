@@ -404,28 +404,6 @@ module CancellableTasks =
                     sm.Data.MethodBuilder.Start(&sm)
                     sm.Data.MethodBuilder.Task
 
-        member inline _.GetCancellationToken
-            ([<InlineIfLambda>] code: CancellableTaskCode<_, _>)
-            : CancellableTask<CancellationToken> =
-            if __useResumableCode then
-                __stateMachine<CancellableTaskStateMachineData<_>, CancellableTask<_>>
-                    (MoveNextMethodImpl<_>(fun sm -> ()
-                    // let __stack_code_fin = code.Invoke(&sm)
-
-                    // if __stack_code_fin then
-                    //     sm.Data.MethodBuilder.SetResult(sm.Data.Result)
-                    ))
-                    (SetStateMachineMethodImpl<_>(fun sm state -> ()
-                    // sm.Data.MethodBuilder.SetStateMachine(state)
-                    ))
-                    (AfterCode<_, _>(fun sm ->
-                        // let sm = sm
-
-                        fun (ct) -> Task.FromResult ct
-                    ))
-            else
-
-                CancellableTaskBuilder.RunDynamic(code)
 
         /// Hosts the task code in a state machine and starts the task.
         member inline _.Run(code: CancellableTaskCode<'T, 'T>) : CancellableTask<'T> =
@@ -1056,12 +1034,6 @@ module CancellableTasks =
         /// followed by "Tasks Finished".
         /// </example>
         let inline getCancellationToken () =
-            // CancellableTaskBuilder.cancellableTask.GetCancellationToken(
-            //     CancellableTaskCode<_, _>(fun sm ->
-            //         sm.Data.Result <- sm.Data.CancellationToken
-            //         true
-            //     )
-            // )
             fun (ct: CancellationToken) ->
 #if NETSTANDARD2_1
                 ValueTask<CancellationToken> ct

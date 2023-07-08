@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>IcedTasks.Benchmarks.FileWriteBenchmarks-20230708-122345</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet=v0.13.2, OS=Windows 11 (10.0.22621.1848)
+12th Gen Intel Core i9-12900F, 1 CPU, 24 logical and 16 physical cores
+.NET SDK=7.0.305
+  [Host]     : .NET 7.0.8 (7.0.823.31807), X64 RyuJIT AVX2 DEBUG
+  Job-RVJWMH : .NET 6.0.19 (6.0.1923.31806), X64 RyuJIT AVX2
+  Job-FJNSFV : .NET 7.0.8 (7.0.823.31807), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>                                                               Method</th><th>Runtime</th><th>                                Categories</th><th>bufferSize</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Median</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharp_ManyWriteFile_TaskBuilder</td><td>.NET 6.0</td><td>ManyWriteFile,CSharp,TaskBuilder</td><td>128</td><td>549.7 ns</td><td>10.76 ns</td><td>26.18 ns</td><td>550.3 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>8 B</td><td>1.00</td>
+</tr><tr><td>CSharp_ManyWriteFile_TaskBuilder</td><td>.NET 7.0</td><td>ManyWriteFile,CSharp,TaskBuilder</td><td>128</td><td>489.6 ns</td><td>13.14 ns</td><td>37.70 ns</td><td>483.1 ns</td><td>0.89</td><td>0.08</td><td>-</td><td>-</td><td>8 B</td><td>1.00</td>
+</tr><tr><td>CSharp_ManyWriteFile_ValueTaskBuilder</td><td>.NET 6.0</td><td>ManyWriteFile,CSharp,ValueTaskBuilder</td><td>128</td><td>527.4 ns</td><td>10.24 ns</td><td>15.01 ns</td><td>526.7 ns</td><td>0.95</td><td>0.05</td><td>-</td><td>-</td><td>8 B</td><td>1.00</td>
+</tr><tr><td>CSharp_ManyWriteFile_ValueTaskBuilder</td><td>.NET 7.0</td><td>ManyWriteFile,CSharp,ValueTaskBuilder</td><td>128</td><td>516.4 ns</td><td>10.40 ns</td><td>30.17 ns</td><td>512.2 ns</td><td>0.94</td><td>0.07</td><td>0.0005</td><td>-</td><td>8 B</td><td>1.00</td>
+</tr><tr><td>FSharp_ManyWriteFile_AsyncBuilder_BindAsync</td><td>.NET 6.0</td><td>ManyWriteFile,FSharp,AsyncBuilder,BindAsync</td><td>128</td><td>1,018.5 ns</td><td>20.13 ns</td><td>34.72 ns</td><td>1,016.9 ns</td><td>1.84</td><td>0.11</td><td>0.0762</td><td>0.0020</td><td>1203 B</td><td>150.38</td>
+</tr><tr><td>FSharp_ManyWriteFile_AsyncBuilder_BindAsync</td><td>.NET 7.0</td><td>ManyWriteFile,FSharp,AsyncBuilder,BindAsync</td><td>128</td><td>1,099.7 ns</td><td>20.29 ns</td><td>48.21 ns</td><td>1,084.8 ns</td><td>2.00</td><td>0.12</td><td>0.0762</td><td>0.0020</td><td>1203 B</td><td>150.38</td>
+</tr><tr><td>FSharp_ManyWriteFile_AsyncBuilder_BindAsync_bindTask</td><td>.NET 6.0</td><td>ManyWriteFile,FSharp,AsyncBuilder,BindTask</td><td>128</td><td>705.0 ns</td><td>20.16 ns</td><td>57.85 ns</td><td>684.1 ns</td><td>1.28</td><td>0.11</td><td>0.0186</td><td>-</td><td>299 B</td><td>37.38</td>
+</tr><tr><td>FSharp_ManyWriteFile_AsyncBuilder_BindAsync_bindTask</td><td>.NET 7.0</td><td>ManyWriteFile,FSharp,AsyncBuilder,BindTask</td><td>128</td><td>724.1 ns</td><td>18.49 ns</td><td>53.35 ns</td><td>708.5 ns</td><td>1.33</td><td>0.10</td><td>0.0186</td><td>-</td><td>299 B</td><td>37.38</td>
+</tr><tr><td>FSharp_ManyWriteFile_CancellableTaskBuilder</td><td>.NET 6.0</td><td>ManyWriteFile,FSharp,CancellableTaskBuilder</td><td>128</td><td>562.2 ns</td><td>15.36 ns</td><td>44.06 ns</td><td>552.9 ns</td><td>1.03</td><td>0.09</td><td>-</td><td>-</td><td>9 B</td><td>1.12</td>
+</tr><tr><td>FSharp_ManyWriteFile_CancellableTaskBuilder_getCancellationTokenOnce</td><td>.NET 6.0</td><td>ManyWriteFile,FSharp,CancellableTaskBuilder</td><td>128</td><td>562.8 ns</td><td>15.21 ns</td><td>43.64 ns</td><td>554.4 ns</td><td>1.02</td><td>0.09</td><td>-</td><td>-</td><td>9 B</td><td>1.12</td>
+</tr><tr><td>FSharp_ManyWriteFile_CancellableTaskBuilder_getCancellationTokenMany</td><td>.NET 6.0</td><td>ManyWriteFile,FSharp,CancellableTaskBuilder</td><td>128</td><td>593.0 ns</td><td>17.21 ns</td><td>49.93 ns</td><td>580.8 ns</td><td>1.08</td><td>0.10</td><td>-</td><td>-</td><td>9 B</td><td>1.12</td>
+</tr><tr><td>FSharp_ManyWriteFile_CancellableTaskBuilder_getCancellationTokenLambda</td><td>.NET 6.0</td><td>ManyWriteFile,FSharp,CancellableTaskBuilder</td><td>128</td><td>575.3 ns</td><td>17.37 ns</td><td>50.38 ns</td><td>556.1 ns</td><td>1.04</td><td>0.09</td><td>-</td><td>-</td><td>9 B</td><td>1.12</td>
+</tr><tr><td>FSharp_ManyWriteFile_CancellableTaskBuilder</td><td>.NET 7.0</td><td>ManyWriteFile,FSharp,CancellableTaskBuilder</td><td>128</td><td>526.3 ns</td><td>13.09 ns</td><td>37.36 ns</td><td>512.4 ns</td><td>0.95</td><td>0.08</td><td>-</td><td>-</td><td>9 B</td><td>1.12</td>
+</tr><tr><td>FSharp_ManyWriteFile_CancellableTaskBuilder_getCancellationTokenOnce</td><td>.NET 7.0</td><td>ManyWriteFile,FSharp,CancellableTaskBuilder</td><td>128</td><td>524.6 ns</td><td>12.78 ns</td><td>36.25 ns</td><td>515.3 ns</td><td>0.96</td><td>0.07</td><td>-</td><td>-</td><td>9 B</td><td>1.12</td>
+</tr><tr><td>FSharp_ManyWriteFile_CancellableTaskBuilder_getCancellationTokenMany</td><td>.NET 7.0</td><td>ManyWriteFile,FSharp,CancellableTaskBuilder</td><td>128</td><td>525.1 ns</td><td>10.40 ns</td><td>27.58 ns</td><td>515.6 ns</td><td>0.96</td><td>0.07</td><td>-</td><td>-</td><td>9 B</td><td>1.12</td>
+</tr><tr><td>FSharp_ManyWriteFile_CancellableTaskBuilder_getCancellationTokenLambda</td><td>.NET 7.0</td><td>ManyWriteFile,FSharp,CancellableTaskBuilder</td><td>128</td><td>511.1 ns</td><td>10.59 ns</td><td>29.35 ns</td><td>506.7 ns</td><td>0.93</td><td>0.07</td><td>-</td><td>-</td><td>9 B</td><td>1.12</td>
+</tr><tr><td>FSharp_ManyWriteFile_CancellableValueTaskBuilder</td><td>.NET 6.0</td><td>ManyWriteFile,FSharp,CancellableValueTaskBuilder</td><td>128</td><td>559.8 ns</td><td>14.58 ns</td><td>41.85 ns</td><td>546.0 ns</td><td>1.02</td><td>0.08</td><td>-</td><td>-</td><td>9 B</td><td>1.12</td>
+</tr><tr><td>FSharp_ManyWriteFile_CancellableValueTaskBuilder_getCancellationTokenOnce</td><td>.NET 6.0</td><td>ManyWriteFile,FSharp,CancellableValueTaskBuilder</td><td>128</td><td>549.3 ns</td><td>14.47 ns</td><td>41.50 ns</td><td>540.0 ns</td><td>0.99</td><td>0.08</td><td>-</td><td>-</td><td>9 B</td><td>1.12</td>
+</tr><tr><td>FSharp_ManyWriteFile_CancellableValueTaskBuilder_getCancellationTokenMany</td><td>.NET 6.0</td><td>ManyWriteFile,FSharp,CancellableValueTaskBuilder</td><td>128</td><td>573.9 ns</td><td>14.05 ns</td><td>40.53 ns</td><td>567.5 ns</td><td>1.04</td><td>0.09</td><td>-</td><td>-</td><td>9 B</td><td>1.12</td>
+</tr><tr><td>FSharp_ManyWriteFile_CancellableValueTaskBuilder_getCancellationTokenLambda</td><td>.NET 6.0</td><td>ManyWriteFile,FSharp,CancellableValueTaskBuilder</td><td>128</td><td>557.9 ns</td><td>13.78 ns</td><td>38.65 ns</td><td>546.5 ns</td><td>1.01</td><td>0.08</td><td>-</td><td>-</td><td>9 B</td><td>1.12</td>
+</tr><tr><td>FSharp_ManyWriteFile_CancellableValueTaskBuilder</td><td>.NET 7.0</td><td>ManyWriteFile,FSharp,CancellableValueTaskBuilder</td><td>128</td><td>550.7 ns</td><td>18.52 ns</td><td>51.00 ns</td><td>541.1 ns</td><td>1.01</td><td>0.10</td><td>-</td><td>-</td><td>9 B</td><td>1.12</td>
+</tr><tr><td>FSharp_ManyWriteFile_CancellableValueTaskBuilder_getCancellationTokenOnce</td><td>.NET 7.0</td><td>ManyWriteFile,FSharp,CancellableValueTaskBuilder</td><td>128</td><td>553.8 ns</td><td>13.34 ns</td><td>37.64 ns</td><td>546.8 ns</td><td>1.02</td><td>0.08</td><td>-</td><td>-</td><td>9 B</td><td>1.12</td>
+</tr><tr><td>FSharp_ManyWriteFile_CancellableValueTaskBuilder_getCancellationTokenMany</td><td>.NET 7.0</td><td>ManyWriteFile,FSharp,CancellableValueTaskBuilder</td><td>128</td><td>537.0 ns</td><td>16.40 ns</td><td>47.58 ns</td><td>522.4 ns</td><td>0.98</td><td>0.09</td><td>-</td><td>-</td><td>9 B</td><td>1.12</td>
+</tr><tr><td>FSharp_ManyWriteFile_CancellableValueTaskBuilder_getCancellationTokenLambda</td><td>.NET 7.0</td><td>ManyWriteFile,FSharp,CancellableValueTaskBuilder</td><td>128</td><td>528.8 ns</td><td>13.90 ns</td><td>39.44 ns</td><td>515.1 ns</td><td>0.96</td><td>0.07</td><td>-</td><td>-</td><td>9 B</td><td>1.12</td>
+</tr><tr><td>FSharp_ManyWriteFile_ply</td><td>.NET 6.0</td><td>ManyWriteFile,FSharp,PlyTaskBuilder</td><td>128</td><td>582.7 ns</td><td>13.30 ns</td><td>37.74 ns</td><td>570.6 ns</td><td>1.06</td><td>0.06</td><td>-</td><td>-</td><td>10 B</td><td>1.25</td>
+</tr><tr><td>FSharp_ManyWriteFile_plyValueTask</td><td>.NET 6.0</td><td>ManyWriteFile,FSharp,PlyTaskBuilder</td><td>128</td><td>594.2 ns</td><td>15.76 ns</td><td>45.99 ns</td><td>589.6 ns</td><td>1.10</td><td>0.10</td><td>-</td><td>-</td><td>10 B</td><td>1.25</td>
+</tr><tr><td>FSharp_ManyWriteFile_ply</td><td>.NET 7.0</td><td>ManyWriteFile,FSharp,PlyTaskBuilder</td><td>128</td><td>609.7 ns</td><td>17.41 ns</td><td>49.95 ns</td><td>594.8 ns</td><td>1.10</td><td>0.11</td><td>-</td><td>-</td><td>10 B</td><td>1.25</td>
+</tr><tr><td>FSharp_ManyWriteFile_plyValueTask</td><td>.NET 7.0</td><td>ManyWriteFile,FSharp,PlyTaskBuilder</td><td>128</td><td>592.6 ns</td><td>15.48 ns</td><td>45.15 ns</td><td>577.3 ns</td><td>1.08</td><td>0.10</td><td>-</td><td>-</td><td>10 B</td><td>1.25</td>
+</tr><tr><td>FSharp_ManyWriteFile_TaskBuilder</td><td>.NET 6.0</td><td>ManyWriteFile,FSharp,TaskBuilder</td><td>128</td><td>558.7 ns</td><td>15.17 ns</td><td>43.76 ns</td><td>550.8 ns</td><td>1.02</td><td>0.09</td><td>-</td><td>-</td><td>8 B</td><td>1.00</td>
+</tr><tr><td>FSharp_ManyWriteFile_TaskBuilder</td><td>.NET 7.0</td><td>ManyWriteFile,FSharp,TaskBuilder</td><td>128</td><td>532.4 ns</td><td>14.44 ns</td><td>41.90 ns</td><td>521.3 ns</td><td>0.96</td><td>0.08</td><td>0.0005</td><td>-</td><td>8 B</td><td>1.00</td>
+</tr><tr><td>FSharp_ManyWriteFile_ValueTaskBuilder</td><td>.NET 6.0</td><td>ManyWriteFile,FSharp,ValueTaskBuilder</td><td>128</td><td>565.1 ns</td><td>15.16 ns</td><td>43.99 ns</td><td>553.1 ns</td><td>1.04</td><td>0.09</td><td>-</td><td>-</td><td>8 B</td><td>1.00</td>
+</tr><tr><td>FSharp_ManyWriteFile_ValueTaskBuilder</td><td>.NET 7.0</td><td>ManyWriteFile,FSharp,ValueTaskBuilder</td><td>128</td><td>500.9 ns</td><td>14.55 ns</td><td>41.26 ns</td><td>490.1 ns</td><td>0.91</td><td>0.08</td><td>-</td><td>-</td><td>8 B</td><td>1.00</td>
+</tr></tbody></table>
+</body>
+</html>
