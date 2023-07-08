@@ -410,15 +410,21 @@ module CancellableTasks =
             if __useResumableCode then
                 __stateMachine<CancellableTaskStateMachineData<_>, CancellableTask<_>>
                     (MoveNextMethodImpl<_>(fun sm -> ()
+                    // let __stack_code_fin = code.Invoke(&sm)
 
+                    // if __stack_code_fin then
+                    //     sm.Data.MethodBuilder.SetResult(sm.Data.Result)
                     ))
-                    (SetStateMachineMethodImpl<_>(fun sm state -> ()))
+                    (SetStateMachineMethodImpl<_>(fun sm state -> ()
+                    // sm.Data.MethodBuilder.SetStateMachine(state)
+                    ))
                     (AfterCode<_, _>(fun sm ->
+                        // let sm = sm
 
                         fun (ct) -> Task.FromResult ct
-
                     ))
             else
+
                 CancellableTaskBuilder.RunDynamic(code)
 
         /// Hosts the task code in a state machine and starts the task.
@@ -767,7 +773,7 @@ module CancellableTasks =
                 when Awaiter<'Awaiter, 'TResult1>>
                 (
                     [<InlineIfLambda>] getAwaiter: CancellationToken -> 'Awaiter,
-                    [<InlineIfLambda>] mapper
+                    mapper: 'TResult1 -> 'TResult2
                 ) : CancellableTaskCode<'TResult2, 'TResult2> =
                 this.Bind((fun ct -> getAwaiter ct), (fun v -> this.Return(mapper v)))
 
@@ -777,7 +783,7 @@ module CancellableTasks =
                 when Awaiter<'Awaiter, 'TResult1>>
                 (
                     getAwaiter: 'Awaiter,
-                    [<InlineIfLambda>] mapper
+                    mapper: 'TResult1 -> 'TResult2
                 ) : CancellableTaskCode<'TResult2, 'TResult2> =
                 this.Bind(getAwaiter, (fun v -> this.Return(mapper v)))
 
@@ -1019,7 +1025,7 @@ module CancellableTasks =
     // Reason is I don't want people to assume cancellation is happening without the caller being explicit about where the CancellationToken came from.
     // Similar reasoning for `IcedTasks.ColdTasks.ColdTaskBuilderBase`.
 
-    /// Contains a set of standard functional helper function
+    // Contains a set of standard functional helper function
 
     [<RequireQualifiedAccess>]
     module CancellableTask =
@@ -1049,13 +1055,19 @@ module CancellableTasks =
         /// This will print "2" 2 seconds from start, "3" 3 seconds from start, "5" 5 seconds from start, cease computation and then
         /// followed by "Tasks Finished".
         /// </example>
-        let getCancellationToken () =
-            CancellableTaskBuilder.cancellableTask.Run(
-                CancellableTaskCode<_, _>(fun sm ->
-                    sm.Data.Result <- sm.Data.CancellationToken
-                    true
-                )
-            )
+        let inline getCancellationToken () =
+            // CancellableTaskBuilder.cancellableTask.GetCancellationToken(
+            //     CancellableTaskCode<_, _>(fun sm ->
+            //         sm.Data.Result <- sm.Data.CancellationToken
+            //         true
+            //     )
+            // )
+            fun (ct: CancellationToken) ->
+#if NETSTANDARD2_1
+                ValueTask<CancellationToken> ct
+#else
+                Task.FromResult ct
+#endif
 
         /// <summary>Lifts an item to a CancellableTask.</summary>
         /// <param name="item">The item to be the result of the CancellableTask.</param>

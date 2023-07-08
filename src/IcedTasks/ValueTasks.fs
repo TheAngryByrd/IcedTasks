@@ -610,9 +610,7 @@ module ValueTasks =
                             __stack_fin <- __stack_yield_fin
 
                         if __stack_fin then
-                            let result =
-                                awaiter
-                                |> Awaiter.GetResult
+                            let result = Awaiter.GetResult awaiter
 
                             (continuation result).Invoke(&sm)
                         else
@@ -676,8 +674,7 @@ module ValueTasks =
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
                 (task: 'Awaitable)
                 : 'Awaiter =
-                task
-                |> Awaitable.GetAwaiter
+                Awaitable.GetAwaiter task
 
 
             /// <summary>Creates an ValueTask that runs binder(resource).

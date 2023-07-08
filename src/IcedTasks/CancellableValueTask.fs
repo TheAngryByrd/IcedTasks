@@ -408,20 +408,6 @@ module CancellableValueTasks =
                     sm.Data.MethodBuilder.Start(&sm)
                     sm.Data.MethodBuilder.Task
 
-
-        member inline _.GetCancellationToken
-            ([<InlineIfLambda>] code: CancellableValueTaskCode<_, _>)
-            : CancellableValueTask<CancellationToken> =
-            if __useResumableCode then
-                __stateMachine<CancellableValueTaskStateMachineData<_>, CancellableValueTask<_>>
-                    (MoveNextMethodImpl<_>(fun sm -> ()
-
-                    ))
-                    (SetStateMachineMethodImpl<_>(fun sm state -> ()))
-                    (AfterCode<_, _>(fun sm -> fun (ct) -> ValueTask<CancellationToken> ct))
-            else
-                fun (ct) -> ValueTask<CancellationToken> ct
-
         /// Hosts the task code in a state machine and starts the task.
         member inline _.Run(code: CancellableValueTaskCode<'T, 'T>) : CancellableValueTask<'T> =
             if __useResumableCode then
@@ -784,7 +770,7 @@ module CancellableValueTasks =
                 when Awaiter<'Awaiter, 'TResult1>>
                 (
                     [<InlineIfLambda>] getAwaiter: CancellationToken -> 'Awaiter,
-                    [<InlineIfLambda>] mapper
+                    mapper
                 ) : CancellableValueTaskCode<'TResult2, 'TResult2> =
                 this.Bind((fun ct -> getAwaiter ct), (fun v -> this.Return(mapper v)))
 
@@ -794,7 +780,7 @@ module CancellableValueTasks =
                 when Awaiter<'Awaiter, 'TResult1>>
                 (
                     getAwaiter: 'Awaiter,
-                    [<InlineIfLambda>] mapper
+                    mapper: 'TResult1 -> 'TResult2
                 ) : CancellableValueTaskCode<'TResult2, 'TResult2> =
                 this.Bind(getAwaiter, (fun v -> this.Return(mapper v)))
 
@@ -1084,13 +1070,8 @@ module CancellableValueTasks =
         /// This will print "2" 2 seconds from start, "3" 3 seconds from start, "5" 5 seconds from start, cease computation and then
         /// followed by "Tasks Finished".
         /// </example>
-        let getCancellationToken () =
-            CancellableValueTaskBuilder.cancellableValueTask.GetCancellationToken(
-                CancellableValueTaskCode<_, _>(fun sm ->
-                    sm.Data.Result <- sm.Data.CancellationToken
-                    true
-                )
-            )
+        let inline getCancellationToken () =
+            fun (ct: CancellationToken) -> ValueTask<CancellationToken> ct
 
         /// <summary>Lifts an item to a CancellableValueTask.</summary>
         /// <param name="item">The item to be the result of the CancellableValueTask.</param>
