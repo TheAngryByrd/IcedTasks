@@ -8,10 +8,10 @@ using System.Threading.Tasks;
 
 public static class TaskPerfCSharp
 {
-    public const int BufferSize = 128;
+    // public const int BufferSize = 128;
     //public const int ManyIterations = 10000;
 
-    public static async Task ManyWriteFileAsync(int ManyIterations)
+    public static async Task ManyWriteFileAsync(int ManyIterations, int BufferSize)
     {
         const string path = "tmp";
         var junk = new byte[BufferSize];
@@ -25,6 +25,22 @@ public static class TaskPerfCSharp
         File.Delete(path);
     }
 
+
+    public static async ValueTask ManyWriteFileAsync_ValueTask(int ManyIterations, int BufferSize)
+    {
+        const string path = "tmp";
+        var junk = new byte[BufferSize];
+        using (var file = File.Create(path))
+        {
+            for (var i = 1; i <= ManyIterations; i++)
+            {
+                await file.WriteAsync(junk, 0, junk.Length);
+            }
+        }
+        File.Delete(path);
+    }
+
+
     public static System.Runtime.CompilerServices.YieldAwaitable AsyncTask()
     {
         return Task.Yield();
@@ -35,7 +51,12 @@ public static class TaskPerfCSharp
         return Task.FromResult(100);
     }
 
-    public static async Task<int> TenBindsSync_CSharp()
+    public static ValueTask<int> SyncValueTask()
+    {
+        return new ValueTask<int>(100);
+    }
+
+    public static async Task<int> CSharp_TenBindsSync_TaskBuilder_BindTask()
     {
         var x1 = await SyncTask();
         var x2 = await SyncTask();
@@ -50,7 +71,69 @@ public static class TaskPerfCSharp
         return x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10;
     }
 
-    public static async Task<int> TenBindsAsync_CSharp()
+    public static async Task<int> CSharp_TenBindsSync_TaskBuilder_BindValueTask()
+    {
+        var x1 = await SyncValueTask();
+        var x2 = await SyncValueTask();
+        var x3 = await SyncValueTask();
+        var x4 = await SyncValueTask();
+        var x5 = await SyncValueTask();
+        var x6 = await SyncValueTask();
+        var x7 = await SyncValueTask();
+        var x8 = await SyncValueTask();
+        var x9 = await SyncValueTask();
+        var x10 = await SyncValueTask();
+        return x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10;
+    }
+
+    public static async ValueTask<int> CSharp_TenBindsSync_ValueTaskBuilder_BindTask()
+    {
+        var x1 = await SyncTask();
+        var x2 = await SyncTask();
+        var x3 = await SyncTask();
+        var x4 = await SyncTask();
+        var x5 = await SyncTask();
+        var x6 = await SyncTask();
+        var x7 = await SyncTask();
+        var x8 = await SyncTask();
+        var x9 = await SyncTask();
+        var x10 = await SyncTask();
+        return x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10;
+    }
+
+
+    public static async ValueTask<int> CSharp_TenBindsSync_ValueTaskBuilder_BindValueTask()
+    {
+        var x1 = await SyncValueTask();
+        var x2 = await SyncValueTask();
+        var x3 = await SyncValueTask();
+        var x4 = await SyncValueTask();
+        var x5 = await SyncValueTask();
+        var x6 = await SyncValueTask();
+        var x7 = await SyncValueTask();
+        var x8 = await SyncValueTask();
+        var x9 = await SyncValueTask();
+        var x10 = await SyncValueTask();
+        return x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10;
+    }
+
+    public static async Task<int> CSharp_TenBindsAsync_TaskBuilder()
+    {
+        await AsyncTask();
+        await AsyncTask();
+        await AsyncTask();
+        await AsyncTask();
+        await AsyncTask();
+        await AsyncTask();
+        await AsyncTask();
+        await AsyncTask();
+        await AsyncTask();
+        await AsyncTask();
+        return 100;
+    }
+
+
+    public static async ValueTask<int> CSharp_TenBindsAsync_ValueTaskBuilder()
     {
         await AsyncTask();
         await AsyncTask();

@@ -775,11 +775,11 @@ module CancellableTaskTests =
 
                     use cts = new CancellationTokenSource()
 
-                    let! passedct =
+                    let! passedCT =
                         fooTask cts.Token
                         |> Async.AwaitTask
 
-                    Expect.equal passedct cts.Token ""
+                    Expect.equal passedCT cts.Token ""
                 }
 
 

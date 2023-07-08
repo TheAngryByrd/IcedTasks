@@ -68,7 +68,7 @@ type Expect =
 #if NET7_0_OR_GREATER
     static member CancellationRequested(operation: CancellableValueTask<_>) =
         Expect.CancellationRequested(Async.AwaitCancellableValueTask operation)
-        |> Async.AsCancellableTask
+        |> Async.AsCancellableValueTask
 #endif
 
 open TimeProviderExtensions
