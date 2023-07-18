@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
+    <GenerateProgramFile>false</GenerateProgramFile>
+    <DefineConstants>$(DefineConstants);NETSTANDARD2_0</DefineConstants>
+  </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" AdditionalProperties="TargetFramework=netstandard2.0" />
+    </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="../IcedTasks.Tests/Expect.fs" />
+    <Compile Include="../IcedTasks.Tests/AsyncExTests.fs" />
+    <Compile Include="../IcedTasks.Tests/ValueTaskTests.fs" />
+    <Compile Include="../IcedTasks.Tests/CancellableTaskTests.fs" />
+    <Compile Include="../IcedTasks.Tests/CancellableValueTaskTests.fs" />
+    <Compile Include="../IcedTasks.Tests/ColdTaskTests.fs" />
+    <Compile Include="../IcedTasks.Tests/ParallelAsyncTests.fs" />
+    <Compile Include="../IcedTasks.Tests/Main.fs" />
+  </ItemGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
+</Project>

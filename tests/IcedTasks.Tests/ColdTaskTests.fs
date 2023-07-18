@@ -407,7 +407,7 @@ module ColdTaskTests =
                 }
 
 
-#if NET7_0_OR_GREATER
+#if !NETSTANDARD2_0
                 testCaseAsync "use IAsyncDisposable sync"
                 <| async {
                     let data = 42
