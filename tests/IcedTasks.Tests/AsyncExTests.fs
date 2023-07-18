@@ -52,7 +52,7 @@ module AsyncExTests =
                     let! result = outer
                     Expect.equal result () "Should return the data"
                 }
-#if NETSTANDARD2_1
+#if !NETSTANDARD2_0
                 testCaseAsync "Can ReturnFrom an ValueTask<T>"
                 <| async {
                     let data = "foo"
@@ -129,7 +129,7 @@ module AsyncExTests =
                     let! result = outer
                     Expect.equal result () "Should return the data"
                 }
-#if NET7_0_OR_GREATER
+#if !NETSTANDARD2_0
                 testCaseAsync "Can bind an ValueTask<T>"
                 <| async {
                     let data = "foo"
@@ -266,7 +266,7 @@ module AsyncExTests =
                     let! result = outer
                     Expect.equal result () "Should return the data"
                 }
-#if NET7_0_OR_GREATER
+#if !NETSTANDARD2_0
                 testCaseAsync
                     "Awaiting Failed ValueTask<'T> should only contain one exception and not aggregation"
                 <| async {
@@ -387,7 +387,7 @@ module AsyncExTests =
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
                 }
-#if NET7_0_OR_GREATER
+#if !NETSTANDARD2_0
                 testCaseAsync "use IAsyncDisposable sync"
                 <| async {
                     let data = 42

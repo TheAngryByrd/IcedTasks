@@ -6,7 +6,7 @@ open System.Threading
 open System.Threading.Tasks
 open IcedTasks
 
-#if NET7_0_OR_GREATER
+#if !NETSTANDARD2_0
 module CancellableValueTaskTests =
     open TimeProviderExtensions
 

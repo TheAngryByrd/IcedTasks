@@ -48,7 +48,7 @@ type Expect =
             (fun () -> operation)
             "Should have been cancelled"
 
-#if NET7_0_OR_GREATER
+#if !NETSTANDARD2_0
     static member CancellationRequested(operation: ValueTask<unit>) =
         Expect.CancellationRequested(Async.AwaitValueTask operation)
         |> Async.AsValueTask
@@ -65,7 +65,7 @@ type Expect =
         Expect.CancellationRequested(Async.AwaitCancellableTask operation)
         |> Async.AsCancellableTask
 
-#if NET7_0_OR_GREATER
+#if !NETSTANDARD2_0
     static member CancellationRequested(operation: CancellableValueTask<_>) =
         Expect.CancellationRequested(Async.AwaitCancellableValueTask operation)
         |> Async.AsCancellableValueTask

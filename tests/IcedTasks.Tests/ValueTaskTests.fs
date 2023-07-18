@@ -5,7 +5,7 @@ open Expecto
 open System.Threading
 open System.Threading.Tasks
 open IcedTasks
-#if NET7_0
+#if !NETSTANDARD2_0
 
 module ValueTaskTests =
 
