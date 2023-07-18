@@ -96,3 +96,28 @@ module CustomAwaiter =
         interface ICriticalNotifyCompletion with
             member this.UnsafeOnCompleted(continuation) = failwith "Not Implemented"
             member this.OnCompleted(continuation: Action) : unit = failwith "Not Implemented"
+
+
+
+type DisposableShape<'Disposable when 'Disposable: (member Dispose: unit -> unit)> = 'Disposable
+
+type Disposable =
+    /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+    static member inline Dispose<'Disposable when DisposableShape<'Disposable>>(d: 'Disposable) =
+        d.Dispose()
+
+module Playground =
+    open System.Numerics
+
+    // type Delegate2<'T when  INumber<'T>> = delegate of 'T -> 'T
+
+    
+    // type Delegate3<'T when DisposableShape<'T>> = delegate of unit -> 'T
+    
+    // type Delegate4<'T when DisposableShape<'T>> = delegate of unit -> 'T
+
+    // type Delegate3<'Awaitable, 'Awaiter, 'TResult when Awaitable<'Awaitable, 'Awaiter, 'TResult>> =
+    //     delegate of int -> 'Awaitable
+
+    // type Delegate3<'T
+

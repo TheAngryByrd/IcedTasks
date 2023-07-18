@@ -834,7 +834,7 @@ module CancellableValueTasks =
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
                 ([<InlineIfLambda>] task: CancellationToken -> 'Awaitable)
                 : CancellationToken -> 'Awaiter =
-                (fun ct -> Awaitable.GetAwaiter(task ct))
+                Awaitable.GetAwaiter task
 
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
@@ -963,7 +963,7 @@ module CancellableValueTasks =
             /// <remarks>This turns a k&lt;'T&gt; into a CancellationToken -> 'Awaiter.</remarks>
             ///
             /// <returns>CancellationToken -> 'Awaiter</returns>
-            member inline _.Source(task: Task<'T>) = task.GetAwaiter()
+            member inline _.Source(task: Task<'T>) = Awaitable.GetAwaiter task
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
@@ -971,7 +971,7 @@ module CancellableValueTasks =
             ///
             /// <returns>CancellationToken -> 'Awaiter</returns>
             member inline _.Source([<InlineIfLambda>] task: ColdTask<'TResult1>) =
-                (fun (ct: CancellationToken) -> (task ()).GetAwaiter())
+                (fun (ct: CancellationToken) -> Awaitable.GetAwaiter(task ()))
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
@@ -979,7 +979,7 @@ module CancellableValueTasks =
             ///
             /// <returns>CancellationToken -> 'Awaiter</returns>
             member inline _.Source([<InlineIfLambda>] task: CancellationToken -> Task<'TResult1>) =
-                (fun ct -> (task ct).GetAwaiter())
+                Awaitable.GetAwaiter task
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
@@ -1170,7 +1170,7 @@ module CancellableValueTasks =
                 |> ValueTask.toUnit
 
         let inline internal getAwaiter ([<InlineIfLambda>] ctask: CancellableValueTask<_>) =
-            fun ct -> (ctask ct).GetAwaiter()
+            Awaitable.GetAwaiter ctask
 
 
     /// <exclude />
@@ -1195,7 +1195,7 @@ module CancellableValueTasks =
                     let! rightResult = rightStarted
                     return leftResult, rightResult
                 }
-                |> CancellableValueTask.getAwaiter
+                |> Awaitable.GetAwaiter
 
             [<NoEagerConstraintApplication>]
             member inline this.MergeSources<'TResult1, 'TResult2, 'Awaiter1, 'Awaiter2
@@ -1212,7 +1212,7 @@ module CancellableValueTasks =
                     let! rightResult = rightStarted
                     return leftResult, rightResult
                 }
-                |> CancellableValueTask.getAwaiter
+                |> Awaitable.GetAwaiter
 
 
             [<NoEagerConstraintApplication>]
@@ -1230,7 +1230,7 @@ module CancellableValueTasks =
                     let! rightResult = right
                     return leftResult, rightResult
                 }
-                |> CancellableValueTask.getAwaiter
+                |> Awaitable.GetAwaiter
 
 
             [<NoEagerConstraintApplication>]
@@ -1246,6 +1246,6 @@ module CancellableValueTasks =
                     let! rightResult = right
                     return leftResult, rightResult
                 }
-                |> CancellableValueTask.getAwaiter
+                |> Awaitable.GetAwaiter
 
 #endif

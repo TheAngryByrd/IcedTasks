@@ -14,6 +14,8 @@ module ValueTaskExtensions =
 
     type ValueTask with
 
+        static member CompletedTask = Unchecked.defaultof<ValueTask>
+
         /// <summary>Creates a <see cref="T:System.Threading.Tasks.ValueTask" /> that's completed due to cancellation with a specified cancellation token.</summary>
         /// <param name="cancellationToken">The cancellation token with which to complete the task.</param>
         /// <returns>The canceled task.</returns>
@@ -718,7 +720,7 @@ module ValueTasks =
             /// <remarks>This turns a Task&lt;'T&gt; into a 'Awaiter.</remarks>
             ///
             /// <returns>'Awaiter</returns>
-            member inline _.Source(task: Task<'T>) = task.GetAwaiter()
+            member inline _.Source(task: Task<'T>) = Awaitable.GetAwaiter task
 
             /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>
             ///

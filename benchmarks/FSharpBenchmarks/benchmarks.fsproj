@@ -14,10 +14,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Consts.fs" />
-    <Compile Include="SynchonousCompletionBenchmark.fs" />
+    <Compile Include="LoopBenchmarks.fs" />
+    <!-- <Compile Include="SynchonousCompletionBenchmark.fs" />
     <Compile Include="AsynchonousCompletionBenchmark.fs" />
     <Compile Include="FileWritingBenchmarks.fs" />
-    <Compile Include="ParallelAsyncBenchmarks.fs" />
+    <Compile Include="ParallelAsyncBenchmarks.fs" /> -->
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>

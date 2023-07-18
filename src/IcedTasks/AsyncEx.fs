@@ -4,6 +4,19 @@ open System
 open System.Threading
 open System.Threading.Tasks
 open System.Runtime.ExceptionServices
+open Microsoft.FSharp.Core.CompilerServices
+open System.Runtime.CompilerServices
+
+module Exceptions =
+    let inline reraise ex =
+        ExceptionDispatchInfo.Capture(ex).Throw()
+        Unchecked.defaultof<_>
+
+[<Extension>]
+type Exception =
+
+    [<Extension>]
+    static member Reraise(x: exn) = Exceptions.reraise x
 
 type private Async =
     static member inline map f x =
@@ -13,6 +26,14 @@ type private Async =
 /// This contains many functions that implement Task throwing semantics differently than the current FSharp.Core. See <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
 /// </summary>
 type AsyncEx =
+
+    static member example1() = async {
+        try
+            failwith "LOL"
+        with e ->
+            e.Reraise()
+            ()
+    }
 
     /// <summary>
     /// Return an asynchronous computation that will wait for the given Awaiter to complete and return
@@ -65,7 +86,11 @@ type AsyncEx =
     /// <remarks>
     /// This is based on <see href="https://stackoverflow.com/a/66815960">How to use awaitable inside async?</see> and <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
     /// </remarks>
-    static member inline AwaitAwaitable(awaitable: 'Awaitable) =
+    [<NoEagerConstraintApplication>]
+    static member inline AwaitAwaitable<'Awaitable, 'Awaiter, 'TResult
+        when Awaitable<'Awaitable, 'Awaiter, 'TResult>>
+        (awaitable: 'Awaitable)
+        =
         AsyncEx.AwaitAwaiter(Awaitable.GetAwaiter awaitable)
 
     /// <summary>

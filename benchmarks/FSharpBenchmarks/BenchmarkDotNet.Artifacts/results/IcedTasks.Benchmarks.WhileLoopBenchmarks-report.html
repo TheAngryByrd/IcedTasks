@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>IcedTasks.Benchmarks.WhileLoopBenchmarks-20230712-224443</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet=v0.13.2, OS=Windows 11 (10.0.22621.1848)
+12th Gen Intel Core i9-12900F, 1 CPU, 24 logical and 16 physical cores
+.NET SDK=7.0.400-preview.23226.4
+  [Host]     : .NET 7.0.8 (7.0.823.31807), X64 RyuJIT AVX2 DEBUG
+  Job-YLXCDK : .NET 7.0.8 (7.0.823.31807), X64 RyuJIT AVX2
+</code></pre>
+<pre><code>Runtime=.NET 7.0  Server=True  Toolchain=net7.0  
+</code></pre>
+
+<table>
+<thead><tr><th>                           Method</th><th>Length</th><th>  Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharp_Whileloop_Tasks</td><td>10000</td><td>2.160 &mu;s</td><td>0.0077 &mu;s</td><td>0.0124 &mu;s</td><td>1.00</td><td>0.00</td><td>72 B</td><td>1.00</td>
+</tr><tr><td>CSharp_Whileloop_Tasks_async</td><td>10000</td><td>3,115.359 &mu;s</td><td>21.9573 &mu;s</td><td>19.4645 &mu;s</td><td>1,440.76</td><td>12.17</td><td>189 B</td><td>2.62</td>
+</tr><tr><td>CancellableTask</td><td>10000</td><td>3.611 &mu;s</td><td>0.0198 &mu;s</td><td>0.0185 &mu;s</td><td>1.67</td><td>0.01</td><td>152 B</td><td>2.11</td>
+</tr><tr><td>CancellableTask2</td><td>10000</td><td>NA</td><td>NA</td><td>NA</td><td>?</td><td>?</td><td>-</td><td>?</td>
+</tr><tr><td>CancellableTask3</td><td>10000</td><td>NA</td><td>NA</td><td>NA</td><td>?</td><td>?</td><td>-</td><td>?</td>
+</tr><tr><td>CancellableTask_syncDoBlockTrick</td><td>10000</td><td>2.160 &mu;s</td><td>0.0117 &mu;s</td><td>0.0110 &mu;s</td><td>1.00</td><td>0.01</td><td>128 B</td><td>1.78</td>
+</tr><tr><td>CancellableTask_async</td><td>10000</td><td>3,077.223 &mu;s</td><td>27.2582 &mu;s</td><td>25.4974 &mu;s</td><td>1,422.40</td><td>15.53</td><td>307 B</td><td>4.26</td>
+</tr><tr><td>CancellableTask_asyncCancellableLambda</td><td>10000</td><td>2,964.279 &mu;s</td><td>55.2893 &mu;s</td><td>49.0125 &mu;s</td><td>1,370.82</td><td>19.18</td><td>309 B</td><td>4.29</td>
+</tr><tr><td>CancellableTask_asyncCancellableLambda2</td><td>10000</td><td>3,045.664 &mu;s</td><td>56.3261 &mu;s</td><td>52.6874 &mu;s</td><td>1,407.80</td><td>25.38</td><td>307 B</td><td>4.26</td>
+</tr><tr><td>CancellableTask_asyncCancellableCE</td><td>10000</td><td>4,491.386 &mu;s</td><td>69.1838 &mu;s</td><td>64.7145 &mu;s</td><td>2,076.06</td><td>31.82</td><td>2080315 B</td><td>28,893.26</td>
+</tr><tr><td>CancellableTask_asyncCancellableCE2</td><td>10000</td><td>4,474.445 &mu;s</td><td>66.4772 &mu;s</td><td>62.1828 &mu;s</td><td>2,068.26</td><td>32.57</td><td>1280384 B</td><td>17,783.11</td>
+</tr><tr><td>CancellableTask_asyncCancellableCE3</td><td>10000</td><td>4,431.639 &mu;s</td><td>48.7732 &mu;s</td><td>45.6224 &mu;s</td><td>2,048.46</td><td>24.98</td><td>1280386 B</td><td>17,783.14</td>
+</tr><tr><td>CancellableTask_asyncCancellableCE4</td><td>10000</td><td>4,362.897 &mu;s</td><td>79.9664 &mu;s</td><td>70.8881 &mu;s</td><td>2,017.69</td><td>34.19</td><td>1520315 B</td><td>21,115.49</td>
+</tr><tr><td>CancellableTask_asyncCancellableCE5</td><td>10000</td><td>NA</td><td>NA</td><td>NA</td><td>?</td><td>?</td><td>-</td><td>?</td>
+</tr></tbody></table>
+</body>
+</html>

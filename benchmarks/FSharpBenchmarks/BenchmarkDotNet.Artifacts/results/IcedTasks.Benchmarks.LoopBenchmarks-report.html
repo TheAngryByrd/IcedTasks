@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>IcedTasks.Benchmarks.LoopBenchmarks-20230711-094222</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet=v0.13.2, OS=Windows 11 (10.0.22621.1848)
+12th Gen Intel Core i9-12900F, 1 CPU, 24 logical and 16 physical cores
+.NET SDK=7.0.400-preview.23226.4
+  [Host]     : .NET 7.0.8 (7.0.823.31807), X64 RyuJIT AVX2 DEBUG
+  Job-IPYGJS : .NET 6.0.19 (6.0.1923.31806), X64 RyuJIT AVX2
+  Job-QURWIS : .NET 7.0.8 (7.0.823.31807), X64 RyuJIT AVX2
+</code></pre>
+<pre><code>Server=True  
+</code></pre>
+
+<table>
+<thead><tr><th>   Method</th><th>Runtime</th><th>Length</th><th>   Mean</th><th> Error</th><th>StdDev</th><th> Median</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Tasks</td><td>.NET 6.0</td><td>100</td><td>64.54 ns</td><td>0.912 ns</td><td>0.853 ns</td><td>64.83 ns</td><td>1.00</td><td>0.00</td><td>0.0002</td><td>-</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>ValueTask</td><td>.NET 6.0</td><td>100</td><td>71.18 ns</td><td>1.163 ns</td><td>1.031 ns</td><td>71.14 ns</td><td>1.10</td><td>0.02</td><td>0.0001</td><td>-</td><td>56 B</td><td>0.58</td>
+</tr><tr><td>Async</td><td>.NET 6.0</td><td>100</td><td>3,440.58 ns</td><td>46.953 ns</td><td>43.920 ns</td><td>3,419.64 ns</td><td>53.32</td><td>1.05</td><td>0.0191</td><td>0.0038</td><td>7624 B</td><td>79.42</td>
+</tr><tr><td>Async_modified</td><td>.NET 6.0</td><td>100</td><td>925.57 ns</td><td>13.116 ns</td><td>12.269 ns</td><td>924.98 ns</td><td>14.34</td><td>0.27</td><td>0.0019</td><td>-</td><td>664 B</td><td>6.92</td>
+</tr><tr><td>CancellableTask</td><td>.NET 6.0</td><td>100</td><td>2,244.16 ns</td><td>19.134 ns</td><td>17.898 ns</td><td>2,240.44 ns</td><td>34.77</td><td>0.45</td><td>0.0420</td><td>-</td><td>16576 B</td><td>172.67</td>
+</tr><tr><td>Tasks</td><td>.NET 7.0</td><td>100</td><td>73.25 ns</td><td>0.706 ns</td><td>0.660 ns</td><td>73.51 ns</td><td>1.14</td><td>0.02</td><td>0.0002</td><td>-</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>ValueTask</td><td>.NET 7.0</td><td>100</td><td>73.47 ns</td><td>0.940 ns</td><td>0.879 ns</td><td>73.62 ns</td><td>1.14</td><td>0.02</td><td>0.0001</td><td>-</td><td>56 B</td><td>0.58</td>
+</tr><tr><td>Async</td><td>.NET 7.0</td><td>100</td><td>3,499.58 ns</td><td>57.306 ns</td><td>50.801 ns</td><td>3,488.84 ns</td><td>54.14</td><td>1.26</td><td>0.0191</td><td>-</td><td>7624 B</td><td>79.42</td>
+</tr><tr><td>Async_modified</td><td>.NET 7.0</td><td>100</td><td>919.73 ns</td><td>6.489 ns</td><td>5.066 ns</td><td>920.66 ns</td><td>14.26</td><td>0.17</td><td>-</td><td>-</td><td>664 B</td><td>6.92</td>
+</tr><tr><td>CancellableTask</td><td>.NET 7.0</td><td>100</td><td>2,477.75 ns</td><td>24.312 ns</td><td>22.741 ns</td><td>2,477.53 ns</td><td>38.40</td><td>0.67</td><td>0.0420</td><td>-</td><td>16576 B</td><td>172.67</td>
+</tr><tr><td>Tasks</td><td>.NET 6.0</td><td>200</td><td>118.30 ns</td><td>1.319 ns</td><td>1.234 ns</td><td>118.46 ns</td><td>1.00</td><td>0.00</td><td>0.0002</td><td>-</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>ValueTask</td><td>.NET 6.0</td><td>200</td><td>122.20 ns</td><td>1.668 ns</td><td>1.561 ns</td><td>121.68 ns</td><td>1.03</td><td>0.01</td><td>-</td><td>-</td><td>56 B</td><td>0.58</td>
+</tr><tr><td>Async</td><td>.NET 6.0</td><td>200</td><td>6,011.44 ns</td><td>25.977 ns</td><td>20.281 ns</td><td>6,019.36 ns</td><td>50.68</td><td>0.52</td><td>0.0305</td><td>-</td><td>14082 B</td><td>146.69</td>
+</tr><tr><td>Async_modified</td><td>.NET 6.0</td><td>200</td><td>934.38 ns</td><td>7.234 ns</td><td>6.413 ns</td><td>936.27 ns</td><td>7.89</td><td>0.10</td><td>-</td><td>-</td><td>664 B</td><td>6.92</td>
+</tr><tr><td>CancellableTask</td><td>.NET 6.0</td><td>200</td><td>4,341.59 ns</td><td>52.784 ns</td><td>49.375 ns</td><td>4,339.75 ns</td><td>36.70</td><td>0.49</td><td>0.0839</td><td>-</td><td>31776 B</td><td>331.00</td>
+</tr><tr><td>Tasks</td><td>.NET 7.0</td><td>200</td><td>119.69 ns</td><td>1.094 ns</td><td>1.024 ns</td><td>119.58 ns</td><td>1.01</td><td>0.01</td><td>-</td><td>-</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>ValueTask</td><td>.NET 7.0</td><td>200</td><td>108.56 ns</td><td>1.233 ns</td><td>1.153 ns</td><td>108.60 ns</td><td>0.92</td><td>0.01</td><td>0.0001</td><td>-</td><td>56 B</td><td>0.58</td>
+</tr><tr><td>Async</td><td>.NET 7.0</td><td>200</td><td>6,571.24 ns</td><td>71.100 ns</td><td>63.028 ns</td><td>6,576.09 ns</td><td>55.48</td><td>0.61</td><td>0.0305</td><td>-</td><td>14085 B</td><td>146.72</td>
+</tr><tr><td>Async_modified</td><td>.NET 7.0</td><td>200</td><td>927.59 ns</td><td>7.832 ns</td><td>7.326 ns</td><td>926.69 ns</td><td>7.84</td><td>0.11</td><td>-</td><td>-</td><td>664 B</td><td>6.92</td>
+</tr><tr><td>CancellableTask</td><td>.NET 7.0</td><td>200</td><td>4,837.92 ns</td><td>51.391 ns</td><td>48.071 ns</td><td>4,851.49 ns</td><td>40.90</td><td>0.47</td><td>0.0839</td><td>-</td><td>31776 B</td><td>331.00</td>
+</tr><tr><td>Tasks</td><td>.NET 6.0</td><td>300</td><td>166.32 ns</td><td>2.368 ns</td><td>2.215 ns</td><td>166.10 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>ValueTask</td><td>.NET 6.0</td><td>300</td><td>163.46 ns</td><td>1.817 ns</td><td>1.700 ns</td><td>163.40 ns</td><td>0.98</td><td>0.02</td><td>-</td><td>-</td><td>56 B</td><td>0.58</td>
+</tr><tr><td>Async</td><td>.NET 6.0</td><td>300</td><td>13,360.78 ns</td><td>220.740 ns</td><td>206.480 ns</td><td>13,399.76 ns</td><td>80.35</td><td>1.88</td><td>0.0458</td><td>-</td><td>20595 B</td><td>214.53</td>
+</tr><tr><td>Async_modified</td><td>.NET 6.0</td><td>300</td><td>962.51 ns</td><td>18.925 ns</td><td>16.777 ns</td><td>960.43 ns</td><td>5.79</td><td>0.07</td><td>-</td><td>-</td><td>664 B</td><td>6.92</td>
+</tr><tr><td>CancellableTask</td><td>.NET 6.0</td><td>300</td><td>6,438.52 ns</td><td>29.700 ns</td><td>27.781 ns</td><td>6,434.90 ns</td><td>38.72</td><td>0.62</td><td>0.1221</td><td>-</td><td>46976 B</td><td>489.33</td>
+</tr><tr><td>Tasks</td><td>.NET 7.0</td><td>300</td><td>161.97 ns</td><td>0.926 ns</td><td>0.773 ns</td><td>162.14 ns</td><td>0.98</td><td>0.01</td><td>0.0002</td><td>-</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>ValueTask</td><td>.NET 7.0</td><td>300</td><td>154.41 ns</td><td>0.977 ns</td><td>0.866 ns</td><td>154.50 ns</td><td>0.93</td><td>0.02</td><td>-</td><td>-</td><td>56 B</td><td>0.58</td>
+</tr><tr><td>Async</td><td>.NET 7.0</td><td>300</td><td>13,025.62 ns</td><td>221.871 ns</td><td>207.539 ns</td><td>13,063.27 ns</td><td>78.33</td><td>1.68</td><td>0.0458</td><td>-</td><td>20590 B</td><td>214.48</td>
+</tr><tr><td>Async_modified</td><td>.NET 7.0</td><td>300</td><td>957.40 ns</td><td>14.360 ns</td><td>13.433 ns</td><td>952.50 ns</td><td>5.76</td><td>0.10</td><td>-</td><td>-</td><td>664 B</td><td>6.92</td>
+</tr><tr><td>CancellableTask</td><td>.NET 7.0</td><td>300</td><td>7,267.18 ns</td><td>105.389 ns</td><td>98.581 ns</td><td>7,259.20 ns</td><td>43.70</td><td>0.78</td><td>0.1221</td><td>-</td><td>46976 B</td><td>489.33</td>
+</tr><tr><td>Tasks</td><td>.NET 6.0</td><td>400</td><td>212.11 ns</td><td>1.047 ns</td><td>0.928 ns</td><td>212.23 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>ValueTask</td><td>.NET 6.0</td><td>400</td><td>207.46 ns</td><td>1.273 ns</td><td>1.191 ns</td><td>207.69 ns</td><td>0.98</td><td>0.01</td><td>-</td><td>-</td><td>56 B</td><td>0.58</td>
+</tr><tr><td>Async</td><td>.NET 6.0</td><td>400</td><td>17,074.92 ns</td><td>274.034 ns</td><td>242.924 ns</td><td>17,099.47 ns</td><td>80.50</td><td>1.36</td><td>0.0610</td><td>-</td><td>27053 B</td><td>281.80</td>
+</tr><tr><td>Async_modified</td><td>.NET 6.0</td><td>400</td><td>949.60 ns</td><td>8.380 ns</td><td>7.429 ns</td><td>948.45 ns</td><td>4.48</td><td>0.04</td><td>0.0019</td><td>-</td><td>664 B</td><td>6.92</td>
+</tr><tr><td>CancellableTask</td><td>.NET 6.0</td><td>400</td><td>8,432.93 ns</td><td>46.398 ns</td><td>38.745 ns</td><td>8,430.88 ns</td><td>39.75</td><td>0.28</td><td>0.1678</td><td>-</td><td>62176 B</td><td>647.67</td>
+</tr><tr><td>Tasks</td><td>.NET 7.0</td><td>400</td><td>198.02 ns</td><td>0.969 ns</td><td>0.907 ns</td><td>197.94 ns</td><td>0.93</td><td>0.01</td><td>0.0002</td><td>-</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>ValueTask</td><td>.NET 7.0</td><td>400</td><td>190.53 ns</td><td>3.384 ns</td><td>3.323 ns</td><td>189.47 ns</td><td>0.90</td><td>0.02</td><td>-</td><td>-</td><td>56 B</td><td>0.58</td>
+</tr><tr><td>Async</td><td>.NET 7.0</td><td>400</td><td>17,773.93 ns</td><td>220.172 ns</td><td>171.896 ns</td><td>17,790.26 ns</td><td>83.80</td><td>0.94</td><td>0.0610</td><td>-</td><td>27054 B</td><td>281.81</td>
+</tr><tr><td>Async_modified</td><td>.NET 7.0</td><td>400</td><td>944.41 ns</td><td>4.517 ns</td><td>4.004 ns</td><td>943.95 ns</td><td>4.45</td><td>0.03</td><td>-</td><td>-</td><td>664 B</td><td>6.92</td>
+</tr><tr><td>CancellableTask</td><td>.NET 7.0</td><td>400</td><td>9,545.38 ns</td><td>108.348 ns</td><td>101.349 ns</td><td>9,541.44 ns</td><td>44.95</td><td>0.47</td><td>0.1526</td><td>-</td><td>62176 B</td><td>647.67</td>
+</tr><tr><td>Tasks</td><td>.NET 6.0</td><td>500</td><td>262.11 ns</td><td>5.055 ns</td><td>5.821 ns</td><td>262.26 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>ValueTask</td><td>.NET 6.0</td><td>500</td><td>249.80 ns</td><td>3.048 ns</td><td>2.851 ns</td><td>249.33 ns</td><td>0.96</td><td>0.02</td><td>-</td><td>-</td><td>56 B</td><td>0.58</td>
+</tr><tr><td>Async</td><td>.NET 6.0</td><td>500</td><td>20,097.42 ns</td><td>249.862 ns</td><td>233.721 ns</td><td>20,155.33 ns</td><td>77.02</td><td>2.06</td><td>0.0610</td><td>-</td><td>33508 B</td><td>349.04</td>
+</tr><tr><td>Async_modified</td><td>.NET 6.0</td><td>500</td><td>1,072.14 ns</td><td>21.465 ns</td><td>22.968 ns</td><td>1,060.04 ns</td><td>4.09</td><td>0.13</td><td>0.0019</td><td>-</td><td>664 B</td><td>6.92</td>
+</tr><tr><td>CancellableTask</td><td>.NET 6.0</td><td>500</td><td>10,443.83 ns</td><td>94.498 ns</td><td>88.394 ns</td><td>10,435.48 ns</td><td>40.02</td><td>0.95</td><td>0.1984</td><td>-</td><td>77376 B</td><td>806.00</td>
+</tr><tr><td>Tasks</td><td>.NET 7.0</td><td>500</td><td>238.05 ns</td><td>3.028 ns</td><td>2.832 ns</td><td>238.51 ns</td><td>0.91</td><td>0.02</td><td>-</td><td>-</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>ValueTask</td><td>.NET 7.0</td><td>500</td><td>221.75 ns</td><td>1.893 ns</td><td>1.771 ns</td><td>222.06 ns</td><td>0.85</td><td>0.02</td><td>-</td><td>-</td><td>56 B</td><td>0.58</td>
+</tr><tr><td>Async</td><td>.NET 7.0</td><td>500</td><td>20,546.35 ns</td><td>248.492 ns</td><td>220.282 ns</td><td>20,450.81 ns</td><td>78.62</td><td>2.03</td><td>0.0610</td><td>-</td><td>33509 B</td><td>349.05</td>
+</tr><tr><td>Async_modified</td><td>.NET 7.0</td><td>500</td><td>946.24 ns</td><td>12.524 ns</td><td>9.778 ns</td><td>946.45 ns</td><td>3.60</td><td>0.05</td><td>-</td><td>-</td><td>664 B</td><td>6.92</td>
+</tr><tr><td>CancellableTask</td><td>.NET 7.0</td><td>500</td><td>11,992.28 ns</td><td>102.910 ns</td><td>96.262 ns</td><td>12,001.51 ns</td><td>45.95</td><td>1.11</td><td>0.1984</td><td>-</td><td>77376 B</td><td>806.00</td>
+</tr><tr><td>Tasks</td><td>.NET 6.0</td><td>1000</td><td>496.03 ns</td><td>8.816 ns</td><td>7.815 ns</td><td>493.71 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>ValueTask</td><td>.NET 6.0</td><td>1000</td><td>465.23 ns</td><td>3.029 ns</td><td>2.833 ns</td><td>465.65 ns</td><td>0.94</td><td>0.02</td><td>-</td><td>-</td><td>56 B</td><td>0.58</td>
+</tr><tr><td>Async</td><td>.NET 6.0</td><td>1000</td><td>32,441.67 ns</td><td>287.937 ns</td><td>269.337 ns</td><td>32,506.29 ns</td><td>65.42</td><td>1.14</td><td>0.1221</td><td>-</td><td>65790 B</td><td>685.31</td>
+</tr><tr><td>Async_modified</td><td>.NET 6.0</td><td>1000</td><td>1,193.87 ns</td><td>29.475 ns</td><td>86.909 ns</td><td>1,253.47 ns</td><td>2.31</td><td>0.20</td><td>0.0019</td><td>-</td><td>664 B</td><td>6.92</td>
+</tr><tr><td>CancellableTask</td><td>.NET 6.0</td><td>1000</td><td>20,736.58 ns</td><td>140.075 ns</td><td>116.969 ns</td><td>20,708.03 ns</td><td>41.79</td><td>0.72</td><td>0.3967</td><td>-</td><td>153376 B</td><td>1,597.67</td>
+</tr><tr><td>Tasks</td><td>.NET 7.0</td><td>1000</td><td>435.66 ns</td><td>5.804 ns</td><td>5.429 ns</td><td>434.98 ns</td><td>0.88</td><td>0.02</td><td>-</td><td>-</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>ValueTask</td><td>.NET 7.0</td><td>1000</td><td>401.72 ns</td><td>2.956 ns</td><td>2.765 ns</td><td>402.11 ns</td><td>0.81</td><td>0.01</td><td>-</td><td>-</td><td>56 B</td><td>0.58</td>
+</tr><tr><td>Async</td><td>.NET 7.0</td><td>1000</td><td>33,308.66 ns</td><td>373.842 ns</td><td>312.175 ns</td><td>33,316.77 ns</td><td>67.12</td><td>1.19</td><td>0.1221</td><td>-</td><td>65790 B</td><td>685.31</td>
+</tr><tr><td>Async_modified</td><td>.NET 7.0</td><td>1000</td><td>1,256.58 ns</td><td>24.989 ns</td><td>46.319 ns</td><td>1,261.50 ns</td><td>2.46</td><td>0.15</td><td>-</td><td>-</td><td>664 B</td><td>6.92</td>
+</tr><tr><td>CancellableTask</td><td>.NET 7.0</td><td>1000</td><td>23,949.17 ns</td><td>234.486 ns</td><td>219.338 ns</td><td>23,898.10 ns</td><td>48.30</td><td>0.82</td><td>0.3967</td><td>-</td><td>153376 B</td><td>1,597.67</td>
+</tr><tr><td>Tasks</td><td>.NET 6.0</td><td>2000</td><td>1,003.47 ns</td><td>18.996 ns</td><td>15.863 ns</td><td>1,003.58 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>ValueTask</td><td>.NET 6.0</td><td>2000</td><td>922.85 ns</td><td>15.741 ns</td><td>14.724 ns</td><td>920.39 ns</td><td>0.92</td><td>0.03</td><td>-</td><td>-</td><td>56 B</td><td>0.58</td>
+</tr><tr><td>Async</td><td>.NET 6.0</td><td>2000</td><td>56,041.16 ns</td><td>481.995 ns</td><td>450.859 ns</td><td>55,922.60 ns</td><td>55.82</td><td>1.02</td><td>0.3052</td><td>-</td><td>130351 B</td><td>1,357.82</td>
+</tr><tr><td>Async_modified</td><td>.NET 6.0</td><td>2000</td><td>1,258.22 ns</td><td>9.594 ns</td><td>8.011 ns</td><td>1,257.26 ns</td><td>1.25</td><td>0.02</td><td>0.0019</td><td>-</td><td>664 B</td><td>6.92</td>
+</tr><tr><td>CancellableTask</td><td>.NET 6.0</td><td>2000</td><td>41,587.87 ns</td><td>415.904 ns</td><td>389.037 ns</td><td>41,474.85 ns</td><td>41.47</td><td>0.85</td><td>0.7935</td><td>-</td><td>305376 B</td><td>3,181.00</td>
+</tr><tr><td>Tasks</td><td>.NET 7.0</td><td>2000</td><td>852.98 ns</td><td>10.254 ns</td><td>9.090 ns</td><td>853.00 ns</td><td>0.85</td><td>0.02</td><td>-</td><td>-</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>ValueTask</td><td>.NET 7.0</td><td>2000</td><td>774.96 ns</td><td>6.596 ns</td><td>6.170 ns</td><td>776.48 ns</td><td>0.77</td><td>0.01</td><td>-</td><td>-</td><td>56 B</td><td>0.58</td>
+</tr><tr><td>Async</td><td>.NET 7.0</td><td>2000</td><td>56,626.55 ns</td><td>135.064 ns</td><td>105.449 ns</td><td>56,634.29 ns</td><td>56.49</td><td>0.90</td><td>0.3052</td><td>-</td><td>130351 B</td><td>1,357.82</td>
+</tr><tr><td>Async_modified</td><td>.NET 7.0</td><td>2000</td><td>1,285.29 ns</td><td>10.726 ns</td><td>10.033 ns</td><td>1,281.78 ns</td><td>1.28</td><td>0.02</td><td>-</td><td>-</td><td>664 B</td><td>6.92</td>
+</tr><tr><td>CancellableTask</td><td>.NET 7.0</td><td>2000</td><td>47,388.29 ns</td><td>588.765 ns</td><td>550.731 ns</td><td>47,397.92 ns</td><td>47.16</td><td>0.79</td><td>0.7935</td><td>-</td><td>305376 B</td><td>3,181.00</td>
+</tr><tr><td>Tasks</td><td>.NET 6.0</td><td>3000</td><td>1,498.48 ns</td><td>25.385 ns</td><td>22.503 ns</td><td>1,491.62 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>ValueTask</td><td>.NET 6.0</td><td>3000</td><td>1,324.92 ns</td><td>5.641 ns</td><td>5.276 ns</td><td>1,325.10 ns</td><td>0.88</td><td>0.01</td><td>-</td><td>-</td><td>56 B</td><td>0.58</td>
+</tr><tr><td>Async</td><td>.NET 6.0</td><td>3000</td><td>79,623.19 ns</td><td>563.577 ns</td><td>499.597 ns</td><td>79,453.10 ns</td><td>53.15</td><td>0.94</td><td>0.4883</td><td>-</td><td>194912 B</td><td>2,030.33</td>
+</tr><tr><td>Async_modified</td><td>.NET 6.0</td><td>3000</td><td>1,492.10 ns</td><td>12.341 ns</td><td>11.544 ns</td><td>1,493.21 ns</td><td>1.00</td><td>0.02</td><td>0.0019</td><td>-</td><td>664 B</td><td>6.92</td>
+</tr><tr><td>CancellableTask</td><td>.NET 6.0</td><td>3000</td><td>62,643.71 ns</td><td>409.240 ns</td><td>362.780 ns</td><td>62,551.65 ns</td><td>41.81</td><td>0.64</td><td>1.2207</td><td>-</td><td>457376 B</td><td>4,764.33</td>
+</tr><tr><td>Tasks</td><td>.NET 7.0</td><td>3000</td><td>1,301.28 ns</td><td>17.359 ns</td><td>16.238 ns</td><td>1,298.62 ns</td><td>0.87</td><td>0.01</td><td>-</td><td>-</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>ValueTask</td><td>.NET 7.0</td><td>3000</td><td>1,146.35 ns</td><td>11.011 ns</td><td>9.761 ns</td><td>1,147.12 ns</td><td>0.77</td><td>0.01</td><td>-</td><td>-</td><td>56 B</td><td>0.58</td>
+</tr><tr><td>Async</td><td>.NET 7.0</td><td>3000</td><td>82,302.47 ns</td><td>1,178.686 ns</td><td>1,102.544 ns</td><td>82,084.27 ns</td><td>54.93</td><td>0.65</td><td>0.4883</td><td>-</td><td>194912 B</td><td>2,030.33</td>
+</tr><tr><td>Async_modified</td><td>.NET 7.0</td><td>3000</td><td>1,613.31 ns</td><td>17.037 ns</td><td>14.226 ns</td><td>1,613.98 ns</td><td>1.08</td><td>0.02</td><td>-</td><td>-</td><td>664 B</td><td>6.92</td>
+</tr><tr><td>CancellableTask</td><td>.NET 7.0</td><td>3000</td><td>71,114.48 ns</td><td>707.669 ns</td><td>661.954 ns</td><td>71,077.51 ns</td><td>47.51</td><td>0.87</td><td>1.2207</td><td>-</td><td>457376 B</td><td>4,764.33</td>
+</tr><tr><td>Tasks</td><td>.NET 6.0</td><td>10000</td><td>5,075.16 ns</td><td>82.901 ns</td><td>77.546 ns</td><td>5,082.43 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>ValueTask</td><td>.NET 6.0</td><td>10000</td><td>4,462.65 ns</td><td>56.928 ns</td><td>53.251 ns</td><td>4,453.13 ns</td><td>0.88</td><td>0.02</td><td>-</td><td>-</td><td>56 B</td><td>0.58</td>
+</tr><tr><td>Async</td><td>.NET 6.0</td><td>10000</td><td>238,656.82 ns</td><td>960.119 ns</td><td>898.096 ns</td><td>238,313.16 ns</td><td>47.03</td><td>0.70</td><td>1.4648</td><td>-</td><td>646832 B</td><td>6,737.83</td>
+</tr><tr><td>Async_modified</td><td>.NET 6.0</td><td>10000</td><td>3,165.22 ns</td><td>20.346 ns</td><td>18.036 ns</td><td>3,158.19 ns</td><td>0.62</td><td>0.01</td><td>-</td><td>-</td><td>664 B</td><td>6.92</td>
+</tr><tr><td>CancellableTask</td><td>.NET 6.0</td><td>10000</td><td>211,346.60 ns</td><td>1,904.986 ns</td><td>1,781.925 ns</td><td>211,601.03 ns</td><td>41.65</td><td>0.68</td><td>3.9063</td><td>-</td><td>1521376 B</td><td>15,847.67</td>
+</tr><tr><td>Tasks</td><td>.NET 7.0</td><td>10000</td><td>5,001.75 ns</td><td>98.459 ns</td><td>144.319 ns</td><td>4,971.78 ns</td><td>0.99</td><td>0.04</td><td>-</td><td>-</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>ValueTask</td><td>.NET 7.0</td><td>10000</td><td>3,738.18 ns</td><td>23.964 ns</td><td>22.416 ns</td><td>3,737.89 ns</td><td>0.74</td><td>0.01</td><td>-</td><td>-</td><td>56 B</td><td>0.58</td>
+</tr><tr><td>Async</td><td>.NET 7.0</td><td>10000</td><td>252,150.22 ns</td><td>3,649.980 ns</td><td>3,235.613 ns</td><td>251,500.93 ns</td><td>49.67</td><td>0.97</td><td>1.4648</td><td>-</td><td>646833 B</td><td>6,737.84</td>
+</tr><tr><td>Async_modified</td><td>.NET 7.0</td><td>10000</td><td>3,170.17 ns</td><td>25.182 ns</td><td>22.323 ns</td><td>3,172.67 ns</td><td>0.62</td><td>0.01</td><td>-</td><td>-</td><td>664 B</td><td>6.92</td>
+</tr><tr><td>CancellableTask</td><td>.NET 7.0</td><td>10000</td><td>231,204.66 ns</td><td>1,448.354 ns</td><td>1,354.791 ns</td><td>231,394.20 ns</td><td>45.57</td><td>0.73</td><td>3.9063</td><td>-</td><td>1521376 B</td><td>15,847.67</td>
+</tr></tbody></table>
+</body>
+</html>

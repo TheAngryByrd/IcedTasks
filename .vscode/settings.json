@@ -3,5 +3,8 @@
     "FSharp.analyzersPath": [
         "./packages/analyzers"
     ],
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "FSharp.notifications.trace": true,
+    "FSharp.fsac.netCoreDllPath": "C:\\Users\\jimmy\\Repositories\\public\\TheAngryByrd\\FsAutoComplete\\src\\FsAutoComplete\\bin\\Debug\\net7.0\\fsautocomplete.dll",
+    "FSharp.trace.server": "verbose"
 }

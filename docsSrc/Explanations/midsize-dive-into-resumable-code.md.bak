@@ -1,0 +1,189 @@
+# A midsized dive into resumable code
+
+
+
+## Show at a high level what IcedTasks is
+
+
+
+
+
+## Explain the enumerator pattern
+
+https://devblogs.microsoft.com/dotnet/how-async-await-really-works/
+
+```csharp
+using System.Threading.Tasks;
+public class C {
+    public async void M() {
+        await Task.FromResult("LOL");
+    }
+}
+```
+
+[Sharplab link](https://sharplab.io/#v2:D4AQTAjAsAUCAMACEEB0AVAFgJwKYEMATASwDsBzAblgWQgFZq4BmZMRAYUQG9ZF/krEAA5kANgA8KeAD5EAWQAUASh58BGgG75siAGYB7A4gC8yAJzjUAMWwGAtgCVcAZwCuAGwAuigEQAZAHl/X2UmDQ0AekiQSxAxVABNYlwPQhVwiP4QAHZ9I0z+AF9YIqA=)
+
+What happens is this creates an `IAsyncStateMachine` with two important members:
+
+- `MoveNext` which is the method that is called to move the state machine forward
+- `SetStateMachine` which is the method that is called to set the state machine to the current state machine
+
+
+## Explain how that leads to the async pattern
+
+```csharp
+using System.Threading.Tasks;
+public class C {
+    public async Task<string> M() {
+        var foo = await Task.FromResult("LOL");
+        await Task.Yield();
+        var foo2 = await Task.FromResult(foo + "lmao");
+        return foo2;
+    }
+}
+```
+
+
+ also discuss the `AwaitUnsafeOnCompleted`
+
+
+## Show use of the task CE
+
+```fsharp
+open System
+open System.Threading.Tasks
+type C() =
+    member _.M() = task {
+        let! foo = Task.FromResult("lol")
+        do! Task.Yield()
+        return foo
+    }
+```
+
+
+## Explain basics of computation expressions
+
+- builder with bind, return, and run
+
+
+## Comparing and contrasting C# vs F# state machine code generation
+
+- `public int <>1__state;` is the same as `public int ResumptionPoint;` 
+- `private TaskAwaiter<string> <>u__1;` is the same as `public TaskAwaiter<string> awaiter;`
+- `public AsyncTaskMethodBuilder<string> <>t__builder` is held within `public TaskStateMachineData<string> Data;` since the state machine is more generic
+
+
+## Show the "Resumable" Run engine
+
+```fsharp
+val __stateMachine:
+   moveNextMethod: MoveNextMethodImpl<'Data> ->
+   setStateMachineMethod: SetStateMachineMethodImpl<'Data> ->
+   afterCode     : AfterCode<'Data,'Result>
+                -> 'Result
+```
+
+This allows for creation of that `IAsyncStateMachine` shown in the C# code generation example.
+
+
+### moveNextMethod
+
+You'll see we start with:
+
+```fsharp
+    __resumeAt sm.ResumptionPoint
+```
+
+This is essentially the if/switch statement:
+
+```csharp
+    switch (num)
+    {
+        default: ...
+        case 0: ...
+        case 1: ...
+    }
+```
+
+This allows us to mimic the switch statement thus _"resuming"_ the operation where it left off.
+
+Then that case will jump into one of the other members on the CE like while, for, tryfinally, but for simplicity we'll only look at Bind but the same principles apply to it.
+
+```csharp
+    awaiter = Task.FromResult("LOL").GetAwaiter();
+    if (!awaiter.IsCompleted)
+    {
+        num = (<>1__state = 0);
+        <>u__1 = awaiter;
+        <>t__builder.AwaitUnsafeOnCompleted(ref awaiter, ref this);
+        return;
+    }
+```
+
+We basically have to re-implement parts of the state machine that C# is doing.
+
+In our Bind method we have:
+
+```fsharp
+let mutable awaiter = (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))
+
+let mutable __stack_fin = true
+
+if not (^Awaiter: (member get_IsCompleted: unit -> bool) (awaiter)) then
+    // This will yield with __stack_yield_fin = false
+    // This will resume with __stack_yield_fin = true
+    let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
+    __stack_fin <- __stack_yield_fin
+
+if __stack_fin then
+    let result = (^Awaiter: (member GetResult: unit -> 'TResult1) (awaiter))
+    (continuation result).Invoke(&sm)
+else
+    sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
+    false
+```
+
+Let's go section by section:
+
+We need to get the awaiter for the task:
+
+```fsharp
+//  awaiter = Task.FromResult("LOL").GetAwaiter();
+let mutable awaiter = (^TaskLike: (member GetAwaiter: unit -> ^Awaiter) (task))
+```
+This happens to be using SRTP but we'll get to why later.
+
+
+Then we check if the awaiter is completed:
+
+```fsharp
+// if (!awaiter.IsCompleted)
+if not (^Awaiter: (member get_IsCompleted: unit -> bool) (awaiter)) then
+```
+
+If it's not completed we need to yield and return:
+
+```fsharp
+// num = (<>1__state = 0);
+let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
+```
+
+Yield is what actually sets the "state" so we can return to this point with the `__resumeAt sm.ResumptionPoint` in the `MoveNext()` method.
+
+Then we figure out if we we can get the value or we need to set the continuation.
+
+```fsharp
+// <>t__builder.AwaitUnsafeOnCompleted(ref awaiter, ref this);
+sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
+// Returning false indicates suspension of computation
+false
+```
+
+
+## References 
+
+- [How Async Await really works](https://devblogs.microsoft.com/dotnet/how-async-await-really-works/)
+- [F# RFC FS-1087 - Resumable code and resumable state machines](https://github.com/fsharp/fslang-design/blob/main/FSharp-6.0/FS-1087-resumable-code.md)
+- [F# RFC FS-1097 - Task builder](https://github.com/fsharp/fslang-design/blob/main/FSharp-6.0/FS-1097-task-builder.md)
+- [Resumable State Machines - F# Compiler Community Session](https://www.youtube.com/watch?v=GYi3ZMF8Pm0)
+- [Resumable code and tasks - F# Community Review Session](https://www.youtube.com/watch?v=B6m_vJ-a2dM)

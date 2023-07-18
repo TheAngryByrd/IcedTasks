@@ -197,4 +197,24 @@ public static class TaskPerfCSharp
 
         }
     }
+
+    public static async Task<int> Csharp_WhileLoop(int length)
+    {
+        var i = 0;
+        while (i < length)
+        {
+            i++;
+        }
+        return i;
+    }
+    public static async Task<int> Csharp_WhileLoop_Async(int length)
+    {
+        var i = 0;
+        while (i < length)
+        {
+            await Task.Yield();
+            i++;
+        }
+        return i;
+    }
 }

@@ -31,6 +31,10 @@ module CancellableTasks =
     /// CancellationToken -> Task
     type CancellableTask = CancellationToken -> Task
 
+    // type CancellableTaskDelegate<'T> = Func<CancellationToken, Task<'T>>
+    // type CancellableTaskDelegate<'T> = FSharpFunc<CancellationToken, Task<'T>>
+    // type CancellableTaskDelegate<'T> = delegate of CancellationToken -> Task<'T>
+
     /// The extra data stored in ResumableStateMachine for tasks
     [<Struct; NoComparison; NoEquality>]
     type CancellableTaskStateMachineData<'T> =
@@ -72,12 +76,7 @@ module CancellableTasks =
         member inline _.Delay
             ([<InlineIfLambdaAttribute>] generator: unit -> CancellableTaskCode<'TOverall, 'T>)
             : CancellableTaskCode<'TOverall, 'T> =
-            ResumableCode.Delay(fun () ->
-                CancellableTaskCode(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    (generator ()).Invoke(&sm)
-                )
-            )
+            ResumableCode.Delay(generator)
 
 
         /// <summary>Creates an CancellableTask that just returns ().</summary>
@@ -101,7 +100,6 @@ module CancellableTasks =
         /// <returns>An CancellableTask that returns value when executed.</returns>
         member inline _.Return(value: 'T) : CancellableTaskCode<'T, 'T> =
             CancellableTaskCode<'T, _>(fun sm ->
-                sm.Data.ThrowIfCancellationRequested()
                 sm.Data.Result <- value
                 true
             )
@@ -123,17 +121,7 @@ module CancellableTasks =
                 task1: CancellableTaskCode<'TOverall, unit>,
                 task2: CancellableTaskCode<'TOverall, 'T>
             ) : CancellableTaskCode<'TOverall, 'T> =
-            ResumableCode.Combine(
-                CancellableTaskCode(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    task1.Invoke(&sm)
-                ),
-
-                CancellableTaskCode(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    task2.Invoke(&sm)
-                )
-            )
+            ResumableCode.Combine(task1, task2)
 
         /// <summary>Creates an CancellableTask that runs computation repeatedly
         /// until guard() becomes false.</summary>
@@ -153,13 +141,7 @@ module CancellableTasks =
                 [<InlineIfLambda>] guard: unit -> bool,
                 computation: CancellableTaskCode<'TOverall, unit>
             ) : CancellableTaskCode<'TOverall, unit> =
-            ResumableCode.While(
-                guard,
-                CancellableTaskCode(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    computation.Invoke(&sm)
-                )
-            )
+            ResumableCode.While(guard, computation)
 
         /// <summary>Creates an CancellableTask that runs computation and returns its result.
         /// If an exception happens then catchHandler(exn) is called and the resulting computation executed instead.</summary>
@@ -179,13 +161,7 @@ module CancellableTasks =
                 computation: CancellableTaskCode<'TOverall, 'T>,
                 catchHandler: exn -> CancellableTaskCode<'TOverall, 'T>
             ) : CancellableTaskCode<'TOverall, 'T> =
-            ResumableCode.TryWith(
-                CancellableTaskCode(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    computation.Invoke(&sm)
-                ),
-                catchHandler
-            )
+            ResumableCode.TryWith(computation, catchHandler)
 
         /// <summary>Creates an CancellableTask that runs computation. The action compensation is executed
         /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
@@ -208,11 +184,7 @@ module CancellableTasks =
                 [<InlineIfLambda>] compensation: unit -> unit
             ) : CancellableTaskCode<'TOverall, 'T> =
             ResumableCode.TryFinally(
-
-                CancellableTaskCode(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    computation.Invoke(&sm)
-                ),
+                computation,
                 ResumableCode<_, _>(fun _ ->
                     compensation ()
                     true
@@ -238,14 +210,7 @@ module CancellableTasks =
                 sequence: seq<'T>,
                 body: 'T -> CancellableTaskCode<'TOverall, unit>
             ) : CancellableTaskCode<'TOverall, unit> =
-            ResumableCode.For(
-                sequence,
-                fun item ->
-                    CancellableTaskCode(fun sm ->
-                        sm.Data.ThrowIfCancellationRequested()
-                        (body item).Invoke(&sm)
-                    )
-            )
+            ResumableCode.For(sequence, body)
 
 #if NETSTANDARD2_1
         /// <summary>Creates an CancellableTask that runs computation. The action compensation is executed
@@ -271,7 +236,6 @@ module CancellableTasks =
             ResumableCode.TryFinallyAsync(
                 computation,
                 ResumableCode<_, _>(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
 
                     if __useResumableCode then
                         let mutable __stack_condition_fin = true
@@ -331,10 +295,7 @@ module CancellableTasks =
                 binder: 'Resource -> CancellableTaskCode<'TOverall, 'T>
             ) : CancellableTaskCode<'TOverall, 'T> =
             this.TryFinallyAsync(
-                (fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    (binder resource).Invoke(&sm)
-                ),
+                (fun sm -> (binder resource).Invoke(&sm)),
                 (fun () ->
                     if not (isNull (box resource)) then
                         resource.DisposeAsync()
@@ -444,7 +405,8 @@ module CancellableTasks =
                                 sm.Data.MethodBuilder.Task
                     ))
             else
-                CancellableTaskBuilder.RunDynamic(code)
+                failwith "sorry lol"
+    // CancellableTaskBuilder.RunDynamic(code)
 
     /// Contains methods to build CancellableTasks using the F# computation expression syntax
     type BackgroundCancellableTaskBuilder() =
@@ -947,6 +909,10 @@ module CancellableTasks =
             member inline _.Source([<InlineIfLambda>] task: CancellableTask<'TResult1>) =
                 (fun ct -> (task ct).GetAwaiter())
 
+
+            // member inline _.Source([<InlineIfLambda>] task: CancellableTaskDelegate<'TResult1>) =
+            //     (fun ct -> (task.Invoke ct).GetAwaiter())
+
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This turns a Async&lt;'T&gt; into a CancellationToken -> 'Awaiter.</remarks>
@@ -1196,6 +1162,10 @@ module CancellableTasks =
 
         let inline internal getAwaiter ([<InlineIfLambda>] ctask: CancellableTask<_>) =
             fun ct -> (ctask ct).GetAwaiter()
+
+        // let inline startAsTask ct (ctask: CancellableTaskDelegate<_>) = ctask.Invoke ct
+
+        let inline startAsTask (ct: byref<CancellationToken>) (ctask: CancellableTask<_>) = ctask ct
 
     /// <exclude />
     [<AutoOpen>]
