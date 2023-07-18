@@ -11,7 +11,7 @@
 
 namespace IcedTasks
 
-#if NETSTANDARD2_1
+#if NETSTANDARD2_1 || NET6_0_OR_GREATER
 
 /// Contains methods to build CancellableTasks using the F# computation expression syntax
 [<AutoOpen>]
@@ -248,7 +248,7 @@ module CancellableValueTasks =
                     )
             )
 
-#if NETSTANDARD2_1
+#if NETSTANDARD2_1 || NET6_0_OR_GREATER
         /// <summary>Creates an CancellableValueTask that runs computation. The action compensation is executed
         /// after computation completes, whether computation exits normally or by an exception. If compensation res an exception itself
         /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>

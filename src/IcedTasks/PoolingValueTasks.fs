@@ -3,66 +3,7 @@ namespace IcedTasks
 
 open System.Threading.Tasks
 
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
-
-/// <summary>
-/// Module with extension methods for <see cref="T:System.Threading.Tasks.ValueTask`1"/>.
-/// </summary>
-[<AutoOpen>]
-module ValueTaskExtensions =
-
-    type ValueTask with
-
-        /// <summary>Creates a <see cref="T:System.Threading.Tasks.ValueTask" /> that's completed due to cancellation with a specified cancellation token.</summary>
-        /// <param name="cancellationToken">The cancellation token with which to complete the task.</param>
-        /// <returns>The canceled task.</returns>
-        /// <exception cref="T:System.ArgumentOutOfRangeException">Cancellation has not been requested for <paramref name="cancellationToken" />; its <see cref="P:System.Threading.CancellationToken.IsCancellationRequested" /> property is <see langword="false" />.</exception>
-        static member FromCanceled(cancellationToken) =
-            new ValueTask(Task.FromCanceled(cancellationToken))
-
-        /// <summary>Creates a <see cref="T:System.Threading.Tasks.ValueTask`1" /> that's completed due to cancellation with a specified cancellation token.</summary>
-        /// <param name="cancellationToken">The cancellation token with which to complete the task.</param>
-        /// <typeparam name="TResult">The type of the result returned by the task.</typeparam>
-        /// <returns>The canceled task.</returns>
-        /// <exception cref="T:System.ArgumentOutOfRangeException">Cancellation has not been requested for <paramref name="cancellationToken" />; its <see cref="P:System.Threading.CancellationToken.IsCancellationRequested" /> property is <see langword="false" />.</exception>
-        static member FromCanceled<'T>(cancellationToken) =
-            new ValueTask<'T>(Task.FromCanceled<'T>(cancellationToken))
-
-    type Microsoft.FSharp.Control.Async with
-
-        /// <summary>
-        /// Return an asynchronous computation that will check if ValueTask is completed or wait for
-        /// the given task to complete and return its result.
-        /// </summary>
-        /// <param name="vTask">The task to await.</param>
-        static member inline AwaitValueTask(vTask: ValueTask<_>) : Async<_> =
-            // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
-            if vTask.IsCompletedSuccessfully then
-                async.Return vTask.Result
-            else
-                Async.AwaitTask(vTask.AsTask())
-
-
-        /// <summary>
-        /// Return an asynchronous computation that will check if ValueTask is completed or wait for
-        /// the given task to complete and return its result.
-        /// </summary>
-        /// <param name="vTask">The task to await.</param>
-        static member inline AwaitValueTask(vTask: ValueTask) : Async<unit> =
-            // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
-            if vTask.IsCompletedSuccessfully then
-                async.Return()
-            else
-                Async.AwaitTask(vTask.AsTask())
-
-
-        /// <summary>
-        /// Runs an asynchronous computation, starting immediately on the current operating system thread,
-        /// but also returns the execution as <see cref="T:System.Threading.Tasks.ValueTask`1" />.
-        /// </summary>
-        static member inline AsValueTask(computation: Async<'T>) : ValueTask<'T> =
-            Async.StartImmediateAsTask(computation)
-            |> ValueTask<'T>
+#if NET6_0_OR_GREATER
 
 
 // Task builder for F# that compiles to allocation-free paths for synchronous code.
@@ -78,9 +19,9 @@ module ValueTaskExtensions =
 
 namespace IcedTasks
 
-/// Contains methods to build ValueTasks using the F# computation expression syntax
+/// Contains methods to build PoolingValueTasks using the F# computation expression syntax
 [<AutoOpen>]
-module ValueTasks =
+module PoolingValueTasks =
     open System
     open System.Runtime.CompilerServices
     open System.Threading
@@ -93,64 +34,66 @@ module ValueTasks =
 
     /// The extra data stored in ResumableStateMachine for tasks
     [<Struct; NoComparison; NoEquality>]
-    type ValueTaskStateMachineData<'T> =
+    type PoolingValueTaskstateMachineData<'T> =
 
         [<DefaultValue(false)>]
         val mutable Result: 'T
 
         [<DefaultValue(false)>]
-        val mutable MethodBuilder: AsyncValueTaskMethodBuilder<'T>
+        val mutable MethodBuilder: PoolingAsyncValueTaskMethodBuilder<'T>
 
     /// This is used by the compiler as a template for creating state machine structs
-    and ValueTaskStateMachine<'TOverall> =
-        ResumableStateMachine<ValueTaskStateMachineData<'TOverall>>
+    and PoolingValueTaskstateMachine<'TOverall> =
+        ResumableStateMachine<PoolingValueTaskstateMachineData<'TOverall>>
 
-    /// Represents the runtime continuation of a valueTask state machine created dynamically
-    and ValueTaskResumptionFunc<'TOverall> = ResumptionFunc<ValueTaskStateMachineData<'TOverall>>
+    /// Represents the runtime continuation of a poolingValueTask state machine created dynamically
+    and PoolingValueTaskResumptionFunc<'TOverall> =
+        ResumptionFunc<PoolingValueTaskstateMachineData<'TOverall>>
 
-    /// Represents the runtime continuation of a valueTask state machine created dynamically
-    and ValueTaskResumptionDynamicInfo<'TOverall> =
-        ResumptionDynamicInfo<ValueTaskStateMachineData<'TOverall>>
+    /// Represents the runtime continuation of a poolingValueTask state machine created dynamically
+    and PoolingValueTaskResumptionDynamicInfo<'TOverall> =
+        ResumptionDynamicInfo<PoolingValueTaskstateMachineData<'TOverall>>
 
-    /// A special compiler-recognised delegate type for specifying blocks of valueTask code with access to the state machine
-    and ValueTaskCode<'TOverall, 'T> = ResumableCode<ValueTaskStateMachineData<'TOverall>, 'T>
+    /// A special compiler-recognised delegate type for specifying blocks of poolingValueTask code with access to the state machine
+    and PoolingValueTaskCode<'TOverall, 'T> =
+        ResumableCode<PoolingValueTaskstateMachineData<'TOverall>, 'T>
 
     /// <summary>
-    /// Contains methods to build ValueTasks using the F# computation expression syntax
+    /// Contains methods to build PoolingValueTasks using the F# computation expression syntax
     /// </summary>
-    type ValueTaskBuilderBase() =
+    type PoolingValueTaskBuilderBase() =
 
 
         /// <summary>Creates a ValueTask that runs generator</summary>
         /// <param name="generator">The function to run</param>
-        /// <returns>A valueTask that runs generator</returns>
+        /// <returns>A poolingValueTask that runs generator</returns>
         member inline _.Delay
-            ([<InlineIfLambdaAttribute>] generator: unit -> ValueTaskCode<'TOverall, 'T>)
-            : ValueTaskCode<'TOverall, 'T> =
+            ([<InlineIfLambdaAttribute>] generator: unit -> PoolingValueTaskCode<'TOverall, 'T>)
+            : PoolingValueTaskCode<'TOverall, 'T> =
             ResumableCode.Delay(fun () -> generator ())
 
 
         /// <summary>Creates an ValueTask that just returns ().</summary>
         /// <remarks>
         /// The existence of this method permits the use of empty else branches in the
-        /// valueTask { ... } computation expression syntax.
+        /// poolingValueTask { ... } computation expression syntax.
         /// </remarks>
         /// <returns>An ValueTask that returns ().</returns>
         [<DefaultValue>]
-        member inline _.Zero() : ValueTaskCode<'TOverall, unit> = ResumableCode.Zero()
+        member inline _.Zero() : PoolingValueTaskCode<'TOverall, unit> = ResumableCode.Zero()
 
         /// <summary>Creates an computation that returns the result v.</summary>
         ///
         /// <remarks>A cancellation check is performed when the computation is executed.
         ///
         /// The existence of this method permits the use of return in the
-        /// valueTask { ... } computation expression syntax.</remarks>
+        /// poolingValueTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="value">The value to return from the computation.</param>
         ///
         /// <returns>An ValueTask that returns value when executed.</returns>
-        member inline _.Return(value: 'T) : ValueTaskCode<'T, 'T> =
-            ValueTaskCode<'T, _>(fun sm ->
+        member inline _.Return(value: 'T) : PoolingValueTaskCode<'T, 'T> =
+            PoolingValueTaskCode<'T, _>(fun sm ->
                 sm.Data.Result <- value
                 true
             )
@@ -161,7 +104,7 @@ module ValueTasks =
         /// <remarks>
         ///
         /// The existence of this method permits the use of expression sequencing in the
-        /// valueTask { ... } computation expression syntax.</remarks>
+        /// poolingValueTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="task1">The first part of the sequenced computation.</param>
         /// <param name="task2">The second part of the sequenced computation.</param>
@@ -169,9 +112,9 @@ module ValueTasks =
         /// <returns>An ValueTask that runs both of the computations sequentially.</returns>
         member inline _.Combine
             (
-                task1: ValueTaskCode<'TOverall, unit>,
-                task2: ValueTaskCode<'TOverall, 'T>
-            ) : ValueTaskCode<'TOverall, 'T> =
+                task1: PoolingValueTaskCode<'TOverall, unit>,
+                task2: PoolingValueTaskCode<'TOverall, 'T>
+            ) : PoolingValueTaskCode<'TOverall, 'T> =
             ResumableCode.Combine(task1, task2)
 
         /// <summary>Creates an ValueTask that runs computation repeatedly
@@ -180,7 +123,7 @@ module ValueTasks =
         /// <remarks>
         ///
         /// The existence of this method permits the use of while in the
-        /// valueTask { ... } computation expression syntax.</remarks>
+        /// poolingValueTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="guard">The function to determine when to stop executing computation.</param>
         /// <param name="computation">The function to be executed.  Equivalent to the body
@@ -190,8 +133,8 @@ module ValueTasks =
         member inline _.While
             (
                 guard: unit -> bool,
-                computation: ValueTaskCode<'TOverall, unit>
-            ) : ValueTaskCode<'TOverall, unit> =
+                computation: PoolingValueTaskCode<'TOverall, unit>
+            ) : PoolingValueTaskCode<'TOverall, unit> =
             ResumableCode.While(guard, computation)
 
         /// <summary>Creates an ValueTask that runs computation and returns its result.
@@ -200,7 +143,7 @@ module ValueTasks =
         /// <remarks>
         ///
         /// The existence of this method permits the use of try/with in the
-        /// valueTask { ... } computation expression syntax.</remarks>
+        /// poolingValueTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="computation">The input computation.</param>
         /// <param name="catchHandler">The function to run when computation throws an exception.</param>
@@ -209,9 +152,9 @@ module ValueTasks =
         /// exception is thrown.</returns>
         member inline _.TryWith
             (
-                computation: ValueTaskCode<'TOverall, 'T>,
-                catchHandler: exn -> ValueTaskCode<'TOverall, 'T>
-            ) : ValueTaskCode<'TOverall, 'T> =
+                computation: PoolingValueTaskCode<'TOverall, 'T>,
+                catchHandler: exn -> PoolingValueTaskCode<'TOverall, 'T>
+            ) : PoolingValueTaskCode<'TOverall, 'T> =
             ResumableCode.TryWith(computation, catchHandler)
 
         /// <summary>Creates an ValueTask that runs computation. The action compensation is executed
@@ -221,7 +164,7 @@ module ValueTasks =
         /// <remarks>
         ///
         /// The existence of this method permits the use of try/finally in the
-        /// valueTask { ... } computation expression syntax.</remarks>
+        /// poolingValueTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="computation">The input computation.</param>
         /// <param name="compensation">The action to be run after computation completes or raises an
@@ -231,9 +174,9 @@ module ValueTasks =
         /// when an exception is raised.</returns>
         member inline _.TryFinally
             (
-                computation: ValueTaskCode<'TOverall, 'T>,
+                computation: PoolingValueTaskCode<'TOverall, 'T>,
                 compensation: unit -> unit
-            ) : ValueTaskCode<'TOverall, 'T> =
+            ) : PoolingValueTaskCode<'TOverall, 'T> =
             ResumableCode.TryFinally(
                 computation,
                 ResumableCode<_, _>(fun _ ->
@@ -248,7 +191,7 @@ module ValueTasks =
         /// <remarks>A cancellation check is performed on each iteration of the loop.
         ///
         /// The existence of this method permits the use of for in the
-        /// valueTask { ... } computation expression syntax.</remarks>
+        /// poolingValueTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="sequence">The sequence to enumerate.</param>
         /// <param name="body">A function to take an item from the sequence and create
@@ -259,8 +202,8 @@ module ValueTasks =
         member inline _.For
             (
                 sequence: seq<'T>,
-                body: 'T -> ValueTaskCode<'TOverall, unit>
-            ) : ValueTaskCode<'TOverall, unit> =
+                body: 'T -> PoolingValueTaskCode<'TOverall, unit>
+            ) : PoolingValueTaskCode<'TOverall, unit> =
             ResumableCode.For(sequence, body)
 
         /// <summary>Creates an ValueTask that runs computation. The action compensation is executed
@@ -270,7 +213,7 @@ module ValueTasks =
         /// <remarks>
         ///
         /// The existence of this method permits the use of try/finally in the
-        /// valueTask { ... } computation expression syntax.</remarks>
+        /// poolingValueTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="computation">The input computation.</param>
         /// <param name="compensation">The action to be run after computation completes or raises an
@@ -280,9 +223,9 @@ module ValueTasks =
         /// when an exception is raised.</returns>
         member inline internal this.TryFinallyAsync
             (
-                computation: ValueTaskCode<'TOverall, 'T>,
+                computation: PoolingValueTaskCode<'TOverall, 'T>,
                 compensation: unit -> ValueTask
-            ) : ValueTaskCode<'TOverall, 'T> =
+            ) : PoolingValueTaskCode<'TOverall, 'T> =
             ResumableCode.TryFinallyAsync(
                 computation,
                 ResumableCode<_, _>(fun sm ->
@@ -305,7 +248,7 @@ module ValueTasks =
                         let mutable awaiter = vtask.GetAwaiter()
 
                         let cont =
-                            ValueTaskResumptionFunc<'TOverall>(fun sm ->
+                            PoolingValueTaskResumptionFunc<'TOverall>(fun sm ->
                                 awaiter
                                 |> Awaiter.GetResult
 
@@ -331,7 +274,7 @@ module ValueTasks =
         /// <remarks>
         ///
         /// The existence of this method permits the use of use and use! in the
-        /// valueTask { ... } computation expression syntax.</remarks>
+        /// poolingValueTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="resource">The resource to be used and disposed.</param>
         /// <param name="binder">The function that takes the resource and returns an asynchronous
@@ -342,8 +285,8 @@ module ValueTasks =
         member inline this.Using<'Resource, 'TOverall, 'T when 'Resource :> IAsyncDisposable>
             (
                 resource: 'Resource,
-                binder: 'Resource -> ValueTaskCode<'TOverall, 'T>
-            ) : ValueTaskCode<'TOverall, 'T> =
+                binder: 'Resource -> PoolingValueTaskCode<'TOverall, 'T>
+            ) : PoolingValueTaskCode<'TOverall, 'T> =
             this.TryFinallyAsync(
                 (fun sm -> (binder resource).Invoke(&sm)),
                 (fun () ->
@@ -355,11 +298,11 @@ module ValueTasks =
             )
 
     ///<summary>
-    /// Contains methods to build ValueTasks using the F# computation expression syntax
+    /// Contains methods to build PoolingValueTasks using the F# computation expression syntax
     /// </summary>
-    type ValueTaskBuilder() =
+    type PoolingValueTaskBuilder() =
 
-        inherit ValueTaskBuilderBase()
+        inherit PoolingValueTaskBuilderBase()
 
         // This is the dynamic implementation - this is not used
         // for statically compiled tasks.  An executor (resumptionFuncExecutor) is
@@ -370,14 +313,15 @@ module ValueTasks =
         /// <summary>
         /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
         /// </summary>
-        static member inline RunDynamic(code: ValueTaskCode<'T, 'T>) : ValueTask<'T> =
+        static member inline RunDynamic(code: PoolingValueTaskCode<'T, 'T>) : ValueTask<'T> =
 
-            let mutable sm = ValueTaskStateMachine<'T>()
+            let mutable sm = PoolingValueTaskstateMachine<'T>()
 
-            let initialResumptionFunc = ValueTaskResumptionFunc<'T>(fun sm -> code.Invoke(&sm))
+            let initialResumptionFunc =
+                PoolingValueTaskResumptionFunc<'T>(fun sm -> code.Invoke(&sm))
 
             let resumptionInfo =
-                { new ValueTaskResumptionDynamicInfo<'T>(initialResumptionFunc) with
+                { new PoolingValueTaskResumptionDynamicInfo<'T>(initialResumptionFunc) with
                     member info.MoveNext(sm) =
                         let mutable savedExn = null
 
@@ -407,14 +351,14 @@ module ValueTasks =
                 }
 
             sm.ResumptionDynamicInfo <- resumptionInfo
-            sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
+            sm.Data.MethodBuilder <- PoolingAsyncValueTaskMethodBuilder<'T>.Create()
             sm.Data.MethodBuilder.Start(&sm)
             sm.Data.MethodBuilder.Task
 
         /// Hosts the task code in a state machine and starts the task.
-        member inline _.Run(code: ValueTaskCode<'T, 'T>) : ValueTask<'T> =
+        member inline _.Run(code: PoolingValueTaskCode<'T, 'T>) : ValueTask<'T> =
             if __useResumableCode then
-                __stateMachine<ValueTaskStateMachineData<'T>, ValueTask<'T>>
+                __stateMachine<PoolingValueTaskstateMachineData<'T>, ValueTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
@@ -437,39 +381,39 @@ module ValueTasks =
                         sm.Data.MethodBuilder.SetStateMachine(state)
                     ))
                     (AfterCode<_, _>(fun sm ->
-                        sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
+                        sm.Data.MethodBuilder <- PoolingAsyncValueTaskMethodBuilder<'T>.Create()
                         sm.Data.MethodBuilder.Start(&sm)
                         sm.Data.MethodBuilder.Task
                     ))
             else
-                ValueTaskBuilder.RunDynamic(code)
+                PoolingValueTaskBuilder.RunDynamic(code)
 
-    /// Contains methods to build ValueTasks using the F# computation expression syntax
-    type BackgroundValueTaskBuilder() =
+    /// Contains methods to build PoolingValueTasks using the F# computation expression syntax
+    type BackgroundPoolingValueTaskBuilder() =
 
-        inherit ValueTaskBuilderBase()
+        inherit PoolingValueTaskBuilderBase()
 
         /// <summary>
         /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
         /// </summary>
-        static member inline RunDynamic(code: ValueTaskCode<'T, 'T>) : ValueTask<'T> =
+        static member inline RunDynamic(code: PoolingValueTaskCode<'T, 'T>) : ValueTask<'T> =
             // backgroundTask { .. } escapes to a background thread where necessary
             // See spec of ConfigureAwait(false) at https://devblogs.microsoft.com/dotnet/configureawait-faq/
             if
                 isNull SynchronizationContext.Current
                 && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
             then
-                ValueTaskBuilder.RunDynamic(code)
+                PoolingValueTaskBuilder.RunDynamic(code)
             else
-                Task.Run<'T>((fun () -> (ValueTaskBuilder.RunDynamic code).AsTask()))
+                Task.Run<'T>((fun () -> (PoolingValueTaskBuilder.RunDynamic code).AsTask()))
                 |> ValueTask<'T>
 
         /// <summary>
         /// Hosts the task code in a state machine and starts the task, executing in the threadpool using Task.Run
         /// </summary>
-        member inline _.Run(code: ValueTaskCode<'T, 'T>) : ValueTask<'T> =
+        member inline _.Run(code: PoolingValueTaskCode<'T, 'T>) : ValueTask<'T> =
             if __useResumableCode then
-                __stateMachine<ValueTaskStateMachineData<'T>, ValueTask<'T>>
+                __stateMachine<PoolingValueTaskstateMachineData<'T>, ValueTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
@@ -495,7 +439,8 @@ module ValueTasks =
                             && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
                         then
 
-                            sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
+                            sm.Data.MethodBuilder <-
+                                PoolingAsyncValueTaskMethodBuilder<'T>.Create()
 
                             sm.Data.MethodBuilder.Start(&sm)
                             sm.Data.MethodBuilder.Task
@@ -507,7 +452,7 @@ module ValueTasks =
                                     let mutable sm = sm // host local mutable copy of contents of state machine on this thread pool thread
 
                                     sm.Data.MethodBuilder <-
-                                        AsyncValueTaskMethodBuilder<'T>.Create()
+                                        PoolingAsyncValueTaskMethodBuilder<'T>.Create()
 
                                     sm.Data.MethodBuilder.Start(&sm)
                                     sm.Data.MethodBuilder.Task.AsTask()
@@ -517,33 +462,33 @@ module ValueTasks =
                     ))
 
             else
-                BackgroundValueTaskBuilder.RunDynamic(code)
+                BackgroundPoolingValueTaskBuilder.RunDynamic(code)
 
 
-    /// Contains the valueTask computation expression builder.
+    /// Contains the poolingValueTask computation expression builder.
     [<AutoOpen>]
     module ValueTaskBuilder =
 
         /// <summary>
-        /// Builds a valueTask using computation expression syntax.
+        /// Builds a poolingValueTask using computation expression syntax.
         /// </summary>
-        let valueTask = ValueTaskBuilder()
+        let poolingValueTask = PoolingValueTaskBuilder()
 
         /// <summary>
-        /// Builds a valueTask using computation expression syntax.
+        /// Builds a poolingValueTask using computation expression syntax.
         /// </summary>
-        let vTask = valueTask
+        let pvTask = poolingValueTask
 
         /// <summary>
-        /// Builds a valueTask using computation expression syntax which switches to execute on a background thread if not already doing so.
+        /// Builds a poolingValueTask using computation expression syntax which switches to execute on a background thread if not already doing so.
         /// </summary>
-        let backgroundValueTask = BackgroundValueTaskBuilder()
+        let backgroundPoolingValueTask = BackgroundPoolingValueTaskBuilder()
 
     /// <exclude/>
     [<AutoOpen>]
     module LowPriority =
         // Low priority extensions
-        type ValueTaskBuilderBase with
+        type PoolingValueTaskBuilderBase with
 
             /// <summary>
             /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
@@ -552,15 +497,15 @@ module ValueTasks =
             static member inline BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
                 (
-                    sm: byref<ResumableStateMachine<ValueTaskStateMachineData<'TOverall>>>,
+                    sm: byref<ResumableStateMachine<PoolingValueTaskstateMachineData<'TOverall>>>,
                     getAwaiter: 'Awaiter,
-                    continuation: ('TResult1 -> ValueTaskCode<'TOverall, 'TResult2>)
+                    continuation: ('TResult1 -> PoolingValueTaskCode<'TOverall, 'TResult2>)
                 ) : bool =
 
                 let mutable awaiter = getAwaiter
 
                 let cont =
-                    (ValueTaskResumptionFunc<'TOverall>(fun sm ->
+                    (PoolingValueTaskResumptionFunc<'TOverall>(fun sm ->
                         let result =
                             awaiter
                             |> Awaiter.GetResult
@@ -584,7 +529,7 @@ module ValueTasks =
             /// <remarks>A cancellation check is performed when the computation is executed.
             ///
             /// The existence of this method permits the use of let! in the
-            /// valueTask { ... } computation expression syntax.</remarks>
+            /// poolingValueTask { ... } computation expression syntax.</remarks>
             ///
             /// <param name="getAwaiter">The computation to provide an unbound result.</param>
             /// <param name="continuation">The function to bind the result of computation.</param>
@@ -596,10 +541,10 @@ module ValueTasks =
                 when Awaiter<'Awaiter, 'TResult1>>
                 (
                     getAwaiter: 'Awaiter,
-                    continuation: ('TResult1 -> ValueTaskCode<'TOverall, 'TResult2>)
-                ) : ValueTaskCode<'TOverall, 'TResult2> =
+                    continuation: ('TResult1 -> PoolingValueTaskCode<'TOverall, 'TResult2>)
+                ) : PoolingValueTaskCode<'TOverall, 'TResult2> =
 
-                ValueTaskCode<'TOverall, _>(fun sm ->
+                PoolingValueTaskCode<'TOverall, _>(fun sm ->
                     if __useResumableCode then
                         //-- RESUMABLE CODE START
                         // Get an awaiter from the Awaiter
@@ -621,7 +566,7 @@ module ValueTasks =
                             sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
                             false
                     else
-                        ValueTaskBuilderBase.BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall>(
+                        PoolingValueTaskBuilderBase.BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall>(
                             &sm,
                             getAwaiter,
                             continuation
@@ -633,7 +578,7 @@ module ValueTasks =
             /// <summary>Delegates to the input computation.</summary>
             ///
             /// <remarks>The existence of this method permits the use of return! in the
-            /// valueTask { ... } computation expression syntax.</remarks>
+            /// poolingValueTask { ... } computation expression syntax.</remarks>
             ///
             /// <param name="getAwaiter">The input computation.</param>
             ///
@@ -642,7 +587,7 @@ module ValueTasks =
             member inline this.ReturnFrom<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
                 (getAwaiter: 'Awaiter)
-                : ValueTaskCode<_, _> =
+                : PoolingValueTaskCode<_, _> =
                 this.Bind(getAwaiter, (fun v -> this.Return v))
 
             [<NoEagerConstraintApplication>]
@@ -651,7 +596,7 @@ module ValueTasks =
                 (
                     getAwaiter: 'Awaiter,
                     f
-                ) : ValueTaskCode<'TResult2, 'TResult2> =
+                ) : PoolingValueTaskCode<'TResult2, 'TResult2> =
                 this.Bind(getAwaiter, (fun v -> this.Return(f v)))
 
 
@@ -688,7 +633,7 @@ module ValueTasks =
             /// <remarks>
             ///
             /// The existence of this method permits the use of use and use! in the
-            /// valueTask { ... } computation expression syntax.</remarks>
+            /// poolingValueTask { ... } computation expression syntax.</remarks>
             ///
             /// <param name="resource">The resource to be used and disposed.</param>
             /// <param name="binder">The function that takes the resource and returns an asynchronous
@@ -699,7 +644,7 @@ module ValueTasks =
             member inline _.Using<'Resource, 'TOverall, 'T when 'Resource :> IDisposable>
                 (
                     resource: 'Resource,
-                    binder: 'Resource -> ValueTaskCode<'TOverall, 'T>
+                    binder: 'Resource -> PoolingValueTaskCode<'TOverall, 'T>
                 ) =
                 ResumableCode.Using(resource, binder)
 
@@ -708,7 +653,7 @@ module ValueTasks =
     module HighPriority =
 
         // High priority extensions
-        type ValueTaskBuilderBase with
+        type PoolingValueTaskBuilderBase with
 
             /// <summary>Allows the computation expression to turn other types into other types</summary>
             ///
@@ -751,7 +696,7 @@ module ValueTasks =
         let inline singleton (item: 'item) : ValueTask<'item> = ValueTask<'item> item
 
 
-        /// <summary>Allows chaining of ValueTasks.</summary>
+        /// <summary>Allows chaining of PoolingValueTasks.</summary>
         /// <param name="binder">The continuation.</param>
         /// <param name="cTask">The value.</param>
         /// <returns>The result of the binder.</returns>
@@ -759,35 +704,35 @@ module ValueTasks =
             ([<InlineIfLambda>] binder: 'input -> ValueTask<'output>)
             (cTask: ValueTask<'input>)
             =
-            valueTask {
+            poolingValueTask {
                 let! cResult = cTask
                 return! binder cResult
             }
 
-        /// <summary>Allows chaining of ValueTasks.</summary>
+        /// <summary>Allows chaining of PoolingValueTasks.</summary>
         /// <param name="mapper">The continuation.</param>
         /// <param name="cTask">The value.</param>
-        /// <returns>The result of the mapper wrapped in a ValueTasks.</returns>
-        let inline map ([<InlineIfLambda>] mapper: 'input -> 'output) (cTask: ValueTask<'input>) = valueTask {
+        /// <returns>The result of the mapper wrapped in a PoolingValueTasks.</returns>
+        let inline map ([<InlineIfLambda>] mapper: 'input -> 'output) (cTask: ValueTask<'input>) = poolingValueTask {
             let! cResult = cTask
             return mapper cResult
         }
 
-        /// <summary>Allows chaining of ValueTasks.</summary>
-        /// <param name="applicable">A function wrapped in a ValueTasks</param>
+        /// <summary>Allows chaining of PoolingValueTasks.</summary>
+        /// <param name="applicable">A function wrapped in a PoolingValueTasks</param>
         /// <param name="cTask">The value.</param>
         /// <returns>The result of the applicable.</returns>
-        let inline apply (applicable: ValueTask<'input -> 'output>) (cTask: ValueTask<'input>) = valueTask {
+        let inline apply (applicable: ValueTask<'input -> 'output>) (cTask: ValueTask<'input>) = poolingValueTask {
             let! applier = applicable
             let! cResult = cTask
             return applier cResult
         }
 
-        /// <summary>Takes two ValueTasks, starts them serially in order of left to right, and returns a tuple of the pair.</summary>
+        /// <summary>Takes two PoolingValueTasks, starts them serially in order of left to right, and returns a tuple of the pair.</summary>
         /// <param name="left">The left value.</param>
         /// <param name="right">The right value.</param>
         /// <returns>A tuple of the parameters passed in</returns>
-        let inline zip (left: ValueTask<'left>) (right: ValueTask<'right>) = valueTask {
+        let inline zip (left: ValueTask<'left>) (right: ValueTask<'right>) = poolingValueTask {
             let! r1 = left
             let! r2 = right
             return r1, r2
@@ -799,7 +744,7 @@ module ValueTasks =
             if vtask.IsCompletedSuccessfully then
                 ValueTask<unit>()
             else
-                valueTask { return! vtask }
+                poolingValueTask { return! vtask }
 
         /// <summary>Initializes a new instance of the System.Threading.Tasks.ValueTask class using the supplied task that represents the operation.</summary>
         /// <param name="task">The task.</param>
@@ -842,7 +787,7 @@ module ValueTasks =
     [<AutoOpen>]
     module MergeSourcesExtensions =
 
-        type ValueTaskBuilderBase with
+        type PoolingValueTaskBuilderBase with
 
             [<NoEagerConstraintApplication>]
             member inline this.MergeSources<'TResult1, 'TResult2, 'Awaiter1, 'Awaiter2
@@ -852,7 +797,7 @@ module ValueTasks =
                     right: 'Awaiter2
                 ) : ValueTaskAwaiter<'TResult1 * 'TResult2> =
 
-                valueTask {
+                poolingValueTask {
                     let leftStarted = left
                     let rightStarted = right
                     let! leftResult = leftStarted

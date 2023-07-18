@@ -196,7 +196,7 @@ module ColdTasks =
             ) : ColdTaskCode<'TOverall, unit> =
             ResumableCode.For(sequence, body)
 
-#if NETSTANDARD2_1
+#if NETSTANDARD2_1 || NET6_0_OR_GREATER
         /// <summary>Creates an ColdTask that runs computation. The action compensation is executed
         /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
         /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
@@ -780,12 +780,20 @@ module ColdTasks =
 
             member inline this.ReturnFrom(coldTask: ColdTask) = this.ReturnFrom(coldTask ())
 
-#if NETSTANDARD2_1
+#if NETSTANDARD2_1 || NET6_0_OR_GREATER
         type ValueTaskBuilderBase with
 
             member inline this.Source(coldTask: ColdTask<'T>) = (coldTask ()).GetAwaiter()
 
             member inline this.Source(coldTask: ColdTask) = (coldTask ()).GetAwaiter()
+#endif
+#if NET6_0_OR_GREATER
+        type PoolingValueTaskBuilderBase with
+
+            member inline this.Source(coldTask: ColdTask<'T>) = (coldTask ()).GetAwaiter()
+
+            member inline this.Source(coldTask: ColdTask) = (coldTask ()).GetAwaiter()
+
 #endif
     /// Contains a set of standard functional helper function
     [<RequireQualifiedAccess>]

@@ -247,7 +247,7 @@ module CancellableTasks =
                     )
             )
 
-#if NETSTANDARD2_1
+#if NETSTANDARD2_1 || NET6_0_OR_GREATER
         /// <summary>Creates an CancellableTask that runs computation. The action compensation is executed
         /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
         /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
@@ -1035,7 +1035,7 @@ module CancellableTasks =
         /// </example>
         let inline getCancellationToken () =
             fun (ct: CancellationToken) ->
-#if NETSTANDARD2_1
+#if NETSTANDARD2_1 || NET6_0_OR_GREATER
                 ValueTask<CancellationToken> ct
 #else
                 Task.FromResult ct

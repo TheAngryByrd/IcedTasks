@@ -13,6 +13,7 @@
     <Compile Include="Expect.fs" />
     <Compile Include="AsyncExTests.fs" />
     <Compile Include="ValueTaskTests.fs" />
+    <Compile Include="PoolingValueTaskTests.fs" />
     <Compile Include="CancellableTaskTests.fs" />
     <Compile Include="CancellableValueTaskTests.fs" />
     <Compile Include="ColdTaskTests.fs" />
