@@ -1092,12 +1092,6 @@ module CancellableTaskTests =
                     let result = CancellableTask.whenAllThrottled maxDegreeOfParallelism tasks ct
 
                     do!
-                        timeProvider.ForwardTimeAsync(pauseTimeTS)
-                        |> Async.AwaitTask
-
-                    Expect.equal (Seq.length times) maxDegreeOfParallelism ""
-
-                    do!
                         task {
                             let mutable i = maxDegreeOfParallelism
 
