@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.1;netstandard2.0;  </TargetFrameworks>
+    <TargetFrameworks>net6.0;netstandard2.1;netstandard2.0;</TargetFrameworks>
     <LangVersion>preview</LangVersion>
     <NoWarn>FS3513</NoWarn>
   </PropertyGroup>
@@ -17,6 +17,7 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="TaskLike.fs" />
     <Compile Include="ValueTasks.fs" />
+    <Compile Include="PoolingValueTasks.fs" />
     <Compile Include="AsyncEx.fs" />
     <Compile Include="ParallelAsync.fs" />
     <Compile Include="ColdTask.fs" />

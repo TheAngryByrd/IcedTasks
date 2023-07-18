@@ -154,7 +154,7 @@ type AsyncEx =
                 )
                 |> ignore
         )
-#if NETSTANDARD2_1
+#if NETSTANDARD2_1 || NET6_0_OR_GREATER
 
 
     /// <summary>
@@ -272,7 +272,7 @@ type AsyncExBuilder() =
     member inline _.Bind(computation: Async<'f>, [<InlineIfLambda>] binder: 'f -> Async<'f0>) =
         async.Bind(computation, binder)
 
-#if NETSTANDARD2_1
+#if NETSTANDARD2_1 || NET6_0_OR_GREATER
 
     member inline _.TryFinallyAsync
         (
@@ -338,7 +338,7 @@ type AsyncExBuilder() =
 
     member inline _.Source(task: Task) = AsyncEx.AwaitTask task
 
-#if NETSTANDARD2_1
+#if NETSTANDARD2_1 || NET6_0_OR_GREATER
     member inline _.Source(vtask: ValueTask<_>) = AsyncEx.AwaitValueTask vtask
 
     member inline _.Source(vtask: ValueTask) = AsyncEx.AwaitValueTask vtask
