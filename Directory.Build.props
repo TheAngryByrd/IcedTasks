@@ -8,5 +8,6 @@
         <Authors>TheAngryByrd</Authors>
         <RepositoryUrl>https://github.com/TheAngryByrd/IcedTasks</RepositoryUrl>
         <!-- owners is not supported in MSBuild -->
+        <OtherFlags>$(OtherFlags) --test:GraphBasedChecking --test:ParallelIlxGen --test:ParallelOptimization</OtherFlags>
     </PropertyGroup>
 </Project>
