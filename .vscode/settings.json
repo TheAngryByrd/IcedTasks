@@ -3,5 +3,7 @@
     "FSharp.analyzersPath": [
         "./packages/analyzers"
     ],
-    "editor.formatOnSave": true
+    "[fsharp]": {
+        "editor.formatOnSave": true
+    }
 }
