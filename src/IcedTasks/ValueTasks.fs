@@ -8,7 +8,6 @@ open System.Threading.Tasks
 /// <summary>
 /// Module with extension methods for <see cref="T:System.Threading.Tasks.ValueTask`1"/>.
 /// </summary>
-[<AutoOpen>]
 module ValueTaskExtensions =
 
     type ValueTask with
@@ -79,7 +78,6 @@ module ValueTaskExtensions =
 namespace IcedTasks
 
 /// Contains methods to build ValueTasks using the F# computation expression syntax
-[<AutoOpen>]
 module ValueTasks =
     open System
     open System.Runtime.CompilerServices
@@ -521,7 +519,6 @@ module ValueTasks =
 
 
     /// Contains the valueTask computation expression builder.
-    [<AutoOpen>]
     module ValueTaskBuilder =
 
         /// <summary>
@@ -539,8 +536,9 @@ module ValueTasks =
         /// </summary>
         let backgroundValueTask = BackgroundValueTaskBuilder()
 
+    open ValueTaskBuilder
+
     /// <exclude/>
-    [<AutoOpen>]
     module LowPriority =
         // Low priority extensions
         type ValueTaskBuilderBase with
@@ -704,7 +702,6 @@ module ValueTasks =
                 ResumableCode.Using(resource, binder)
 
     /// <exclude/>
-    [<AutoOpen>]
     module HighPriority =
 
         // High priority extensions
@@ -744,6 +741,8 @@ module ValueTasks =
     [<RequireQualifiedAccess>]
     module ValueTask =
         open System.Threading.Tasks
+        open LowPriority
+        open HighPriority
 
         /// <summary>Lifts an item to a ValueTask.</summary>
         /// <param name="item">The item to be the result of the ValueTask.</param>
@@ -839,8 +838,8 @@ module ValueTasks =
                 ValueTask(vtask.AsTask())
 
     /// <exclude/>
-    [<AutoOpen>]
     module MergeSourcesExtensions =
+        open LowPriority
 
         type ValueTaskBuilderBase with
 
@@ -860,5 +859,14 @@ module ValueTasks =
                     return leftResult, rightResult
                 }
                 |> Awaitable.GetAwaiter
+
+[<assembly: AutoOpen("IcedTasks.ValueTaskExtensions")>]
+[<assembly: AutoOpen("IcedTasks.ValueTasks")>]
+[<assembly: AutoOpen("IcedTasks.ValueTasks.ValueTaskBuilderModule")>]
+[<assembly: AutoOpen("IcedTasks.ValueTasks.LowPriority")>]
+[<assembly: AutoOpen("IcedTasks.ValueTasks.HighPriority")>]
+[<assembly: AutoOpen("IcedTasks.ValueTasks.MergeSourcesExtensions")>]
+do ()
+
 
 #endif

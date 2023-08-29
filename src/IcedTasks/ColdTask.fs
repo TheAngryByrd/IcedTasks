@@ -12,7 +12,6 @@
 namespace IcedTasks
 
 /// Contains methods to build ColdTasks using the F# computation expression syntax
-[<AutoOpen>]
 module ColdTasks =
     open System
     open System.Runtime.CompilerServices
@@ -450,7 +449,6 @@ module ColdTasks =
                 BackgroundColdTaskBuilder.RunDynamic(code)
 
     /// Contains the coldTasks computation expression builder.
-    [<AutoOpen>]
     module ColdTaskBuilder =
 
         /// <summary>
@@ -464,7 +462,6 @@ module ColdTasks =
         let backgroundColdTask = BackgroundColdTaskBuilder()
 
     /// <exclude />
-    [<AutoOpen>]
     module LowPriority =
         // Low priority extensions
         type ColdTaskBuilderBase with
@@ -658,7 +655,6 @@ module ColdTasks =
                 ResumableCode.Using(resource, body)
 
     /// <exclude />
-    [<AutoOpen>]
     module HighPriority =
         // High priority extensions
 
@@ -744,9 +740,8 @@ module ColdTasks =
     /// <summary>
     /// A set of extension methods making it possible to bind against <see cref='T:IcedTasks.ColdTasks.ColdTask`1'/> in async computations.
     /// </summary>
-    [<AutoOpen>]
     module AsyncExtensions =
-
+        open HighPriority
 
         type AsyncExBuilder with
 
@@ -781,23 +776,27 @@ module ColdTasks =
             member inline this.ReturnFrom(coldTask: ColdTask) = this.ReturnFrom(coldTask ())
 
 #if NETSTANDARD2_1 || NET6_0_OR_GREATER
-        type ValueTaskBuilderBase with
+        type ValueTasks.ValueTaskBuilderBase with
 
             member inline this.Source(coldTask: ColdTask<'T>) = (coldTask ()).GetAwaiter()
 
             member inline this.Source(coldTask: ColdTask) = (coldTask ()).GetAwaiter()
 #endif
+
 #if NET6_0_OR_GREATER
-        type PoolingValueTaskBuilderBase with
+
+        type PoolingValueTasks.PoolingValueTaskBuilderBase with
 
             member inline this.Source(coldTask: ColdTask<'T>) = (coldTask ()).GetAwaiter()
 
             member inline this.Source(coldTask: ColdTask) = (coldTask ()).GetAwaiter()
-
 #endif
     /// Contains a set of standard functional helper function
     [<RequireQualifiedAccess>]
     module ColdTask =
+        open ColdTaskBuilder
+        open LowPriority
+        open HighPriority
 
         /// <summary>Lifts an item to a ColdTask.</summary>
         /// <param name="item">The item to be the result of the ColdTask.</param>
@@ -891,8 +890,10 @@ module ColdTasks =
             fun () -> (ctask ()).GetAwaiter()
 
     /// <exclude />
-    [<AutoOpen>]
     module MergeSourcesExtensions =
+        open ColdTaskBuilder
+        open LowPriority
+        open HighPriority
 
         type ColdTaskBuilderBase with
 
@@ -912,3 +913,12 @@ module ColdTasks =
                     return leftResult, rightResult
                 }
                 |> ColdTask.getAwaiter
+
+
+[<assembly: AutoOpen("IcedTasks.ColdTasks")>]
+[<assembly: AutoOpen("IcedTasks.ColdTasks.ColdTaskBuilderModule")>]
+[<assembly: AutoOpen("IcedTasks.ColdTasks.LowPriority")>]
+[<assembly: AutoOpen("IcedTasks.ColdTasks.HighPriority")>]
+[<assembly: AutoOpen("IcedTasks.ColdTasks.AsyncExtensions")>]
+[<assembly: AutoOpen("IcedTasks.ColdTasks.MergeSourcesExtensions")>]
+do ()

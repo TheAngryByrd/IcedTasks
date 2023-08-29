@@ -13,7 +13,7 @@ namespace IcedTasks
 
 
 /// Contains methods to build CancellableTasks using the F# computation expression syntax
-[<AutoOpen>]
+
 module CancellableTasks =
 
     open System
@@ -531,7 +531,6 @@ module CancellableTasks =
                 BackgroundCancellableTaskBuilder.RunDynamic(code)
 
     /// Contains the cancellableTask computation expression builder.
-    [<AutoOpen>]
     module CancellableTaskBuilder =
 
         /// <summary>
@@ -545,7 +544,6 @@ module CancellableTasks =
         let backgroundCancellableTask = BackgroundCancellableTaskBuilder()
 
     /// <exclude />
-    [<AutoOpen>]
     module LowPriority =
         // Low priority extensions
         type CancellableTaskBuilderBase with
@@ -860,8 +858,9 @@ module CancellableTasks =
                 )
 
     /// <exclude />
-    [<AutoOpen>]
     module HighPriority =
+        open AsyncExBuilderCE
+        open AsyncExExtensions
 
         type AsyncEx with
 
@@ -965,8 +964,8 @@ module CancellableTasks =
     /// <summary>
     /// A set of extension methods making it possible to bind against <see cref='T:IcedTasks.CancellableTasks.CancellableTask`1'/> in async computations.
     /// </summary>
-    [<AutoOpen>]
     module AsyncExtensions =
+        open HighPriority
 
         type AsyncExBuilder with
 
@@ -1007,6 +1006,9 @@ module CancellableTasks =
 
     [<RequireQualifiedAccess>]
     module CancellableTask =
+        open CancellableTaskBuilder
+        open LowPriority
+        open HighPriority
 
         /// <summary>Gets the default cancellation token for executing computations.</summary>
         ///
@@ -1198,8 +1200,10 @@ module CancellableTasks =
             fun ct -> (ctask ct).GetAwaiter()
 
     /// <exclude />
-    [<AutoOpen>]
     module MergeSourcesExtensions =
+        open CancellableTaskBuilder
+        open LowPriority
+        open HighPriority
 
         type CancellableTaskBuilderBase with
 
@@ -1271,3 +1275,11 @@ module CancellableTasks =
                     return leftResult, rightResult
                 }
                 |> CancellableTask.getAwaiter
+
+[<assembly: AutoOpen("IcedTasks.CancellableTasks")>]
+[<assembly: AutoOpen("IcedTasks.CancellableTasks.CancellableTaskBuilderModule")>]
+[<assembly: AutoOpen("IcedTasks.CancellableTasks.LowPriority")>]
+[<assembly: AutoOpen("IcedTasks.CancellableTasks.HighPriority")>]
+[<assembly: AutoOpen("IcedTasks.CancellableTasks.AsyncExtensions")>]
+[<assembly: AutoOpen("IcedTasks.CancellableTasks.MergeSourcesExtensions")>]
+do ()

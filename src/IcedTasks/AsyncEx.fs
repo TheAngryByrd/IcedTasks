@@ -5,14 +5,30 @@ open System.Threading
 open System.Threading.Tasks
 open System.Runtime.ExceptionServices
 
-type private Async =
-    static member inline map f x =
-        async.Bind(x, (fun v -> async.Return(f v)))
-
 /// <summary>
 /// This contains many functions that implement Task throwing semantics differently than the current FSharp.Core. See <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
 /// </summary>
 type AsyncEx =
+
+    static member inline private handleException
+        (
+            e: exn,
+            [<InlineIfLambdaAttribute>] onError: exn -> unit,
+            [<InlineIfLambdaAttribute>] onCancel: OperationCanceledException -> unit
+        ) =
+        let rec matcher (e: exn) =
+            match e with
+            | :? OperationCanceledException as ce -> onCancel ce
+            | :? AggregateException as ae ->
+                let ae = ae.Flatten()
+
+                if ae.InnerExceptions.Count = 1 then
+                    matcher ae.InnerExceptions.[0]
+                else
+                    onError e
+            | e -> onError e
+
+        matcher e
 
     /// <summary>
     /// Return an asynchronous computation that will wait for the given Awaiter to complete and return
@@ -28,30 +44,16 @@ type AsyncEx =
             if Awaiter.IsCompleted awaiter then
                 try
                     onNext (Awaiter.GetResult awaiter)
-                with
-                | :? TaskCanceledException as ce -> onCancel ce
-                | :? OperationCanceledException as ce -> onCancel ce
-                | :? AggregateException as ae ->
-                    if ae.InnerExceptions.Count = 1 then
-                        onError ae.InnerExceptions.[0]
-                    else
-                        onError ae
-                | e -> onError e
+                with e ->
+                    AsyncEx.handleException (e, onError, onCancel)
             else
                 Awaiter.OnCompleted(
                     awaiter,
                     (fun () ->
                         try
                             onNext (Awaiter.GetResult awaiter)
-                        with
-                        | :? TaskCanceledException as ce -> onCancel ce
-                        | :? OperationCanceledException as ce -> onCancel ce
-                        | :? AggregateException as ae ->
-                            if ae.InnerExceptions.Count = 1 then
-                                onError ae.InnerExceptions.[0]
-                            else
-                                onError ae
-                        | e -> onError e
+                        with e ->
+                            AsyncEx.handleException (e, onError, onCancel)
                     )
                 )
         )
@@ -81,12 +83,7 @@ type AsyncEx =
         Async.FromContinuations(fun (onNext, onError, onCancel) ->
             if task.IsCompleted then
                 if task.IsFaulted then
-                    let e = task.Exception
-
-                    if e.InnerExceptions.Count = 1 then
-                        onError e.InnerExceptions.[0]
-                    else
-                        onError e
+                    AsyncEx.handleException (task.Exception, onError, onCancel)
                 elif task.IsCanceled then
                     onCancel (TaskCanceledException(task))
                 else
@@ -95,12 +92,7 @@ type AsyncEx =
                 task.ContinueWith(
                     (fun (task: Task) ->
                         if task.IsFaulted then
-                            let e = task.Exception
-
-                            if e.InnerExceptions.Count = 1 then
-                                onError e.InnerExceptions.[0]
-                            else
-                                onError e
+                            AsyncEx.handleException (task.Exception, onError, onCancel)
                         elif task.IsCanceled then
                             onCancel (TaskCanceledException(task))
                         else
@@ -125,12 +117,7 @@ type AsyncEx =
 
             if task.IsCompleted then
                 if task.IsFaulted then
-                    let e = task.Exception
-
-                    if e.InnerExceptions.Count = 1 then
-                        onError e.InnerExceptions.[0]
-                    else
-                        onError e
+                    AsyncEx.handleException (task.Exception, onError, onCancel)
                 elif task.IsCanceled then
                     onCancel (TaskCanceledException(task))
                 else
@@ -139,12 +126,7 @@ type AsyncEx =
                 task.ContinueWith(
                     (fun (task: Task<'T>) ->
                         if task.IsFaulted then
-                            let e = task.Exception
-
-                            if e.InnerExceptions.Count = 1 then
-                                onError e.InnerExceptions.[0]
-                            else
-                                onError e
+                            AsyncEx.handleException (task.Exception, onError, onCancel)
                         elif task.IsCanceled then
                             onCancel (TaskCanceledException(task))
                         else
@@ -192,61 +174,9 @@ type AsyncEx =
 
 #endif
 
-[<AutoOpen>]
-module AsyncExtensions =
-
-    type Microsoft.FSharp.Control.Async with
-
-        /// <summary>Creates an Async that runs computation. The action compensation is executed
-        /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
-        /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
-        /// <param name="computation">The input computation.</param>
-        /// <param name="compensation">The action to be run after computation completes or raises an
-        /// exception (including cancellation).</param>
-        /// <remarks> <see href="http://www.fssnip.net/ru/title/Async-workflow-with-asynchronous-finally-clause">See this F# gist</see></remarks>
-        /// <returns>An async with the result of the computation.</returns>
-        static member inline TryFinallyAsync
-            (
-                computation: Async<'T>,
-                compensation: Async<unit>
-            ) : Async<'T> =
-
-            let finish (compResult, deferredResult) (onNext, (onError: exn -> unit), onCancel) =
-                match (compResult, deferredResult) with
-                | (Choice1Of3 x, Choice1Of3()) -> onNext x
-                | (Choice2Of3 compExn, Choice1Of3()) -> onError compExn
-                | (Choice3Of3 compExn, Choice1Of3()) -> onCancel compExn
-                | (Choice1Of3 _, Choice2Of3 deferredExn) -> onError deferredExn
-                | (Choice2Of3 compExn, Choice2Of3 deferredExn) ->
-                    onError
-                    <| new AggregateException(compExn, deferredExn)
-                | (Choice3Of3 compExn, Choice2Of3 deferredExn) -> onError deferredExn
-                | (_, Choice3Of3 deferredExn) ->
-                    onError
-                    <| new Exception("Unexpected cancellation.", deferredExn)
-
-            let startDeferred compResult (onNext, onError, onCancel) =
-                Async.StartWithContinuations(
-                    compensation,
-                    (fun () -> finish (compResult, Choice1Of3()) (onNext, onError, onCancel)),
-                    (fun exn -> finish (compResult, Choice2Of3 exn) (onNext, onError, onCancel)),
-                    (fun exn -> finish (compResult, Choice3Of3 exn) (onNext, onError, onCancel))
-                )
-
-            let startComp ct (onNext, onError, onCancel) =
-                Async.StartWithContinuations(
-                    computation,
-                    (fun x -> startDeferred (Choice1Of3(x)) (onNext, onError, onCancel)),
-                    (fun exn -> startDeferred (Choice2Of3 exn) (onNext, onError, onCancel)),
-                    (fun exn -> startDeferred (Choice3Of3 exn) (onNext, onError, onCancel)),
-                    ct
-                )
-
-            async {
-                let! ct = Async.CancellationToken
-                return! Async.FromContinuations(startComp ct)
-            }
-
+#if NETSTANDARD2_1 || NET6_0_OR_GREATER
+open ValueTaskExtensions
+#endif
 
 /// <summary>Builds an asynchronous workflow using computation expression syntax.</summary>
 /// <remarks>
@@ -328,29 +258,49 @@ type AsyncExBuilder() =
 
     member inline _.Source(async: Async<'a>) = async
 
-    member inline _.Source(seq: #seq<_>) = seq
+module AsyncExBuilderCE =
 
-    // Required because SRTP can't determine the type of the awaiter
-    //     Candidates:
-    //  - Task.GetAwaiter() : Runtime.CompilerServices.TaskAwaiter
-    //  - Task.GetAwaiter() : Runtime.CompilerServices.TaskAwaiter<string>F# Compiler43
-    member inline _.Source(task: Task<_>) = AsyncEx.AwaitTask task
+    /// <summary>Builds an asynchronous workflow using computation expression syntax.</summary>
+    /// <remarks>
+    /// The difference between the AsyncBuilder and AsyncExBuilder is follows:
+    /// <list type="bullet">
+    /// <item><description>Allows <c>use</c> on <see cref="T:System.IAsyncDisposable">System.IAsyncDisposable</see></description></item>
+    /// <item><description>Allows <c>let!</c> for Tasks, ValueTasks, and any Awaitable Type</description></item>
+    /// <item><description>When Tasks throw exceptions they will use the behavior described in <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see></description></item>
+    /// </list>
+    ///
+    /// </remarks>
+    let asyncEx = new AsyncExBuilder()
 
-    member inline _.Source(task: Task) = AsyncEx.AwaitTask task
 
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
-    member inline _.Source(vtask: ValueTask<_>) = AsyncEx.AwaitValueTask vtask
-
-    member inline _.Source(vtask: ValueTask) = AsyncEx.AwaitValueTask vtask
-#endif
-[<AutoOpen>]
 module AsyncExExtensions =
-    open FSharp.Core.CompilerServices
 
     type AsyncExBuilder with
 
+        member inline _.Source(seq: #seq<_>) = seq
+
+        // Required because SRTP can't determine the type of the awaiter
+        //     Candidates:
+        //  - Task.GetAwaiter() : Runtime.CompilerServices.TaskAwaiter
+        //  - Task.GetAwaiter() : Runtime.CompilerServices.TaskAwaiter<string>F# Compiler43
+        member inline _.Source(task: Task<_>) = AsyncEx.AwaitTask task
+
+        member inline _.Source(task: Task) = AsyncEx.AwaitTask task
+
+#if NETSTANDARD2_1 || NET6_0_OR_GREATER
+        member inline _.Source(vtask: ValueTask<_>) = AsyncEx.AwaitValueTask vtask
+
+        member inline _.Source(vtask: ValueTask) = AsyncEx.AwaitValueTask vtask
+#endif
+
         member inline _.Using(resource: #IDisposable, [<InlineIfLambda>] binder) =
             async.Using(resource, binder)
+
+
+module AsyncExExtensionsLower =
+    open FSharp.Core.CompilerServices
+
+    type AsyncExBuilder with
 
         [<NoEagerConstraintApplication>]
         member inline _.Source<'TResult1, 'TResult2, 'Awaiter, 'TOverall
@@ -368,14 +318,8 @@ module AsyncExExtensions =
             task
             |> AsyncEx.AwaitAwaitable
 
-    /// <summary>Builds an asynchronous workflow using computation expression syntax.</summary>
-    /// <remarks>
-    /// The difference between the AsyncBuilder and AsyncExBuilder is follows:
-    /// <list type="bullet">
-    /// <item><description>Allows <c>use</c> on <see cref="T:System.IAsyncDisposable">System.IAsyncDisposable</see></description></item>
-    /// <item><description>Allows <c>let!</c> for Tasks, ValueTasks, and any Awaitable Type</description></item>
-    /// <item><description>When Tasks throw exceptions they will use the behavior described in <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see></description></item>
-    /// </list>
-    ///
-    /// </remarks>
-    let asyncEx = new AsyncExBuilder()
+[<assembly: AutoOpen("IcedTasks.AsyncEx")>]
+[<assembly: AutoOpen("IcedTasks.AsyncExExtensionsLower")>]
+[<assembly: AutoOpen("IcedTasks.AsyncExExtensions")>]
+[<assembly: AutoOpen("IcedTasks.AsyncExBuilderCE")>]
+do ()

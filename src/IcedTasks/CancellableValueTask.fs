@@ -14,7 +14,6 @@ namespace IcedTasks
 #if NETSTANDARD2_1 || NET6_0_OR_GREATER
 
 /// Contains methods to build CancellableTasks using the F# computation expression syntax
-[<AutoOpen>]
 module CancellableValueTasks =
 
     open System
@@ -26,6 +25,7 @@ module CancellableValueTasks =
     open Microsoft.FSharp.Core.CompilerServices.StateMachineHelpers
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
     open Microsoft.FSharp.Collections
+    open ValueTaskExtensions
 
     /// CancellationToken -> Task<'T>
     type CancellableValueTask<'T> = CancellationToken -> ValueTask<'T>
@@ -248,7 +248,6 @@ module CancellableValueTasks =
                     )
             )
 
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
         /// <summary>Creates an CancellableValueTask that runs computation. The action compensation is executed
         /// after computation completes, whether computation exits normally or by an exception. If compensation res an exception itself
         /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
@@ -343,7 +342,7 @@ module CancellableValueTasks =
                         ValueTask()
                 )
             )
-#endif
+
 
     /// Contains methods to build CancellableValueTasks using the F# computation expression syntax
     type CancellableValueTaskBuilder() =
@@ -544,7 +543,7 @@ module CancellableValueTasks =
                 BackgroundCancellableValueTaskBuilder.RunDynamic(code)
 
     /// Contains the cancellableTask computation expression builder.
-    [<AutoOpen>]
+
     module CancellableValueTaskBuilder =
 
         /// <summary>
@@ -558,7 +557,7 @@ module CancellableValueTasks =
         let backgroundCancellableValueTask = BackgroundCancellableValueTaskBuilder()
 
     /// <exclude />
-    [<AutoOpen>]
+
     module LowPriority =
         // Low priority extensions
         type CancellableValueTaskBuilderBase with
@@ -880,8 +879,15 @@ module CancellableValueTasks =
                 )
 
     /// <exclude />
-    [<AutoOpen>]
+
     module HighPriority =
+        open AsyncExBuilderCE
+        open AsyncExExtensions
+        open ValueTaskExtensions
+
+        open ColdTasks
+        open LowPriority
+        open HighPriority
 
         type AsyncEx with
 
@@ -950,7 +956,6 @@ module CancellableValueTasks =
         // High priority extensions
         type CancellableValueTaskBuilderBase with
 
-
             /// <summary>Allows the computation expression to turn other types into other types</summary>
             ///
             /// <remarks>This is the identify function for For binds.</remarks>
@@ -1000,8 +1005,10 @@ module CancellableValueTasks =
     /// <summary>
     /// A set of extension methods making it possible to bind against <see cref='T:IcedTasks.CancellableValueTasks.CancellableValueTask`1'/> in async computations.
     /// </summary>
-    [<AutoOpen>]
+
     module AsyncExtensions =
+        open HighPriority
+
         type AsyncExBuilder with
 
             member inline this.Source([<InlineIfLambda>] t: CancellableValueTask<'T>) : Async<'T> =
@@ -1044,6 +1051,9 @@ module CancellableValueTasks =
     /// Contains a set of standard functional helper function
     [<RequireQualifiedAccess>]
     module CancellableValueTask =
+        open CancellableValueTaskBuilder
+        open LowPriority
+        open HighPriority
 
         /// <summary>Gets the default cancellation token for executing computations.</summary>
         ///
@@ -1167,15 +1177,18 @@ module CancellableValueTasks =
             : CancellableValueTask =
             fun ct ->
                 cancellableTask ct
-                |> ValueTask.toUnit
+                |> ValueTasks.ValueTask.toUnit
 
         let inline internal getAwaiter ([<InlineIfLambda>] ctask: CancellableValueTask<_>) =
             fun ct -> (ctask ct).GetAwaiter()
 
 
     /// <exclude />
-    [<AutoOpen>]
+
     module MergeSourcesExtensions =
+        open CancellableValueTaskBuilder
+        open LowPriority
+        open HighPriority
 
         type CancellableValueTaskBuilderBase with
 
@@ -1247,5 +1260,14 @@ module CancellableValueTasks =
                     return leftResult, rightResult
                 }
                 |> CancellableValueTask.getAwaiter
+
+[<assembly: AutoOpen("IcedTasks.CancellableValueTasks")>]
+[<assembly: AutoOpen("IcedTasks.CancellableValueTasks.CancellableValueTaskBuilderModule")>]
+[<assembly: AutoOpen("IcedTasks.CancellableValueTasks.LowPriority")>]
+[<assembly: AutoOpen("IcedTasks.CancellableValueTasks.HighPriority")>]
+[<assembly: AutoOpen("IcedTasks.CancellableValueTasks.AsyncExtensions")>]
+[<assembly: AutoOpen("IcedTasks.CancellableValueTasks.MergeSourcesExtensions")>]
+do ()
+
 
 #endif

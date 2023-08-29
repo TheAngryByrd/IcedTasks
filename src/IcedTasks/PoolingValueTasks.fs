@@ -5,7 +5,6 @@ open System.Threading.Tasks
 
 #if NET6_0_OR_GREATER
 
-
 // Task builder for F# that compiles to allocation-free paths for synchronous code.
 //
 // Originally written in 2016 by Robert Peele (humbobst@gmail.com)
@@ -17,10 +16,8 @@ open System.Threading.Tasks
 // To the extent possible under law, the author(s) have dedicated all copyright and related and neighboring rights
 // to this software to the public domain worldwide. This software is distributed without any warranty.
 
-namespace IcedTasks
 
 /// Contains methods to build PoolingValueTasks using the F# computation expression syntax
-[<AutoOpen>]
 module PoolingValueTasks =
     open System
     open System.Runtime.CompilerServices
@@ -466,7 +463,6 @@ module PoolingValueTasks =
 
 
     /// Contains the poolingValueTask computation expression builder.
-    [<AutoOpen>]
     module ValueTaskBuilder =
 
         /// <summary>
@@ -485,7 +481,6 @@ module PoolingValueTasks =
         let backgroundPoolingValueTask = BackgroundPoolingValueTaskBuilder()
 
     /// <exclude/>
-    [<AutoOpen>]
     module LowPriority =
         // Low priority extensions
         type PoolingValueTaskBuilderBase with
@@ -649,7 +644,6 @@ module PoolingValueTasks =
                 ResumableCode.Using(resource, binder)
 
     /// <exclude/>
-    [<AutoOpen>]
     module HighPriority =
 
         // High priority extensions
@@ -689,6 +683,8 @@ module PoolingValueTasks =
     [<RequireQualifiedAccess>]
     module ValueTask =
         open System.Threading.Tasks
+        open ValueTaskBuilder
+        open LowPriority
 
         /// <summary>Lifts an item to a ValueTask.</summary>
         /// <param name="item">The item to be the result of the ValueTask.</param>
@@ -784,8 +780,9 @@ module PoolingValueTasks =
                 ValueTask(vtask.AsTask())
 
     /// <exclude/>
-    [<AutoOpen>]
     module MergeSourcesExtensions =
+        open ValueTaskBuilder
+        open LowPriority
 
         type PoolingValueTaskBuilderBase with
 
@@ -805,5 +802,12 @@ module PoolingValueTasks =
                     return leftResult, rightResult
                 }
                 |> Awaitable.GetAwaiter
+
+[<assembly: AutoOpen("IcedTasks.PoolingValueTasks")>]
+[<assembly: AutoOpen("IcedTasks.PoolingValueTasks.ValueTaskBuilder")>]
+[<assembly: AutoOpen("IcedTasks.PoolingValueTasks.LowPriority")>]
+[<assembly: AutoOpen("IcedTasks.PoolingValueTasks.HighPriority")>]
+[<assembly: AutoOpen("IcedTasks.PoolingValueTasks.MergeSourcesExtensions")>]
+do ()
 
 #endif
