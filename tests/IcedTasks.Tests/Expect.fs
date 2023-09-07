@@ -79,7 +79,7 @@ type ManualTimeProviderExtensions =
 
     [<Extension>]
     static member ForwardTimeAsync(this: ManualTimeProvider, time) = task {
-        this.ForwardTime(time)
+        this.Advance(time)
         //https://github.com/dotnet/runtime/issues/85326
         do! Task.Yield()
         do! Task.Delay(5)

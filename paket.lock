@@ -25,10 +25,8 @@ NUGET
     FSharp.Core (7.0)
     Iced (1.17) - restriction: >= netstandard2.0
     Microsoft.Bcl.AsyncInterfaces (6.0) - restriction: >= netstandard2.0
-      System.Threading.Tasks.Extensions (>= 4.5.4) - restriction: || (>= net461) (&& (>= netstandard2.0) (< netstandard2.1))
-    Microsoft.Bcl.TimeProvider (8.0.0-preview.5.23280.8) - restriction: >= netstandard2.0
+    Microsoft.Bcl.TimeProvider (8.0.0-preview.7.23375.6) - restriction: >= net6.0
       Microsoft.Bcl.AsyncInterfaces (>= 6.0) - restriction: || (>= net462) (>= netstandard2.0)
-      System.ValueTuple (>= 4.5) - restriction: >= net462
     Microsoft.Build.Tasks.Git (1.1) - copy_local: true
     Microsoft.CodeAnalysis.Analyzers (3.3.3) - restriction: >= netstandard2.0
     Microsoft.CodeAnalysis.Common (4.1) - restriction: >= netstandard2.0
@@ -407,7 +405,7 @@ NUGET
       System.Runtime (>= 4.3) - restriction: && (< monoandroid) (< monotouch) (< net46) (>= netstandard1.3) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos)
       System.Runtime.Handles (>= 4.3) - restriction: && (< monoandroid) (< monotouch) (< net46) (>= netstandard1.3) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos)
     System.Threading.Timer (4.3) - restriction: || (&& (< netstandard1.3) (>= uap10.0)) (&& (< netstandard1.4) (>= uap10.0) (< win8) (< wpa81)) (&& (>= netstandard1.5) (< netstandard1.6) (>= uap10.0) (< win8) (< wpa81)) (&& (< netstandard1.5) (>= uap10.0) (< uap10.1)) (&& (< netstandard1.5) (>= uap10.0) (< win8) (< wpa81)) (&& (>= netstandard1.6) (< netstandard2.0) (>= uap10.0) (< win8) (< wpa81))
-    System.ValueTuple (4.5) - restriction: && (>= net462) (>= netstandard2.0)
+    System.ValueTuple (4.5) - restriction: && (>= net461) (>= netstandard2.0)
     System.Xml.ReaderWriter (4.3.1) - restriction: || (&& (>= net46) (< netstandard1.4) (>= uap10.0)) (&& (< netstandard1.2) (>= uap10.0) (< win8)) (&& (< netstandard1.3) (>= uap10.0)) (&& (< netstandard1.4) (>= uap10.0) (< win8) (< wpa81)) (&& (>= netstandard1.5) (< netstandard1.6) (>= uap10.0) (< win8) (< wpa81)) (&& (< netstandard1.5) (>= uap10.0) (< uap10.1)) (&& (< netstandard1.5) (>= uap10.0) (< win8) (< wpa81)) (&& (< netstandard2.0) (>= uap10.0)) (&& (< portable-net45+win8+wpa81) (>= uap10.0))
     System.Xml.XDocument (4.3) - restriction: || (&& (< netstandard1.2) (>= uap10.0) (< win8)) (&& (< netstandard1.3) (>= uap10.0)) (&& (< netstandard1.4) (>= uap10.0) (< win8) (< wpa81)) (&& (>= netstandard1.5) (< netstandard1.6) (>= uap10.0) (< win8) (< wpa81)) (&& (< netstandard1.5) (>= uap10.0) (< uap10.1)) (&& (< netstandard1.5) (>= uap10.0) (< win8) (< wpa81)) (&& (>= netstandard1.6) (< netstandard2.0) (>= uap10.0) (< win8) (< wpa81)) (&& (< portable-net45+win8+wpa81) (>= uap10.0))
     System.Xml.XmlDocument (4.3) - restriction: && (< netstandard2.0) (>= uap10.0)
@@ -421,8 +419,8 @@ NUGET
       System.Text.Encoding (>= 4.3) - restriction: && (< monoandroid) (< monotouch) (< net46) (>= netstandard1.3) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos)
       System.Threading (>= 4.3) - restriction: && (< monoandroid) (< monotouch) (< net46) (>= netstandard1.3) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos)
       System.Xml.ReaderWriter (>= 4.3) - restriction: && (< monoandroid) (< monotouch) (< net46) (>= netstandard1.3) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos)
-    TimeProviderExtensions (1.0.0-preview.4)
-      Microsoft.Bcl.TimeProvider (>= 8.0.0-preview.4.23259.5) - restriction: >= netstandard2.0
+    TimeProviderExtensions (1.0.0-preview.6)
+      Microsoft.Bcl.TimeProvider (>= 8.0.0-preview.7.23375.6) - restriction: >= net6.0
     YoloDev.Expecto.TestSdk (0.12.12)
       Expecto (>= 9.0 < 10.0) - restriction: >= netcoreapp2.1
       FSharp.Core (>= 4.6) - restriction: >= netcoreapp2.1
@@ -595,7 +593,7 @@ NUGET
       System.Security.Principal.Windows (>= 5.0) - restriction: || (&& (>= monoandroid) (< netstandard1.3)) (&& (< monoandroid) (>= netcoreapp2.0)) (>= monotouch) (&& (< net46) (< netcoreapp2.0) (>= netstandard2.0)) (>= net461) (>= netcoreapp2.1) (>= uap10.1) (>= xamarinios) (>= xamarinmac) (>= xamarintvos) (>= xamarinwatchos)
     Microsoft.Win32.SystemEvents (7.0) - restriction: >= net6.0
     Mono.Posix.NETStandard (1.0) - restriction: >= netstandard2.0
-    MSBuild.StructuredLogger (2.1.820)
+    MSBuild.StructuredLogger (2.1.858)
       Microsoft.Build.Framework (>= 17.5) - restriction: >= netstandard2.0
       Microsoft.Build.Utilities.Core (>= 17.5) - restriction: >= netstandard2.0
     Newtonsoft.Json (13.0.1) - restriction: >= netstandard2.0
