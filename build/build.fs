@@ -932,62 +932,35 @@ let githubRelease _ =
     |> Async.RunSynchronously
 
 let formatCode _ =
-    let result =
-        [
-            benchmarksCodeGlob
-            srcCodeGlob
-            testsCodeGlob
-        ]
-        |> Seq.collect id
-        // Ignore AssemblyInfo
-        |> Seq.filter (fun f ->
-            f.EndsWith("AssemblyInfo.fs")
-            |> not
-        )
-        |> String.concat " "
-        |> dotnet.fantomas
+    let result = dotnet.fantomas $"{rootDirectory}"
 
     if not result.OK then
         printfn "Errors while formatting all files: %A" result.Messages
 
-let checkFormatCode _ =
-    let result =
-        [
-            benchmarksCodeGlob
-            srcCodeGlob
-            testsCodeGlob
-        ]
-        |> Seq.collect id
-        // Ignore AssemblyInfo
-        |> Seq.filter (fun f ->
-            f.EndsWith("AssemblyInfo.fs")
-            |> not
-        )
-        |> String.concat " "
-        |> sprintf "%s --check"
-        |> dotnet.fantomas
+let checkFormatCode ctx =
+    if isCI.Value then
+        let result = dotnet.fantomas $"{rootDirectory} --check"
 
-    if result.ExitCode = 0 then
-        Trace.log "No files need formatting"
-    elif result.ExitCode = 99 then
-        failwith "Some files need formatting, check output for more info"
+        if result.ExitCode = 0 then
+            Trace.log "No files need formatting"
+        elif result.ExitCode = 99 then
+            failwith "Some files need formatting, check output for more info"
+        else
+            Trace.logf "Errors while formatting: %A" result.Errors
     else
-        Trace.logf "Errors while formatting: %A" result.Errors
+        formatCode ctx
 
 let cleanDocsCache _ = DocsTool.cleanDocsCache ()
 
 let generateSdkReferences () =
-
     dotnet.tool id "fsi" "generate-sdk-references.fsx"
 
 let buildDocs ctx =
-
     generateSdkReferences ()
     let configuration = configuration (ctx.Context.AllExecutingTargets)
     DocsTool.build (string configuration)
 
 let watchDocs ctx =
-
     generateSdkReferences ()
     let configuration = configuration (ctx.Context.AllExecutingTargets)
     DocsTool.watch (string configuration)
