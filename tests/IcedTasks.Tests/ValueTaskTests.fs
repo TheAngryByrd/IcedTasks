@@ -110,10 +110,11 @@ module ValueTaskTests =
                     let expected = "lol"
                     let fooTask: ValueTask<_> = ValueTask.FromResult expected
 
-                    let outerTask = valueTask {
-                        let! result = fooTask
-                        return result
-                    }
+                    let outerTask =
+                        valueTask {
+                            let! result = fooTask
+                            return result
+                        }
 
                     let! actual =
                         outerTask
@@ -135,10 +136,11 @@ module ValueTaskTests =
                 <| async {
                     let expected = "lol"
 
-                    let outerTask = valueTask {
-                        let! result = Task.FromResult expected
-                        return result
-                    }
+                    let outerTask =
+                        valueTask {
+                            let! result = Task.FromResult expected
+                            return result
+                        }
 
                     let! actual =
                         outerTask
@@ -153,10 +155,11 @@ module ValueTaskTests =
                     let expected = "lol"
                     let fooTask = async.Return expected
 
-                    let outerTask = valueTask {
-                        let! result = fooTask
-                        return result
-                    }
+                    let outerTask =
+                        valueTask {
+                            let! result = fooTask
+                            return result
+                        }
 
                     let! actual =
                         outerTask

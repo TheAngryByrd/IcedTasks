@@ -31,11 +31,12 @@ module ParallelAsyncTests =
                 <| async {
                     let data = 42
 
-                    let! actual = parallelAsync {
+                    let! actual =
+                        parallelAsync {
 
-                        let! someValue = async.Return data
-                        return someValue
-                    }
+                            let! someValue = async.Return data
+                            return someValue
+                        }
 
                     Expect.equal actual data "Should be able to Return! value"
                 }
@@ -48,14 +49,15 @@ module ParallelAsyncTests =
                 <| async {
                     let data = 42
 
-                    let! actual = parallelAsync {
-                        let result = data
+                    let! actual =
+                        parallelAsync {
+                            let result = data
 
-                        if true then
-                            ()
+                            if true then
+                                ()
 
-                        return result
-                    }
+                            return result
+                        }
 
                     Expect.equal actual data "Zero/Combine/Delay should work"
                 }
@@ -65,16 +67,17 @@ module ParallelAsyncTests =
                 <| async {
                     let data = 42
 
-                    let! actual = parallelAsync {
-                        let data = data
+                    let! actual =
+                        parallelAsync {
+                            let data = data
 
-                        try
-                            ()
-                        with _ ->
-                            ()
+                            try
+                                ()
+                            with _ ->
+                                ()
 
-                        return data
-                    }
+                            return data
+                        }
 
                     Expect.equal actual data "TryWith should work"
                 }
@@ -86,16 +89,17 @@ module ParallelAsyncTests =
                 <| async {
                     let data = 42
 
-                    let! actual = parallelAsync {
-                        let data = data
+                    let! actual =
+                        parallelAsync {
+                            let data = data
 
-                        try
-                            ()
-                        finally
-                            ()
+                            try
+                                ()
+                            finally
+                                ()
 
-                        return data
-                    }
+                            return data
+                        }
 
                     Expect.equal actual data "TryFinally should work"
                 }
@@ -108,10 +112,11 @@ module ParallelAsyncTests =
                     let mutable wasDisposed = false
                     let doDispose () = wasDisposed <- true
 
-                    let! actual = parallelAsync {
-                        use d = TestHelpers.makeDisposable (doDispose)
-                        return data
-                    }
+                    let! actual =
+                        parallelAsync {
+                            use d = TestHelpers.makeDisposable (doDispose)
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -122,13 +127,14 @@ module ParallelAsyncTests =
                     let mutable wasDisposed = false
                     let doDispose () = wasDisposed <- true
 
-                    let! actual = parallelAsync {
-                        use! d =
-                            TestHelpers.makeDisposable (doDispose)
-                            |> async.Return
+                    let! actual =
+                        parallelAsync {
+                            use! d =
+                                TestHelpers.makeDisposable (doDispose)
+                                |> async.Return
 
-                        return data
-                    }
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -137,10 +143,11 @@ module ParallelAsyncTests =
                 <| async {
                     let data = 42
 
-                    let! actual = parallelAsync {
-                        use d = null
-                        return data
-                    }
+                    let! actual =
+                        parallelAsync {
+                            use d = null
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                 }
@@ -152,12 +159,13 @@ module ParallelAsyncTests =
                     let loops = 10
                     let mutable index = 0
 
-                    let! actual = parallelAsync {
-                        while index < loops do
-                            index <- index + 1
+                    let! actual =
+                        parallelAsync {
+                            while index < loops do
+                                index <- index + 1
 
-                        return index
-                    }
+                            return index
+                        }
 
                     Expect.equal actual loops "Should be ok"
                 }
@@ -169,12 +177,13 @@ module ParallelAsyncTests =
                     let loops = 10
                     let mutable index = 0
 
-                    let! actual = parallelAsync {
-                        for i in [ 1..10 ] do
-                            index <- i + i
+                    let! actual =
+                        parallelAsync {
+                            for i in [ 1..10 ] do
+                                index <- i + i
 
-                        return index
-                    }
+                            return index
+                        }
 
                     Expect.equal actual index "Should be ok"
                 }
@@ -185,12 +194,13 @@ module ParallelAsyncTests =
                     let loops = 10
                     let mutable index = 0
 
-                    let! actual = parallelAsync {
-                        for i = 1 to loops do
-                            index <- i + i
+                    let! actual =
+                        parallelAsync {
+                            for i = 1 to loops do
+                                index <- i + i
 
-                        return index
-                    }
+                            return index
+                        }
 
                     Expect.equal actual index "Should be ok"
                 }
@@ -201,16 +211,17 @@ module ParallelAsyncTests =
                 <| async {
                     let data = 42
 
-                    let! actual = parallelAsync {
-                        let! r1 = async.Return data
-                        and! r2 = async.Return data
-                        and! r3 = async.Return data
+                    let! actual =
+                        parallelAsync {
+                            let! r1 = async.Return data
+                            and! r2 = async.Return data
+                            and! r3 = async.Return data
 
-                        return
-                            r1
-                            + r2
-                            + r3
-                    }
+                            return
+                                r1
+                                + r2
+                                + r3
+                        }
 
                     Expect.equal actual 126 "and! works"
                 }

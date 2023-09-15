@@ -110,10 +110,11 @@ module PoolingValueTaskTests =
                     let expected = "lol"
                     let fooTask: ValueTask<_> = ValueTask.FromResult expected
 
-                    let outerTask = poolingValueTask {
-                        let! result = fooTask
-                        return result
-                    }
+                    let outerTask =
+                        poolingValueTask {
+                            let! result = fooTask
+                            return result
+                        }
 
                     let! actual =
                         outerTask
@@ -135,10 +136,11 @@ module PoolingValueTaskTests =
                 <| async {
                     let expected = "lol"
 
-                    let outerTask = poolingValueTask {
-                        let! result = Task.FromResult expected
-                        return result
-                    }
+                    let outerTask =
+                        poolingValueTask {
+                            let! result = Task.FromResult expected
+                            return result
+                        }
 
                     let! actual =
                         outerTask
@@ -153,10 +155,11 @@ module PoolingValueTaskTests =
                     let expected = "lol"
                     let fooTask = async.Return expected
 
-                    let outerTask = poolingValueTask {
-                        let! result = fooTask
-                        return result
-                    }
+                    let outerTask =
+                        poolingValueTask {
+                            let! result = fooTask
+                            return result
+                        }
 
                     let! actual =
                         outerTask

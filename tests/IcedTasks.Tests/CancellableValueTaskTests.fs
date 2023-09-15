@@ -177,10 +177,11 @@ module CancellableValueTaskTests =
                     let expected = "lol"
                     let fooTask: CancellableValueTask<_> = fun ct -> ValueTask.FromResult expected
 
-                    let outerTask = cancellableValueTask {
-                        let! result = fooTask
-                        return result
-                    }
+                    let outerTask =
+                        cancellableValueTask {
+                            let! result = fooTask
+                            return result
+                        }
 
                     use cts = new CancellationTokenSource()
 
@@ -207,10 +208,11 @@ module CancellableValueTaskTests =
                     let expected = "lol"
                     let fooTask: CancellableTask<_> = fun ct -> Task.FromResult expected
 
-                    let outerTask = cancellableValueTask {
-                        let! result = fooTask
-                        return result
-                    }
+                    let outerTask =
+                        cancellableValueTask {
+                            let! result = fooTask
+                            return result
+                        }
 
                     use cts = new CancellationTokenSource()
 
@@ -225,10 +227,11 @@ module CancellableValueTaskTests =
                 <| async {
                     let fooTask = fun (ct: CancellationToken) -> Task.Yield()
 
-                    let outerTask = cancellableValueTask {
-                        let! result = fooTask
-                        return result
-                    }
+                    let outerTask =
+                        cancellableValueTask {
+                            let! result = fooTask
+                            return result
+                        }
 
                     use cts = new CancellationTokenSource()
 
@@ -253,10 +256,11 @@ module CancellableValueTaskTests =
                 <| async {
                     let expected = "lol"
 
-                    let outerTask = cancellableValueTask {
-                        let! result = Task.FromResult expected
-                        return result
-                    }
+                    let outerTask =
+                        cancellableValueTask {
+                            let! result = Task.FromResult expected
+                            return result
+                        }
 
                     use cts = new CancellationTokenSource()
 
@@ -273,10 +277,11 @@ module CancellableValueTaskTests =
 
                     let coldT = coldTask { return expected }
 
-                    let outerTask = cancellableValueTask {
-                        let! result = coldT
-                        return result
-                    }
+                    let outerTask =
+                        cancellableValueTask {
+                            let! result = coldT
+                            return result
+                        }
 
                     use cts = new CancellationTokenSource()
 
@@ -292,10 +297,11 @@ module CancellableValueTaskTests =
 
                     let coldT: ColdTask = fun () -> Task.CompletedTask
 
-                    let outerTask = cancellableValueTask {
-                        let! result = coldT
-                        return result
-                    }
+                    let outerTask =
+                        cancellableValueTask {
+                            let! result = coldT
+                            return result
+                        }
 
                     use cts = new CancellationTokenSource()
 
@@ -309,10 +315,11 @@ module CancellableValueTaskTests =
                 <| async {
                     let fooTask = fun () -> Task.Yield()
 
-                    let outerTask = cancellableValueTask {
-                        let! result = fooTask
-                        return result
-                    }
+                    let outerTask =
+                        cancellableValueTask {
+                            let! result = fooTask
+                            return result
+                        }
 
                     use cts = new CancellationTokenSource()
 
@@ -327,10 +334,11 @@ module CancellableValueTaskTests =
                     let expected = "lol"
                     let fooTask = async.Return expected
 
-                    let outerTask = cancellableValueTask {
-                        let! result = fooTask
-                        return result
-                    }
+                    let outerTask =
+                        cancellableValueTask {
+                            let! result = fooTask
+                            return result
+                        }
 
                     use cts = new CancellationTokenSource()
 
@@ -348,14 +356,15 @@ module CancellableValueTaskTests =
                 <| async {
                     let data = 42
 
-                    let! actual = cancellableValueTask {
-                        let result = data
+                    let! actual =
+                        cancellableValueTask {
+                            let result = data
 
-                        if true then
-                            ()
+                            if true then
+                                ()
 
-                        return result
-                    }
+                            return result
+                        }
 
                     Expect.equal actual data "Zero/Combine/Delay should work"
                 }
@@ -366,16 +375,17 @@ module CancellableValueTaskTests =
                 <| async {
                     let data = 42
 
-                    let! actual = cancellableValueTask {
-                        let data = data
+                    let! actual =
+                        cancellableValueTask {
+                            let data = data
 
-                        try
-                            ()
-                        with _ ->
-                            ()
+                            try
+                                ()
+                            with _ ->
+                                ()
 
-                        return data
-                    }
+                            return data
+                        }
 
                     Expect.equal actual data "TryWith should work"
                 }
@@ -386,16 +396,17 @@ module CancellableValueTaskTests =
                 <| async {
                     let data = 42
 
-                    let! actual = cancellableValueTask {
-                        let data = data
+                    let! actual =
+                        cancellableValueTask {
+                            let data = data
 
-                        try
-                            ()
-                        finally
-                            ()
+                            try
+                                ()
+                            finally
+                                ()
 
-                        return data
-                    }
+                            return data
+                        }
 
                     Expect.equal actual data "TryFinally should work"
                 }
@@ -408,10 +419,11 @@ module CancellableValueTaskTests =
                     let mutable wasDisposed = false
                     let doDispose () = wasDisposed <- true
 
-                    let! actual = cancellableValueTask {
-                        use d = TestHelpers.makeDisposable doDispose
-                        return data
-                    }
+                    let! actual =
+                        cancellableValueTask {
+                            use d = TestHelpers.makeDisposable doDispose
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -422,13 +434,14 @@ module CancellableValueTaskTests =
                     let mutable wasDisposed = false
                     let doDispose () = wasDisposed <- true
 
-                    let! actual = cancellableValueTask {
-                        use! d =
-                            TestHelpers.makeDisposable doDispose
-                            |> async.Return
+                    let! actual =
+                        cancellableValueTask {
+                            use! d =
+                                TestHelpers.makeDisposable doDispose
+                                |> async.Return
 
-                        return data
-                    }
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -443,11 +456,12 @@ module CancellableValueTaskTests =
                         wasDisposed <- true
                         ValueTask.CompletedTask
 
-                    let! actual = cancellableValueTask {
-                        use d = TestHelpers.makeAsyncDisposable (doDispose)
+                    let! actual =
+                        cancellableValueTask {
+                            use d = TestHelpers.makeAsyncDisposable (doDispose)
 
-                        return data
-                    }
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -461,13 +475,14 @@ module CancellableValueTaskTests =
                         wasDisposed <- true
                         ValueTask.CompletedTask
 
-                    let! actual = cancellableValueTask {
-                        use! d =
-                            TestHelpers.makeAsyncDisposable (doDispose)
-                            |> async.Return
+                    let! actual =
+                        cancellableValueTask {
+                            use! d =
+                                TestHelpers.makeAsyncDisposable (doDispose)
+                                |> async.Return
 
-                        return data
-                    }
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -487,12 +502,13 @@ module CancellableValueTaskTests =
                         }
                         |> ValueTask
 
-                    let! actual = cancellableValueTask {
-                        use d = TestHelpers.makeAsyncDisposable (doDispose)
-                        Expect.isFalse wasDisposed ""
+                    let! actual =
+                        cancellableValueTask {
+                            use d = TestHelpers.makeAsyncDisposable (doDispose)
+                            Expect.isFalse wasDisposed ""
 
-                        return data
-                    }
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -510,14 +526,15 @@ module CancellableValueTaskTests =
                         }
                         |> ValueTask
 
-                    let! actual = cancellableValueTask {
-                        use! d =
-                            TestHelpers.makeAsyncDisposable (doDispose)
-                            |> async.Return
+                    let! actual =
+                        cancellableValueTask {
+                            use! d =
+                                TestHelpers.makeAsyncDisposable (doDispose)
+                                |> async.Return
 
-                        Expect.isFalse wasDisposed ""
-                        return data
-                    }
+                            Expect.isFalse wasDisposed ""
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -527,10 +544,11 @@ module CancellableValueTaskTests =
                 <| async {
                     let data = 42
 
-                    let! actual = cancellableValueTask {
-                        use d = null
-                        return data
-                    }
+                    let! actual =
+                        cancellableValueTask {
+                            use d = null
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                 }
@@ -549,12 +567,13 @@ module CancellableValueTaskTests =
                         <| async {
                             let mutable index = 0
 
-                            let! actual = cancellableValueTask {
-                                while index < loops do
-                                    index <- index + 1
+                            let! actual =
+                                cancellableValueTask {
+                                    while index < loops do
+                                        index <- index + 1
 
-                                return index
-                            }
+                                    return index
+                                }
 
                             Expect.equal actual loops "Should be ok"
                         }
@@ -572,13 +591,14 @@ module CancellableValueTaskTests =
                         <| async {
                             let mutable index = 0
 
-                            let! actual = cancellableValueTask {
-                                while index < loops do
-                                    do! Task.Yield()
-                                    index <- index + 1
+                            let! actual =
+                                cancellableValueTask {
+                                    while index < loops do
+                                        do! Task.Yield()
+                                        index <- index + 1
 
-                                return index
-                            }
+                                    return index
+                                }
 
                             Expect.equal actual loops "Should be ok"
                         }
@@ -599,12 +619,13 @@ module CancellableValueTaskTests =
                         <| async {
                             let mutable index = 0
 
-                            let! actual = cancellableValueTask {
-                                for i in [ 1..10 ] do
-                                    index <- i + i
+                            let! actual =
+                                cancellableValueTask {
+                                    for i in [ 1..10 ] do
+                                        index <- i + i
 
-                                return index
-                            }
+                                    return index
+                                }
 
                             Expect.equal actual index "Should be ok"
                         }
@@ -622,12 +643,13 @@ module CancellableValueTaskTests =
                         <| async {
                             let mutable index = 0
 
-                            let! actual = cancellableValueTask {
-                                for i = 1 to loops do
-                                    index <- i + i
+                            let! actual =
+                                cancellableValueTask {
+                                    for i = 1 to loops do
+                                        index <- i + i
 
-                                return index
-                            }
+                                    return index
+                                }
 
                             Expect.equal actual index "Should be ok"
                         }
@@ -644,13 +666,14 @@ module CancellableValueTaskTests =
                         <| async {
                             let mutable index = 0
 
-                            let! actual = cancellableValueTask {
-                                for i in [ 1..10 ] do
-                                    do! Task.Yield()
-                                    index <- i + i
+                            let! actual =
+                                cancellableValueTask {
+                                    for i in [ 1..10 ] do
+                                        do! Task.Yield()
+                                        index <- i + i
 
-                                return index
-                            }
+                                    return index
+                                }
 
                             Expect.equal actual index "Should be ok"
                         }
@@ -668,13 +691,14 @@ module CancellableValueTaskTests =
                         <| async {
                             let mutable index = 0
 
-                            let! actual = cancellableValueTask {
-                                for i = 1 to loops do
-                                    do! Task.Yield()
-                                    index <- i + i
+                            let! actual =
+                                cancellableValueTask {
+                                    for i = 1 to loops do
+                                        do! Task.Yield()
+                                        index <- i + i
 
-                                return index
-                            }
+                                    return index
+                                }
 
                             Expect.equal actual index "Should be ok"
                         }
@@ -684,14 +708,15 @@ module CancellableValueTaskTests =
             testList "MergeSources" [
                 testCaseAsync "and! 6"
                 <| async {
-                    let! actual = cancellableValueTask {
-                        let! a = cancellableValueTask { return 1 }
-                        and! b = coldTask { return 2 }
-                        and! _ = Task.Yield()
-                        and! _ = ValueTask.CompletedTask
-                        and! c = fun () -> ValueTask.FromResult(3)
-                        return a + b + c
-                    }
+                    let! actual =
+                        cancellableValueTask {
+                            let! a = cancellableValueTask { return 1 }
+                            and! b = coldTask { return 2 }
+                            and! _ = Task.Yield()
+                            and! _ = ValueTask.CompletedTask
+                            and! c = fun () -> ValueTask.FromResult(3)
+                            return a + b + c
+                        }
 
                     Expect.equal actual 6 ""
 
@@ -744,10 +769,11 @@ module CancellableValueTaskTests =
                 testCaseAsync
                     "Can extract context's CancellationToken via CancellableValueTask.getCancellationToken"
                 <| async {
-                    let fooTask = cancellableValueTask {
-                        let! ct = CancellableValueTask.getCancellationToken ()
-                        return ct
-                    }
+                    let fooTask =
+                        cancellableValueTask {
+                            let! ct = CancellableValueTask.getCancellationToken ()
+                            return ct
+                        }
 
                     use cts = new CancellationTokenSource()
 
@@ -766,19 +792,24 @@ module CancellableValueTaskTests =
                     do!
                         Expect.CancellationRequested(
                             cancellableValueTask {
-                                let fooTask = cancellableValueTask {
-                                    return! cancellableValueTask {
-                                        do! cancellableValueTask {
-                                            let! ct = CancellableValueTask.getCancellationToken ()
+                                let fooTask =
+                                    cancellableValueTask {
+                                        return!
+                                            cancellableValueTask {
+                                                do!
+                                                    cancellableValueTask {
+                                                        let! ct =
+                                                            CancellableValueTask.getCancellationToken
+                                                                ()
 
-                                            do!
-                                                timeProvider.Delay(
-                                                    TimeSpan.FromMilliseconds(1000),
-                                                    ct
-                                                )
-                                        }
+                                                        do!
+                                                            timeProvider.Delay(
+                                                                TimeSpan.FromMilliseconds(1000),
+                                                                ct
+                                                            )
+                                                    }
+                                            }
                                     }
-                                }
 
                                 use cts =
                                     timeProvider.CreateCancellationTokenSource(
@@ -798,14 +829,16 @@ module CancellableValueTaskTests =
                 testCaseAsync "pass along CancellationToken to async bind"
                 <| async {
 
-                    let fooTask = cancellableValueTask {
-                        let! result = async {
-                            let! ct = Async.CancellationToken
-                            return ct
-                        }
+                    let fooTask =
+                        cancellableValueTask {
+                            let! result =
+                                async {
+                                    let! ct = Async.CancellationToken
+                                    return ct
+                                }
 
-                        return result
-                    }
+                            return result
+                        }
 
                     use cts = new CancellationTokenSource()
 
@@ -819,15 +852,17 @@ module CancellableValueTaskTests =
                 testCase
                     "CancellationToken flows from Async<unit> to CancellableValueTask<T> via Async.AwaitCancellableValueTask"
                 <| fun () ->
-                    let innerTask = cancellableValueTask {
-                        return! CancellableValueTask.getCancellationToken ()
-                    }
+                    let innerTask =
+                        cancellableValueTask {
+                            return! CancellableValueTask.getCancellationToken ()
+                        }
 
-                    let outerAsync = async {
-                        return!
-                            innerTask
-                            |> Async.AwaitCancellableValueTask
-                    }
+                    let outerAsync =
+                        async {
+                            return!
+                                innerTask
+                                |> Async.AwaitCancellableValueTask
+                        }
 
                     use cts = new CancellationTokenSource()
                     let actual = Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
@@ -843,11 +878,12 @@ module CancellableValueTaskTests =
                             valueTask { actual <- ct }
                             |> ValueTask.toUnit
 
-                    let outerAsync = async {
-                        return!
-                            innerTask
-                            |> Async.AwaitCancellableValueTask
-                    }
+                    let outerAsync =
+                        async {
+                            return!
+                                innerTask
+                                |> Async.AwaitCancellableValueTask
+                        }
 
                     use cts = new CancellationTokenSource()
                     Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
@@ -860,14 +896,14 @@ module CancellableValueTaskTests =
 
             testCase "AsyncBuilder can Bind CancellableValueTask<T>"
             <| fun () ->
-                let innerTask = cancellableValueTask {
-                    return! CancellableValueTask.getCancellationToken ()
-                }
+                let innerTask =
+                    cancellableValueTask { return! CancellableValueTask.getCancellationToken () }
 
-                let outerAsync = async {
-                    let! result = innerTask
-                    return result
-                }
+                let outerAsync =
+                    async {
+                        let! result = innerTask
+                        return result
+                    }
 
                 use cts = new CancellationTokenSource()
                 let actual = Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
@@ -876,9 +912,8 @@ module CancellableValueTaskTests =
 
             testCase "AsyncBuilder can ReturnFrom CancellableValueTask<T>"
             <| fun () ->
-                let innerTask = cancellableValueTask {
-                    return! CancellableValueTask.getCancellationToken ()
-                }
+                let innerTask =
+                    cancellableValueTask { return! CancellableValueTask.getCancellationToken () }
 
                 let outerAsync = async { return! innerTask }
 
@@ -924,14 +959,14 @@ module CancellableValueTaskTests =
 
             testCase "AsyncExBuilder can Bind CancellableValueTask<T>"
             <| fun () ->
-                let innerTask = cancellableValueTask {
-                    return! CancellableValueTask.getCancellationToken ()
-                }
+                let innerTask =
+                    cancellableValueTask { return! CancellableValueTask.getCancellationToken () }
 
-                let outerAsync = asyncEx {
-                    let! result = innerTask
-                    return result
-                }
+                let outerAsync =
+                    asyncEx {
+                        let! result = innerTask
+                        return result
+                    }
 
                 use cts = new CancellationTokenSource()
                 let actual = Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
@@ -940,9 +975,8 @@ module CancellableValueTaskTests =
 
             testCase "AsyncBuilder can ReturnFrom CancellableValueTask<T>"
             <| fun () ->
-                let innerTask = cancellableValueTask {
-                    return! CancellableValueTask.getCancellationToken ()
-                }
+                let innerTask =
+                    cancellableValueTask { return! CancellableValueTask.getCancellationToken () }
 
                 let outerAsync = asyncEx { return! innerTask }
 
@@ -1001,9 +1035,9 @@ module CancellableValueTaskTests =
 
                     let! someTask =
                         innerCall
-                        |> CancellableValueTask.bind (fun x -> cancellableValueTask {
-                            return x + "fooo"
-                        })
+                        |> CancellableValueTask.bind (fun x ->
+                            cancellableValueTask { return x + "fooo" }
+                        )
 
                     Expect.equal "lolfooo" someTask ""
                 }

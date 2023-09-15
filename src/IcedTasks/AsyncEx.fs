@@ -280,10 +280,11 @@ type AsyncExBuilder() =
             [<InlineIfLambda>] compensation: unit -> ValueTask
         ) : Async<'ok> =
 
-        let compensation = async {
-            let vTask = compensation ()
-            return! Async.AwaitValueTask vTask
-        }
+        let compensation =
+            async {
+                let vTask = compensation ()
+                return! Async.AwaitValueTask vTask
+            }
 
         Async.TryFinallyAsync(computation, compensation)
 

@@ -31,60 +31,65 @@ module Task =
 type Person = { Name: string; Age: int }
 
 type Database =
-    static member Get<'a>(query, queryParams, cancellationToken: CancellationToken) = task {
-        do! Task.Delay(1000, cancellationToken)
-        return { Name = "Foo"; Age = 42 }
-    }
+    static member Get<'a>(query, queryParams, cancellationToken: CancellationToken) =
+        task {
+            do! Task.Delay(1000, cancellationToken)
+            return { Name = "Foo"; Age = 42 }
+        }
 
 // Stand in for some web call
 type WebCall =
-    static member HttpGet(route, cancellationToken: CancellationToken) = task {
-        do! Task.Delay(1000, cancellationToken)
-        return { Name = "Foo"; Age = 42 }
+    static member HttpGet(route, cancellationToken: CancellationToken) =
+        task {
+            do! Task.Delay(1000, cancellationToken)
+            return { Name = "Foo"; Age = 42 }
+        }
+
+let someOtherBusinessLogic (person: Person) =
+    cancellableTask {
+        let! ct = CancellableTask.getCancellationToken () // A helper to get the current CancellationToken
+        let! result = WebCall.HttpGet("https://example.com", ct)
+        return result.Age < 1000 // prevent vampires from using our app
     }
 
-let someOtherBusinessLogic (person: Person) = cancellableTask {
-    let! ct = CancellableTask.getCancellationToken () // A helper to get the current CancellationToken
-    let! result = WebCall.HttpGet("https://example.com", ct)
-    return result.Age < 1000 // prevent vampires from using our app
-}
+let cacheItem (key: string) value =
+    async {
+        let! ct = Async.CancellationToken // This token will come from the cancellable task
 
-let cacheItem (key: string) value = async {
-    let! ct = Async.CancellationToken // This token will come from the cancellable task
+        let! result =
+            Database.Get("SELECT foo FROM bar where baz = @0", [ "@0", key ], ct)
+            |> Async.AwaitTask
 
-    let! result =
-        Database.Get("SELECT foo FROM bar where baz = @0", [ "@0", key ], ct)
-        |> Async.AwaitTask
+        return ()
+    }
 
-    return ()
-}
+let businessLayerCall someParameter =
+    cancellableTask {
+        // use a lamdbda to get the cancellableTask's current CancellationToken
+        // then bind against it like you normally would in any other computation expression
+        let! result =
+            fun cancellationToken ->
+                Database.Get(
+                    "SELECT foo FROM bar where baz = @0",
+                    [ "@0", someParameter ],
+                    cancellationToken
+                )
 
-let businessLayerCall someParameter = cancellableTask {
-    // use a lamdbda to get the cancellableTask's current CancellationToken
-    // then bind against it like you normally would in any other computation expression
-    let! result =
-        fun cancellationToken ->
-            Database.Get(
-                "SELECT foo FROM bar where baz = @0",
-                [ "@0", someParameter ],
-                cancellationToken
-            )
+        // This will implicitly pass the CancellationToken along to the next cancellableTask
+        let! notVampire = someOtherBusinessLogic result
 
-    // This will implicitly pass the CancellationToken along to the next cancellableTask
-    let! notVampire = someOtherBusinessLogic result
+        // This will implicitly pass the CancellationToken along to async computation expressions as well
+        do! cacheItem "buzz" result
 
-    // This will implicitly pass the CancellationToken along to async computation expressions as well
-    do! cacheItem "buzz" result
-
-    // Conduct some business logic
-    if
-        result.Age > 18
-        && notVampire
-    then
-        return Some result
-    else
-        return None
-}
+        // Conduct some business logic
+        if
+            result.Age > 18
+            && notVampire
+        then
+            return Some result
+        else
+            return None
+    }
 
 
 // Now we can use our businessLayerCall like any other Task

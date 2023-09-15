@@ -20,25 +20,27 @@ module Expect =
 
     /// Expects the passed function to throw `'texn`.
     [<RequiresExplicitTypeArguments>]
-    let throwsTAsync<'texn when 'texn :> exn> f message = async {
-        let! thrown = async {
-            try
-                do! f ()
-                return ValueNone
-            with e ->
-                return ValueSome e
-        }
+    let throwsTAsync<'texn when 'texn :> exn> f message =
+        async {
+            let! thrown =
+                async {
+                    try
+                        do! f ()
+                        return ValueNone
+                    with e ->
+                        return ValueSome e
+                }
 
-        match thrown with
-        | ValueSome e when e.GetType().IsAssignableFrom typeof<'texn> ->
-            failtestf
-                "%s. Expected f to throw an exn of type %s, but one of type %s was thrown."
-                message
-                (typeof<'texn>.FullName)
-                (e.GetType().FullName)
-        | ValueSome _ -> ()
-        | _ -> failtestf "%s. Expected f to throw." message
-    }
+            match thrown with
+            | ValueSome e when e.GetType().IsAssignableFrom typeof<'texn> ->
+                failtestf
+                    "%s. Expected f to throw an exn of type %s, but one of type %s was thrown."
+                    message
+                    (typeof<'texn>.FullName)
+                    (e.GetType().FullName)
+            | ValueSome _ -> ()
+            | _ -> failtestf "%s. Expected f to throw." message
+        }
 
 
 type Expect =
@@ -78,12 +80,13 @@ open System.Runtime.CompilerServices
 type ManualTimeProviderExtensions =
 
     [<Extension>]
-    static member ForwardTimeAsync(this: ManualTimeProvider, time) = task {
-        this.Advance(time)
-        //https://github.com/dotnet/runtime/issues/85326
-        do! Task.Yield()
-        do! Task.Delay(5)
-    }
+    static member ForwardTimeAsync(this: ManualTimeProvider, time) =
+        task {
+            this.Advance(time)
+            //https://github.com/dotnet/runtime/issues/85326
+            do! Task.Yield()
+            do! Task.Delay(5)
+        }
 
 
 module CustomAwaiter =
