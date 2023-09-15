@@ -6,10 +6,11 @@ open System.Threading.Tasks
 open IcedTasks
 
 module ColdTaskHelpers =
-    let map (mapper: 'a -> 'b) (item: ColdTask<'a>) : ColdTask<'b> = coldTask {
-        let! i = item
-        return mapper i
-    }
+    let map (mapper: 'a -> 'b) (item: ColdTask<'a>) : ColdTask<'b> =
+        coldTask {
+            let! i = item
+            return mapper i
+        }
 
 module ColdTaskTests =
     open System.Threading
@@ -178,10 +179,11 @@ module ColdTaskTests =
                     let expected = "lol"
                     let fooTask: ColdTask<_> = fun () -> Task.FromResult expected
 
-                    let outerTask = coldTask {
-                        let! result = fooTask
-                        return result
-                    }
+                    let outerTask =
+                        coldTask {
+                            let! result = fooTask
+                            return result
+                        }
 
                     let! actual =
                         outerTask ()
@@ -203,10 +205,11 @@ module ColdTaskTests =
                 <| async {
                     let expected = "lol"
 
-                    let outerTask = coldTask {
-                        let! result = Task.FromResult expected
-                        return result
-                    }
+                    let outerTask =
+                        coldTask {
+                            let! result = Task.FromResult expected
+                            return result
+                        }
 
                     let! actual =
                         outerTask ()
@@ -220,10 +223,11 @@ module ColdTaskTests =
                 <| async {
                     let fooTask = ValueTask.CompletedTask
 
-                    let outerTask = coldTask {
-                        let! result = fooTask
-                        return result
-                    }
+                    let outerTask =
+                        coldTask {
+                            let! result = fooTask
+                            return result
+                        }
 
                     do!
                         outerTask ()
@@ -236,10 +240,11 @@ module ColdTaskTests =
                     let expected = "lol"
                     let fooTask = ValueTask.FromResult expected
 
-                    let outerTask = coldTask {
-                        let! result = fooTask
-                        return result
-                    }
+                    let outerTask =
+                        coldTask {
+                            let! result = fooTask
+                            return result
+                        }
 
                     let! actual =
                         outerTask ()
@@ -253,10 +258,11 @@ module ColdTaskTests =
                 <| async {
                     let fooTask = fun () -> ValueTask.CompletedTask
 
-                    let outerTask = coldTask {
-                        let! result = fooTask
-                        return result
-                    }
+                    let outerTask =
+                        coldTask {
+                            let! result = fooTask
+                            return result
+                        }
 
                     do!
                         outerTask ()
@@ -269,10 +275,11 @@ module ColdTaskTests =
                     let expected = "lol"
                     let fooTask = fun () -> ValueTask.FromResult expected
 
-                    let outerTask = coldTask {
-                        let! result = fooTask
-                        return result
-                    }
+                    let outerTask =
+                        coldTask {
+                            let! result = fooTask
+                            return result
+                        }
 
                     let! actual =
                         outerTask ()
@@ -285,10 +292,11 @@ module ColdTaskTests =
                 <| async {
                     let fooTask = fun () -> Task.Yield()
 
-                    let outerTask = coldTask {
-                        let! result = fooTask
-                        return result
-                    }
+                    let outerTask =
+                        coldTask {
+                            let! result = fooTask
+                            return result
+                        }
 
                     do!
                         outerTask ()
@@ -301,10 +309,11 @@ module ColdTaskTests =
                     let expected = "lol"
                     let fooTask = async.Return expected
 
-                    let outerTask = coldTask {
-                        let! result = fooTask
-                        return result
-                    }
+                    let outerTask =
+                        coldTask {
+                            let! result = fooTask
+                            return result
+                        }
 
                     let! actual =
                         outerTask ()
@@ -320,14 +329,15 @@ module ColdTaskTests =
                 <| async {
                     let data = 42
 
-                    let! actual = coldTask {
-                        let result = data
+                    let! actual =
+                        coldTask {
+                            let result = data
 
-                        if true then
-                            ()
+                            if true then
+                                ()
 
-                        return result
-                    }
+                            return result
+                        }
 
                     Expect.equal actual data "Zero/Combine/Delay should work"
                 }
@@ -338,16 +348,17 @@ module ColdTaskTests =
                 <| async {
                     let data = 42
 
-                    let! actual = coldTask {
-                        let data = data
+                    let! actual =
+                        coldTask {
+                            let data = data
 
-                        try
-                            ()
-                        with _ ->
-                            ()
+                            try
+                                ()
+                            with _ ->
+                                ()
 
-                        return data
-                    }
+                            return data
+                        }
 
                     Expect.equal actual data "TryWith should work"
                 }
@@ -358,16 +369,17 @@ module ColdTaskTests =
                 <| async {
                     let data = 42
 
-                    let! actual = coldTask {
-                        let data = data
+                    let! actual =
+                        coldTask {
+                            let data = data
 
-                        try
-                            ()
-                        finally
-                            ()
+                            try
+                                ()
+                            finally
+                                ()
 
-                        return data
-                    }
+                            return data
+                        }
 
                     Expect.equal actual data "TryFinally should work"
                 }
@@ -380,10 +392,11 @@ module ColdTaskTests =
                     let mutable wasDisposed = false
                     let doDispose () = wasDisposed <- true
 
-                    let! actual = coldTask {
-                        use d = TestHelpers.makeDisposable (doDispose)
-                        return data
-                    }
+                    let! actual =
+                        coldTask {
+                            use d = TestHelpers.makeDisposable (doDispose)
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -394,13 +407,14 @@ module ColdTaskTests =
                     let mutable wasDisposed = false
                     let doDispose () = wasDisposed <- true
 
-                    let! actual = coldTask {
-                        use! d =
-                            TestHelpers.makeDisposable (doDispose)
-                            |> async.Return
+                    let! actual =
+                        coldTask {
+                            use! d =
+                                TestHelpers.makeDisposable (doDispose)
+                                |> async.Return
 
-                        return data
-                    }
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -417,11 +431,12 @@ module ColdTaskTests =
                         wasDisposed <- true
                         ValueTask.CompletedTask
 
-                    let! actual = coldTask {
-                        use d = TestHelpers.makeAsyncDisposable (doDispose)
+                    let! actual =
+                        coldTask {
+                            use d = TestHelpers.makeAsyncDisposable (doDispose)
 
-                        return data
-                    }
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -435,13 +450,14 @@ module ColdTaskTests =
                         wasDisposed <- true
                         ValueTask.CompletedTask
 
-                    let! actual = coldTask {
-                        use! d =
-                            TestHelpers.makeAsyncDisposable (doDispose)
-                            |> async.Return
+                    let! actual =
+                        coldTask {
+                            use! d =
+                                TestHelpers.makeAsyncDisposable (doDispose)
+                                |> async.Return
 
-                        return data
-                    }
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -462,12 +478,13 @@ module ColdTaskTests =
                         |> ValueTask
 
 
-                    let! actual = coldTask {
-                        use d = TestHelpers.makeAsyncDisposable (doDispose)
-                        Expect.isFalse wasDisposed ""
+                    let! actual =
+                        coldTask {
+                            use d = TestHelpers.makeAsyncDisposable (doDispose)
+                            Expect.isFalse wasDisposed ""
 
-                        return data
-                    }
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -486,15 +503,16 @@ module ColdTaskTests =
                         |> ValueTask
 
 
-                    let! actual = coldTask {
-                        use! d =
-                            TestHelpers.makeAsyncDisposable (doDispose)
-                            |> async.Return
+                    let! actual =
+                        coldTask {
+                            use! d =
+                                TestHelpers.makeAsyncDisposable (doDispose)
+                                |> async.Return
 
-                        Expect.isFalse wasDisposed ""
+                            Expect.isFalse wasDisposed ""
 
-                        return data
-                    }
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -504,10 +522,11 @@ module ColdTaskTests =
                 <| async {
                     let data = 42
 
-                    let! actual = coldTask {
-                        use d = null
-                        return data
-                    }
+                    let! actual =
+                        coldTask {
+                            use d = null
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                 }
@@ -526,12 +545,13 @@ module ColdTaskTests =
                         <| async {
                             let mutable index = 0
 
-                            let! actual = coldTask {
-                                while index < loops do
-                                    index <- index + 1
+                            let! actual =
+                                coldTask {
+                                    while index < loops do
+                                        index <- index + 1
 
-                                return index
-                            }
+                                    return index
+                                }
 
                             Expect.equal actual loops "Should be ok"
                         }
@@ -549,13 +569,14 @@ module ColdTaskTests =
                         <| async {
                             let mutable index = 0
 
-                            let! actual = coldTask {
-                                while index < loops do
-                                    do! Task.Yield()
-                                    index <- index + 1
+                            let! actual =
+                                coldTask {
+                                    while index < loops do
+                                        do! Task.Yield()
+                                        index <- index + 1
 
-                                return index
-                            }
+                                    return index
+                                }
 
                             Expect.equal actual loops "Should be ok"
                         }
@@ -575,12 +596,13 @@ module ColdTaskTests =
                         <| async {
                             let mutable index = 0
 
-                            let! actual = coldTask {
-                                for i in [ 1..10 ] do
-                                    index <- i + i
+                            let! actual =
+                                coldTask {
+                                    for i in [ 1..10 ] do
+                                        index <- i + i
 
-                                return index
-                            }
+                                    return index
+                                }
 
                             Expect.equal actual index "Should be ok"
                         }
@@ -598,12 +620,13 @@ module ColdTaskTests =
                         <| async {
                             let mutable index = 0
 
-                            let! actual = coldTask {
-                                for i = 1 to loops do
-                                    index <- i + i
+                            let! actual =
+                                coldTask {
+                                    for i = 1 to loops do
+                                        index <- i + i
 
-                                return index
-                            }
+                                    return index
+                                }
 
                             Expect.equal actual index "Should be ok"
                         }
@@ -620,13 +643,14 @@ module ColdTaskTests =
                         <| async {
                             let mutable index = 0
 
-                            let! actual = coldTask {
-                                for i in [ 1..10 ] do
-                                    do! Task.Yield()
-                                    index <- i + i
+                            let! actual =
+                                coldTask {
+                                    for i in [ 1..10 ] do
+                                        do! Task.Yield()
+                                        index <- i + i
 
-                                return index
-                            }
+                                    return index
+                                }
 
                             Expect.equal actual index "Should be ok"
                         }
@@ -644,13 +668,14 @@ module ColdTaskTests =
                         <| async {
                             let mutable index = 0
 
-                            let! actual = coldTask {
-                                for i = 1 to loops do
-                                    do! Task.Yield()
-                                    index <- i + i
+                            let! actual =
+                                coldTask {
+                                    for i = 1 to loops do
+                                        do! Task.Yield()
+                                        index <- i + i
 
-                                return index
-                            }
+                                    return index
+                                }
 
                             Expect.equal actual index "Should be ok"
                         }
@@ -660,14 +685,15 @@ module ColdTaskTests =
             testList "MergeSources" [
                 testCaseAsync "and! 5"
                 <| async {
-                    let! actual = coldTask {
-                        let! a = fun () -> Task.FromResult 1
-                        and! b = coldTask { return 2 }
-                        and! _ = Task.Yield()
-                        and! _ = ValueTask.CompletedTask
-                        and! c = fun () -> ValueTask.FromResult(3)
-                        return a + b + c
-                    }
+                    let! actual =
+                        coldTask {
+                            let! a = fun () -> Task.FromResult 1
+                            and! b = coldTask { return 2 }
+                            and! _ = Task.Yield()
+                            and! _ = ValueTask.CompletedTask
+                            and! c = fun () -> ValueTask.FromResult(3)
+                            return a + b + c
+                        }
 
                     Expect.equal actual 6 ""
 
@@ -775,10 +801,11 @@ module ColdTaskTests =
             <| fun () ->
                 let innerTask = coldTask { return! coldTask { return "lol" } }
 
-                let outerAsync = async {
-                    let! result = innerTask
-                    return result
-                }
+                let outerAsync =
+                    async {
+                        let! result = innerTask
+                        return result
+                    }
 
                 let actual = Async.RunSynchronously(outerAsync)
                 Expect.equal actual "lol" ""
@@ -797,10 +824,11 @@ module ColdTaskTests =
             <| fun () ->
                 let innerTask: ColdTask = fun () -> Task.CompletedTask
 
-                let outerAsync = async {
-                    let! result = innerTask
-                    return result
-                }
+                let outerAsync =
+                    async {
+                        let! result = innerTask
+                        return result
+                    }
 
                 let actual = Async.RunSynchronously(outerAsync)
                 Expect.equal actual () ""
@@ -823,10 +851,11 @@ module ColdTaskTests =
             <| fun () ->
                 let innerTask = coldTask { return! coldTask { return "lol" } }
 
-                let outerAsync = asyncEx {
-                    let! result = innerTask
-                    return result
-                }
+                let outerAsync =
+                    asyncEx {
+                        let! result = innerTask
+                        return result
+                    }
 
                 let actual = Async.RunSynchronously(outerAsync)
                 Expect.equal actual "lol" ""
@@ -845,10 +874,11 @@ module ColdTaskTests =
             <| fun () ->
                 let innerTask: ColdTask = fun () -> Task.CompletedTask
 
-                let outerAsync = asyncEx {
-                    let! result = innerTask
-                    return result
-                }
+                let outerAsync =
+                    asyncEx {
+                        let! result = innerTask
+                        return result
+                    }
 
                 let actual = Async.RunSynchronously(outerAsync)
                 Expect.equal actual () ""
@@ -871,10 +901,11 @@ module ColdTaskTests =
             <| fun () ->
                 let innerTask = coldTask { return! coldTask { return "lol" } }
 
-                let outerAsync = task {
-                    let! result = innerTask
-                    return result
-                }
+                let outerAsync =
+                    task {
+                        let! result = innerTask
+                        return result
+                    }
 
                 let actual = outerAsync.GetAwaiter().GetResult()
                 Expect.equal actual "lol" ""
@@ -893,10 +924,11 @@ module ColdTaskTests =
             <| fun () ->
                 let innerTask: ColdTask = fun () -> Task.CompletedTask
 
-                let outerAsync = task {
-                    let! result = innerTask
-                    return result
-                }
+                let outerAsync =
+                    task {
+                        let! result = innerTask
+                        return result
+                    }
 
                 let actual = outerAsync.GetAwaiter().GetResult()
                 Expect.equal actual () ""

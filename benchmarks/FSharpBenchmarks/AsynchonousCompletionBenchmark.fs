@@ -23,19 +23,20 @@ module AsyncHelpers =
     let taskCTYield () =
         fun (ct: CancellationToken) -> Task.Yield()
 
-    let fsharp_tenBindAsync_AsyncBuilder () = async {
-        do! asyncYield ()
-        do! asyncYield ()
-        do! asyncYield ()
-        do! asyncYield ()
-        do! asyncYield ()
-        do! asyncYield ()
-        do! asyncYield ()
-        do! asyncYield ()
-        do! asyncYield ()
-        do! asyncYield ()
-        return 100
-    }
+    let fsharp_tenBindAsync_AsyncBuilder () =
+        async {
+            do! asyncYield ()
+            do! asyncYield ()
+            do! asyncYield ()
+            do! asyncYield ()
+            do! asyncYield ()
+            do! asyncYield ()
+            do! asyncYield ()
+            do! asyncYield ()
+            do! asyncYield ()
+            do! asyncYield ()
+            return 100
+        }
 
     let fsharp_tenBindAsync_PlyTaskBuilder () =
         FSharp.Control.Tasks.Affine.task {
@@ -67,93 +68,99 @@ module AsyncHelpers =
             return 100
         }
 
-    let fsharp_tenBindAsync_TaskBuilder () = task {
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        return 100
-    }
+    let fsharp_tenBindAsync_TaskBuilder () =
+        task {
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            return 100
+        }
 
 
-    let fsharp_tenBindAsync_ValueTaskBuilder () = valueTask {
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        return 100
-    }
+    let fsharp_tenBindAsync_ValueTaskBuilder () =
+        valueTask {
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            return 100
+        }
 
 
-    let fsharp_tenBindAsync_CancellableTaskBuilder () = cancellableTask {
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        return 100
-    }
+    let fsharp_tenBindAsync_CancellableTaskBuilder () =
+        cancellableTask {
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            return 100
+        }
 
 
-    let fsharp_tenBindAsync_CancellableTaskBuilder_BindCancellableTask () = cancellableTask {
-        do! taskCTYield ()
-        do! taskCTYield ()
-        do! taskCTYield ()
-        do! taskCTYield ()
-        do! taskCTYield ()
-        do! taskCTYield ()
-        do! taskCTYield ()
-        do! taskCTYield ()
-        do! taskCTYield ()
-        do! taskCTYield ()
-        return 100
-    }
+    let fsharp_tenBindAsync_CancellableTaskBuilder_BindCancellableTask () =
+        cancellableTask {
+            do! taskCTYield ()
+            do! taskCTYield ()
+            do! taskCTYield ()
+            do! taskCTYield ()
+            do! taskCTYield ()
+            do! taskCTYield ()
+            do! taskCTYield ()
+            do! taskCTYield ()
+            do! taskCTYield ()
+            do! taskCTYield ()
+            return 100
+        }
 
-    let fsharp_tenBindAsync_CancellableValueTaskBuilder () = cancellableValueTask {
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        do! taskYield ()
-        return 100
-    }
+    let fsharp_tenBindAsync_CancellableValueTaskBuilder () =
+        cancellableValueTask {
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            return 100
+        }
 
 
-    let fsharp_tenBindAsync_CancellableValueTaskBuilder_BindCancellableTask () = cancellableValueTask {
-        do! taskCTYield ()
-        do! taskCTYield ()
-        do! taskCTYield ()
-        do! taskCTYield ()
-        do! taskCTYield ()
-        do! taskCTYield ()
-        do! taskCTYield ()
-        do! taskCTYield ()
-        do! taskCTYield ()
-        do! taskCTYield ()
-        return 100
-    }
+    let fsharp_tenBindAsync_CancellableValueTaskBuilder_BindCancellableTask () =
+        cancellableValueTask {
+            do! taskCTYield ()
+            do! taskCTYield ()
+            do! taskCTYield ()
+            do! taskCTYield ()
+            do! taskCTYield ()
+            do! taskCTYield ()
+            do! taskCTYield ()
+            do! taskCTYield ()
+            do! taskCTYield ()
+            do! taskCTYield ()
+            return 100
+        }
 
 
 [<MemoryDiagnoser>]

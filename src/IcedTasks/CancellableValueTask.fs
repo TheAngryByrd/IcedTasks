@@ -1155,9 +1155,8 @@ module CancellableValueTasks =
         /// <summary>Coverts a CancellableValueTask to a CancellableValueTask\&lt;unit\&gt;.</summary>
         /// <param name="unitCancellableTask">The CancellableValueTask to convert.</param>
         /// <returns>a CancellableValueTask\&lt;unit\&gt;.</returns>
-        let inline ofUnit ([<InlineIfLambda>] unitCancellableTask: CancellableValueTask) = cancellableValueTask {
-            return! unitCancellableTask
-        }
+        let inline ofUnit ([<InlineIfLambda>] unitCancellableTask: CancellableValueTask) =
+            cancellableValueTask { return! unitCancellableTask }
 
         /// <summary>Coverts a CancellableValueTask\&lt;_\&gt; to a CancellableValueTask.</summary>
         /// <param name="Task">The CancellableValueTask to convert.</param>

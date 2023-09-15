@@ -282,8 +282,9 @@ module Changelog =
                 | Some desc when desc.Contains(linkReference) -> desc
                 | Some desc -> sprintf "%s\n\n%s" (desc.Trim()) linkReference
 
-            { latestEntry with
-                Description = Some description
+            {
+                latestEntry with
+                    Description = Some description
             }
                 .ToString()
 
@@ -365,13 +366,13 @@ module FSharpAnalyzers =
 module DocsTool =
     let quoted s = $"\"%s{s}\""
 
-    let fsDocsDotnetOptions (o: DotNet.Options) =
-        { o with
+    let fsDocsDotnetOptions (o: DotNet.Options) = {
+        o with
             WorkingDirectory = rootDirectory
-        }
+    }
 
-    let fsDocsBuildParams configuration (p: Fsdocs.BuildCommandParams) =
-        { p with
+    let fsDocsBuildParams configuration (p: Fsdocs.BuildCommandParams) = {
+        p with
             Clean = Some true
             Input = Some(quoted docsSrcDir)
             Output = Some(quoted docsDir)
@@ -390,7 +391,7 @@ module DocsTool =
                     "fsdocs-release-notes-link", quoted (CHANGELOGlink.ToString())
                 ]
             Strict = Some true
-        }
+    }
 
 
     let cleanDocsCache () = Fsdocs.cleanCache rootDirectory
@@ -405,18 +406,18 @@ module DocsTool =
                 Option.defaultValue Fsdocs.BuildCommandParams.Default bp
                 |> fsDocsBuildParams configuration
 
-            { bp with
-                Output = Some watchDocsDir
-                Strict = None
+            {
+                bp with
+                    Output = Some watchDocsDir
+                    Strict = None
             }
 
         Fsdocs.watch
             fsDocsDotnetOptions
-            (fun p ->
-                { p with
+            (fun p -> {
+                p with
                     BuildCommandParams = Some(buildParams p.BuildCommandParams)
-                }
-            )
+            })
 
 let allReleaseChecks () =
     isReleaseBranchCheck ()
@@ -471,13 +472,12 @@ let dotnetRestore _ =
                 |> String.concat " "
 
             DotNet.restore
-                (fun c ->
-                    { c with
+                (fun c -> {
+                    c with
                         Common =
                             c.Common
                             |> DotNet.Options.withCustomParams (Some(args))
-                    }
-                )
+                })
                 dir
     )
     |> Seq.iter (retryIfInCI 10)
@@ -664,15 +664,14 @@ let dotnetBuild ctx =
     ]
 
     DotNet.build
-        (fun c ->
-            { c with
+        (fun c -> {
+            c with
                 Configuration = configuration (ctx.Context.AllExecutingTargets)
                 Common =
                     c.Common
                     |> DotNet.Options.withAdditionalArgs args
 
-            }
-        )
+        })
         sln
 
 let fsharpAnalyzers _ =
@@ -714,13 +713,13 @@ let dotnetTest ctx =
     DotNet.test
         (fun c ->
 
-            { c with
-                Configuration = configuration (ctx.Context.AllExecutingTargets)
-                Common =
-                    c.Common
-                    |> DotNet.Options.withAdditionalArgs args
-            }
-        )
+            {
+                c with
+                    Configuration = configuration (ctx.Context.AllExecutingTargets)
+                    Common =
+                        c.Common
+                        |> DotNet.Options.withAdditionalArgs args
+            })
         sln
 
 let generateCoverageReport _ =
@@ -847,15 +846,14 @@ let dotnetPack ctx =
     ]
 
     DotNet.pack
-        (fun c ->
-            { c with
+        (fun c -> {
+            c with
                 Configuration = configuration (ctx.Context.AllExecutingTargets)
                 OutputPath = Some distDir
                 Common =
                     c.Common
                     |> DotNet.Options.withAdditionalArgs args
-            }
-        )
+        })
         sln
 
 let sourceLinkTest _ =
@@ -865,8 +863,8 @@ let sourceLinkTest _ =
 let publishToNuget _ =
     allPublishChecks ()
 
-    Paket.push (fun c ->
-        { c with
+    Paket.push (fun c -> {
+        c with
             ToolType = ToolType.CreateLocalTool()
             PublishUrl = publishUrl
             WorkingDir = "dist"
@@ -874,8 +872,7 @@ let publishToNuget _ =
                 match nugetToken with
                 | Some s -> s
                 | _ -> c.ApiKey // assume paket-config was set properly
-        }
-    )
+    })
     // If build fails after this point, we've pushed a release out with this version of CHANGELOG.md so we should keep it around
     Target.deactivateBuildFailure "RevertChangelog"
 

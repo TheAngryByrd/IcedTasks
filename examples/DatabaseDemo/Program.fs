@@ -21,42 +21,49 @@ module Database =
             Password = "postgres"
         )
 
-    let doSlowWorkAsync (conn: IDbConnection) = async {
-        let! ct = Async.CancellationToken
-        let cmdDef = CommandDefinition("select pg_sleep(10)", cancellationToken = ct)
+    let doSlowWorkAsync (conn: IDbConnection) =
+        async {
+            let! ct = Async.CancellationToken
+            let cmdDef = CommandDefinition("select pg_sleep(10)", cancellationToken = ct)
 
-        let! _ =
-            conn.QueryAsync(cmdDef)
-            |> Async.AwaitTask
+            let! _ =
+                conn.QueryAsync(cmdDef)
+                |> Async.AwaitTask
 
-        ()
-    }
+            ()
+        }
 
-    let doSlowWork1 (conn: IDbConnection) = task {
-        let! _ = conn.QueryAsync("select pg_sleep(10)")
-        ()
-    }
+    let doSlowWork1 (conn: IDbConnection) =
+        task {
+            let! _ = conn.QueryAsync("select pg_sleep(10)")
+            ()
+        }
 
-    let doSlowWork2 (ct: CancellationToken) (conn: IDbConnection) = task {
-        let cmdDef = CommandDefinition("select pg_sleep(10)", cancellationToken = ct)
-        let! _ = conn.QueryAsync(cmdDef)
-        ()
-    }
+    let doSlowWork2 (ct: CancellationToken) (conn: IDbConnection) =
+        task {
+            let cmdDef = CommandDefinition("select pg_sleep(10)", cancellationToken = ct)
+            let! _ = conn.QueryAsync(cmdDef)
+            ()
+        }
 
     // CancellableTask<'T> = CancellationToken -> Task<'T>
-    let doSlowWork3 (conn: IDbConnection) = cancellableTask {
-        let! ct = CancellableTask.getCancellationToken ()
-        let cmdDef = CommandDefinition("select pg_sleep(10)", cancellationToken = ct)
-        let! _ = conn.QueryAsync(cmdDef)
-        ()
-    }
-        // CancellableTask<'T> = CancellationToken -> Task<'T>
-    let doSlowWork3b (conn: IDbConnection) = cancellableTask {
-        let! _ = fun ct ->
+    let doSlowWork3 (conn: IDbConnection) =
+        cancellableTask {
+            let! ct = CancellableTask.getCancellationToken ()
             let cmdDef = CommandDefinition("select pg_sleep(10)", cancellationToken = ct)
-            conn.QueryAsync(cmdDef)
-        ()
-    }
+            let! _ = conn.QueryAsync(cmdDef)
+            ()
+        }
+    // CancellableTask<'T> = CancellationToken -> Task<'T>
+    let doSlowWork3b (conn: IDbConnection) =
+        cancellableTask {
+            let! _ =
+                fun ct ->
+                    let cmdDef = CommandDefinition("select pg_sleep(10)", cancellationToken = ct)
+                    conn.QueryAsync(cmdDef)
+
+            ()
+        }
 
 open Database
 
@@ -64,28 +71,31 @@ let webApp =
     choose [
         // This is not using CancellationTokens
         route "/simpleExample1"
-        >=> fun next ctx -> task {
-            use conn = new Npgsql.NpgsqlConnection(connStr.ToString())
-            do! doSlowWork1 (conn)
-            return! next ctx
-        }
+        >=> fun next ctx ->
+            task {
+                use conn = new Npgsql.NpgsqlConnection(connStr.ToString())
+                do! doSlowWork1 (conn)
+                return! next ctx
+            }
 
         // This is using CancellationTokens explicitly
         route "/simpleExample2"
-        >=> fun next ctx -> task {
-            use conn = new Npgsql.NpgsqlConnection(connStr.ToString())
-            do! doSlowWork2 ctx.RequestAborted conn
-            return! next ctx
-        }
+        >=> fun next ctx ->
+            task {
+                use conn = new Npgsql.NpgsqlConnection(connStr.ToString())
+                do! doSlowWork2 ctx.RequestAborted conn
+                return! next ctx
+            }
 
 
         // This is using CancellationTokens at the top level and only when needed
         route "/simpleExample3"
-        >=> fun next ctx -> task {
-            use conn = new Npgsql.NpgsqlConnection(connStr.ToString())
-            do! doSlowWork3 conn ctx.RequestAborted
-            return! next ctx
-        }
+        >=> fun next ctx ->
+            task {
+                use conn = new Npgsql.NpgsqlConnection(connStr.ToString())
+                do! doSlowWork3 conn ctx.RequestAborted
+                return! next ctx
+            }
     ]
 
 module BusinessLogic =
@@ -94,37 +104,42 @@ module BusinessLogic =
 
     let preserveEndocrins (logger: ILogger) () = task { do! Task.Delay(100) }
 
-    let monotonectallyImplementErrorFreeConvergence (logger: ILogger) id = task {
-        let! _ = preserveEndocrins logger ()
-        return id
-    }
+    let monotonectallyImplementErrorFreeConvergence (logger: ILogger) id =
+        task {
+            let! _ = preserveEndocrins logger ()
+            return id
+        }
 
-    let fungiblyFacilitateTechnicallySoundResults id conn = task {
-        let! _ = Database.doSlowWork1 conn
-        ()
-    }
-
-    let completelyTransitionBackendRelationships () = task {
-        //send an email?
-        ()
-    }
-
-    let continuallyActualizeImperatives (logger: ILogger) (conn) = task {
-        for i = 0 to 100000 do
-            let! r1 = monotonectallyImplementErrorFreeConvergence logger i
-            let! _ = fungiblyFacilitateTechnicallySoundResults r1 conn
+    let fungiblyFacilitateTechnicallySoundResults id conn =
+        task {
+            let! _ = Database.doSlowWork1 conn
             ()
-    }
+        }
 
-    let reticulatingSplines (logger: ILogger) (caching: IDistributedCache) (conn) = task {
-        logger.LogDebug("Started reticulatingSplines")
-        let! _ = preserveEndocrins logger ()
-        logger.LogInformation("preserveEndocrins might be doing something strange?")
-        let! _ = Database.doSlowWork1 conn
-        let! _ = continuallyActualizeImperatives logger conn
-        let! _ = completelyTransitionBackendRelationships ()
-        ()
-    }
+    let completelyTransitionBackendRelationships () =
+        task {
+            //send an email?
+            ()
+        }
+
+    let continuallyActualizeImperatives (logger: ILogger) (conn) =
+        task {
+            for i = 0 to 100000 do
+                let! r1 = monotonectallyImplementErrorFreeConvergence logger i
+                let! _ = fungiblyFacilitateTechnicallySoundResults r1 conn
+                ()
+        }
+
+    let reticulatingSplines (logger: ILogger) (caching: IDistributedCache) (conn) =
+        task {
+            logger.LogDebug("Started reticulatingSplines")
+            let! _ = preserveEndocrins logger ()
+            logger.LogInformation("preserveEndocrins might be doing something strange?")
+            let! _ = Database.doSlowWork1 conn
+            let! _ = continuallyActualizeImperatives logger conn
+            let! _ = completelyTransitionBackendRelationships ()
+            ()
+        }
 
 
 module BusinessLogic2 =
@@ -132,9 +147,8 @@ module BusinessLogic2 =
     open System.Threading.Tasks
     open Microsoft.Extensions.Caching.Distributed
 
-    let preserveEndocrins (logger: ILogger) (ct: CancellationToken) () = task {
-        do! Task.Delay(100, ct)
-    }
+    let preserveEndocrins (logger: ILogger) (ct: CancellationToken) () =
+        task { do! Task.Delay(100, ct) }
 
     let monotonectallyImplementErrorFreeConvergence (ct: CancellationToken) (logger: ILogger) id =
         task {
@@ -185,11 +199,12 @@ module BusinessLogic3 =
     open Microsoft.Extensions.Caching.Distributed
     open IcedTasks
 
-    let preserveEndocrins (logger: ILogger) () = cancellableTask {
-        // You can bind against `CancellationToken -> Task<'T>` calls
-        // no need for `CancellableTask.getCancellationToken()`.
-        do! fun ct -> Task.Delay(100, ct)
-    }
+    let preserveEndocrins (logger: ILogger) () =
+        cancellableTask {
+            // You can bind against `CancellationToken -> Task<'T>` calls
+            // no need for `CancellableTask.getCancellationToken()`.
+            do! fun ct -> Task.Delay(100, ct)
+        }
 
     let monotonectallyImplementErrorFreeConvergence (logger: ILogger) id =
         cancellableTask {

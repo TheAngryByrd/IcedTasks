@@ -24,10 +24,11 @@ let getRuntimeList () =
     let proc = Process.Start(psi)
     proc.WaitForExit()
 
-    let output = seq {
-        while not proc.StandardOutput.EndOfStream do
-            proc.StandardOutput.ReadLine()
-    }
+    let output =
+        seq {
+            while not proc.StandardOutput.EndOfStream do
+                proc.StandardOutput.ReadLine()
+        }
 
     /// Regex for output like: Microsoft.AspNetCore.App 5.0.13 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]
     let listRuntimesRegex = Regex("([^\s]+) ([^\s]+) \[(.*?)\\]")

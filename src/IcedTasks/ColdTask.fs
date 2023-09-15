@@ -877,9 +877,8 @@ module ColdTasks =
         /// <summary>Coverts a ColdTask to a ColdTask\&lt;unit\&gt;.</summary>
         /// <param name="unitColdTask">The ColdTask to convert.</param>
         /// <returns>a ColdTask\&lt;unit\&gt;.</returns>
-        let inline ofUnit ([<InlineIfLambda>] unitColdTask: ColdTask) = coldTask {
-            return! unitColdTask
-        }
+        let inline ofUnit ([<InlineIfLambda>] unitColdTask: ColdTask) =
+            coldTask { return! unitColdTask }
 
         /// <summary>Coverts a ColdTask\&lt;_\&gt; to a ColdTask.</summary>
         /// <param name="coldTask">The ColdTask to convert.</param>

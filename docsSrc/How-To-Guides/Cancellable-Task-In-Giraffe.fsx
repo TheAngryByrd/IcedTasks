@@ -31,29 +31,30 @@ open Giraffe
 
 // This is a stand in for some real database call like Npgsql where it would take a CancellationToken
 type Database =
-    static member Get(query, queryParams, cancellationToken: CancellationToken) = task {
-        do! Task.Delay(10)
-    }
+    static member Get(query, queryParams, cancellationToken: CancellationToken) =
+        task { do! Task.Delay(10) }
 
 
 module ExampleVerbose =
 
 
     // Some function that's doing the real handler's work
-    let myRealWork next ctx = cancellableTask {
-        // use a lamdbda to get the cancellableTask's current CancellationToken
-        let! result =
-            fun ct -> Database.Get("SELECT foo FROM bar where baz = @0", [ "@0", "buzz" ], ct)
+    let myRealWork next ctx =
+        cancellableTask {
+            // use a lamdbda to get the cancellableTask's current CancellationToken
+            let! result =
+                fun ct -> Database.Get("SELECT foo FROM bar where baz = @0", [ "@0", "buzz" ], ct)
 
-        return! json result next ctx
-    }
+            return! json result next ctx
+        }
 
     // A helper to get the context's RequestAborted CancellationToken which will give the cancellableTask
     // the context to pass long.
-    let myCustomHandler next (ctx: HttpContext) = task {
-        let cancellationToken = ctx.RequestAborted
-        return! myRealWork next ctx cancellationToken
-    }
+    let myCustomHandler next (ctx: HttpContext) =
+        task {
+            let cancellationToken = ctx.RequestAborted
+            return! myRealWork next ctx cancellationToken
+        }
 
     // Some Giraffe App
     let app: HttpFunc -> HttpContext -> HttpFuncResult =
@@ -77,13 +78,14 @@ module ExampleRefactor1 =
         task { return! cancellableHandler next ctx ctx.RequestAborted }
 
     // Some function that's doing the real handler's work
-    let myRealWork next ctx = cancellableTask {
-        // use a lamdbda to get the cancellableTask's current CancellationToken
-        let! result =
-            fun ct -> Database.Get("SELECT foo FROM bar where baz = @0", [ "@0", "buzz" ], ct)
+    let myRealWork next ctx =
+        cancellableTask {
+            // use a lamdbda to get the cancellableTask's current CancellationToken
+            let! result =
+                fun ct -> Database.Get("SELECT foo FROM bar where baz = @0", [ "@0", "buzz" ], ct)
 
-        return! json result next ctx
-    }
+            return! json result next ctx
+        }
 
 
     // Some Giraffe App

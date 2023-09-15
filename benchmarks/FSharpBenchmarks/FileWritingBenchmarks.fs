@@ -164,14 +164,15 @@ type FileWriteBenchmarks() =
     member x.FSharp_ManyWriteFile_CancellableTaskBuilder() =
         let path = getTempFileName ()
 
-        let t = cancellableTask {
-            let junk = Array.zeroCreate x.bufferSize
-            use file = File.Create(path)
+        let t =
+            cancellableTask {
+                let junk = Array.zeroCreate x.bufferSize
+                use file = File.Create(path)
 
-            for i = 1 to x.manyIterations do
-                do! file.WriteAsync(junk, 0, junk.Length)
+                for i = 1 to x.manyIterations do
+                    do! file.WriteAsync(junk, 0, junk.Length)
 
-        }
+            }
 
         (t CancellationToken.None).GetAwaiter().GetResult()
 
@@ -183,14 +184,15 @@ type FileWriteBenchmarks() =
     member x.FSharp_ManyWriteFile_CancellableTaskBuilder_getCancellationTokenOnce() =
         let path = getTempFileName ()
 
-        let t = cancellableTask {
-            let junk = Array.zeroCreate x.bufferSize
-            use file = File.Create(path)
-            let! ct = CancellableTask.getCancellationToken ()
+        let t =
+            cancellableTask {
+                let junk = Array.zeroCreate x.bufferSize
+                use file = File.Create(path)
+                let! ct = CancellableTask.getCancellationToken ()
 
-            for i = 1 to x.manyIterations do
-                do! file.WriteAsync(junk, 0, junk.Length, ct)
-        }
+                for i = 1 to x.manyIterations do
+                    do! file.WriteAsync(junk, 0, junk.Length, ct)
+            }
 
         (t CancellationToken.None).GetAwaiter().GetResult()
 
@@ -201,14 +203,15 @@ type FileWriteBenchmarks() =
     member x.FSharp_ManyWriteFile_CancellableTaskBuilder_getCancellationTokenMany() =
         let path = getTempFileName ()
 
-        let t = cancellableTask {
-            let junk = Array.zeroCreate x.bufferSize
-            use file = File.Create(path)
+        let t =
+            cancellableTask {
+                let junk = Array.zeroCreate x.bufferSize
+                use file = File.Create(path)
 
-            for i = 1 to x.manyIterations do
-                let! ct = CancellableTask.getCancellationToken ()
-                do! file.WriteAsync(junk, 0, junk.Length, ct)
-        }
+                for i = 1 to x.manyIterations do
+                    let! ct = CancellableTask.getCancellationToken ()
+                    do! file.WriteAsync(junk, 0, junk.Length, ct)
+            }
 
         (t CancellationToken.None).GetAwaiter().GetResult()
 
@@ -219,13 +222,14 @@ type FileWriteBenchmarks() =
     member x.FSharp_ManyWriteFile_CancellableTaskBuilder_getCancellationTokenLambda() =
         let path = getTempFileName ()
 
-        let t = cancellableTask {
-            let junk = Array.zeroCreate x.bufferSize
-            use file = File.Create(path)
+        let t =
+            cancellableTask {
+                let junk = Array.zeroCreate x.bufferSize
+                use file = File.Create(path)
 
-            for i = 1 to x.manyIterations do
-                do! fun ct -> file.WriteAsync(junk, 0, junk.Length, ct)
-        }
+                for i = 1 to x.manyIterations do
+                    do! fun ct -> file.WriteAsync(junk, 0, junk.Length, ct)
+            }
 
         (t CancellationToken.None).GetAwaiter().GetResult()
 
@@ -237,14 +241,15 @@ type FileWriteBenchmarks() =
     member x.FSharp_ManyWriteFile_CancellableValueTaskBuilder() =
         let path = getTempFileName ()
 
-        let t = cancellableValueTask {
-            let junk = Array.zeroCreate x.bufferSize
-            use file = File.Create(path)
+        let t =
+            cancellableValueTask {
+                let junk = Array.zeroCreate x.bufferSize
+                use file = File.Create(path)
 
-            for i = 1 to x.manyIterations do
-                do! file.WriteAsync(junk, 0, junk.Length)
+                for i = 1 to x.manyIterations do
+                    do! file.WriteAsync(junk, 0, junk.Length)
 
-        }
+            }
 
         (t CancellationToken.None).GetAwaiter().GetResult()
 
@@ -256,14 +261,15 @@ type FileWriteBenchmarks() =
     member x.FSharp_ManyWriteFile_CancellableValueTaskBuilder_getCancellationTokenOnce() =
         let path = getTempFileName ()
 
-        let t = cancellableValueTask {
-            let! ct = CancellableValueTask.getCancellationToken ()
-            let junk = Array.zeroCreate x.bufferSize
-            use file = File.Create(path)
+        let t =
+            cancellableValueTask {
+                let! ct = CancellableValueTask.getCancellationToken ()
+                let junk = Array.zeroCreate x.bufferSize
+                use file = File.Create(path)
 
-            for i = 1 to x.manyIterations do
-                do! file.WriteAsync(junk, 0, junk.Length, ct)
-        }
+                for i = 1 to x.manyIterations do
+                    do! file.WriteAsync(junk, 0, junk.Length, ct)
+            }
 
         (t CancellationToken.None).GetAwaiter().GetResult()
 
@@ -274,15 +280,16 @@ type FileWriteBenchmarks() =
     member x.FSharp_ManyWriteFile_CancellableValueTaskBuilder_getCancellationTokenMany() =
         let path = getTempFileName ()
 
-        let t = cancellableValueTask {
-            let junk = Array.zeroCreate x.bufferSize
-            use file = File.Create(path)
+        let t =
+            cancellableValueTask {
+                let junk = Array.zeroCreate x.bufferSize
+                use file = File.Create(path)
 
-            for i = 1 to x.manyIterations do
-                let! ct = CancellableValueTask.getCancellationToken ()
-                do! file.WriteAsync(junk, 0, junk.Length, ct)
+                for i = 1 to x.manyIterations do
+                    let! ct = CancellableValueTask.getCancellationToken ()
+                    do! file.WriteAsync(junk, 0, junk.Length, ct)
 
-        }
+            }
 
         (t CancellationToken.None).GetAwaiter().GetResult()
 
@@ -293,14 +300,15 @@ type FileWriteBenchmarks() =
     member x.FSharp_ManyWriteFile_CancellableValueTaskBuilder_getCancellationTokenLambda() =
         let path = getTempFileName ()
 
-        let t = cancellableValueTask {
-            let junk = Array.zeroCreate x.bufferSize
-            use file = File.Create(path)
+        let t =
+            cancellableValueTask {
+                let junk = Array.zeroCreate x.bufferSize
+                use file = File.Create(path)
 
-            for i = 1 to x.manyIterations do
-                do! fun ct -> file.WriteAsync(junk, 0, junk.Length, ct)
+                for i = 1 to x.manyIterations do
+                    do! fun ct -> file.WriteAsync(junk, 0, junk.Length, ct)
 
-        }
+            }
 
         (t CancellationToken.None).GetAwaiter().GetResult()
 

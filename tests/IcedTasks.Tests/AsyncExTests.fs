@@ -83,10 +83,11 @@ module AsyncExTests =
                     let data = "foo"
                     let inner = asyncEx { return data }
 
-                    let outer = asyncEx {
-                        let! result = inner
-                        return result
-                    }
+                    let outer =
+                        asyncEx {
+                            let! result = inner
+                            return result
+                        }
 
                     let! result = outer
                     Expect.equal result data "Should return the data"
@@ -96,10 +97,11 @@ module AsyncExTests =
                     let data = "foo"
                     let inner = async { return data }
 
-                    let outer = asyncEx {
-                        let! result = inner
-                        return result
-                    }
+                    let outer =
+                        asyncEx {
+                            let! result = inner
+                            return result
+                        }
 
                     let! result = outer
                     Expect.equal result data "Should return the data"
@@ -109,10 +111,11 @@ module AsyncExTests =
                     let data = "foo"
                     let inner = task { return data }
 
-                    let outer = asyncEx {
-                        let! result = inner
-                        return result
-                    }
+                    let outer =
+                        asyncEx {
+                            let! result = inner
+                            return result
+                        }
 
                     let! result = outer
                     Expect.equal result data "Should return the data"
@@ -121,10 +124,11 @@ module AsyncExTests =
                 <| async {
                     let inner: Task = Task.CompletedTask
 
-                    let outer = asyncEx {
-                        let! result = inner
-                        return result
-                    }
+                    let outer =
+                        asyncEx {
+                            let! result = inner
+                            return result
+                        }
 
                     let! result = outer
                     Expect.equal result () "Should return the data"
@@ -135,10 +139,11 @@ module AsyncExTests =
                     let data = "foo"
                     let inner = valueTask { return data }
 
-                    let outer = asyncEx {
-                        let! result = inner
-                        return result
-                    }
+                    let outer =
+                        asyncEx {
+                            let! result = inner
+                            return result
+                        }
 
                     let! result = outer
                     Expect.equal result data "Should return the data"
@@ -147,10 +152,11 @@ module AsyncExTests =
                 <| async {
                     let inner: ValueTask = ValueTask.CompletedTask
 
-                    let outer = asyncEx {
-                        let! result = inner
-                        return result
-                    }
+                    let outer =
+                        asyncEx {
+                            let! result = inner
+                            return result
+                        }
 
                     let! result = outer
                     Expect.equal result () "Should return the data"
@@ -160,10 +166,11 @@ module AsyncExTests =
                 <| async {
                     let inner = Task.Yield()
 
-                    let outer = asyncEx {
-                        let! result = inner
-                        return result
-                    }
+                    let outer =
+                        asyncEx {
+                            let! result = inner
+                            return result
+                        }
 
                     let! result = outer
                     Expect.equal result () "Should return the data"
@@ -175,14 +182,15 @@ module AsyncExTests =
                     let data = "foo"
                     let inner = asyncEx { return data }
 
-                    let outer = asyncEx {
-                        let! result = inner
+                    let outer =
+                        asyncEx {
+                            let! result = inner
 
-                        if true then
-                            ()
+                            if true then
+                                ()
 
-                        return result
-                    }
+                            return result
+                        }
 
                     let! result = outer
                     Expect.equal result data "Should return the data"
@@ -194,13 +202,14 @@ module AsyncExTests =
                     let data = "foo"
                     let inner = asyncEx { return data }
 
-                    let outer = asyncEx {
-                        try
-                            let! result = inner
-                            return result
-                        with ex ->
-                            return failwith "Should not throw"
-                    }
+                    let outer =
+                        asyncEx {
+                            try
+                                let! result = inner
+                                return result
+                            with ex ->
+                                return failwith "Should not throw"
+                        }
 
                     let! result = outer
                     Expect.equal result data "Should return the data"
@@ -210,27 +219,31 @@ module AsyncExTests =
                 <| async {
                     let data = "lol"
 
-                    let inner = asyncEx {
-                        let! result = task {
-                            do! Task.Yield()
-                            raise (ArgumentException "foo")
-                            return data
+                    let inner =
+                        asyncEx {
+                            let! result =
+                                task {
+                                    do! Task.Yield()
+                                    raise (ArgumentException "foo")
+                                    return data
+                                }
+
+                            return result
                         }
 
-                        return result
-                    }
-
-                    let outer = asyncEx {
-                        try
-                            let! result = inner
-                            return ()
-                        with
-                        | :? ArgumentException ->
-                            // Should be this exception and not AggregationException
-                            return ()
-                        | ex ->
-                            return raise (Exception("Should not throw this type of exception", ex))
-                    }
+                    let outer =
+                        asyncEx {
+                            try
+                                let! result = inner
+                                return ()
+                            with
+                            | :? ArgumentException ->
+                                // Should be this exception and not AggregationException
+                                return ()
+                            | ex ->
+                                return
+                                    raise (Exception("Should not throw this type of exception", ex))
+                        }
 
                     let! result = outer
                     Expect.equal result () "Should return the data"
@@ -241,27 +254,30 @@ module AsyncExTests =
                 <| async {
                     let data = "lol"
 
-                    let inner = asyncEx {
-                        do!
-                            task {
-                                do! Task.Yield()
-                                raise (ArgumentException "foo")
-                                return data
-                            }
-                            :> Task
-                    }
+                    let inner =
+                        asyncEx {
+                            do!
+                                task {
+                                    do! Task.Yield()
+                                    raise (ArgumentException "foo")
+                                    return data
+                                }
+                                :> Task
+                        }
 
-                    let outer = asyncEx {
-                        try
-                            do! inner
-                            return ()
-                        with
-                        | :? ArgumentException ->
-                            // Should be this exception and not AggregationException
-                            return ()
-                        | ex ->
-                            return raise (Exception("Should not throw this type of exception", ex))
-                    }
+                    let outer =
+                        asyncEx {
+                            try
+                                do! inner
+                                return ()
+                            with
+                            | :? ArgumentException ->
+                                // Should be this exception and not AggregationException
+                                return ()
+                            | ex ->
+                                return
+                                    raise (Exception("Should not throw this type of exception", ex))
+                        }
 
                     let! result = outer
                     Expect.equal result () "Should return the data"
@@ -272,27 +288,31 @@ module AsyncExTests =
                 <| async {
                     let data = "lol"
 
-                    let inner = asyncEx {
-                        let! result = valueTask {
-                            do! Task.Yield()
-                            raise (ArgumentException "foo")
-                            return data
+                    let inner =
+                        asyncEx {
+                            let! result =
+                                valueTask {
+                                    do! Task.Yield()
+                                    raise (ArgumentException "foo")
+                                    return data
+                                }
+
+                            return result
                         }
 
-                        return result
-                    }
-
-                    let outer = asyncEx {
-                        try
-                            let! result = inner
-                            return ()
-                        with
-                        | :? ArgumentException ->
-                            // Should be this exception and not AggregationException
-                            return ()
-                        | ex ->
-                            return raise (Exception("Should not throw this type of exception", ex))
-                    }
+                    let outer =
+                        asyncEx {
+                            try
+                                let! result = inner
+                                return ()
+                            with
+                            | :? ArgumentException ->
+                                // Should be this exception and not AggregationException
+                                return ()
+                            | ex ->
+                                return
+                                    raise (Exception("Should not throw this type of exception", ex))
+                        }
 
                     let! result = outer
                     Expect.equal result () "Should return the data"
@@ -303,35 +323,37 @@ module AsyncExTests =
                 <| async {
                     let data = "lol"
 
-                    let inner = asyncEx {
-                        let awaiter =
-                            CustomAwaiter.CustomAwaiter(
-                                (fun () -> raise (ArgumentException "foo")),
-                                (fun () -> true)
-                            )
-
-                        let! result = awaiter
-
-                        return result
-                    }
-
-                    let outer = asyncEx {
-                        try
-                            let! result = inner
-                            return ()
-                        with
-                        | :? ArgumentException ->
-                            // Should be this exception and not AggregationException
-                            return ()
-                        | ex ->
-                            return
-                                raise (
-                                    Exception(
-                                        $"Should not throw this type of exception {ex.GetType()}",
-                                        ex
-                                    )
+                    let inner =
+                        asyncEx {
+                            let awaiter =
+                                CustomAwaiter.CustomAwaiter(
+                                    (fun () -> raise (ArgumentException "foo")),
+                                    (fun () -> true)
                                 )
-                    }
+
+                            let! result = awaiter
+
+                            return result
+                        }
+
+                    let outer =
+                        asyncEx {
+                            try
+                                let! result = inner
+                                return ()
+                            with
+                            | :? ArgumentException ->
+                                // Should be this exception and not AggregationException
+                                return ()
+                            | ex ->
+                                return
+                                    raise (
+                                        Exception(
+                                            $"Should not throw this type of exception {ex.GetType()}",
+                                            ex
+                                        )
+                                    )
+                        }
 
                     let! result = outer
                     Expect.equal result () "Should return the data"
@@ -343,13 +365,14 @@ module AsyncExTests =
                     let data = "foo"
                     let inner = asyncEx { return data }
 
-                    let outer = asyncEx {
-                        try
-                            let! result = inner
-                            return result
-                        finally
-                            ()
-                    }
+                    let outer =
+                        asyncEx {
+                            try
+                                let! result = inner
+                                return result
+                            finally
+                                ()
+                        }
 
                     let! result = outer
                     Expect.equal result data "Should return the data"
@@ -362,10 +385,11 @@ module AsyncExTests =
                     let mutable wasDisposed = false
                     let doDispose () = wasDisposed <- true
 
-                    let! actual = asyncEx {
-                        use d = TestHelpers.makeDisposable (doDispose)
-                        return data
-                    }
+                    let! actual =
+                        asyncEx {
+                            use d = TestHelpers.makeDisposable (doDispose)
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -376,13 +400,14 @@ module AsyncExTests =
                     let mutable wasDisposed = false
                     let doDispose () = wasDisposed <- true
 
-                    let! actual = asyncEx {
-                        use! d =
-                            TestHelpers.makeDisposable (doDispose)
-                            |> async.Return
+                    let! actual =
+                        asyncEx {
+                            use! d =
+                                TestHelpers.makeDisposable (doDispose)
+                                |> async.Return
 
-                        return data
-                    }
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -397,10 +422,11 @@ module AsyncExTests =
                         wasDisposed <- true
                         ValueTask.CompletedTask
 
-                    let! actual = asyncEx {
-                        use d = TestHelpers.makeAsyncDisposable (doDispose)
-                        return data
-                    }
+                    let! actual =
+                        asyncEx {
+                            use d = TestHelpers.makeAsyncDisposable (doDispose)
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -415,13 +441,14 @@ module AsyncExTests =
                         wasDisposed <- true
                         ValueTask.CompletedTask
 
-                    let! actual = asyncEx {
-                        use! d =
-                            TestHelpers.makeAsyncDisposable (doDispose)
-                            |> async.Return
+                    let! actual =
+                        asyncEx {
+                            use! d =
+                                TestHelpers.makeAsyncDisposable (doDispose)
+                                |> async.Return
 
-                        return data
-                    }
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -440,10 +467,11 @@ module AsyncExTests =
                         }
                         |> ValueTask
 
-                    let! actual = asyncEx {
-                        use d = TestHelpers.makeAsyncDisposable (doDispose)
-                        return data
-                    }
+                    let! actual =
+                        asyncEx {
+                            use d = TestHelpers.makeAsyncDisposable (doDispose)
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -461,13 +489,14 @@ module AsyncExTests =
                         }
                         |> ValueTask
 
-                    let! actual = asyncEx {
-                        use! d =
-                            TestHelpers.makeAsyncDisposable (doDispose)
-                            |> async.Return
+                    let! actual =
+                        asyncEx {
+                            use! d =
+                                TestHelpers.makeAsyncDisposable (doDispose)
+                                |> async.Return
 
-                        return data
-                    }
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -477,10 +506,11 @@ module AsyncExTests =
                 <| async {
                     let data = 42
 
-                    let! actual = asyncEx {
-                        use d = null
-                        return data
-                    }
+                    let! actual =
+                        asyncEx {
+                            use d = null
+                            return data
+                        }
 
                     Expect.equal actual data "Should be able to use use"
                 }
@@ -498,12 +528,13 @@ module AsyncExTests =
                         <| async {
                             let mutable index = 0
 
-                            let! actual = asyncEx {
-                                while index < loops do
-                                    index <- index + 1
+                            let! actual =
+                                asyncEx {
+                                    while index < loops do
+                                        index <- index + 1
 
-                                return index
-                            }
+                                    return index
+                                }
 
                             Expect.equal actual loops "Should be ok"
                         }
@@ -521,13 +552,14 @@ module AsyncExTests =
                         <| async {
                             let mutable index = 0
 
-                            let! actual = asyncEx {
-                                while index < loops do
-                                    do! Task.Yield()
-                                    index <- index + 1
+                            let! actual =
+                                asyncEx {
+                                    while index < loops do
+                                        do! Task.Yield()
+                                        index <- index + 1
 
-                                return index
-                            }
+                                    return index
+                                }
 
                             Expect.equal actual loops "Should be ok"
                         }
@@ -547,12 +579,13 @@ module AsyncExTests =
                         <| async {
                             let mutable index = 0
 
-                            let! actual = asyncEx {
-                                for i in [ 1..10 ] do
-                                    index <- i + i
+                            let! actual =
+                                asyncEx {
+                                    for i in [ 1..10 ] do
+                                        index <- i + i
 
-                                return index
-                            }
+                                    return index
+                                }
 
                             Expect.equal actual index "Should be ok"
                         }
@@ -570,12 +603,13 @@ module AsyncExTests =
                         <| async {
                             let mutable index = 0
 
-                            let! actual = asyncEx {
-                                for i = 1 to loops do
-                                    index <- i + i
+                            let! actual =
+                                asyncEx {
+                                    for i = 1 to loops do
+                                        index <- i + i
 
-                                return index
-                            }
+                                    return index
+                                }
 
                             Expect.equal actual index "Should be ok"
                         }
@@ -592,13 +626,14 @@ module AsyncExTests =
                         <| async {
                             let mutable index = 0
 
-                            let! actual = asyncEx {
-                                for i in [ 1..10 ] do
-                                    do! Task.Yield()
-                                    index <- i + i
+                            let! actual =
+                                asyncEx {
+                                    for i in [ 1..10 ] do
+                                        do! Task.Yield()
+                                        index <- i + i
 
-                                return index
-                            }
+                                    return index
+                                }
 
                             Expect.equal actual index "Should be ok"
                         }
@@ -616,13 +651,14 @@ module AsyncExTests =
                         <| async {
                             let mutable index = 0
 
-                            let! actual = asyncEx {
-                                for i = 1 to loops do
-                                    do! Task.Yield()
-                                    index <- i + i
+                            let! actual =
+                                asyncEx {
+                                    for i = 1 to loops do
+                                        do! Task.Yield()
+                                        index <- i + i
 
-                                return index
-                            }
+                                    return index
+                                }
 
                             Expect.equal actual index "Should be ok"
                         }

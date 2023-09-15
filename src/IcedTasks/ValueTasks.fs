@@ -768,30 +768,33 @@ module ValueTasks =
         /// <param name="mapper">The continuation.</param>
         /// <param name="cTask">The value.</param>
         /// <returns>The result of the mapper wrapped in a ValueTasks.</returns>
-        let inline map ([<InlineIfLambda>] mapper: 'input -> 'output) (cTask: ValueTask<'input>) = valueTask {
-            let! cResult = cTask
-            return mapper cResult
-        }
+        let inline map ([<InlineIfLambda>] mapper: 'input -> 'output) (cTask: ValueTask<'input>) =
+            valueTask {
+                let! cResult = cTask
+                return mapper cResult
+            }
 
         /// <summary>Allows chaining of ValueTasks.</summary>
         /// <param name="applicable">A function wrapped in a ValueTasks</param>
         /// <param name="cTask">The value.</param>
         /// <returns>The result of the applicable.</returns>
-        let inline apply (applicable: ValueTask<'input -> 'output>) (cTask: ValueTask<'input>) = valueTask {
-            let! applier = applicable
-            let! cResult = cTask
-            return applier cResult
-        }
+        let inline apply (applicable: ValueTask<'input -> 'output>) (cTask: ValueTask<'input>) =
+            valueTask {
+                let! applier = applicable
+                let! cResult = cTask
+                return applier cResult
+            }
 
         /// <summary>Takes two ValueTasks, starts them serially in order of left to right, and returns a tuple of the pair.</summary>
         /// <param name="left">The left value.</param>
         /// <param name="right">The right value.</param>
         /// <returns>A tuple of the parameters passed in</returns>
-        let inline zip (left: ValueTask<'left>) (right: ValueTask<'right>) = valueTask {
-            let! r1 = left
-            let! r2 = right
-            return r1, r2
-        }
+        let inline zip (left: ValueTask<'left>) (right: ValueTask<'right>) =
+            valueTask {
+                let! r1 = left
+                let! r2 = right
+                return r1, r2
+            }
 
         let inline ofUnit (vtask: ValueTask) : ValueTask<unit> =
             // this implementation follows Stephen Toub's advice, see:

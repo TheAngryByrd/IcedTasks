@@ -138,449 +138,466 @@ module SyncHelpers =
         }
 
     // ===== F# AsyncBuilder =====
-    let fsharp_TenBindSync_AsyncBuilder_BindAsync () = async {
-        let! res1 = sync_Async ()
-        let! res2 = sync_Async ()
-        let! res3 = sync_Async ()
-        let! res4 = sync_Async ()
-        let! res5 = sync_Async ()
-        let! res6 = sync_Async ()
-        let! res7 = sync_Async ()
-        let! res8 = sync_Async ()
-        let! res9 = sync_Async ()
-        let! res10 = sync_Async ()
+    let fsharp_TenBindSync_AsyncBuilder_BindAsync () =
+        async {
+            let! res1 = sync_Async ()
+            let! res2 = sync_Async ()
+            let! res3 = sync_Async ()
+            let! res4 = sync_Async ()
+            let! res5 = sync_Async ()
+            let! res6 = sync_Async ()
+            let! res7 = sync_Async ()
+            let! res8 = sync_Async ()
+            let! res9 = sync_Async ()
+            let! res10 = sync_Async ()
 
-        return
-            res1
-            + res2
-            + res3
-            + res4
-            + res5
-            + res6
-            + res7
-            + res8
-            + res9
-            + res10
-    }
+            return
+                res1
+                + res2
+                + res3
+                + res4
+                + res5
+                + res6
+                + res7
+                + res8
+                + res9
+                + res10
+        }
 
     // ==== F# TaskBuilder =====
 
-    let fsharp_TenBindSync_TaskBuilder_BindTask () = task {
-        let! res1 = sync_Task ()
-        let! res2 = sync_Task ()
-        let! res3 = sync_Task ()
-        let! res4 = sync_Task ()
-        let! res5 = sync_Task ()
-        let! res6 = sync_Task ()
-        let! res7 = sync_Task ()
-        let! res8 = sync_Task ()
-        let! res9 = sync_Task ()
-        let! res10 = sync_Task ()
+    let fsharp_TenBindSync_TaskBuilder_BindTask () =
+        task {
+            let! res1 = sync_Task ()
+            let! res2 = sync_Task ()
+            let! res3 = sync_Task ()
+            let! res4 = sync_Task ()
+            let! res5 = sync_Task ()
+            let! res6 = sync_Task ()
+            let! res7 = sync_Task ()
+            let! res8 = sync_Task ()
+            let! res9 = sync_Task ()
+            let! res10 = sync_Task ()
 
-        return
-            res1
-            + res2
-            + res3
-            + res4
-            + res5
-            + res6
-            + res7
-            + res8
-            + res9
-            + res10
-    }
+            return
+                res1
+                + res2
+                + res3
+                + res4
+                + res5
+                + res6
+                + res7
+                + res8
+                + res9
+                + res10
+        }
 
-    let fsharp_TenBindSync_TaskBuilder_BindValueTask () = task {
-        let! res1 = sync_ValueTask ()
-        let! res2 = sync_ValueTask ()
-        let! res3 = sync_ValueTask ()
-        let! res4 = sync_ValueTask ()
-        let! res5 = sync_ValueTask ()
-        let! res6 = sync_ValueTask ()
-        let! res7 = sync_ValueTask ()
-        let! res8 = sync_ValueTask ()
-        let! res9 = sync_ValueTask ()
-        let! res10 = sync_ValueTask ()
+    let fsharp_TenBindSync_TaskBuilder_BindValueTask () =
+        task {
+            let! res1 = sync_ValueTask ()
+            let! res2 = sync_ValueTask ()
+            let! res3 = sync_ValueTask ()
+            let! res4 = sync_ValueTask ()
+            let! res5 = sync_ValueTask ()
+            let! res6 = sync_ValueTask ()
+            let! res7 = sync_ValueTask ()
+            let! res8 = sync_ValueTask ()
+            let! res9 = sync_ValueTask ()
+            let! res10 = sync_ValueTask ()
 
-        return
-            res1
-            + res2
-            + res3
-            + res4
-            + res5
-            + res6
-            + res7
-            + res8
-            + res9
-            + res10
-    }
+            return
+                res1
+                + res2
+                + res3
+                + res4
+                + res5
+                + res6
+                + res7
+                + res8
+                + res9
+                + res10
+        }
 
-    let fsharp_TenBindSync_TaskBuilder_BindAsync () = task {
-        let! res1 = sync_Async ()
-        let! res2 = sync_Async ()
-        let! res3 = sync_Async ()
-        let! res4 = sync_Async ()
-        let! res5 = sync_Async ()
-        let! res6 = sync_Async ()
-        let! res7 = sync_Async ()
-        let! res8 = sync_Async ()
-        let! res9 = sync_Async ()
-        let! res10 = sync_Async ()
+    let fsharp_TenBindSync_TaskBuilder_BindAsync () =
+        task {
+            let! res1 = sync_Async ()
+            let! res2 = sync_Async ()
+            let! res3 = sync_Async ()
+            let! res4 = sync_Async ()
+            let! res5 = sync_Async ()
+            let! res6 = sync_Async ()
+            let! res7 = sync_Async ()
+            let! res8 = sync_Async ()
+            let! res9 = sync_Async ()
+            let! res10 = sync_Async ()
 
-        return
-            res1
-            + res2
-            + res3
-            + res4
-            + res5
-            + res6
-            + res7
-            + res8
-            + res9
-            + res10
-    }
+            return
+                res1
+                + res2
+                + res3
+                + res4
+                + res5
+                + res6
+                + res7
+                + res8
+                + res9
+                + res10
+        }
 
 
     // ==== F# ValueTaskBuilder =====
 
-    let fsharp_TenBindSync_ValueTaskBuilder_BindTask () = valueTask {
-        let! res1 = sync_Task ()
-        let! res2 = sync_Task ()
-        let! res3 = sync_Task ()
-        let! res4 = sync_Task ()
-        let! res5 = sync_Task ()
-        let! res6 = sync_Task ()
-        let! res7 = sync_Task ()
-        let! res8 = sync_Task ()
-        let! res9 = sync_Task ()
-        let! res10 = sync_Task ()
+    let fsharp_TenBindSync_ValueTaskBuilder_BindTask () =
+        valueTask {
+            let! res1 = sync_Task ()
+            let! res2 = sync_Task ()
+            let! res3 = sync_Task ()
+            let! res4 = sync_Task ()
+            let! res5 = sync_Task ()
+            let! res6 = sync_Task ()
+            let! res7 = sync_Task ()
+            let! res8 = sync_Task ()
+            let! res9 = sync_Task ()
+            let! res10 = sync_Task ()
 
-        return
-            res1
-            + res2
-            + res3
-            + res4
-            + res5
-            + res6
-            + res7
-            + res8
-            + res9
-            + res10
-    }
+            return
+                res1
+                + res2
+                + res3
+                + res4
+                + res5
+                + res6
+                + res7
+                + res8
+                + res9
+                + res10
+        }
 
 
-    let fsharp_TenBindSync_ValueTaskBuilder_BindValueTask () = valueTask {
-        let! res1 = sync_ValueTask ()
-        let! res2 = sync_ValueTask ()
-        let! res3 = sync_ValueTask ()
-        let! res4 = sync_ValueTask ()
-        let! res5 = sync_ValueTask ()
-        let! res6 = sync_ValueTask ()
-        let! res7 = sync_ValueTask ()
-        let! res8 = sync_ValueTask ()
-        let! res9 = sync_ValueTask ()
-        let! res10 = sync_ValueTask ()
+    let fsharp_TenBindSync_ValueTaskBuilder_BindValueTask () =
+        valueTask {
+            let! res1 = sync_ValueTask ()
+            let! res2 = sync_ValueTask ()
+            let! res3 = sync_ValueTask ()
+            let! res4 = sync_ValueTask ()
+            let! res5 = sync_ValueTask ()
+            let! res6 = sync_ValueTask ()
+            let! res7 = sync_ValueTask ()
+            let! res8 = sync_ValueTask ()
+            let! res9 = sync_ValueTask ()
+            let! res10 = sync_ValueTask ()
 
-        return
-            res1
-            + res2
-            + res3
-            + res4
-            + res5
-            + res6
-            + res7
-            + res8
-            + res9
-            + res10
-    }
+            return
+                res1
+                + res2
+                + res3
+                + res4
+                + res5
+                + res6
+                + res7
+                + res8
+                + res9
+                + res10
+        }
 
-    let fsharp_TenBindSync_ValueTaskBuilder_BindAsync () = valueTask {
-        let! res1 = sync_Async ()
-        let! res2 = sync_Async ()
-        let! res3 = sync_Async ()
-        let! res4 = sync_Async ()
-        let! res5 = sync_Async ()
-        let! res6 = sync_Async ()
-        let! res7 = sync_Async ()
-        let! res8 = sync_Async ()
-        let! res9 = sync_Async ()
-        let! res10 = sync_Async ()
+    let fsharp_TenBindSync_ValueTaskBuilder_BindAsync () =
+        valueTask {
+            let! res1 = sync_Async ()
+            let! res2 = sync_Async ()
+            let! res3 = sync_Async ()
+            let! res4 = sync_Async ()
+            let! res5 = sync_Async ()
+            let! res6 = sync_Async ()
+            let! res7 = sync_Async ()
+            let! res8 = sync_Async ()
+            let! res9 = sync_Async ()
+            let! res10 = sync_Async ()
 
-        return
-            res1
-            + res2
-            + res3
-            + res4
-            + res5
-            + res6
-            + res7
-            + res8
-            + res9
-            + res10
-    }
+            return
+                res1
+                + res2
+                + res3
+                + res4
+                + res5
+                + res6
+                + res7
+                + res8
+                + res9
+                + res10
+        }
 
     /// ==== F# CancellableTaskBuilder =====
 
-    let fsharp_TenBindSync_CancellableTaskBuilder_BindCancellableTask () = cancellableTask {
-        let! res1 = sync_cancellableTask ()
-        let! res2 = sync_cancellableTask ()
-        let! res3 = sync_cancellableTask ()
-        let! res4 = sync_cancellableTask ()
-        let! res5 = sync_cancellableTask ()
-        let! res6 = sync_cancellableTask ()
-        let! res7 = sync_cancellableTask ()
-        let! res8 = sync_cancellableTask ()
-        let! res9 = sync_cancellableTask ()
-        let! res10 = sync_cancellableTask ()
+    let fsharp_TenBindSync_CancellableTaskBuilder_BindCancellableTask () =
+        cancellableTask {
+            let! res1 = sync_cancellableTask ()
+            let! res2 = sync_cancellableTask ()
+            let! res3 = sync_cancellableTask ()
+            let! res4 = sync_cancellableTask ()
+            let! res5 = sync_cancellableTask ()
+            let! res6 = sync_cancellableTask ()
+            let! res7 = sync_cancellableTask ()
+            let! res8 = sync_cancellableTask ()
+            let! res9 = sync_cancellableTask ()
+            let! res10 = sync_cancellableTask ()
 
-        return
-            res1
-            + res2
-            + res3
-            + res4
-            + res5
-            + res6
-            + res7
-            + res8
-            + res9
-            + res10
-    }
-
-
-    let fsharp_TenBindSync_CancellableTaskBuilder_BindTask () = cancellableTask {
-        let! res1 = sync_Task ()
-        let! res2 = sync_Task ()
-        let! res3 = sync_Task ()
-        let! res4 = sync_Task ()
-        let! res5 = sync_Task ()
-        let! res6 = sync_Task ()
-        let! res7 = sync_Task ()
-        let! res8 = sync_Task ()
-        let! res9 = sync_Task ()
-        let! res10 = sync_Task ()
-
-        return
-            res1
-            + res2
-            + res3
-            + res4
-            + res5
-            + res6
-            + res7
-            + res8
-            + res9
-            + res10
-    }
+            return
+                res1
+                + res2
+                + res3
+                + res4
+                + res5
+                + res6
+                + res7
+                + res8
+                + res9
+                + res10
+        }
 
 
-    let fsharp_TenBindSync_CancellableTaskBuilder_BindValueTask () = cancellableTask {
-        let! res1 = sync_ValueTask ()
-        let! res2 = sync_ValueTask ()
-        let! res3 = sync_ValueTask ()
-        let! res4 = sync_ValueTask ()
-        let! res5 = sync_ValueTask ()
-        let! res6 = sync_ValueTask ()
-        let! res7 = sync_ValueTask ()
-        let! res8 = sync_ValueTask ()
-        let! res9 = sync_ValueTask ()
-        let! res10 = sync_ValueTask ()
+    let fsharp_TenBindSync_CancellableTaskBuilder_BindTask () =
+        cancellableTask {
+            let! res1 = sync_Task ()
+            let! res2 = sync_Task ()
+            let! res3 = sync_Task ()
+            let! res4 = sync_Task ()
+            let! res5 = sync_Task ()
+            let! res6 = sync_Task ()
+            let! res7 = sync_Task ()
+            let! res8 = sync_Task ()
+            let! res9 = sync_Task ()
+            let! res10 = sync_Task ()
 
-        return
-            res1
-            + res2
-            + res3
-            + res4
-            + res5
-            + res6
-            + res7
-            + res8
-            + res9
-            + res10
-    }
-
-
-    let fsharp_TenBindSync_CancellableTaskBuilder_BindCancellableValueTask () = cancellableTask {
-        let! res1 = sync_cancellableValueTask ()
-        let! res2 = sync_cancellableValueTask ()
-        let! res3 = sync_cancellableValueTask ()
-        let! res4 = sync_cancellableValueTask ()
-        let! res5 = sync_cancellableValueTask ()
-        let! res6 = sync_cancellableValueTask ()
-        let! res7 = sync_cancellableValueTask ()
-        let! res8 = sync_cancellableValueTask ()
-        let! res9 = sync_cancellableValueTask ()
-        let! res10 = sync_cancellableValueTask ()
-
-        return
-            res1
-            + res2
-            + res3
-            + res4
-            + res5
-            + res6
-            + res7
-            + res8
-            + res9
-            + res10
-    }
+            return
+                res1
+                + res2
+                + res3
+                + res4
+                + res5
+                + res6
+                + res7
+                + res8
+                + res9
+                + res10
+        }
 
 
-    let fsharp_TenBindSync_CancellableTaskBuilder_BindAsync () = cancellableTask {
-        let! res1 = sync_Async ()
-        let! res2 = sync_Async ()
-        let! res3 = sync_Async ()
-        let! res4 = sync_Async ()
-        let! res5 = sync_Async ()
-        let! res6 = sync_Async ()
-        let! res7 = sync_Async ()
-        let! res8 = sync_Async ()
-        let! res9 = sync_Async ()
-        let! res10 = sync_Async ()
+    let fsharp_TenBindSync_CancellableTaskBuilder_BindValueTask () =
+        cancellableTask {
+            let! res1 = sync_ValueTask ()
+            let! res2 = sync_ValueTask ()
+            let! res3 = sync_ValueTask ()
+            let! res4 = sync_ValueTask ()
+            let! res5 = sync_ValueTask ()
+            let! res6 = sync_ValueTask ()
+            let! res7 = sync_ValueTask ()
+            let! res8 = sync_ValueTask ()
+            let! res9 = sync_ValueTask ()
+            let! res10 = sync_ValueTask ()
 
-        return
-            res1
-            + res2
-            + res3
-            + res4
-            + res5
-            + res6
-            + res7
-            + res8
-            + res9
-            + res10
-    }
+            return
+                res1
+                + res2
+                + res3
+                + res4
+                + res5
+                + res6
+                + res7
+                + res8
+                + res9
+                + res10
+        }
+
+
+    let fsharp_TenBindSync_CancellableTaskBuilder_BindCancellableValueTask () =
+        cancellableTask {
+            let! res1 = sync_cancellableValueTask ()
+            let! res2 = sync_cancellableValueTask ()
+            let! res3 = sync_cancellableValueTask ()
+            let! res4 = sync_cancellableValueTask ()
+            let! res5 = sync_cancellableValueTask ()
+            let! res6 = sync_cancellableValueTask ()
+            let! res7 = sync_cancellableValueTask ()
+            let! res8 = sync_cancellableValueTask ()
+            let! res9 = sync_cancellableValueTask ()
+            let! res10 = sync_cancellableValueTask ()
+
+            return
+                res1
+                + res2
+                + res3
+                + res4
+                + res5
+                + res6
+                + res7
+                + res8
+                + res9
+                + res10
+        }
+
+
+    let fsharp_TenBindSync_CancellableTaskBuilder_BindAsync () =
+        cancellableTask {
+            let! res1 = sync_Async ()
+            let! res2 = sync_Async ()
+            let! res3 = sync_Async ()
+            let! res4 = sync_Async ()
+            let! res5 = sync_Async ()
+            let! res6 = sync_Async ()
+            let! res7 = sync_Async ()
+            let! res8 = sync_Async ()
+            let! res9 = sync_Async ()
+            let! res10 = sync_Async ()
+
+            return
+                res1
+                + res2
+                + res3
+                + res4
+                + res5
+                + res6
+                + res7
+                + res8
+                + res9
+                + res10
+        }
 
     // ==== F# CancellableValueTaskBuilder =====
 
 
-    let fsharp_TenBindSync_CancellableValueTaskBuilder_BindCancellableTask () = cancellableValueTask {
-        let! res1 = sync_cancellableTask ()
-        let! res2 = sync_cancellableTask ()
-        let! res3 = sync_cancellableTask ()
-        let! res4 = sync_cancellableTask ()
-        let! res5 = sync_cancellableTask ()
-        let! res6 = sync_cancellableTask ()
-        let! res7 = sync_cancellableTask ()
-        let! res8 = sync_cancellableTask ()
-        let! res9 = sync_cancellableTask ()
-        let! res10 = sync_cancellableTask ()
+    let fsharp_TenBindSync_CancellableValueTaskBuilder_BindCancellableTask () =
+        cancellableValueTask {
+            let! res1 = sync_cancellableTask ()
+            let! res2 = sync_cancellableTask ()
+            let! res3 = sync_cancellableTask ()
+            let! res4 = sync_cancellableTask ()
+            let! res5 = sync_cancellableTask ()
+            let! res6 = sync_cancellableTask ()
+            let! res7 = sync_cancellableTask ()
+            let! res8 = sync_cancellableTask ()
+            let! res9 = sync_cancellableTask ()
+            let! res10 = sync_cancellableTask ()
 
-        return
-            res1
-            + res2
-            + res3
-            + res4
-            + res5
-            + res6
-            + res7
-            + res8
-            + res9
-            + res10
-    }
-
-
-    let fsharp_TenBindSync_CancellableValueTaskBuilder_BindTask () = cancellableValueTask {
-        let! res1 = sync_Task ()
-        let! res2 = sync_Task ()
-        let! res3 = sync_Task ()
-        let! res4 = sync_Task ()
-        let! res5 = sync_Task ()
-        let! res6 = sync_Task ()
-        let! res7 = sync_Task ()
-        let! res8 = sync_Task ()
-        let! res9 = sync_Task ()
-        let! res10 = sync_Task ()
-
-        return
-            res1
-            + res2
-            + res3
-            + res4
-            + res5
-            + res6
-            + res7
-            + res8
-            + res9
-            + res10
-    }
+            return
+                res1
+                + res2
+                + res3
+                + res4
+                + res5
+                + res6
+                + res7
+                + res8
+                + res9
+                + res10
+        }
 
 
-    let fsharp_TenBindSync_CancellableValueTaskBuilder_BindValueTask () = cancellableValueTask {
-        let! res1 = sync_ValueTask ()
-        let! res2 = sync_ValueTask ()
-        let! res3 = sync_ValueTask ()
-        let! res4 = sync_ValueTask ()
-        let! res5 = sync_ValueTask ()
-        let! res6 = sync_ValueTask ()
-        let! res7 = sync_ValueTask ()
-        let! res8 = sync_ValueTask ()
-        let! res9 = sync_ValueTask ()
-        let! res10 = sync_ValueTask ()
+    let fsharp_TenBindSync_CancellableValueTaskBuilder_BindTask () =
+        cancellableValueTask {
+            let! res1 = sync_Task ()
+            let! res2 = sync_Task ()
+            let! res3 = sync_Task ()
+            let! res4 = sync_Task ()
+            let! res5 = sync_Task ()
+            let! res6 = sync_Task ()
+            let! res7 = sync_Task ()
+            let! res8 = sync_Task ()
+            let! res9 = sync_Task ()
+            let! res10 = sync_Task ()
 
-        return
-            res1
-            + res2
-            + res3
-            + res4
-            + res5
-            + res6
-            + res7
-            + res8
-            + res9
-            + res10
-    }
-
-
-    let fsharp_TenBindSync_CancellableValueTaskBuilder_BindCancellableValueTask () = cancellableValueTask {
-        let! res1 = sync_cancellableValueTask ()
-        let! res2 = sync_cancellableValueTask ()
-        let! res3 = sync_cancellableValueTask ()
-        let! res4 = sync_cancellableValueTask ()
-        let! res5 = sync_cancellableValueTask ()
-        let! res6 = sync_cancellableValueTask ()
-        let! res7 = sync_cancellableValueTask ()
-        let! res8 = sync_cancellableValueTask ()
-        let! res9 = sync_cancellableValueTask ()
-        let! res10 = sync_cancellableValueTask ()
-
-        return
-            res1
-            + res2
-            + res3
-            + res4
-            + res5
-            + res6
-            + res7
-            + res8
-            + res9
-            + res10
-    }
+            return
+                res1
+                + res2
+                + res3
+                + res4
+                + res5
+                + res6
+                + res7
+                + res8
+                + res9
+                + res10
+        }
 
 
-    let fsharp_TenBindSync_CancellableValueTaskBuilder_BindAsync () = cancellableValueTask {
-        let! res1 = sync_Async ()
-        let! res2 = sync_Async ()
-        let! res3 = sync_Async ()
-        let! res4 = sync_Async ()
-        let! res5 = sync_Async ()
-        let! res6 = sync_Async ()
-        let! res7 = sync_Async ()
-        let! res8 = sync_Async ()
-        let! res9 = sync_Async ()
-        let! res10 = sync_Async ()
+    let fsharp_TenBindSync_CancellableValueTaskBuilder_BindValueTask () =
+        cancellableValueTask {
+            let! res1 = sync_ValueTask ()
+            let! res2 = sync_ValueTask ()
+            let! res3 = sync_ValueTask ()
+            let! res4 = sync_ValueTask ()
+            let! res5 = sync_ValueTask ()
+            let! res6 = sync_ValueTask ()
+            let! res7 = sync_ValueTask ()
+            let! res8 = sync_ValueTask ()
+            let! res9 = sync_ValueTask ()
+            let! res10 = sync_ValueTask ()
 
-        return
-            res1
-            + res2
-            + res3
-            + res4
-            + res5
-            + res6
-            + res7
-            + res8
-            + res9
-            + res10
-    }
+            return
+                res1
+                + res2
+                + res3
+                + res4
+                + res5
+                + res6
+                + res7
+                + res8
+                + res9
+                + res10
+        }
+
+
+    let fsharp_TenBindSync_CancellableValueTaskBuilder_BindCancellableValueTask () =
+        cancellableValueTask {
+            let! res1 = sync_cancellableValueTask ()
+            let! res2 = sync_cancellableValueTask ()
+            let! res3 = sync_cancellableValueTask ()
+            let! res4 = sync_cancellableValueTask ()
+            let! res5 = sync_cancellableValueTask ()
+            let! res6 = sync_cancellableValueTask ()
+            let! res7 = sync_cancellableValueTask ()
+            let! res8 = sync_cancellableValueTask ()
+            let! res9 = sync_cancellableValueTask ()
+            let! res10 = sync_cancellableValueTask ()
+
+            return
+                res1
+                + res2
+                + res3
+                + res4
+                + res5
+                + res6
+                + res7
+                + res8
+                + res9
+                + res10
+        }
+
+
+    let fsharp_TenBindSync_CancellableValueTaskBuilder_BindAsync () =
+        cancellableValueTask {
+            let! res1 = sync_Async ()
+            let! res2 = sync_Async ()
+            let! res3 = sync_Async ()
+            let! res4 = sync_Async ()
+            let! res5 = sync_Async ()
+            let! res6 = sync_Async ()
+            let! res7 = sync_Async ()
+            let! res8 = sync_Async ()
+            let! res9 = sync_Async ()
+            let! res10 = sync_Async ()
+
+            return
+                res1
+                + res2
+                + res3
+                + res4
+                + res5
+                + res6
+                + res7
+                + res8
+                + res9
+                + res10
+        }
 
 [<MemoryDiagnoser>]
 // [<GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByMethod)>]

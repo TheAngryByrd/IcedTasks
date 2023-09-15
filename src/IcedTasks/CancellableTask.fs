@@ -871,10 +871,11 @@ module CancellableTasks =
             /// <remarks>
             /// This is based on <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
             /// </remarks>
-            static member inline AwaitCancellableTask([<InlineIfLambda>] t: CancellableTask<'T>) = asyncEx {
-                let! ct = Async.CancellationToken
-                return! t ct
-            }
+            static member inline AwaitCancellableTask([<InlineIfLambda>] t: CancellableTask<'T>) =
+                asyncEx {
+                    let! ct = Async.CancellationToken
+                    return! t ct
+                }
 
             /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
             /// its result.</summary>
@@ -882,32 +883,35 @@ module CancellableTasks =
             /// <remarks>
             /// This is based on <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
             /// </remarks>
-            static member inline AwaitCancellableTask([<InlineIfLambda>] t: CancellableTask) = asyncEx {
-                let! ct = Async.CancellationToken
-                return! t ct
-            }
+            static member inline AwaitCancellableTask([<InlineIfLambda>] t: CancellableTask) =
+                asyncEx {
+                    let! ct = Async.CancellationToken
+                    return! t ct
+                }
 
         type Microsoft.FSharp.Control.Async with
 
             /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
             /// its result.</summary>
-            static member inline AwaitCancellableTask([<InlineIfLambda>] t: CancellableTask<'T>) = async {
-                let! ct = Async.CancellationToken
+            static member inline AwaitCancellableTask([<InlineIfLambda>] t: CancellableTask<'T>) =
+                async {
+                    let! ct = Async.CancellationToken
 
-                return!
-                    t ct
-                    |> Async.AwaitTask
-            }
+                    return!
+                        t ct
+                        |> Async.AwaitTask
+                }
 
             /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
             /// its result.</summary>
-            static member inline AwaitCancellableTask([<InlineIfLambda>] t: CancellableTask) = async {
-                let! ct = Async.CancellationToken
+            static member inline AwaitCancellableTask([<InlineIfLambda>] t: CancellableTask) =
+                async {
+                    let! ct = Async.CancellationToken
 
-                return!
-                    t ct
-                    |> Async.AwaitTask
-            }
+                    return!
+                        t ct
+                        |> Async.AwaitTask
+                }
 
             /// <summary>Runs an asynchronous computation, starting on the current operating system thread.</summary>
             static member inline AsCancellableTask(computation: Async<'T>) : CancellableTask<_> =
@@ -1124,16 +1128,17 @@ module CancellableTasks =
         /// <returns>A CancellableTask that represents the completion of all of the supplied tasks.</returns>
         /// <exception cref="T:System.ArgumentNullException">The <paramref name="tasks" /> argument was <see langword="null" />.</exception>
         /// <exception cref="T:System.ArgumentException">The <paramref name="tasks" /> collection contained a <see langword="null" /> task.</exception>
-        let inline whenAll (tasks: CancellableTask<_> seq) = cancellableTask {
-            let! ct = getCancellationToken ()
+        let inline whenAll (tasks: CancellableTask<_> seq) =
+            cancellableTask {
+                let! ct = getCancellationToken ()
 
-            let! results =
-                tasks
-                |> Seq.map (fun t -> t ct)
-                |> Task.WhenAll
+                let! results =
+                    tasks
+                    |> Seq.map (fun t -> t ct)
+                    |> Task.WhenAll
 
-            return results
-        }
+                return results
+            }
 
         /// <summary>Creates a task that will complete when all of the <see cref='T:IcedTasks.CancellableTasks.CancellableTask`1'/> in an enumerable collection have completed.</summary>
         /// <param name="tasks">The tasks to wait on for completion</param>
@@ -1141,52 +1146,55 @@ module CancellableTasks =
         /// <returns>A CancellableTask that represents the completion of all of the supplied tasks.</returns>
         /// <exception cref="T:System.ArgumentNullException">The <paramref name="tasks" /> argument was <see langword="null" />.</exception>
         /// <exception cref="T:System.ArgumentException">The <paramref name="tasks" /> collection contained a <see langword="null" /> task.</exception>
-        let inline whenAllThrottled (maxDegreeOfParallelism: int) (tasks: CancellableTask<_> seq) = cancellableTask {
-            let! ct = getCancellationToken ()
+        let inline whenAllThrottled (maxDegreeOfParallelism: int) (tasks: CancellableTask<_> seq) =
+            cancellableTask {
+                let! ct = getCancellationToken ()
 
-            use semaphore =
-                new SemaphoreSlim(
-                    initialCount = maxDegreeOfParallelism,
-                    maxCount = maxDegreeOfParallelism
-                )
+                use semaphore =
+                    new SemaphoreSlim(
+                        initialCount = maxDegreeOfParallelism,
+                        maxCount = maxDegreeOfParallelism
+                    )
 
-            let! results =
-                tasks
-                |> Seq.map (fun t -> task {
-                    do! semaphore.WaitAsync ct
+                let! results =
+                    tasks
+                    |> Seq.map (fun t ->
+                        task {
+                            do! semaphore.WaitAsync ct
 
-                    try
-                        return! t ct
-                    finally
-                        semaphore.Release()
-                        |> ignore
+                            try
+                                return! t ct
+                            finally
+                                semaphore.Release()
+                                |> ignore
 
-                })
-                |> Task.WhenAll
+                        }
+                    )
+                    |> Task.WhenAll
 
-            return results
-        }
+                return results
+            }
 
         /// <summary>Creates a <see cref='T:IcedTasks.CancellableTasks.CancellableTask`1'/> that will complete when all of the <see cref='T:IcedTasks.CancellableTasks.CancellableTask`1'/>s in an enumerable collection have completed sequentially.</summary>
         /// <param name="tasks">The tasks to wait on for completion</param>
         /// <returns>A CancellableTask that represents the completion of all of the supplied tasks.</returns>
-        let inline sequential (tasks: CancellableTask<'a> seq) = cancellableTask {
-            let mutable results = ArrayCollector<'a>()
+        let inline sequential (tasks: CancellableTask<'a> seq) =
+            cancellableTask {
+                let mutable results = ArrayCollector<'a>()
 
-            for t in tasks do
-                let! result = t
-                results.Add result
+                for t in tasks do
+                    let! result = t
+                    results.Add result
 
-            return results.Close()
-        }
+                return results.Close()
+            }
 
 
         /// <summary>Coverts a CancellableTask to a CancellableTask\&lt;unit\&gt;.</summary>
         /// <param name="unitCancellableTask">The CancellableTask to convert.</param>
         /// <returns>a CancellableTask\&lt;unit\&gt;.</returns>
-        let inline ofUnit ([<InlineIfLambda>] unitCancellableTask: CancellableTask) = cancellableTask {
-            return! unitCancellableTask
-        }
+        let inline ofUnit ([<InlineIfLambda>] unitCancellableTask: CancellableTask) =
+            cancellableTask { return! unitCancellableTask }
 
         /// <summary>Coverts a CancellableTask\&lt;_\&gt; to a CancellableTask.</summary>
         /// <param name="ctask">The CancellableTask to convert.</param>
