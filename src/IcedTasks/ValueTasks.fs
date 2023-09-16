@@ -408,8 +408,8 @@ module ValueTasks =
 
             sm.ResumptionDynamicInfo <- resumptionInfo
             sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
-            sm.Data.MethodBuilder.Start(&sm)
-            sm.Data.MethodBuilder.Task
+            AsyncMethodBuilder.Start(sm.Data.MethodBuilder, &sm)
+            AsyncMethodBuilder.Task sm.Data.MethodBuilder
 
         /// Hosts the task code in a state machine and starts the task.
         member inline _.Run(code: ValueTaskCode<'T, 'T>) : ValueTask<'T> =
@@ -424,22 +424,33 @@ module ValueTasks =
                             let __stack_code_fin = code.Invoke(&sm)
 
                             if __stack_code_fin then
-                                sm.Data.MethodBuilder.SetResult(sm.Data.Result)
+
+                                // AsyncMethodBuilder.setResult sm.Data.MethodBuilder sm.Data.Result
+                                // sm.Data.MethodBuilder.SetResult(sm.Data.Result)
+                                AsyncMethodBuilder.SetResult(sm.Data.MethodBuilder, sm.Data.Result)
+                        // printfn "gothere 3"
+
                         with exn ->
                             __stack_exn <- exn
                         // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
                         match __stack_exn with
                         | null -> ()
-                        | exn -> sm.Data.MethodBuilder.SetException exn
+                        | exn -> sm.Data.MethodBuilder.SetException(exn)
+
+                    // AsyncMethodBuilder.SetException(sm.Data.MethodBuilder, exn)
                     //-- RESUMABLE CODE END
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         sm.Data.MethodBuilder.SetStateMachine(state)
+                    // AsyncMethodBuilder.SetStateMachine(sm.Data.MethodBuilder, state)
                     ))
                     (AfterCode<_, _>(fun sm ->
                         sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
                         sm.Data.MethodBuilder.Start(&sm)
+                        // AsyncMethodBuilder.Start(sm.Data.MethodBuilder, &sm)
+                        // AsyncMethodBuilder.Task sm.Data.MethodBuilder
                         sm.Data.MethodBuilder.Task
+
                     ))
             else
                 ValueTaskBuilder.RunDynamic(code)

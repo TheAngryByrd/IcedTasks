@@ -1,6 +1,7 @@
 namespace IcedTasks
 
 open System.Runtime.CompilerServices
+open System.Threading.Tasks
 
 /// <namespacedoc>
 ///   <summary>
@@ -62,3 +63,56 @@ type Awaitable =
         (awaitable: 'Awaitable)
         =
         awaitable.GetAwaiter()
+
+
+module AsyncMethodBuilder =
+
+    let inline setResult<'MethodBuilder, 'TResult
+        when 'MethodBuilder: (member SetResult: 'TResult -> unit)>
+        (mb: 'MethodBuilder)
+        (result: 'TResult)
+        =
+        mb.SetResult result
+
+type AsyncMethodBuilder =
+
+    static member inline SetResult<'MethodBuilder, 'TResult
+        when 'MethodBuilder: (member SetResult: 'TResult -> unit)>
+        (
+            mb: 'MethodBuilder,
+            result: 'TResult
+        ) =
+        mb.SetResult result
+
+
+    static member inline SetException<'MethodBuilder
+        when 'MethodBuilder: (member SetException: exn -> unit)>
+        (
+            mb: 'MethodBuilder,
+            ex: exn
+        ) =
+        mb.SetException(ex)
+
+    static member inline SetStateMachine<'MethodBuilder
+        when 'MethodBuilder: (member SetStateMachine: IAsyncStateMachine -> unit)>
+        (
+            mb: 'MethodBuilder,
+            stateMachine: IAsyncStateMachine
+        ) =
+        mb.SetStateMachine(stateMachine)
+
+    static member inline Start<'TStateMachine, 'MethodBuilder
+        when 'MethodBuilder: (member Start: byref<'TStateMachine> -> unit)
+        and 'TStateMachine :> IAsyncStateMachine>
+        (
+            mb: 'MethodBuilder,
+            stateMachine: byref<'TStateMachine>
+        ) =
+        mb.Start(&stateMachine)
+
+    /// <summary>Gets the task for this builder.</summary>
+    static member inline Task<'Awaitable, 'Awaiter, 'TResult, 'MethodBuilder
+        when 'MethodBuilder: (member get_Task: unit -> Awaitable<'Awaitable, 'Awaiter, 'TResult>)>
+        (mb: 'MethodBuilder)
+        =
+        mb.get_Task ()

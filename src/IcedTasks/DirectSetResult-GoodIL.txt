@@ -1,0 +1,250 @@
+
+  .class nested assembly sealed auto autochar specialname beforefieldinit
+    'outerTask@140-10'
+      extends [System.Runtime]System.ValueType
+      implements
+        [System.Runtime]System.Runtime.CompilerServices.IAsyncStateMachine,
+        class [FSharp.Core]Microsoft.FSharp.Core.CompilerServices.IResumableStateMachine`1<valuetype [IcedTasks]IcedTasks.ValueTasks/ValueTaskStateMachineData`1<string>>
+  {
+    .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor()
+      = (01 00 00 00 )
+    .custom instance void [FSharp.Core]Microsoft.FSharp.Core.CompilationMappingAttribute::.ctor(valuetype [FSharp.Core]Microsoft.FSharp.Core.SourceConstructFlags)
+      = (01 00 06 00 00 00 00 00 ) // ........
+      // int32(6) // 0x00000006
+
+    .field public valuetype [IcedTasks]IcedTasks.ValueTasks/ValueTaskStateMachineData`1<string> Data
+
+    .field public int32 ResumptionPoint
+
+    .field public string expected
+
+    .field public class [FSharp.Core]Microsoft.FSharp.Core.FSharpFunc`2<string, string> f
+
+    .field public valuetype [System.Runtime]System.Runtime.CompilerServices.TaskAwaiter`1<string> awaiter
+
+    .method public strict virtual instance void
+      MoveNext() cil managed
+    {
+      .override method instance void [System.Runtime]System.Runtime.CompilerServices.IAsyncStateMachine::MoveNext()
+      .maxstack 5
+      .locals init (
+        [0] int32 V_0,
+        [1] class [System.Runtime]System.Exception V_1,
+        [2] bool V_2,
+        [3] valuetype [System.Runtime]System.Runtime.CompilerServices.TaskAwaiter`1<string> V_3,
+        [4] class [IcedTasks]IcedTasks.ValueTasks/ValueTaskBuilderBase V_4,
+        [5] valuetype [System.Runtime]System.Runtime.CompilerServices.TaskAwaiter`1<string> V_5,
+        [6] bool V_6,
+        [7] valuetype [System.Runtime]System.Runtime.CompilerServices.TaskAwaiter`1<string> V_7,
+        [8] valuetype [System.Runtime]System.Runtime.CompilerServices.TaskAwaiter`1<string> V_8,
+        [9] bool V_9,
+        [10] string V_10,
+        [11] valuetype [System.Runtime]System.Runtime.CompilerServices.TaskAwaiter`1<string> V_11,
+        [12] valuetype [System.Runtime]System.Runtime.CompilerServices.TaskAwaiter`1<string> V_12,
+        [13] string V_13,
+        [14] string V_14,
+        [15] valuetype [System.Runtime]System.Runtime.CompilerServices.TaskAwaiter`1<string> V_15,
+        [16] valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncValueTaskMethodBuilder`1<string> V_16,
+        [17] class [System.Runtime]System.Exception V_17,
+        [18] class [System.Runtime]System.Exception V_18,
+        [19] class [System.Runtime]System.Exception V_19
+      )
+
+      IL_0000: ldarg.0      // this
+      IL_0001: ldfld        int32 IcedTasks.Tests.ValueTaskTests/'outerTask@140-10'::ResumptionPoint
+      IL_0006: stloc.0      // V_0
+
+      IL_0007: ldloc.0      // V_0
+      IL_0008: ldc.i4.1
+      IL_0009: sub
+      IL_000a: switch       (IL_0015)
+      IL_0013: br.s         IL_0018
+
+      IL_0015: nop
+      IL_0016: br.s         IL_0019
+
+      IL_0018: nop
+      .try
+      {
+
+        IL_0019: ldloc.0      // V_0
+        IL_001a: ldc.i4.1
+        IL_001b: sub
+        IL_001c: switch       (IL_0027)
+        IL_0025: br.s         IL_002a
+
+        IL_0027: nop
+        IL_0028: br.s         IL_0078
+
+        IL_002a: nop
+
+        // [141 29 - 141 67]
+        IL_002b: call         class [IcedTasks]IcedTasks.ValueTasks/ValueTaskBuilder [IcedTasks]IcedTasks.ValueTasks/ValueTaskBuilderModule::get_valueTask()
+        IL_0030: stloc.s      V_4
+        IL_0032: ldarg.0      // this
+        IL_0033: ldfld        string IcedTasks.Tests.ValueTaskTests/'outerTask@140-10'::expected
+        IL_0038: call         class [System.Runtime]System.Threading.Tasks.Task`1<!!0/*string*/> [System.Runtime]System.Threading.Tasks.Task::FromResult<string>(!!0/*string*/)
+        IL_003d: callvirt     instance valuetype [System.Runtime]System.Runtime.CompilerServices.TaskAwaiter`1<!0/*string*/> class [System.Runtime]System.Threading.Tasks.Task`1<string>::GetAwaiter()
+        IL_0042: stloc.3      // V_3
+        IL_0043: ldarg.0      // this
+        IL_0044: ldsfld       class IcedTasks.Tests.ValueTaskTests/'outerTask@142-11' IcedTasks.Tests.ValueTaskTests/'outerTask@142-11'::@_instance
+        IL_0049: stfld        class [FSharp.Core]Microsoft.FSharp.Core.FSharpFunc`2<string, string> IcedTasks.Tests.ValueTaskTests/'outerTask@140-10'::f
+
+        IL_004e: ldloc.3      // V_3
+        IL_004f: stloc.s      V_5
+        IL_0051: ldarg.0      // this
+        IL_0052: ldloc.s      V_5
+        IL_0054: stfld        valuetype [System.Runtime]System.Runtime.CompilerServices.TaskAwaiter`1<string> IcedTasks.Tests.ValueTaskTests/'outerTask@140-10'::awaiter
+
+        IL_0059: ldc.i4.1
+        IL_005a: stloc.s      V_6
+
+        IL_005c: ldarg.0      // this
+        IL_005d: ldfld        valuetype [System.Runtime]System.Runtime.CompilerServices.TaskAwaiter`1<string> IcedTasks.Tests.ValueTaskTests/'outerTask@140-10'::awaiter
+        IL_0062: stloc.s      V_7
+        IL_0064: ldloc.s      V_7
+        IL_0066: stloc.s      V_8
+        IL_0068: ldloca.s     V_8
+        IL_006a: call         instance bool valuetype [System.Runtime]System.Runtime.CompilerServices.TaskAwaiter`1<string>::get_IsCompleted()
+        IL_006f: ldc.i4.0
+        IL_0070: ceq
+
+        IL_0072: nop
+
+        IL_0073: brfalse.s    IL_008e
+
+        IL_0075: ldc.i4.0
+        IL_0076: brfalse.s    IL_007c
+
+        IL_0078: ldc.i4.1
+
+        IL_0079: nop
+        IL_007a: br.s         IL_0085
+
+        IL_007c: ldarg.0      // this
+        IL_007d: ldc.i4.1
+        IL_007e: stfld        int32 IcedTasks.Tests.ValueTaskTests/'outerTask@140-10'::ResumptionPoint
+        IL_0083: ldc.i4.0
+
+        IL_0084: nop
+
+        IL_0085: stloc.s      V_9
+        IL_0087: ldloc.s      V_9
+        IL_0089: stloc.s      V_6
+
+        IL_008b: nop
+        IL_008c: br.s         IL_008f
+
+        IL_008e: nop
+
+        IL_008f: ldloc.s      V_6
+        IL_0091: brfalse.s    IL_00cc
+
+        IL_0093: ldarg.0      // this
+        IL_0094: ldfld        valuetype [System.Runtime]System.Runtime.CompilerServices.TaskAwaiter`1<string> IcedTasks.Tests.ValueTaskTests/'outerTask@140-10'::awaiter
+        IL_0099: stloc.s      V_11
+        IL_009b: ldloc.s      V_11
+        IL_009d: stloc.s      V_12
+        IL_009f: ldloca.s     V_12
+        IL_00a1: call         instance !0/*string*/ valuetype [System.Runtime]System.Runtime.CompilerServices.TaskAwaiter`1<string>::GetResult()
+        IL_00a6: stloc.s      V_10
+        IL_00a8: ldloc.s      V_10
+        IL_00aa: stloc.s      V_13
+        IL_00ac: ldarg.0      // this
+        IL_00ad: ldfld        class [FSharp.Core]Microsoft.FSharp.Core.FSharpFunc`2<string, string> IcedTasks.Tests.ValueTaskTests/'outerTask@140-10'::f
+        IL_00b2: ldloc.s      V_13
+        IL_00b4: callvirt     instance !1/*string*/ class [FSharp.Core]Microsoft.FSharp.Core.FSharpFunc`2<string, string>::Invoke(!0/*string*/)
+        IL_00b9: stloc.s      V_14
+        IL_00bb: ldarg.0      // this
+        IL_00bc: ldflda       valuetype [IcedTasks]IcedTasks.ValueTasks/ValueTaskStateMachineData`1<string> IcedTasks.Tests.ValueTaskTests/'outerTask@140-10'::Data
+        IL_00c1: ldloc.s      V_14
+        IL_00c3: stfld        !0/*string*/ valuetype [IcedTasks]IcedTasks.ValueTasks/ValueTaskStateMachineData`1<string>::Result
+        IL_00c8: ldc.i4.1
+
+        IL_00c9: nop
+        IL_00ca: br.s         IL_00e5
+
+        IL_00cc: ldarg.0      // this
+        IL_00cd: ldflda       valuetype [IcedTasks]IcedTasks.ValueTasks/ValueTaskStateMachineData`1<string> IcedTasks.Tests.ValueTaskTests/'outerTask@140-10'::Data
+        IL_00d2: ldflda       valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncValueTaskMethodBuilder`1<!0/*string*/> valuetype [IcedTasks]IcedTasks.ValueTasks/ValueTaskStateMachineData`1<string>::MethodBuilder
+        IL_00d7: ldarg.0      // this
+        IL_00d8: ldflda       valuetype [System.Runtime]System.Runtime.CompilerServices.TaskAwaiter`1<string> IcedTasks.Tests.ValueTaskTests/'outerTask@140-10'::awaiter
+        IL_00dd: ldarg.0      // this
+        IL_00de: call         instance void valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncValueTaskMethodBuilder`1<string>::AwaitUnsafeOnCompleted<valuetype [System.Runtime]System.Runtime.CompilerServices.TaskAwaiter`1<string>, valuetype IcedTasks.Tests.ValueTaskTests/'outerTask@140-10'>(!!0/*valuetype [System.Runtime]System.Runtime.CompilerServices.TaskAwaiter`1<string>*/&, !!1/*valuetype IcedTasks.Tests.ValueTaskTests/'outerTask@140-10'*/&)
+        IL_00e3: ldc.i4.0
+
+        IL_00e4: nop
+
+        IL_00e5: brfalse.s    IL_00f3
+
+        IL_00e7: ldarg.0      // this
+        IL_00e8: ldloc.s      V_15
+        IL_00ea: stfld        valuetype [System.Runtime]System.Runtime.CompilerServices.TaskAwaiter`1<string> IcedTasks.Tests.ValueTaskTests/'outerTask@140-10'::awaiter
+        IL_00ef: ldc.i4.1
+
+        IL_00f0: nop
+        IL_00f1: br.s         IL_00f5
+
+        IL_00f3: ldc.i4.0
+
+        IL_00f4: nop
+
+        IL_00f5: brfalse.s    IL_0102
+
+        IL_00f7: ldarg.0      // this
+        IL_00f8: ldnull
+        IL_00f9: stfld        class [FSharp.Core]Microsoft.FSharp.Core.FSharpFunc`2<string, string> IcedTasks.Tests.ValueTaskTests/'outerTask@140-10'::f
+        IL_00fe: ldc.i4.1
+
+        IL_00ff: nop
+        IL_0100: br.s         IL_0104
+
+        IL_0102: ldc.i4.0
+
+        IL_0103: nop
+
+        IL_0104: stloc.2      // V_2
+
+        IL_0105: ldloc.2      // V_2
+        IL_0106: brfalse.s    IL_0129
+
+        IL_0108: ldarg.0      // this
+        IL_0109: ldflda       valuetype [IcedTasks]IcedTasks.ValueTasks/ValueTaskStateMachineData`1<string> IcedTasks.Tests.ValueTaskTests/'outerTask@140-10'::Data
+        IL_010e: ldfld        valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncValueTaskMethodBuilder`1<!0/*string*/> valuetype [IcedTasks]IcedTasks.ValueTasks/ValueTaskStateMachineData`1<string>::MethodBuilder
+        IL_0113: stloc.s      V_16
+        IL_0115: ldloca.s     V_16
+        IL_0117: ldarg.0      // this
+        IL_0118: ldflda       valuetype [IcedTasks]IcedTasks.ValueTasks/ValueTaskStateMachineData`1<string> IcedTasks.Tests.ValueTaskTests/'outerTask@140-10'::Data
+        IL_011d: ldfld        !0/*string*/ valuetype [IcedTasks]IcedTasks.ValueTasks/ValueTaskStateMachineData`1<string>::Result
+        IL_0122: call         instance void valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncValueTaskMethodBuilder`1<string>::SetResult(!0/*string*/)
+        IL_0127: leave.s      IL_0137
+
+        IL_0129: leave.s      IL_0137
+      } // end of .try
+      catch [System.Runtime]System.Object
+      {
+        IL_012b: castclass    [System.Runtime]System.Exception
+        IL_0130: stloc.s      V_17
+        IL_0132: ldloc.s      V_17
+        IL_0134: stloc.1      // V_1
+        IL_0135: leave.s      IL_0137
+      } // end of catch
+
+      IL_0137: ldloc.1      // V_1
+      IL_0138: stloc.s      V_18
+
+      IL_013a: ldloc.s      V_18
+      IL_013c: brtrue.s     IL_013f
+
+      IL_013e: ret
+
+      IL_013f: ldloc.s      V_18
+      IL_0141: stloc.s      V_19
+      IL_0143: ldarg.0      // this
+      IL_0144: ldflda       valuetype [IcedTasks]IcedTasks.ValueTasks/ValueTaskStateMachineData`1<string> IcedTasks.Tests.ValueTaskTests/'outerTask@140-10'::Data
+      IL_0149: ldflda       valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncValueTaskMethodBuilder`1<!0/*string*/> valuetype [IcedTasks]IcedTasks.ValueTasks/ValueTaskStateMachineData`1<string>::MethodBuilder
+      IL_014e: ldloc.s      V_19
+      IL_0150: call         instance void valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncValueTaskMethodBuilder`1<string>::SetException(class [System.Runtime]System.Exception)
+      IL_0155: ret
+
+    } // end of method 'outerTask@140-10'::MoveNext
