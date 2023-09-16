@@ -1,12 +1,14 @@
 source https://www.nuget.org/api/v2
 source https://api.nuget.org/v3/index.json
+strategy: min
+lowest_matching: true
 storage: none
 nuget FSharp.Core >= 7.0.0
 nuget Microsoft.SourceLink.GitHub 1.1.0 copy_local: true
-nuget Expecto 9.0.4
-nuget YoloDev.Expecto.TestSdk 0.12.12
-nuget Microsoft.NET.Test.Sdk 17.1.0-preview-20211109-03
-nuget altcover ~> 8.2.825
+nuget Expecto
+nuget YoloDev.Expecto.TestSdk 0.14.2
+nuget Microsoft.NET.Test.Sdk 17.7.2
+nuget altcover 8.6.68
 nuget BenchmarkDotNet
 nuget Ply
 nuget TimeProviderExtensions
