@@ -7,7 +7,31 @@ on:
 env:
   CONFIGURATION: Release
 jobs:
+  set_version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Versions
+        uses: actions/github-script@v6
+        id: set_version
+        with:
+          script: |
+            const tag = context.ref.substring(10)
+            const no_v = tag.replace('v', '')
+            const dash_index = no_v.lastIndexOf('-')
+            const no_dash = (dash_index > -1) ?  no_v.substring(0, dash_index) : no_v
+            core.setOutput('tag', tag)
+            core.setOutput('no-v', no_v)
+            core.setOutput('no-dash', no_dash)
+    outputs:
+      tag: ${{ steps.set_version.outputs.tag }}
+      no-v: ${{ steps.set_version.outputs.no-v }}
+      no-dash: ${{ steps.set_version.outputs.no-dash }}
+
   build:
+    needs: set_version
+    environment:
+      name: nuget
+      url: https://www.nuget.org/packages/IcedTasks/${{ needs.set_version.outputs.no-v }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -17,6 +41,7 @@ jobs:
           global-json-file: global.json
           dotnet-version: |
             6.x
+            7.x
       - name: publish
         env:
           NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}
