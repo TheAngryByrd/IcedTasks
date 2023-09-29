@@ -1,40 +1,30 @@
-FROM debian:buster-slim
+# FROM debian:buster-slim
+FROM mcr.microsoft.com/devcontainers/base:debian
+COPY --from=mcr.microsoft.com/dotnet/sdk:6.0 /usr/share/dotnet /usr/share/dotnet
+COPY --from=mcr.microsoft.com/dotnet/sdk:7.0 /usr/share/dotnet /usr/share/dotnet
 
+RUN ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        ca-certificates \
-        \
-        # .NET Core dependencies
-        libc6 \
-        libgcc1 \
-        libgssapi-krb5-2 \
-        libicu63 \
-        libssl1.1 \
-        libstdc++6 \
-        zlib1g \
-        curl \
-        git \
-        procps \
-        wget \
-    && rm -rf /var/lib/apt/lists/*
-
+USER vscode
 
 ENV \
     # Enable detection of running in a container
     DOTNET_RUNNING_IN_CONTAINER=true \
-    DOTNET_INSTALL_DIR=/usr/share/dotnet/ \
-    DOTNET_ROOT=/usr/share/dotnet/
+    # DOTNET_INSTALL_DIR=/usr/share/dotnet/ \
+    DOTNET_ROOT=/usr/share/dotnet/ \
+    # DOTNET_ROOT=/home/vscode/.dotnet \
+    DOTNET_NOLOGO=true \
+    DOTNET_CLI_TELEMETRY_OPTOUT=false
 
-COPY ./.devcontainer/install-dotnets.sh global.json* .
+# Change the default shell to zsh
+SHELL ["/bin/zsh", "-c"]
 
-RUN /bin/bash install-dotnets.sh
+# Install starship
+RUN curl -sS https://starship.rs/install.sh | sh -s -- -y
+RUN echo 'eval "$(starship init zsh)"' >> ~/.zshrc
+RUN echo "export PATH=$PATH:$DOTNET_ROOT" >> ~/.zshrc
+RUN echo "export PATH=$PATH:$DOTNET_ROOT" >> ~/.bashrc
+RUN source ~/.zshrc
+WORKDIR /home/vscode/
 
-ENV PATH="$DOTNET_ROOT:${PATH}"
-RUN ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet
-
-RUN  dotnet --info
-
-# Copy endpoint specific user settings into container to specify
-# .NET Core should be used as the runtime.
-COPY ./.devcontainer/settings.vscode.json /root/.vscode-remote/data/Machine/settings.json
+CMD [ "/bin/zsh" ]

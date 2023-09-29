@@ -1,16 +1,40 @@
 {
-	"name": "dotnet",
-	// Set the build context one level higher so we can grab metadata like global.json
-	"context": "..",
-	"dockerFile": "Dockerfile",
-	"forwardPorts": [
-		0
-	],
-	"extensions": [
-		"ionide.ionide-fsharp",
-		"ms-dotnettools.csharp",
-		"editorconfig.editorconfig",
-		"ionide.ionide-paket",
-		"ionide.ionide-fake"
-	]
+    "name": "dotnet",
+    // Set the build context one level higher so we can grab metadata like global.json
+    "context": "..",
+    "dockerFile": "Dockerfile",
+    "forwardPorts": [
+        0
+    ],
+    "customizations": {
+        "vscode": {
+            // Add the IDs of extensions you want installed when the container is created.
+            "extensions": [
+                "ms-dotnettools.csharp",
+                "Ionide.Ionide-fsharp",
+                "tintoy.msbuild-project-tools",
+                "ionide.ionide-paket",
+                "usernamehw.errorlens",
+                "alefragnani.Bookmarks",
+                "oderwat.indent-rainbow",
+                "vscode-icons-team.vscode-icons",
+                "EditorConfig.EditorConfig"
+            ],
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "zsh",
+                // "FSharp.dotnetRoot": "/home/vscode/.dotnet",
+                "csharp.suppressDotnetInstallWarning": true
+            }
+        }
+    },
+    "containerUser": "vscode",
+    "containerEnv": {
+        "HOME": "/home/vscode"
+    },
+
+    "onCreateCommand": {
+        "permissions": "sudo chown -R vscode:vscode  /workspaces",
+        "restore" : "dotnet restore"
+    },
+    "waitFor": "onCreateCommand"
 }
