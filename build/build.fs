@@ -119,7 +119,7 @@ let gitRepoName = "IcedTasks"
 
 let gitHubRepoUrl = sprintf "https://github.com/%s/%s/" gitOwner gitRepoName
 
-let documetationUrl = "https://www.jimmybyrd.me/IcedTasks/"
+let documentationUrl = "https://www.jimmybyrd.me/IcedTasks/"
 
 let releaseBranch = "master"
 let readme = "README.md"
@@ -187,7 +187,7 @@ let failOnBadExitAndPrint (p: ProcessResult) =
 
 let isCI = lazy environVarAsBoolOrDefault "CI" false
 
-// CI Servers can have bizzare failures that have nothing to do with your code
+// CI Servers can have bizarre failures that have nothing to do with your code
 let rec retryIfInCI times fn =
     match isCI.Value with
     | true ->
@@ -339,12 +339,8 @@ module dotnet =
         DotNet.exec optionConfig (sprintf "%s" command) args
         |> failOnBadExitAndPrint
 
-    let reportgenerator optionConfig args =
-        tool optionConfig "reportgenerator" args
-
-    let sourcelink optionConfig args = tool optionConfig "sourcelink" args
-
-    let fcswatch optionConfig args = tool optionConfig "fcswatch" args
+    let reportGenerator optionConfig args =
+        tool optionConfig "reportGenerator" args
 
     let fsharpAnalyzer optionConfig args =
         tool optionConfig "fsharp-analyzers" args
@@ -382,7 +378,7 @@ module DocsTool =
             Parameters =
                 Some [
                     // https://fsprojects.github.io/FSharp.Formatting/content.html#Templates-and-Substitutions
-                    "root", quoted documetationUrl
+                    "root", quoted documentationUrl
                     "fsdocs-collection-name", quoted productName
                     "fsdocs-repository-branch", quoted releaseBranch
                     "fsdocs-repository-link", quoted (productName)
@@ -465,21 +461,7 @@ let clean _ =
 
 let dotnetRestore _ =
     [ sln ]
-    |> Seq.map (fun dir ->
-        fun () ->
-            let args =
-                []
-                |> String.concat " "
-
-            DotNet.restore
-                (fun c -> {
-                    c with
-                        Common =
-                            c.Common
-                            |> DotNet.Options.withCustomParams (Some(args))
-                })
-                dir
-    )
+    |> Seq.map (fun dir -> fun () -> DotNet.restore id dir)
     |> Seq.iter (retryIfInCI 10)
 
 let updateChangelog ctx =
@@ -746,7 +728,7 @@ let generateCoverageReport _ =
         independentArgs
         |> String.concat " "
 
-    dotnet.reportgenerator id args
+    dotnet.reportGenerator id args
 
 let watchTests _ =
     !!testsGlob
@@ -856,22 +838,19 @@ let dotnetPack ctx =
         })
         sln
 
-let sourceLinkTest _ =
-    !!distGlob
-    |> Seq.iter (fun nupkg -> dotnet.sourcelink id (sprintf "test %s" nupkg))
-
 let publishToNuget _ =
     allPublishChecks ()
 
-    Paket.push (fun c -> {
+    NuGet.NuGet.NuGetPublish(fun c -> {
+
         c with
-            ToolType = ToolType.CreateLocalTool()
+            // ToolType = ToolType.CreateLocalTool()
             PublishUrl = publishUrl
             WorkingDir = "dist"
-            ApiKey =
+            AccessKey =
                 match nugetToken with
                 | Some s -> s
-                | _ -> c.ApiKey // assume paket-config was set properly
+                | _ -> c.AccessKey // assume paket-config was set properly
     })
     // If build fails after this point, we've pushed a release out with this version of CHANGELOG.md so we should keep it around
     Target.deactivateBuildFailure "RevertChangelog"
@@ -999,7 +978,6 @@ let initTargets () =
     Target.create "WatchTests" watchTests
     Target.create "GenerateAssemblyInfo" generateAssemblyInfo
     Target.create "DotnetPack" dotnetPack
-    Target.create "SourceLinkTest" sourceLinkTest
     Target.create "PublishToNuGet" publishToNuget
     Target.create "GitRelease" gitRelease
     Target.create "GitHubRelease" githubRelease
