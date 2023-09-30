@@ -1,9 +1,16 @@
 {
     "recommendations": [
-        "ionide.ionide-paket",
-        "ionide.ionide-fsharp",
-        "ionide.ionide-fake",
         "ms-dotnettools.csharp",
-        "editorConfig.editorConfig"
+        "Ionide.Ionide-fsharp",
+        "tintoy.msbuild-project-tools",
+        "ionide.ionide-paket",
+        "usernamehw.errorlens",
+        "alefragnani.Bookmarks",
+        "oderwat.indent-rainbow",
+        "vscode-icons-team.vscode-icons",
+        "EditorConfig.EditorConfig",
+        "ms-azuretools.vscode-docker",
+        "GitHub.vscode-pull-request-github",
+        "github.vscode-github-actions"
     ]
 }
