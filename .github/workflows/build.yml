@@ -1,6 +1,7 @@
 name: Build master
 
 on:
+  # Runs only on pushes to the default branch or pull requests to the default branch
   push:
     branches:
       - master
@@ -9,22 +10,27 @@ on:
       - master
 
 jobs:
+  # Builds the project for all supported configurations and operating systems
   build:
     strategy:
       matrix:
+        # Builds for Debug and Release configurations
         configuration: [Debug, Release]
+        # Builds for Ubuntu, Windows, and macOS
         os: [ubuntu-latest, windows-latest, macOS-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v3
+
       - name: Setup necessary dotnet SDKs
         uses: actions/setup-dotnet@v3
         with:
           global-json-file: global.json
           dotnet-version: |
+            7.x
             6.x
-
+      # Build on mac/linux
       - name: Build via Bash
         if: runner.os != 'Windows'
         run: |
@@ -33,9 +39,23 @@ jobs:
         env:
           CONFIGURATION: ${{ matrix.configuration }}
           CI: true
+      # Build on windows
       - name: Build via Windows
         if: runner.os == 'Windows'
         run: ./build.cmd
         env:
           CONFIGURATION: ${{ matrix.configuration }}
           CI: true
+  # Builds the project in a dev container
+  build-devcontainer:
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@v3
+
+      - name: Build and run dev container task
+        uses: devcontainers/ci@v0.3
+        with:
+          runCmd: |
+            chmod +x ./build.sh
+            ./build.sh
