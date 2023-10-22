@@ -9,7 +9,6 @@
         <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" />
     </ItemGroup>
   <ItemGroup>
-    <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Expect.fs" />
     <Compile Include="AsyncExTests.fs" />
     <Compile Include="ValueTaskTests.fs" />

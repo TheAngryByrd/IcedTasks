@@ -481,7 +481,7 @@ let generateAssemblyInfo _ =
          IO.Path.GetDirectoryName(projectPath),
          (getAssemblyInfoAttributes projectName))
 
-    srcAndTest
+    !!srcGlob
     |> Seq.map getProjectDetails
     |> Seq.iter (fun (projFileName, _, folderName, attributes) ->
         match projFileName with
@@ -693,6 +693,10 @@ let initTargets () =
 
     "GenerateAssemblyInfo"
     ==>! "PublishToNuGet"
+
+
+    "GenerateAssemblyInfo"
+    ==>! "Release"
 
     // Only call UpdateChangelog if Publish was in the call chain
     // Ensure UpdateChangelog is called after DotnetRestore and before GenerateAssemblyInfo
