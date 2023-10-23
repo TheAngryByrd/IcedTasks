@@ -527,12 +527,21 @@ let dotnetPack ctx =
 let publishToNuget _ =
     allPublishChecks ()
 
-    NuGet.NuGet.NuGetPublish(fun c -> {
-        c with
-            PublishUrl = publishUrl
-            WorkingDir = "dist"
-            AccessKey = Option.defaultValue c.AccessKey nugetToken
-    })
+    DotNet.nugetPush
+        (fun c -> {
+            c with
+                Common = {
+                    c.Common with
+                        WorkingDirectory = distDir
+                }
+                PushParams = {
+                    c.PushParams with
+                        Source = Some publishUrl
+                        ApiKey = nugetToken
+                }
+        })
+        "."
+
     // If build fails after this point, we've pushed a release out with this version of CHANGELOG.md so we should keep it around
     Target.deactivateBuildFailure "RevertChangelog"
 
