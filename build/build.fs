@@ -540,7 +540,7 @@ let publishToNuget _ =
                         ApiKey = nugetToken
                 }
         })
-        ""
+        "*.nupkg"
 
     // If build fails after this point, we've pushed a release out with this version of CHANGELOG.md so we should keep it around
     Target.deactivateBuildFailure "RevertChangelog"
