@@ -694,6 +694,8 @@ let initTargets () =
     "GenerateAssemblyInfo"
     ==>! "PublishToNuGet"
 
+    "GenerateAssemblyInfo"
+    ?=>! "GitRelease"
 
     "GenerateAssemblyInfo"
     ==>! "Release"
