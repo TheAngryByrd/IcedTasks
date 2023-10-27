@@ -27,9 +27,9 @@ module CancellableValueTasks =
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
     open Microsoft.FSharp.Collections
 
-    /// CancellationToken -> Task<'T>
+    /// CancellationToken -> ValueTask<'T>
     type CancellableValueTask<'T> = CancellationToken -> ValueTask<'T>
-    /// CancellationToken -> Task
+    /// CancellationToken -> ValueTask
     type CancellableValueTask = CancellationToken -> ValueTask
 
     /// The extra data stored in ResumableStateMachine for tasks
@@ -73,12 +73,7 @@ module CancellableValueTasks =
         member inline _.Delay
             ([<InlineIfLambdaAttribute>] generator: unit -> CancellableValueTaskCode<'TOverall, 'T>)
             : CancellableValueTaskCode<'TOverall, 'T> =
-            ResumableCode.Delay(fun () ->
-                CancellableValueTaskCode(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    (generator ()).Invoke(&sm)
-                )
-            )
+            ResumableCode.Delay(fun () -> (generator ()))
 
 
         /// <summary>Creates an CancellableValueTask that just returns </summary>
@@ -102,7 +97,6 @@ module CancellableValueTasks =
         /// <returns>An CancellableValueTask that returns ue when executed.</returns>
         member inline _.Return(value: 'T) : CancellableValueTaskCode<'T, 'T> =
             CancellableValueTaskCode<'T, _>(fun sm ->
-                sm.Data.ThrowIfCancellationRequested()
                 sm.Data.Result <- value
                 true
             )
@@ -124,17 +118,7 @@ module CancellableValueTasks =
                 task1: CancellableValueTaskCode<'TOverall, unit>,
                 task2: CancellableValueTaskCode<'TOverall, 'T>
             ) : CancellableValueTaskCode<'TOverall, 'T> =
-            ResumableCode.Combine(
-                CancellableValueTaskCode(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    task1.Invoke(&sm)
-                ),
-
-                CancellableValueTaskCode(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    task2.Invoke(&sm)
-                )
-            )
+            ResumableCode.Combine(task1, task2)
 
         /// <summary>Creates an CancellableValueTask that runs computation repeatedly
         /// until rd() becomes false.</summary>
@@ -154,13 +138,7 @@ module CancellableValueTasks =
                 [<InlineIfLambda>] guard: unit -> bool,
                 computation: CancellableValueTaskCode<'TOverall, unit>
             ) : CancellableValueTaskCode<'TOverall, unit> =
-            ResumableCode.While(
-                guard,
-                CancellableValueTaskCode(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    computation.Invoke(&sm)
-                )
-            )
+            ResumableCode.While(guard, computation)
 
         /// <summary>Creates an CancellableValueTask that runs computation and returns its result.
         /// If an exception happens then chHandler(exn) is called and the resulting computation executed instead.</summary>
@@ -180,13 +158,7 @@ module CancellableValueTasks =
                 computation: CancellableValueTaskCode<'TOverall, 'T>,
                 catchHandler: exn -> CancellableValueTaskCode<'TOverall, 'T>
             ) : CancellableValueTaskCode<'TOverall, 'T> =
-            ResumableCode.TryWith(
-                CancellableValueTaskCode(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    computation.Invoke(&sm)
-                ),
-                catchHandler
-            )
+            ResumableCode.TryWith(computation, catchHandler)
 
         /// <summary>Creates an CancellableValueTask that runs computation. The action compensation is executed
         /// after computation completes, whether computation exits normally or by an exception. If compensation res an exception itself
@@ -209,11 +181,7 @@ module CancellableValueTasks =
                 [<InlineIfLambda>] compensation: unit -> unit
             ) : CancellableValueTaskCode<'TOverall, 'T> =
             ResumableCode.TryFinally(
-
-                CancellableValueTaskCode(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    computation.Invoke(&sm)
-                ),
+                computation,
                 ResumableCode<_, _>(fun _ ->
                     compensation ()
                     true
@@ -239,14 +207,7 @@ module CancellableValueTasks =
                 sequence: seq<'T>,
                 body: 'T -> CancellableValueTaskCode<'TOverall, unit>
             ) : CancellableValueTaskCode<'TOverall, unit> =
-            ResumableCode.For(
-                sequence,
-                fun item ->
-                    CancellableValueTaskCode(fun sm ->
-                        sm.Data.ThrowIfCancellationRequested()
-                        (body item).Invoke(&sm)
-                    )
-            )
+            ResumableCode.For(sequence, body)
 
 #if NETSTANDARD2_1 || NET6_0_OR_GREATER
         /// <summary>Creates an CancellableValueTask that runs computation. The action compensation is executed
@@ -272,8 +233,6 @@ module CancellableValueTasks =
             ResumableCode.TryFinallyAsync(
                 computation,
                 ResumableCode<_, _>(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-
                     if __useResumableCode then
                         let mutable __stack_condition_fin = true
                         let __stack_vtask = compensation ()
@@ -332,10 +291,7 @@ module CancellableValueTasks =
                 binder: 'Resource -> CancellableValueTaskCode<'TOverall, 'T>
             ) : CancellableValueTaskCode<'TOverall, 'T> =
             this.TryFinallyAsync(
-                (fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    (binder resource).Invoke(&sm)
-                ),
+                (fun sm -> (binder resource).Invoke(&sm)),
                 (fun () ->
                     if not (isNull (box resource)) then
                         resource.DisposeAsync()
