@@ -19,9 +19,7 @@ module CancellableTaskTests =
                 <| async {
                     let foo = cancellableTask { return "lol" }
 
-                    let! result =
-                        foo
-                        |> Async.AwaitCancellableTask
+                    let! result = foo |> Async.AwaitCancellableTask
 
                     Expect.equal result "lol" "Should be able to Return value"
                 }
@@ -33,9 +31,7 @@ module CancellableTaskTests =
                     let outerTask = cancellableTask { return! fooTask }
                     use cts = new CancellationTokenSource()
 
-                    do!
-                        outerTask cts.Token
-                        |> Async.AwaitTask
+                    do! outerTask cts.Token |> Async.AwaitTask
                 // Compiling is sufficient expect
                 }
                 testCaseAsync "Can ReturnFrom CancellableTask<T>"
@@ -45,9 +41,7 @@ module CancellableTaskTests =
                     let outerTask = cancellableTask { return! fooTask }
                     use cts = new CancellationTokenSource()
 
-                    let! actual =
-                        outerTask cts.Token
-                        |> Async.AwaitTask
+                    let! actual = outerTask cts.Token |> Async.AwaitTask
 
                     Expect.equal actual expected "Should be able to Return! value"
                 }
@@ -58,9 +52,7 @@ module CancellableTaskTests =
                     let outerTask = cancellableTask { return! fooTask }
                     use cts = new CancellationTokenSource()
 
-                    do!
-                        outerTask cts.Token
-                        |> Async.AwaitTask
+                    do! outerTask cts.Token |> Async.AwaitTask
                 // Compiling is sufficient expect
                 }
 
@@ -69,9 +61,7 @@ module CancellableTaskTests =
                     let outerTask = cancellableTask { return! Task.CompletedTask }
                     use cts = new CancellationTokenSource()
 
-                    do!
-                        outerTask cts.Token
-                        |> Async.AwaitTask
+                    do! outerTask cts.Token |> Async.AwaitTask
                 // Compiling is sufficient expect
                 }
                 testCaseAsync "Can ReturnFrom Task<T>"
@@ -80,9 +70,7 @@ module CancellableTaskTests =
                     let outerTask = cancellableTask { return! Task.FromResult expected }
                     use cts = new CancellationTokenSource()
 
-                    let! actual =
-                        outerTask cts.Token
-                        |> Async.AwaitTask
+                    let! actual = outerTask cts.Token |> Async.AwaitTask
 
                     Expect.equal actual expected "Should be able to Return! value"
                 }
@@ -93,9 +81,7 @@ module CancellableTaskTests =
                     let outerTask = cancellableTask { return! fooTask }
                     use cts = new CancellationTokenSource()
 
-                    do!
-                        outerTask cts.Token
-                        |> Async.AwaitTask
+                    do! outerTask cts.Token |> Async.AwaitTask
                 // Compiling is sufficient expect
                 }
 
@@ -105,9 +91,7 @@ module CancellableTaskTests =
                     let outerTask = cancellableTask { return! coldT }
                     use cts = new CancellationTokenSource()
 
-                    do!
-                        outerTask cts.Token
-                        |> Async.AwaitTask
+                    do! outerTask cts.Token |> Async.AwaitTask
                 // Compiling is sufficient expect
                 }
 
@@ -118,9 +102,7 @@ module CancellableTaskTests =
                     let outerTask = cancellableTask { return! coldT }
                     use cts = new CancellationTokenSource()
 
-                    let! actual =
-                        outerTask cts.Token
-                        |> Async.AwaitTask
+                    let! actual = outerTask cts.Token |> Async.AwaitTask
 
                     Expect.equal actual expected "Should be able to Return! value"
                 }
@@ -131,9 +113,7 @@ module CancellableTaskTests =
                     let outerTask = cancellableTask { return! fooTask }
                     use cts = new CancellationTokenSource()
 
-                    do!
-                        outerTask cts.Token
-                        |> Async.AwaitTask
+                    do! outerTask cts.Token |> Async.AwaitTask
                 // Compiling is sufficient expect
                 }
                 testCaseAsync "Can ReturnFrom Async<T>"
@@ -143,9 +123,7 @@ module CancellableTaskTests =
                     let outerTask = cancellableTask { return! fooTask }
                     use cts = new CancellationTokenSource()
 
-                    let! actual =
-                        outerTask cts.Token
-                        |> Async.AwaitTask
+                    let! actual = outerTask cts.Token |> Async.AwaitTask
 
                     Expect.equal actual expected ""
                 }
@@ -158,9 +136,7 @@ module CancellableTaskTests =
                     let outerTask = cancellableTask { do! fooTask }
                     use cts = new CancellationTokenSource()
 
-                    do!
-                        outerTask cts.Token
-                        |> Async.AwaitTask
+                    do! outerTask cts.Token |> Async.AwaitTask
                 // Compiling is a sufficient Expect
                 }
                 testCaseAsync "Can Bind CancellableTask<T>"
@@ -176,9 +152,7 @@ module CancellableTaskTests =
 
                     use cts = new CancellationTokenSource()
 
-                    let! actual =
-                        outerTask cts.Token
-                        |> Async.AwaitTask
+                    let! actual = outerTask cts.Token |> Async.AwaitTask
 
                     Expect.equal actual expected ""
                 }
@@ -206,9 +180,7 @@ module CancellableTaskTests =
                     let outerTask = cancellableTask { do! Task.CompletedTask }
                     use cts = new CancellationTokenSource()
 
-                    do!
-                        outerTask cts.Token
-                        |> Async.AwaitTask
+                    do! outerTask cts.Token |> Async.AwaitTask
                 // Compiling is a sufficient Expect
                 }
 
@@ -224,9 +196,7 @@ module CancellableTaskTests =
 
                     use cts = new CancellationTokenSource()
 
-                    let! actual =
-                        outerTask cts.Token
-                        |> Async.AwaitTask
+                    let! actual = outerTask cts.Token |> Async.AwaitTask
 
                     Expect.equal actual expected ""
                 }
@@ -245,9 +215,7 @@ module CancellableTaskTests =
 
                     use cts = new CancellationTokenSource()
 
-                    let! actual =
-                        outerTask cts.Token
-                        |> Async.AwaitTask
+                    let! actual = outerTask cts.Token |> Async.AwaitTask
 
                     Expect.equal actual expected ""
                 }
@@ -265,9 +233,7 @@ module CancellableTaskTests =
 
                     use cts = new CancellationTokenSource()
 
-                    do!
-                        outerTask cts.Token
-                        |> Async.AwaitTask
+                    do! outerTask cts.Token |> Async.AwaitTask
                 // Compiling is a sufficient Expect
                 }
 
@@ -283,9 +249,7 @@ module CancellableTaskTests =
 
                     use cts = new CancellationTokenSource()
 
-                    do!
-                        outerTask cts.Token
-                        |> Async.AwaitTask
+                    do! outerTask cts.Token |> Async.AwaitTask
                 // Compiling is sufficient expect
                 }
 
@@ -302,9 +266,7 @@ module CancellableTaskTests =
 
                     use cts = new CancellationTokenSource()
 
-                    let! actual =
-                        outerTask cts.Token
-                        |> Async.AwaitTask
+                    let! actual = outerTask cts.Token |> Async.AwaitTask
 
                     Expect.equal actual expected ""
                 }
@@ -742,9 +704,7 @@ module CancellableTaskTests =
 
                     use cts = new CancellationTokenSource()
 
-                    let! result =
-                        fooTask cts.Token
-                        |> Async.AwaitTask
+                    let! result = fooTask cts.Token |> Async.AwaitTask
 
                     Expect.equal result cts.Token ""
                 }
@@ -806,9 +766,7 @@ module CancellableTaskTests =
 
                     use cts = new CancellationTokenSource()
 
-                    let! passedCT =
-                        fooTask cts.Token
-                        |> Async.AwaitTask
+                    let! passedCT = fooTask cts.Token |> Async.AwaitTask
 
                     Expect.equal passedCT cts.Token ""
                 }
@@ -820,12 +778,7 @@ module CancellableTaskTests =
                     let innerTask =
                         cancellableTask { return! CancellableTask.getCancellationToken () }
 
-                    let outerAsync =
-                        async {
-                            return!
-                                innerTask
-                                |> Async.AwaitCancellableTask
-                        }
+                    let outerAsync = async { return! innerTask |> Async.AwaitCancellableTask }
 
                     use cts = new CancellationTokenSource()
                     let actual = Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
@@ -837,12 +790,7 @@ module CancellableTaskTests =
                     let mutable actual = CancellationToken.None
                     let innerTask: CancellableTask = fun ct -> task { actual <- ct } :> Task
 
-                    let outerAsync =
-                        async {
-                            return!
-                                innerTask
-                                |> Async.AwaitCancellableTask
-                        }
+                    let outerAsync = async { return! innerTask |> Async.AwaitCancellableTask }
 
                     use cts = new CancellationTokenSource()
                     Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
@@ -1035,9 +983,7 @@ module CancellableTaskTests =
                 <| async {
                     let innerCall = fun ct -> Task.CompletedTask
 
-                    let! someTask =
-                        innerCall
-                        |> CancellableTask.ofUnit
+                    let! someTask = innerCall |> CancellableTask.ofUnit
 
                     Expect.equal () someTask ""
                 }
@@ -1049,9 +995,7 @@ module CancellableTaskTests =
                 <| async {
                     let innerCall = fun ct -> Task.FromResult "lol"
 
-                    let! someTask =
-                        innerCall
-                        |> CancellableTask.toUnit
+                    let! someTask = innerCall |> CancellableTask.toUnit
 
                     Expect.equal () someTask ""
                 }
@@ -1085,9 +1029,7 @@ module CancellableTaskTests =
                         timeProvider.ForwardTimeAsync(TimeSpan.FromSeconds(15.))
                         |> Async.AwaitTask
 
-                    let! result =
-                        result
-                        |> Async.AwaitTask
+                    let! result = result |> Async.AwaitTask
 
                     Expect.equal
                         result
@@ -1135,9 +1077,7 @@ module CancellableTaskTests =
 
                             while Seq.length times < items.Length do
 
-                                i <-
-                                    i
-                                    + maxDegreeOfParallelism
+                                i <- i + maxDegreeOfParallelism
 
                                 do!
                                     timeProvider.ForwardTimeAsync(pauseTimeTS)
@@ -1152,9 +1092,7 @@ module CancellableTaskTests =
 
                     Expect.equal (Seq.length times) items.Length ""
 
-                    let! result =
-                        result
-                        |> Async.AwaitTask
+                    let! result = result |> Async.AwaitTask
 
                     Expect.equal
                         result
@@ -1197,9 +1135,7 @@ module CancellableTaskTests =
                             let mutable i = 0
 
                             while Seq.length times < items.Length do
-                                i <-
-                                    i
-                                    + maxDegreeOfParallelism
+                                i <- i + maxDegreeOfParallelism
 
                                 do!
                                     timeProvider.ForwardTimeAsync(pauseTimeTS)
@@ -1215,9 +1151,7 @@ module CancellableTaskTests =
 
                     Expect.equal (Seq.length times) items.Length ""
 
-                    let! result =
-                        result
-                        |> Async.AwaitTask
+                    let! result = result |> Async.AwaitTask
 
                     Expect.equal
                         result

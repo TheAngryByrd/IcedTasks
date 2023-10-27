@@ -8,6 +8,7 @@ open IcedTasks
 
 
 module AsyncExTests =
+    open System.Runtime.ExceptionServices
 
     let builderTests =
         testList "AsyncExBuilder" [
@@ -669,3 +670,158 @@ module AsyncExTests =
 
     [<Tests>]
     let asyncExTests = testList "IcedTasks.AsyncEx" [ builderTests ]
+
+    let inline private retryTask times ([<InlineIfLambda>] test: int -> Task<unit>) =
+        task {
+            let times = max 1 times // at least once
+            let mutable i = 0
+            let mutable lastEx = None
+            let mutable successful = false
+
+            while not successful && i < times do
+                try
+                    do! test i
+                    successful <- true
+                with ex ->
+                    lastEx <- Some(ExceptionDispatchInfo.Capture(ex))
+                    i <- i + 1
+
+            if not successful then
+                lastEx
+                |> Option.iter (fun e -> e.Throw())
+        }
+
+    let inline private retryAsync times ([<InlineIfLambda>] test) =
+        asyncEx { return! retryTask times (fun i -> Async.StartImmediateAsTask(test i)) }
+
+    let inline private retry times ([<InlineIfLambda>] test) =
+        let times = max 1 times // at least once
+        let mutable i = 0
+        let mutable lastEx = None
+        let mutable successful = false
+
+        while not successful && i < times do
+            try
+                do test i
+                successful <- true
+            with ex ->
+                lastEx <- Some(ExceptionDispatchInfo.Capture(ex))
+                i <- i + 1
+
+        if not successful then
+            lastEx
+            |> Option.iter (fun e -> e.Throw())
+
+    let retryTestCaseAsync name times test =
+        testCaseAsync name (retryAsync times test)
+
+    let fretryTestCaseAsync name times test =
+        ftestCaseAsync name (retryAsync times test)
+
+    let pretryTestCaseAsync name times test =
+        ptestCaseAsync name (retryAsync times test)
+
+    let testCaseTask name (test: unit -> Task<_>) =
+        testCaseAsync name (asyncEx { do! test () })
+
+    let ftestCaseTask name (test: unit -> Task<_>) =
+        ftestCaseAsync name (asyncEx { do! test () })
+
+    let ptestCaseTask name (test: unit -> Task<_>) =
+        ptestCaseAsync name (asyncEx { do! test () })
+
+    let retryTestCaseTask name times test =
+        testCaseTask name (fun () -> retryTask times test)
+
+    let fretryTestCaseTask name times test =
+        ftestCaseTask name (fun () -> retryTask times test)
+
+    let pretryTestCaseTask name times test =
+        ptestCaseTask name (fun () -> retryTask times test)
+
+    let retryTestCase name times test =
+        testCase name (fun () -> retry times test)
+
+    let fretryTestCase name times test =
+        ftestCase name (fun () -> retry times test)
+
+    let pretryTestCase name times test =
+        ptestCase name (fun () -> retry times test)
+
+    [<Tests>]
+    let tests2 =
+        testList "retryableTests" [
+            let assertable times = times < 9
+
+            testList "Async" [
+                retryTestCaseAsync "Raise Exception" 10
+                <| fun attempt ->
+                    asyncEx {
+                        do! Async.Sleep 0
+
+                        if assertable attempt then
+                            raise (Exception(attempt.ToString()))
+                    }
+                retryTestCaseAsync "Fail expect" 10
+                <| fun attempt -> asyncEx { Expect.isFalse (assertable attempt) "" }
+            ]
+
+            testList "Task" [
+                retryTestCaseTask "Raise Exception" 10
+                <| fun attempt ->
+                    task {
+                        do! Task.Yield()
+
+                        if assertable attempt then
+                            raise (Exception(attempt.ToString()))
+                    }
+                retryTestCaseTask "Fail expect" 10
+                <| fun attempt -> task { Expect.isFalse (assertable attempt) "" }
+            ]
+
+            testList "Sync" [
+                retryTestCase "Raise Exception" 10
+                <| fun attempt ->
+                    if assertable attempt then
+                        raise (Exception(attempt.ToString()))
+
+                retryTestCase "Fail expect" 10
+                <| fun attempt -> Expect.isFalse (assertable attempt) ""
+            ]
+        ]
+
+    let inline bounded minVal maxVal value = min (max minVal value) maxVal
+
+    [<Tests>]
+    let tests3 =
+        ftestList "bounded" [
+            test "lol" {
+                let concurrencyLimit = 3
+                let lower = 1
+                let upper = 23
+
+                let actual = bounded lower upper concurrencyLimit
+
+                Expect.equal actual 3 ""
+            }
+            test "lol2" {
+                let concurrencyLimit = 3
+                let lower = 1
+                let upper = max (lower - 1) 1
+
+                let actual = bounded lower upper concurrencyLimit
+
+                Expect.equal actual 1 ""
+            }
+
+
+            test "lol3" {
+                let concurrencyLimit = 0
+                let lower = 1
+                let upper = max (lower - 1) 1
+
+                let actual = bounded lower upper concurrencyLimit
+
+                Expect.equal actual 1 ""
+            }
+        ]

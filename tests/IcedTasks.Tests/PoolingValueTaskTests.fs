@@ -16,9 +16,7 @@ module PoolingValueTaskTests =
                 <| async {
                     let foo = poolingValueTask { return "lol" }
 
-                    let! result =
-                        foo
-                        |> Async.AwaitValueTask
+                    let! result = foo |> Async.AwaitValueTask
 
                     Expect.equal result "lol" "Should be able to Return value"
                 }
@@ -29,9 +27,7 @@ module PoolingValueTaskTests =
                     let fooTask: ValueTask = ValueTask.CompletedTask
                     let outerTask = poolingValueTask { return! fooTask }
 
-                    do!
-                        outerTask
-                        |> Async.AwaitValueTask
+                    do! outerTask |> Async.AwaitValueTask
                 // Compiling is sufficient expect
                 }
                 testCaseAsync "Can ReturnFrom PoolingValueTask<T>"
@@ -41,9 +37,7 @@ module PoolingValueTaskTests =
                     let outerTask = poolingValueTask { return! fooTask }
 
 
-                    let! actual =
-                        outerTask
-                        |> Async.AwaitValueTask
+                    let! actual = outerTask |> Async.AwaitValueTask
 
                     Expect.equal actual expected "Should be able to Return! value"
                 }
@@ -51,9 +45,7 @@ module PoolingValueTaskTests =
                 <| async {
                     let outerTask = poolingValueTask { return! Task.CompletedTask }
 
-                    do!
-                        outerTask
-                        |> Async.AwaitValueTask
+                    do! outerTask |> Async.AwaitValueTask
                 // Compiling is sufficient expect
                 }
                 testCaseAsync "Can ReturnFrom Task<T>"
@@ -61,9 +53,7 @@ module PoolingValueTaskTests =
                     let expected = "lol"
                     let outerTask = poolingValueTask { return! Task.FromResult expected }
 
-                    let! actual =
-                        outerTask
-                        |> Async.AwaitValueTask
+                    let! actual = outerTask |> Async.AwaitValueTask
 
                     Expect.equal actual expected "Should be able to Return! value"
                 }
@@ -73,9 +63,7 @@ module PoolingValueTaskTests =
                     let fooTask = Task.Yield()
                     let outerTask = poolingValueTask { return! fooTask }
 
-                    do!
-                        outerTask
-                        |> Async.AwaitValueTask
+                    do! outerTask |> Async.AwaitValueTask
                 // Compiling is sufficient expect
                 }
 
@@ -86,9 +74,7 @@ module PoolingValueTaskTests =
                     let outerTask = poolingValueTask { return! fooTask }
 
 
-                    let! actual =
-                        outerTask
-                        |> Async.AwaitValueTask
+                    let! actual = outerTask |> Async.AwaitValueTask
 
                     Expect.equal actual expected ""
                 }
@@ -100,9 +86,7 @@ module PoolingValueTaskTests =
                     let fooTask: ValueTask = ValueTask.CompletedTask
                     let outerTask = poolingValueTask { do! fooTask }
 
-                    do!
-                        outerTask
-                        |> Async.AwaitValueTask
+                    do! outerTask |> Async.AwaitValueTask
                 // Compiling is a sufficient Expect
                 }
                 testCaseAsync "Can Bind PoolingValueTask<T>"
@@ -116,9 +100,7 @@ module PoolingValueTaskTests =
                             return result
                         }
 
-                    let! actual =
-                        outerTask
-                        |> Async.AwaitValueTask
+                    let! actual = outerTask |> Async.AwaitValueTask
 
                     Expect.equal actual expected ""
                 }
@@ -126,9 +108,7 @@ module PoolingValueTaskTests =
                 <| async {
                     let outerTask = poolingValueTask { do! Task.CompletedTask }
 
-                    do!
-                        outerTask
-                        |> Async.AwaitValueTask
+                    do! outerTask |> Async.AwaitValueTask
                 // Compiling is a sufficient Expect
                 }
 
@@ -142,9 +122,7 @@ module PoolingValueTaskTests =
                             return result
                         }
 
-                    let! actual =
-                        outerTask
-                        |> Async.AwaitValueTask
+                    let! actual = outerTask |> Async.AwaitValueTask
 
                     Expect.equal actual expected ""
                 }
@@ -161,9 +139,7 @@ module PoolingValueTaskTests =
                             return result
                         }
 
-                    let! actual =
-                        outerTask
-                        |> Async.AwaitValueTask
+                    let! actual = outerTask |> Async.AwaitValueTask
 
                     Expect.equal actual expected ""
                 }
@@ -621,9 +597,7 @@ module PoolingValueTaskTests =
                 <| async {
                     let innerCall = ValueTask.singleton "lol"
 
-                    let! someTask =
-                        innerCall
-                        |> Async.AwaitValueTask
+                    let! someTask = innerCall |> Async.AwaitValueTask
 
                     Expect.equal "lol" someTask ""
                 }

@@ -22,9 +22,7 @@ module ColdTaskTests =
                 <| async {
                     let foo = coldTask { return "lol" }
 
-                    let! result =
-                        foo
-                        |> Async.AwaitColdTask
+                    let! result = foo |> Async.AwaitColdTask
 
                     Expect.equal result "lol" "Should be able to Return value"
                 }
@@ -35,9 +33,7 @@ module ColdTaskTests =
                     let fooTask: ColdTask = fun () -> Task.CompletedTask
                     let outerTask = coldTask { return! fooTask }
 
-                    do!
-                        outerTask ()
-                        |> Async.AwaitTask
+                    do! outerTask () |> Async.AwaitTask
                 // Compiling is sufficient expect
                 }
                 testCaseAsync "Can ReturnFrom ColdTask<T>"
@@ -47,9 +43,7 @@ module ColdTaskTests =
                     let outerTask = coldTask { return! fooTask }
                     use cts = new CancellationTokenSource()
 
-                    let! actual =
-                        outerTask ()
-                        |> Async.AwaitTask
+                    let! actual = outerTask () |> Async.AwaitTask
 
                     Expect.equal actual expected "Should be able to Return! value"
                 }
@@ -57,9 +51,7 @@ module ColdTaskTests =
                 <| async {
                     let outerTask = coldTask { return! Task.CompletedTask }
 
-                    do!
-                        outerTask ()
-                        |> Async.AwaitTask
+                    do! outerTask () |> Async.AwaitTask
                 // Compiling is sufficient expect
                 }
                 testCaseAsync "Can ReturnFrom Task<T>"
@@ -67,9 +59,7 @@ module ColdTaskTests =
                     let expected = "lol"
                     let outerTask = coldTask { return! Task.FromResult expected }
 
-                    let! actual =
-                        outerTask ()
-                        |> Async.AwaitTask
+                    let! actual = outerTask () |> Async.AwaitTask
 
                     Expect.equal actual expected "Should be able to Return! value"
                 }
@@ -81,9 +71,7 @@ module ColdTaskTests =
 
                     let outerTask = coldTask { return! fooTask }
 
-                    do!
-                        outerTask ()
-                        |> Async.AwaitTask
+                    do! outerTask () |> Async.AwaitTask
 
                 // Compiling is a sufficient Expect
                 }
@@ -94,9 +82,7 @@ module ColdTaskTests =
 
                     let outerTask = coldTask { return! fooTask }
 
-                    let! actual =
-                        outerTask ()
-                        |> Async.AwaitTask
+                    let! actual = outerTask () |> Async.AwaitTask
 
                     Expect.equal actual expected ""
                 }
@@ -108,9 +94,7 @@ module ColdTaskTests =
 
                     let outerTask = coldTask { return! fooTask }
 
-                    do!
-                        outerTask ()
-                        |> Async.AwaitTask
+                    do! outerTask () |> Async.AwaitTask
 
                 // Compiling is a sufficient Expect
                 }
@@ -121,9 +105,7 @@ module ColdTaskTests =
 
                     let outerTask = coldTask { return! fooTask }
 
-                    let! actual =
-                        outerTask ()
-                        |> Async.AwaitTask
+                    let! actual = outerTask () |> Async.AwaitTask
 
                     Expect.equal actual expected ""
                 }
@@ -133,9 +115,7 @@ module ColdTaskTests =
                     let fooTask = Task.Yield()
                     let outerTask = coldTask { return! fooTask }
 
-                    do!
-                        outerTask ()
-                        |> Async.AwaitTask
+                    do! outerTask () |> Async.AwaitTask
                 // Compiling is sufficient expect
                 }
                 testCaseAsync "Can ReturnFrom cold TaskLike"
@@ -143,9 +123,7 @@ module ColdTaskTests =
                     let fooTask = fun () -> Task.Yield()
                     let outerTask = coldTask { return! fooTask }
 
-                    do!
-                        outerTask ()
-                        |> Async.AwaitTask
+                    do! outerTask () |> Async.AwaitTask
                 // Compiling is sufficient expect
                 }
                 testCaseAsync "Can ReturnFrom Async<T>"
@@ -155,9 +133,7 @@ module ColdTaskTests =
                     let outerTask = coldTask { return! fooTask }
                     use cts = new CancellationTokenSource()
 
-                    let! actual =
-                        outerTask ()
-                        |> Async.AwaitTask
+                    let! actual = outerTask () |> Async.AwaitTask
 
                     Expect.equal actual expected ""
                 }
@@ -169,9 +145,7 @@ module ColdTaskTests =
                     let fooTask: ColdTask = fun () -> Task.CompletedTask
                     let outerTask = coldTask { do! fooTask }
 
-                    do!
-                        outerTask ()
-                        |> Async.AwaitTask
+                    do! outerTask () |> Async.AwaitTask
                 // Compiling is a sufficient Expect
                 }
                 testCaseAsync "Can Bind ColdTask<T>"
@@ -185,9 +159,7 @@ module ColdTaskTests =
                             return result
                         }
 
-                    let! actual =
-                        outerTask ()
-                        |> Async.AwaitTask
+                    let! actual = outerTask () |> Async.AwaitTask
 
                     Expect.equal actual expected ""
                 }
@@ -195,9 +167,7 @@ module ColdTaskTests =
                 <| async {
                     let outerTask = coldTask { do! Task.CompletedTask }
 
-                    do!
-                        outerTask ()
-                        |> Async.AwaitTask
+                    do! outerTask () |> Async.AwaitTask
                 // Compiling is a sufficient Expect
                 }
 
@@ -211,9 +181,7 @@ module ColdTaskTests =
                             return result
                         }
 
-                    let! actual =
-                        outerTask ()
-                        |> Async.AwaitTask
+                    let! actual = outerTask () |> Async.AwaitTask
 
                     Expect.equal actual expected ""
                 }
@@ -229,9 +197,7 @@ module ColdTaskTests =
                             return result
                         }
 
-                    do!
-                        outerTask ()
-                        |> Async.AwaitTask
+                    do! outerTask () |> Async.AwaitTask
 
                 // Compiling is a sufficient Expect
                 }
@@ -246,9 +212,7 @@ module ColdTaskTests =
                             return result
                         }
 
-                    let! actual =
-                        outerTask ()
-                        |> Async.AwaitTask
+                    let! actual = outerTask () |> Async.AwaitTask
 
                     Expect.equal actual expected ""
                 }
@@ -264,9 +228,7 @@ module ColdTaskTests =
                             return result
                         }
 
-                    do!
-                        outerTask ()
-                        |> Async.AwaitTask
+                    do! outerTask () |> Async.AwaitTask
 
                 // Compiling is a sufficient Expect
                 }
@@ -281,9 +243,7 @@ module ColdTaskTests =
                             return result
                         }
 
-                    let! actual =
-                        outerTask ()
-                        |> Async.AwaitTask
+                    let! actual = outerTask () |> Async.AwaitTask
 
                     Expect.equal actual expected ""
                 }
@@ -298,9 +258,7 @@ module ColdTaskTests =
                             return result
                         }
 
-                    do!
-                        outerTask ()
-                        |> Async.AwaitTask
+                    do! outerTask () |> Async.AwaitTask
                 // Compiling is sufficient expect
                 }
 
@@ -315,9 +273,7 @@ module ColdTaskTests =
                             return result
                         }
 
-                    let! actual =
-                        outerTask ()
-                        |> Async.AwaitTask
+                    let! actual = outerTask () |> Async.AwaitTask
 
                     Expect.equal actual expected ""
                 }
@@ -719,9 +675,7 @@ module ColdTaskTests =
                     do! Async.Sleep(100)
                     Expect.equal someValue null ""
 
-                    let fooAsync =
-                        fooColdTask
-                        |> Async.AwaitColdTask
+                    let fooAsync = fooColdTask |> Async.AwaitColdTask
 
                     do! Async.Sleep(100)
                     Expect.equal someValue null ""
@@ -738,9 +692,7 @@ module ColdTaskTests =
                     do! Async.Sleep(100)
                     Expect.equal someValue null ""
 
-                    let fooAsync =
-                        fooColdTask
-                        |> Async.AwaitColdTask
+                    let fooAsync = fooColdTask |> Async.AwaitColdTask
 
                     do! Async.Sleep(100)
                     Expect.equal someValue null ""
@@ -755,13 +707,9 @@ module ColdTaskTests =
                     let values = ResizeArray<_>()
                     let someTask = task { values.Add("foo") }
 
-                    do!
-                        someTask
-                        |> Async.AwaitTask
+                    do! someTask |> Async.AwaitTask
 
-                    do!
-                        someTask
-                        |> Async.AwaitTask
+                    do! someTask |> Async.AwaitTask
 
                     Expect.hasLength values 1 ""
                 }
@@ -780,13 +728,9 @@ module ColdTaskTests =
                     let values = ResizeArray<_>()
                     let someTask = coldTask { values.Add("foo") }
 
-                    do!
-                        someTask
-                        |> Async.AwaitColdTask
+                    do! someTask |> Async.AwaitColdTask
 
-                    do!
-                        someTask
-                        |> Async.AwaitColdTask
+                    do! someTask |> Async.AwaitColdTask
 
                     Expect.hasLength values 2 ""
                 }
@@ -985,9 +929,7 @@ module ColdTaskTests =
                     let innerCall = coldTask { return "lol" }
                     let applier = coldTask { return fun x -> x + "fooo" }
 
-                    let! someTask =
-                        innerCall
-                        |> ColdTask.apply applier
+                    let! someTask = innerCall |> ColdTask.apply applier
 
                     Expect.equal "lolfooo" someTask ""
                 }
@@ -1022,9 +964,7 @@ module ColdTaskTests =
                 <| async {
                     let innerCall = fun ct -> Task.CompletedTask
 
-                    let! someTask =
-                        innerCall
-                        |> ColdTask.ofUnit
+                    let! someTask = innerCall |> ColdTask.ofUnit
 
                     Expect.equal () someTask ""
                 }
@@ -1036,9 +976,7 @@ module ColdTaskTests =
                 <| async {
                     let innerCall = fun ct -> Task.FromResult "lol"
 
-                    let! someTask =
-                        innerCall
-                        |> ColdTask.toUnit
+                    let! someTask = innerCall |> ColdTask.toUnit
 
                     Expect.equal () someTask ""
                 }

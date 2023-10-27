@@ -17,9 +17,7 @@ module CancellableValueTaskTests =
                 <| async {
                     let foo = cancellableValueTask { return "lol" }
 
-                    let! result =
-                        foo
-                        |> Async.AwaitCancellableValueTask
+                    let! result = foo |> Async.AwaitCancellableValueTask
 
                     Expect.equal result "lol" "Should be able to Return value"
                 }
@@ -81,9 +79,7 @@ module CancellableValueTaskTests =
                     let outerTask = cancellableTask { return! fooTask }
                     use cts = new CancellationTokenSource()
 
-                    do!
-                        outerTask cts.Token
-                        |> Async.AwaitTask
+                    do! outerTask cts.Token |> Async.AwaitTask
                 // Compiling is sufficient expect
                 }
                 testCaseAsync "Can ReturnFrom Task"
@@ -1101,9 +1097,7 @@ module CancellableValueTaskTests =
                 <| async {
                     let innerCall = fun ct -> ValueTask.CompletedTask
 
-                    let! someTask =
-                        innerCall
-                        |> CancellableValueTask.ofUnit
+                    let! someTask = innerCall |> CancellableValueTask.ofUnit
 
                     Expect.equal () someTask ""
                 }
@@ -1114,9 +1108,7 @@ module CancellableValueTaskTests =
                 <| async {
                     let innerCall = fun ct -> ValueTask.FromResult "lol"
 
-                    let! someTask =
-                        innerCall
-                        |> CancellableValueTask.toUnit
+                    let! someTask = innerCall |> CancellableValueTask.toUnit
 
                     Expect.equal () someTask ""
                 }

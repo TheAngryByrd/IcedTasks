@@ -217,10 +217,7 @@ module ParallelAsyncTests =
                             and! r2 = async.Return data
                             and! r3 = async.Return data
 
-                            return
-                                r1
-                                + r2
-                                + r3
+                            return r1 + r2 + r3
                         }
 
                     Expect.equal actual 126 "and! works"
