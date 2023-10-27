@@ -466,6 +466,51 @@ module CancellableValueTaskTests =
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
                 }
+
+                testCaseAsync "use IAsyncDisposable cancelled"
+                <| async {
+                    let data = 42
+                    let mutable wasDisposed = false
+
+                    let doDispose () =
+                        task {
+                            do! Task.Yield()
+                            wasDisposed <- true
+                        }
+                        |> ValueTask
+
+                    let timeProvider = ManualTimeProvider()
+
+                    let actor data =
+                        cancellableValueTask {
+                            use d = TestHelpers.makeAsyncDisposable (doDispose)
+                            do! fun ct -> timeProvider.Delay(TimeSpan.FromMilliseconds(200), ct)
+
+                        }
+
+                    use cts =
+                        timeProvider.CreateCancellationTokenSource(TimeSpan.FromMilliseconds(100))
+
+                    let inProgress = actor data cts.Token
+
+                    do!
+                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(100))
+                        |> Async.AwaitTask
+
+                    let _ = Expect.CancellationRequested inProgress
+
+                    // try
+                    //     let! _ =
+                    //         inProgress
+                    //         |> Async.AwaitValueTask
+
+                    //     ()
+                    // with (:? OperationCanceledException) ->
+                    //     ()
+
+                    Expect.isTrue wasDisposed ""
+                }
+
                 testCaseAsync "use! IAsyncDisposable sync "
                 <| async {
                     let data = 42
