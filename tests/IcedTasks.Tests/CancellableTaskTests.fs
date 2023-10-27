@@ -451,6 +451,43 @@ module CancellableTaskTests =
                 }
 
 
+                testCaseAsync "use IAsyncDisposable cancelled"
+                <| async {
+                    let data = 42
+                    let mutable wasDisposed = false
+
+                    let doDispose () =
+                        task {
+                            do! Task.Yield()
+                            wasDisposed <- true
+                        }
+                        |> ValueTask
+
+                    let timeProvider = ManualTimeProvider()
+
+                    let actor data =
+                        cancellableTask {
+                            use d = TestHelpers.makeAsyncDisposable (doDispose)
+                            do! fun ct -> timeProvider.Delay(TimeSpan.FromMilliseconds(200), ct)
+                            return ()
+                        }
+
+                    use cts =
+                        timeProvider.CreateCancellationTokenSource(TimeSpan.FromMilliseconds(100))
+
+                    let inProgress = actor data cts.Token
+
+                    do!
+                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(100))
+                        |> Async.AwaitTask
+
+
+                    let _ = Expect.CancellationRequested inProgress
+
+                    Expect.isTrue wasDisposed ""
+                }
+
+
                 testCaseAsync "use IAsyncDisposable async"
                 <| async {
                     let data = 42
