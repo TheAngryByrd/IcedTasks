@@ -454,12 +454,12 @@ module CancellableTaskTests =
                 testCaseAsync "use IAsyncDisposable cancelled"
                 <| async {
                     let data = 42
-                    let mutable wasDisposed = false
+                    let mutable wasDisposed = TaskCompletionSource<bool>()
 
                     let doDispose () =
                         task {
                             do! Task.Yield()
-                            wasDisposed <- true
+                            wasDisposed.SetResult true
                         }
                         |> ValueTask
 
@@ -482,7 +482,13 @@ module CancellableTaskTests =
                         |> Async.AwaitTask
 
 
-                    let _ = Expect.CancellationRequested inProgress
+                    let! _ =
+                        Expect.CancellationRequested inProgress
+                        |> Async.AwaitTask
+
+                    let! wasDisposed =
+                        wasDisposed.Task
+                        |> Async.AwaitTask
 
                     Expect.isTrue wasDisposed ""
                 }
