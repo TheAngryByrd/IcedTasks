@@ -72,12 +72,7 @@ module CancellableTasks =
         member inline _.Delay
             ([<InlineIfLambdaAttribute>] generator: unit -> CancellableTaskCode<'TOverall, 'T>)
             : CancellableTaskCode<'TOverall, 'T> =
-            ResumableCode.Delay(fun () ->
-                CancellableTaskCode(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    (generator ()).Invoke(&sm)
-                )
-            )
+            ResumableCode.Delay(fun () -> generator ())
 
 
         /// <summary>Creates an CancellableTask that just returns ().</summary>
@@ -101,7 +96,6 @@ module CancellableTasks =
         /// <returns>An CancellableTask that returns value when executed.</returns>
         member inline _.Return(value: 'T) : CancellableTaskCode<'T, 'T> =
             CancellableTaskCode<'T, _>(fun sm ->
-                sm.Data.ThrowIfCancellationRequested()
                 sm.Data.Result <- value
                 true
             )
@@ -123,17 +117,7 @@ module CancellableTasks =
                 task1: CancellableTaskCode<'TOverall, unit>,
                 task2: CancellableTaskCode<'TOverall, 'T>
             ) : CancellableTaskCode<'TOverall, 'T> =
-            ResumableCode.Combine(
-                CancellableTaskCode(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    task1.Invoke(&sm)
-                ),
-
-                CancellableTaskCode(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    task2.Invoke(&sm)
-                )
-            )
+            ResumableCode.Combine(task1, task2)
 
         /// <summary>Creates an CancellableTask that runs computation repeatedly
         /// until guard() becomes false.</summary>
@@ -153,13 +137,7 @@ module CancellableTasks =
                 [<InlineIfLambda>] guard: unit -> bool,
                 computation: CancellableTaskCode<'TOverall, unit>
             ) : CancellableTaskCode<'TOverall, unit> =
-            ResumableCode.While(
-                guard,
-                CancellableTaskCode(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    computation.Invoke(&sm)
-                )
-            )
+            ResumableCode.While(guard, computation)
 
         /// <summary>Creates an CancellableTask that runs computation and returns its result.
         /// If an exception happens then catchHandler(exn) is called and the resulting computation executed instead.</summary>
@@ -179,13 +157,7 @@ module CancellableTasks =
                 computation: CancellableTaskCode<'TOverall, 'T>,
                 catchHandler: exn -> CancellableTaskCode<'TOverall, 'T>
             ) : CancellableTaskCode<'TOverall, 'T> =
-            ResumableCode.TryWith(
-                CancellableTaskCode(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    computation.Invoke(&sm)
-                ),
-                catchHandler
-            )
+            ResumableCode.TryWith(computation, catchHandler)
 
         /// <summary>Creates an CancellableTask that runs computation. The action compensation is executed
         /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
@@ -208,11 +180,7 @@ module CancellableTasks =
                 [<InlineIfLambda>] compensation: unit -> unit
             ) : CancellableTaskCode<'TOverall, 'T> =
             ResumableCode.TryFinally(
-
-                CancellableTaskCode(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    computation.Invoke(&sm)
-                ),
+                computation,
                 ResumableCode<_, _>(fun _ ->
                     compensation ()
                     true
@@ -238,14 +206,7 @@ module CancellableTasks =
                 sequence: seq<'T>,
                 body: 'T -> CancellableTaskCode<'TOverall, unit>
             ) : CancellableTaskCode<'TOverall, unit> =
-            ResumableCode.For(
-                sequence,
-                fun item ->
-                    CancellableTaskCode(fun sm ->
-                        sm.Data.ThrowIfCancellationRequested()
-                        (body item).Invoke(&sm)
-                    )
-            )
+            ResumableCode.For(sequence, body)
 
 #if NETSTANDARD2_1 || NET6_0_OR_GREATER
         /// <summary>Creates an CancellableTask that runs computation. The action compensation is executed
@@ -271,7 +232,6 @@ module CancellableTasks =
             ResumableCode.TryFinallyAsync(
                 computation,
                 ResumableCode<_, _>(fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
 
                     if __useResumableCode then
                         let mutable __stack_condition_fin = true
@@ -331,10 +291,7 @@ module CancellableTasks =
                 binder: 'Resource -> CancellableTaskCode<'TOverall, 'T>
             ) : CancellableTaskCode<'TOverall, 'T> =
             this.TryFinallyAsync(
-                (fun sm ->
-                    sm.Data.ThrowIfCancellationRequested()
-                    (binder resource).Invoke(&sm)
-                ),
+                (fun sm -> (binder resource).Invoke(&sm)),
                 (fun () ->
                     if not (isNull (box resource)) then
                         resource.DisposeAsync()
@@ -850,14 +807,7 @@ module CancellableTasks =
                     resource: 'Resource,
                     binder: 'Resource -> CancellableTaskCode<'TOverall, 'T>
                 ) =
-                ResumableCode.Using(
-                    resource,
-                    fun resource ->
-                        CancellableTaskCode<'TOverall, 'T>(fun sm ->
-                            sm.Data.ThrowIfCancellationRequested()
-                            (binder resource).Invoke(&sm)
-                        )
-                )
+                ResumableCode.Using(resource, binder)
 
     /// <exclude />
     [<AutoOpen>]
@@ -1254,7 +1204,8 @@ module CancellableTasks =
                 ) : CancellationToken -> TaskAwaiter<'TResult1 * 'TResult2> =
 
                 cancellableTask {
-                    let leftStarted = fun ct -> left ct
+                    let! ct = CancellableTask.getCancellationToken ()
+                    let leftStarted = left ct
                     let rightStarted = right
                     let! leftResult = leftStarted
                     let! rightResult = rightStarted
@@ -1272,8 +1223,9 @@ module CancellableTasks =
                 ) : CancellationToken -> TaskAwaiter<'TResult1 * 'TResult2> =
 
                 cancellableTask {
+                    let! ct = CancellableTask.getCancellationToken ()
                     let leftStarted = left
-                    let rightStarted = fun ct -> right ct
+                    let rightStarted = right ct
                     let! leftResult = leftStarted
                     let! rightResult = rightStarted
                     return leftResult, rightResult
