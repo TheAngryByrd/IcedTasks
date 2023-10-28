@@ -229,7 +229,9 @@ module ColdTasks =
                             let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
                             __stack_condition_fin <- __stack_yield_fin
 
-                            if not __stack_condition_fin then
+                            if __stack_condition_fin then
+                                Awaiter.GetResult awaiter
+                            else
                                 sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
 
                         __stack_condition_fin
@@ -239,15 +241,13 @@ module ColdTasks =
 
                         let cont =
                             ColdTaskResumptionFunc<'TOverall>(fun sm ->
-                                awaiter
-                                |> Awaiter.GetResult
-
+                                Awaiter.GetResult awaiter
                                 true
                             )
 
                         // shortcut to continue immediately
                         if awaiter.IsCompleted then
-                            true
+                            cont.Invoke(&sm)
                         else
                             sm.ResumptionDynamicInfo.ResumptionData <-
                                 (awaiter :> ICriticalNotifyCompletion)
@@ -485,10 +485,7 @@ module ColdTasks =
 
                 let cont =
                     (ColdTaskResumptionFunc<'TOverall>(fun sm ->
-                        let result =
-                            awaiter
-                            |> Awaiter.GetResult
-
+                        let result = Awaiter.GetResult awaiter
                         (continuation result).Invoke(&sm)
                     ))
 
@@ -538,10 +535,7 @@ module ColdTasks =
                             __stack_fin <- __stack_yield_fin
 
                         if __stack_fin then
-                            let result =
-                                awaiter
-                                |> Awaiter.GetResult
-
+                            let result = Awaiter.GetResult awaiter
                             (continuation result).Invoke(&sm)
                         else
                             sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
@@ -614,10 +608,7 @@ module ColdTasks =
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
                 (task: 'Awaitable)
                 : unit -> 'Awaiter =
-                (fun () ->
-                    task
-                    |> Awaitable.GetAwaiter
-                )
+                (fun () -> Awaitable.GetAwaiter task)
 
             /// <summary>Allows the computation expression to turn other types into unit -> 'Awaiter</summary>
             ///
@@ -629,10 +620,7 @@ module ColdTasks =
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult>>
                 ([<InlineIfLambda>] task: unit -> 'Awaitable)
                 : unit -> 'Awaiter =
-                (fun () ->
-                    task ()
-                    |> Awaitable.GetAwaiter
-                )
+                (fun () -> Awaitable.GetAwaiter(task ()))
 
 
             /// <summary>Creates an ColdTask that runs binder(resource).

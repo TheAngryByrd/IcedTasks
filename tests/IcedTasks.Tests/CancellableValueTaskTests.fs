@@ -467,6 +467,28 @@ module CancellableValueTaskTests =
                     Expect.isTrue wasDisposed ""
                 }
 
+                testCaseAsync "use IAsyncDisposable propagate exception"
+                <| async {
+                    let doDispose () =
+                        task {
+                            do! Task.Yield()
+                            failwith "boom"
+                        }
+                        |> ValueTask
+
+                    do!
+                        Expect.throwsValueTask<Exception>
+                            (fun () ->
+                                cancellableValueTask {
+                                    use d = TestHelpers.makeAsyncDisposable (doDispose)
+                                    return ()
+                                }
+                                |> fun c -> c CancellationToken.None
+                            )
+                            ""
+                        |> Async.AwaitValueTask
+                }
+
                 testCaseAsync "use IAsyncDisposable cancelled"
                 <| async {
                     let data = 42

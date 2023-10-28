@@ -316,6 +316,27 @@ module PoolingValueTaskTests =
                     Expect.isTrue wasDisposed ""
                 }
 
+                testCaseAsync "use IAsyncDisposable propagate exception"
+                <| async {
+                    let doDispose () =
+                        task {
+                            do! Task.Yield()
+                            failwith "boom"
+                        }
+                        |> ValueTask
+
+                    do!
+                        Expect.throwsValueTask<Exception>
+                            (fun () ->
+                                poolingValueTask {
+                                    use d = TestHelpers.makeAsyncDisposable (doDispose)
+                                    return ()
+                                }
+                            )
+                            ""
+                        |> Async.AwaitValueTask
+                }
+
 
                 testCaseAsync "use IAsyncDisposable async"
                 <| async {

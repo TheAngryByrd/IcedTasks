@@ -242,7 +242,9 @@ module CancellableTasks =
                             let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
                             __stack_condition_fin <- __stack_yield_fin
 
-                            if not __stack_condition_fin then
+                            if __stack_condition_fin then
+                                Awaiter.GetResult awaiter
+                            else
                                 sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
 
                         __stack_condition_fin
@@ -252,15 +254,13 @@ module CancellableTasks =
 
                         let cont =
                             CancellableTaskResumptionFunc<'TOverall>(fun sm ->
-                                awaiter
-                                |> Awaiter.GetResult
-
+                                Awaiter.GetResult awaiter
                                 true
                             )
 
                         // shortcut to continue immediately
                         if awaiter.IsCompleted then
-                            true
+                            cont.Invoke(&sm)
                         else
                             sm.ResumptionDynamicInfo.ResumptionData <-
                                 (awaiter :> ICriticalNotifyCompletion)
@@ -575,10 +575,7 @@ module CancellableTasks =
                             __stack_fin <- __stack_yield_fin
 
                         if __stack_fin then
-                            let result =
-                                awaiter
-                                |> Awaiter.GetResult
-
+                            let result = Awaiter.GetResult awaiter
                             (continuation result).Invoke(&sm)
                         else
                             sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
@@ -661,10 +658,7 @@ module CancellableTasks =
                             __stack_fin <- __stack_yield_fin
 
                         if __stack_fin then
-                            let result =
-                                awaiter
-                                |> Awaiter.GetResult
-
+                            let result = Awaiter.GetResult awaiter
                             (continuation result).Invoke(&sm)
                         else
                             sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
