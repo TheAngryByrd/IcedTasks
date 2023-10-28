@@ -233,21 +233,21 @@ module PoolingValueTasks =
                     if __useResumableCode then
                         let mutable __stack_condition_fin = true
                         let __stack_vtask = compensation ()
+                        let mutable awaiter = Awaitable.GetAwaiter __stack_vtask
 
-                        if not __stack_vtask.IsCompleted then
-                            let mutable awaiter = __stack_vtask.GetAwaiter()
+                        if not (Awaiter.IsCompleted awaiter) then
                             let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
                             __stack_condition_fin <- __stack_yield_fin
 
-                            if __stack_condition_fin then
-                                Awaiter.GetResult awaiter
-                            else
-                                sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
+                        if __stack_condition_fin then
+                            Awaiter.GetResult awaiter
+                        else
+                            sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
 
                         __stack_condition_fin
                     else
                         let vtask = compensation ()
-                        let mutable awaiter = vtask.GetAwaiter()
+                        let mutable awaiter = Awaitable.GetAwaiter vtask
 
                         let cont =
                             PoolingValueTaskResumptionFunc<'TOverall>(fun sm ->
