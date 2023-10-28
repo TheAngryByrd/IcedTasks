@@ -42,7 +42,25 @@ module Expect =
             | _ -> failtestf "%s. Expected f to throw." message
         }
 
+    [<RequiresExplicitTypeArguments>]
+    let throwsTask<'texn when 'texn :> exn> f message =
+        throwsTAsync<'texn>
+            (f
+             >> Async.AwaitTask)
+            message
+        |> Async.StartImmediateAsTask
 
+#if !NETSTANDARD2_0
+    [<RequiresExplicitTypeArguments>]
+    let throwsValueTask<'texn when 'texn :> exn> (f: unit -> ValueTask<unit>) message =
+        throwsTAsync<'texn>
+            (f
+             >> Async.AwaitValueTask)
+            message
+        |> Async.StartImmediateAsTask
+        |> ValueTask<unit>
+
+#endif
 type Expect =
 
     static member CancellationRequested(operation: Async<_>) =

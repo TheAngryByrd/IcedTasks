@@ -451,6 +451,29 @@ module CancellableTaskTests =
                 }
 
 
+                testCaseAsync "use IAsyncDisposable propagate exception"
+                <| async {
+                    let doDispose () =
+                        task {
+                            do! Task.Yield()
+                            failwith "boom"
+                        }
+                        |> ValueTask
+
+                    do!
+                        Expect.throwsTask<Exception>
+                            (fun () ->
+                                cancellableTask {
+                                    use d = TestHelpers.makeAsyncDisposable (doDispose)
+                                    return ()
+                                }
+                                |> fun c -> c CancellationToken.None
+                            )
+                            ""
+                        |> Async.AwaitTask
+                }
+
+
                 testCaseAsync "use IAsyncDisposable cancelled"
                 <| async {
                     let data = 42

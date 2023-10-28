@@ -464,6 +464,29 @@ module ColdTaskTests =
                 }
 
 
+                testCaseAsync "use IAsyncDisposable propagate exception"
+                <| async {
+                    let doDispose () =
+                        task {
+                            do! Task.Yield()
+                            failwith "boom"
+                        }
+                        |> ValueTask
+
+                    do!
+                        Expect.throwsTask<Exception>
+                            (fun () ->
+                                coldTask {
+                                    use d = TestHelpers.makeAsyncDisposable (doDispose)
+                                    return ()
+                                }
+                                |> fun c -> c ()
+                            )
+                            ""
+                        |> Async.AwaitTask
+                }
+
+
                 testCaseAsync "use IAsyncDisposable async"
                 <| async {
                     let data = 42
