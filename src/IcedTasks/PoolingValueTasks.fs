@@ -34,7 +34,7 @@ module PoolingValueTasks =
 
     /// The extra data stored in ResumableStateMachine for tasks
     [<Struct; NoComparison; NoEquality>]
-    type PoolingValueTaskstateMachineData<'T> =
+    type PoolingValueTaskStateMachineData<'T> =
 
         [<DefaultValue(false)>]
         val mutable Result: 'T
@@ -43,20 +43,20 @@ module PoolingValueTasks =
         val mutable MethodBuilder: PoolingAsyncValueTaskMethodBuilder<'T>
 
     /// This is used by the compiler as a template for creating state machine structs
-    and PoolingValueTaskstateMachine<'TOverall> =
-        ResumableStateMachine<PoolingValueTaskstateMachineData<'TOverall>>
+    and PoolingValueTaskStateMachine<'TOverall> =
+        ResumableStateMachine<PoolingValueTaskStateMachineData<'TOverall>>
 
     /// Represents the runtime continuation of a poolingValueTask state machine created dynamically
     and PoolingValueTaskResumptionFunc<'TOverall> =
-        ResumptionFunc<PoolingValueTaskstateMachineData<'TOverall>>
+        ResumptionFunc<PoolingValueTaskStateMachineData<'TOverall>>
 
     /// Represents the runtime continuation of a poolingValueTask state machine created dynamically
     and PoolingValueTaskResumptionDynamicInfo<'TOverall> =
-        ResumptionDynamicInfo<PoolingValueTaskstateMachineData<'TOverall>>
+        ResumptionDynamicInfo<PoolingValueTaskStateMachineData<'TOverall>>
 
     /// A special compiler-recognised delegate type for specifying blocks of poolingValueTask code with access to the state machine
     and PoolingValueTaskCode<'TOverall, 'T> =
-        ResumableCode<PoolingValueTaskstateMachineData<'TOverall>, 'T>
+        ResumableCode<PoolingValueTaskStateMachineData<'TOverall>, 'T>
 
     /// <summary>
     /// Contains methods to build PoolingValueTasks using the F# computation expression syntax
@@ -315,7 +315,7 @@ module PoolingValueTasks =
         /// </summary>
         static member inline RunDynamic(code: PoolingValueTaskCode<'T, 'T>) : ValueTask<'T> =
 
-            let mutable sm = PoolingValueTaskstateMachine<'T>()
+            let mutable sm = PoolingValueTaskStateMachine<'T>()
 
             let initialResumptionFunc =
                 PoolingValueTaskResumptionFunc<'T>(fun sm -> code.Invoke(&sm))
@@ -358,7 +358,7 @@ module PoolingValueTasks =
         /// Hosts the task code in a state machine and starts the task.
         member inline _.Run(code: PoolingValueTaskCode<'T, 'T>) : ValueTask<'T> =
             if __useResumableCode then
-                __stateMachine<PoolingValueTaskstateMachineData<'T>, ValueTask<'T>>
+                __stateMachine<PoolingValueTaskStateMachineData<'T>, ValueTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
@@ -413,7 +413,7 @@ module PoolingValueTasks =
         /// </summary>
         member inline _.Run(code: PoolingValueTaskCode<'T, 'T>) : ValueTask<'T> =
             if __useResumableCode then
-                __stateMachine<PoolingValueTaskstateMachineData<'T>, ValueTask<'T>>
+                __stateMachine<PoolingValueTaskStateMachineData<'T>, ValueTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
@@ -497,7 +497,7 @@ module PoolingValueTasks =
             static member inline BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
                 (
-                    sm: byref<ResumableStateMachine<PoolingValueTaskstateMachineData<'TOverall>>>,
+                    sm: byref<ResumableStateMachine<PoolingValueTaskStateMachineData<'TOverall>>>,
                     getAwaiter: 'Awaiter,
                     continuation: ('TResult1 -> PoolingValueTaskCode<'TOverall, 'TResult2>)
                 ) : bool =
