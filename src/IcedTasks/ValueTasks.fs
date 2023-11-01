@@ -93,27 +93,29 @@ module ValueTasks =
 
     /// The extra data stored in ResumableStateMachine for tasks
     [<Struct; NoComparison; NoEquality>]
-    type ValueTaskStateMachineData<'T> =
+    type ValueTaskStateMachineData<'T, 'Builder> =
 
         [<DefaultValue(false)>]
         val mutable Result: 'T
 
         [<DefaultValue(false)>]
-        val mutable MethodBuilder: AsyncValueTaskMethodBuilder<'T>
+        val mutable MethodBuilder: 'Builder // 'BuilderAsyncValueTaskMethodBuilder<'T>
 
     /// This is used by the compiler as a template for creating state machine structs
-    and ValueTaskStateMachine<'TOverall> =
-        ResumableStateMachine<ValueTaskStateMachineData<'TOverall>>
+    and ValueTaskStateMachine<'TOverall, 'Builder> =
+        ResumableStateMachine<ValueTaskStateMachineData<'TOverall, 'Builder>>
 
     /// Represents the runtime continuation of a valueTask state machine created dynamically
-    and ValueTaskResumptionFunc<'TOverall> = ResumptionFunc<ValueTaskStateMachineData<'TOverall>>
+    and ValueTaskResumptionFunc<'TOverall, 'Builder> =
+        ResumptionFunc<ValueTaskStateMachineData<'TOverall, 'Builder>>
 
     /// Represents the runtime continuation of a valueTask state machine created dynamically
-    and ValueTaskResumptionDynamicInfo<'TOverall> =
-        ResumptionDynamicInfo<ValueTaskStateMachineData<'TOverall>>
+    and ValueTaskResumptionDynamicInfo<'TOverall, 'Builder> =
+        ResumptionDynamicInfo<ValueTaskStateMachineData<'TOverall, 'Builder>>
 
     /// A special compiler-recognised delegate type for specifying blocks of valueTask code with access to the state machine
-    and ValueTaskCode<'TOverall, 'T> = ResumableCode<ValueTaskStateMachineData<'TOverall>, 'T>
+    and ValueTaskCode<'TOverall, 'T, 'Builder> =
+        ResumableCode<ValueTaskStateMachineData<'TOverall, 'Builder>, 'T>
 
     /// <summary>
     /// Contains methods to build ValueTasks using the F# computation expression syntax
@@ -125,8 +127,8 @@ module ValueTasks =
         /// <param name="generator">The function to run</param>
         /// <returns>A valueTask that runs generator</returns>
         member inline _.Delay
-            ([<InlineIfLambdaAttribute>] generator: unit -> ValueTaskCode<'TOverall, 'T>)
-            : ValueTaskCode<'TOverall, 'T> =
+            ([<InlineIfLambdaAttribute>] generator: unit -> ValueTaskCode<'TOverall, 'T, 'Builder>)
+            : ValueTaskCode<'TOverall, 'T, 'Builder> =
             ResumableCode.Delay(fun () -> generator ())
 
 
@@ -137,7 +139,7 @@ module ValueTasks =
         /// </remarks>
         /// <returns>An ValueTask that returns ().</returns>
         [<DefaultValue>]
-        member inline _.Zero() : ValueTaskCode<'TOverall, unit> = ResumableCode.Zero()
+        member inline _.Zero() : ValueTaskCode<'TOverall, unit, 'Builder> = ResumableCode.Zero()
 
         /// <summary>Creates an computation that returns the result v.</summary>
         ///
@@ -149,8 +151,8 @@ module ValueTasks =
         /// <param name="value">The value to return from the computation.</param>
         ///
         /// <returns>An ValueTask that returns value when executed.</returns>
-        member inline _.Return(value: 'T) : ValueTaskCode<'T, 'T> =
-            ValueTaskCode<'T, _>(fun sm ->
+        member inline _.Return(value: 'T) : ValueTaskCode<'T, 'T, 'Builder> =
+            ValueTaskCode<'T, _, 'Builder>(fun sm ->
                 sm.Data.Result <- value
                 true
             )
@@ -169,9 +171,9 @@ module ValueTasks =
         /// <returns>An ValueTask that runs both of the computations sequentially.</returns>
         member inline _.Combine
             (
-                task1: ValueTaskCode<'TOverall, unit>,
-                task2: ValueTaskCode<'TOverall, 'T>
-            ) : ValueTaskCode<'TOverall, 'T> =
+                task1: ValueTaskCode<'TOverall, unit, 'Builder>,
+                task2: ValueTaskCode<'TOverall, 'T, 'Builder>
+            ) : ValueTaskCode<'TOverall, 'T, 'Builder> =
             ResumableCode.Combine(task1, task2)
 
         /// <summary>Creates an ValueTask that runs computation repeatedly
@@ -190,8 +192,8 @@ module ValueTasks =
         member inline _.While
             (
                 guard: unit -> bool,
-                computation: ValueTaskCode<'TOverall, unit>
-            ) : ValueTaskCode<'TOverall, unit> =
+                computation: ValueTaskCode<'TOverall, unit, 'Builder>
+            ) : ValueTaskCode<'TOverall, unit, 'Builder> =
             ResumableCode.While(guard, computation)
 
         /// <summary>Creates an ValueTask that runs computation and returns its result.
@@ -209,9 +211,9 @@ module ValueTasks =
         /// exception is thrown.</returns>
         member inline _.TryWith
             (
-                computation: ValueTaskCode<'TOverall, 'T>,
-                catchHandler: exn -> ValueTaskCode<'TOverall, 'T>
-            ) : ValueTaskCode<'TOverall, 'T> =
+                computation: ValueTaskCode<'TOverall, 'T, 'Builder>,
+                catchHandler: exn -> ValueTaskCode<'TOverall, 'T, 'Builder>
+            ) : ValueTaskCode<'TOverall, 'T, 'Builder> =
             ResumableCode.TryWith(computation, catchHandler)
 
         /// <summary>Creates an ValueTask that runs computation. The action compensation is executed
@@ -231,9 +233,9 @@ module ValueTasks =
         /// when an exception is raised.</returns>
         member inline _.TryFinally
             (
-                computation: ValueTaskCode<'TOverall, 'T>,
+                computation: ValueTaskCode<'TOverall, 'T, 'Builder>,
                 compensation: unit -> unit
-            ) : ValueTaskCode<'TOverall, 'T> =
+            ) : ValueTaskCode<'TOverall, 'T, 'Builder> =
             ResumableCode.TryFinally(
                 computation,
                 ResumableCode<_, _>(fun _ ->
@@ -259,8 +261,8 @@ module ValueTasks =
         member inline _.For
             (
                 sequence: seq<'T>,
-                body: 'T -> ValueTaskCode<'TOverall, unit>
-            ) : ValueTaskCode<'TOverall, unit> =
+                body: 'T -> ValueTaskCode<'TOverall, unit, 'Builder>
+            ) : ValueTaskCode<'TOverall, unit, 'Builder> =
             ResumableCode.For(sequence, body)
 
         /// <summary>Creates an ValueTask that runs computation. The action compensation is executed
@@ -280,17 +282,17 @@ module ValueTasks =
         /// when an exception is raised.</returns>
         member inline internal this.TryFinallyAsync
             (
-                computation: ValueTaskCode<'TOverall, 'T>,
-                compensation: unit -> ValueTask
-            ) : ValueTaskCode<'TOverall, 'T> =
+                computation: ValueTaskCode<'TOverall, 'T, 'Builder>,
+                compensation: unit -> 'Awaitable
+            ) : ValueTaskCode<'TOverall, 'T, 'Builder> =
             ResumableCode.TryFinallyAsync(
                 computation,
                 ResumableCode<_, _>(fun sm ->
 
                     if __useResumableCode then
                         let mutable __stack_condition_fin = true
-                        let __stack_vtask = compensation ()
-                        let mutable awaiter = Awaitable.GetAwaiter __stack_vtask
+                        // let __stack_vtask = compensation ()
+                        let mutable awaiter = compensation ()
 
                         if not (Awaiter.IsCompleted awaiter) then
                             let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
@@ -307,17 +309,17 @@ module ValueTasks =
 
                         __stack_condition_fin
                     else
-                        let vtask = compensation ()
-                        let mutable awaiter = vtask.GetAwaiter()
+                        // let vtask = compensation ()
+                        let mutable awaiter = compensation ()
 
                         let cont =
-                            ValueTaskResumptionFunc<'TOverall>(fun sm ->
+                            ValueTaskResumptionFunc<'TOverall, 'Builder>(fun sm ->
                                 Awaiter.GetResult awaiter
                                 true
                             )
 
                         // shortcut to continue immediately
-                        if awaiter.IsCompleted then
+                        if Awaiter.IsCompleted awaiter then
                             cont.Invoke(&sm)
                         else
                             sm.ResumptionDynamicInfo.ResumptionData <-
@@ -343,18 +345,20 @@ module ValueTasks =
         ///
         /// <returns>An ValueTask that binds and eventually disposes resource.</returns>
         ///
-        member inline this.Using<'Resource, 'TOverall, 'T when 'Resource :> IAsyncDisposable>
+        member inline this.Using
             (
-                resource: 'Resource,
-                binder: 'Resource -> ValueTaskCode<'TOverall, 'T>
-            ) : ValueTaskCode<'TOverall, 'T> =
+                resource: #IAsyncDisposable,
+                binder: #IAsyncDisposable -> ValueTaskCode<'TOverall, 'T, 'Builder>
+            ) : ValueTaskCode<'TOverall, 'T, 'Builder> =
             this.TryFinallyAsync(
                 (fun sm -> (binder resource).Invoke(&sm)),
                 (fun () ->
                     if not (isNull (box resource)) then
                         resource.DisposeAsync()
+                        |> Awaitable.GetAwaiter
                     else
                         ValueTask()
+                        |> Awaitable.GetAwaiter
                 )
             )
 
@@ -374,14 +378,15 @@ module ValueTasks =
         /// <summary>
         /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
         /// </summary>
-        static member inline RunDynamic(code: ValueTaskCode<'T, 'T>) : ValueTask<'T> =
+        static member inline RunDynamic(code: ValueTaskCode<'T, 'T, _>) : ValueTask<'T> =
 
-            let mutable sm = ValueTaskStateMachine<'T>()
+            let mutable sm = ValueTaskStateMachine<'T, _>()
 
-            let initialResumptionFunc = ValueTaskResumptionFunc<'T>(fun sm -> code.Invoke(&sm))
+            let initialResumptionFunc =
+                ValueTaskResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm))
 
             let resumptionInfo =
-                { new ValueTaskResumptionDynamicInfo<'T>(initialResumptionFunc) with
+                { new ValueTaskResumptionDynamicInfo<'T, _>(initialResumptionFunc) with
                     member info.MoveNext(sm) =
                         let mutable savedExn = null
 
@@ -421,9 +426,9 @@ module ValueTasks =
             MethodBuilder.get_Task (&sm.Data.MethodBuilder)
 
         /// Hosts the task code in a state machine and starts the task.
-        member inline _.Run(code: ValueTaskCode<'T, 'T>) : ValueTask<'T> =
+        member inline _.Run(code: ValueTaskCode<'T, 'T, _>) : ValueTask<'T> =
             if __useResumableCode then
-                __stateMachine<ValueTaskStateMachineData<'T>, ValueTask<'T>>
+                __stateMachine<ValueTaskStateMachineData<'T, _>, ValueTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
@@ -553,18 +558,18 @@ module ValueTasks =
             /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
             /// </summary>
             [<NoEagerConstraintApplication>]
-            static member inline BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall
+            static member inline BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall, 'Builder
                 when Awaiter<'Awaiter, 'TResult1>>
                 (
-                    sm: byref<ResumableStateMachine<ValueTaskStateMachineData<'TOverall>>>,
+                    sm: byref<ResumableStateMachine<ValueTaskStateMachineData<'TOverall, 'Builder>>>,
                     getAwaiter: 'Awaiter,
-                    continuation: ('TResult1 -> ValueTaskCode<'TOverall, 'TResult2>)
+                    continuation: ('TResult1 -> ValueTaskCode<'TOverall, 'TResult2, 'Builder>)
                 ) : bool =
 
                 let mutable awaiter = getAwaiter
 
                 let cont =
-                    (ValueTaskResumptionFunc<'TOverall>(fun sm ->
+                    (ValueTaskResumptionFunc<'TOverall, 'Builder>(fun sm ->
                         let result = Awaiter.GetResult awaiter
                         (continuation result).Invoke(&sm)
                     ))
@@ -593,14 +598,13 @@ module ValueTasks =
             /// <returns>An ValueTask that performs a monadic bind on the result
             /// of computation.</returns>
             [<NoEagerConstraintApplication>]
-            member inline _.Bind<'TResult1, 'TResult2, 'Awaiter, 'TOverall
-                when Awaiter<'Awaiter, 'TResult1>>
+            member inline _.Bind
                 (
                     getAwaiter: 'Awaiter,
-                    continuation: ('TResult1 -> ValueTaskCode<'TOverall, 'TResult2>)
-                ) : ValueTaskCode<'TOverall, 'TResult2> =
+                    continuation: ('TResult1 -> ValueTaskCode<'TOverall, 'TResult2, _>)
+                ) : ValueTaskCode<'TOverall, 'TResult2, _> =
 
-                ValueTaskCode<'TOverall, _>(fun sm ->
+                ValueTaskCode<'TOverall, 'TResult2, 'Builder>(fun sm ->
                     if __useResumableCode then
                         //-- RESUMABLE CODE START
                         // Get an awaiter from the Awaiter
@@ -629,7 +633,9 @@ module ValueTasks =
 
                             false
                     else
-                        ValueTaskBuilderBase.BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall>(
+                        failwith ""
+
+                        ValueTaskBuilderBase.BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall, 'Builder>(
                             &sm,
                             getAwaiter,
                             continuation
@@ -647,19 +653,15 @@ module ValueTasks =
             ///
             /// <returns>The input computation.</returns>
             [<NoEagerConstraintApplication>]
-            member inline this.ReturnFrom<'TResult1, 'TResult2, 'Awaiter, 'TOverall
-                when Awaiter<'Awaiter, 'TResult1>>
-                (getAwaiter: 'Awaiter)
-                : ValueTaskCode<_, _> =
+            member inline this.ReturnFrom(getAwaiter: 'Awaiter) : ValueTaskCode<_, _, 'Builder> =
                 this.Bind(getAwaiter, (fun v -> this.Return v))
 
             [<NoEagerConstraintApplication>]
-            member inline this.BindReturn<'TResult1, 'TResult2, 'Awaiter, 'TOverall
-                when Awaiter<'Awaiter, 'TResult1>>
+            member inline this.BindReturn
                 (
                     getAwaiter: 'Awaiter,
                     f
-                ) : ValueTaskCode<'TResult2, 'TResult2> =
+                ) : ValueTaskCode<'TResult2, 'TResult2, 'Builder> =
                 this.Bind(getAwaiter, (fun v -> this.Return(f v)))
 
 
@@ -704,10 +706,10 @@ module ValueTasks =
             ///
             /// <returns>An ValueTask that binds and eventually disposes resource.</returns>
             ///
-            member inline _.Using<'Resource, 'TOverall, 'T when 'Resource :> IDisposable>
+            member inline _.Using
                 (
-                    resource: 'Resource,
-                    binder: 'Resource -> ValueTaskCode<'TOverall, 'T>
+                    resource: #IDisposable,
+                    binder: #IDisposable -> ValueTaskCode<'TOverall, 'T, 'Builder>
                 ) =
                 ResumableCode.Using(resource, binder)
 

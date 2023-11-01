@@ -123,7 +123,9 @@ type MethodBuilder =
     /// <typeparam name="TStateMachine">The type of the state machine.</typeparam>
     static member inline AwaitUnsafeOnCompleted<'Builder, 'TAwaiter, 'TStateMachine
         when 'Builder: (member AwaitUnsafeOnCompleted:
-            byref<'TAwaiter> * byref<'TStateMachine> -> unit)>
+            byref<'TAwaiter> * byref<'TStateMachine> -> unit)
+        and 'TAwaiter :> ICriticalNotifyCompletion
+        and 'TStateMachine :> IAsyncStateMachine>
         (
             builder: byref<'Builder>,
             awaiter: byref<'TAwaiter>,
@@ -138,7 +140,9 @@ type MethodBuilder =
     /// <typeparam name="TAwaiter">The type of the awaiter.</typeparam>
     /// <typeparam name="TStateMachine">The type of the state machine.</typeparam>
     static member inline AwaitOnCompleted<'Builder, 'TAwaiter, 'TStateMachine
-        when 'Builder: (member AwaitOnCompleted: byref<'TAwaiter> * byref<'TStateMachine> -> unit)>
+        when 'Builder: (member AwaitOnCompleted: byref<'TAwaiter> * byref<'TStateMachine> -> unit)
+        and 'TAwaiter :> INotifyCompletion
+        and 'TStateMachine :> IAsyncStateMachine>
         (
             builder: byref<'Builder>,
             awaiter: byref<'TAwaiter>,
