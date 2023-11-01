@@ -769,20 +769,13 @@ module ColdTasks =
             member inline this.ReturnFrom(coldTask: ColdTask) = this.ReturnFrom(coldTask ())
 
 #if NETSTANDARD2_1 || NET6_0_OR_GREATER
-        type ValueTaskBuilderBase with
+        type TaskBuilderBase with
 
             member inline this.Source(coldTask: ColdTask<'T>) = (coldTask ()).GetAwaiter()
 
             member inline this.Source(coldTask: ColdTask) = (coldTask ()).GetAwaiter()
 #endif
-#if NET6_0_OR_GREATER
-        type PoolingValueTaskBuilderBase with
 
-            member inline this.Source(coldTask: ColdTask<'T>) = (coldTask ()).GetAwaiter()
-
-            member inline this.Source(coldTask: ColdTask) = (coldTask ()).GetAwaiter()
-
-#endif
     /// Contains a set of standard functional helper function
     [<RequireQualifiedAccess>]
     module ColdTask =

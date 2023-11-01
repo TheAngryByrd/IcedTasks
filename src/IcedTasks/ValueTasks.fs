@@ -91,283 +91,12 @@ module ValueTasks =
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
     open Microsoft.FSharp.Collections
 
-    /// The extra data stored in ResumableStateMachine for tasks
-    [<Struct; NoComparison; NoEquality>]
-    type ValueTaskStateMachineData<'T, 'Builder> =
-
-        [<DefaultValue(false)>]
-        val mutable Result: 'T
-
-        [<DefaultValue(false)>]
-        val mutable MethodBuilder: 'Builder // 'BuilderAsyncValueTaskMethodBuilder<'T>
-
-    /// This is used by the compiler as a template for creating state machine structs
-    and ValueTaskStateMachine<'TOverall, 'Builder> =
-        ResumableStateMachine<ValueTaskStateMachineData<'TOverall, 'Builder>>
-
-    /// Represents the runtime continuation of a valueTask state machine created dynamically
-    and ValueTaskResumptionFunc<'TOverall, 'Builder> =
-        ResumptionFunc<ValueTaskStateMachineData<'TOverall, 'Builder>>
-
-    /// Represents the runtime continuation of a valueTask state machine created dynamically
-    and ValueTaskResumptionDynamicInfo<'TOverall, 'Builder> =
-        ResumptionDynamicInfo<ValueTaskStateMachineData<'TOverall, 'Builder>>
-
-    /// A special compiler-recognised delegate type for specifying blocks of valueTask code with access to the state machine
-    and ValueTaskCode<'TOverall, 'T, 'Builder> =
-        ResumableCode<ValueTaskStateMachineData<'TOverall, 'Builder>, 'T>
-
-    /// <summary>
-    /// Contains methods to build ValueTasks using the F# computation expression syntax
-    /// </summary>
-    type ValueTaskBuilderBase() =
-
-
-        /// <summary>Creates a ValueTask that runs generator</summary>
-        /// <param name="generator">The function to run</param>
-        /// <returns>A valueTask that runs generator</returns>
-        member inline _.Delay
-            ([<InlineIfLambdaAttribute>] generator: unit -> ValueTaskCode<'TOverall, 'T, 'Builder>)
-            : ValueTaskCode<'TOverall, 'T, 'Builder> =
-            ResumableCode.Delay(fun () -> generator ())
-
-
-        /// <summary>Creates an ValueTask that just returns ().</summary>
-        /// <remarks>
-        /// The existence of this method permits the use of empty else branches in the
-        /// valueTask { ... } computation expression syntax.
-        /// </remarks>
-        /// <returns>An ValueTask that returns ().</returns>
-        [<DefaultValue>]
-        member inline _.Zero() : ValueTaskCode<'TOverall, unit, 'Builder> = ResumableCode.Zero()
-
-        /// <summary>Creates an computation that returns the result v.</summary>
-        ///
-        /// <remarks>A cancellation check is performed when the computation is executed.
-        ///
-        /// The existence of this method permits the use of return in the
-        /// valueTask { ... } computation expression syntax.</remarks>
-        ///
-        /// <param name="value">The value to return from the computation.</param>
-        ///
-        /// <returns>An ValueTask that returns value when executed.</returns>
-        member inline _.Return(value: 'T) : ValueTaskCode<'T, 'T, 'Builder> =
-            ValueTaskCode<'T, _, 'Builder>(fun sm ->
-                sm.Data.Result <- value
-                true
-            )
-
-        /// <summary>Creates an ValueTask that first runs task1
-        /// and then runs computation2, returning the result of computation2.</summary>
-        ///
-        /// <remarks>
-        ///
-        /// The existence of this method permits the use of expression sequencing in the
-        /// valueTask { ... } computation expression syntax.</remarks>
-        ///
-        /// <param name="task1">The first part of the sequenced computation.</param>
-        /// <param name="task2">The second part of the sequenced computation.</param>
-        ///
-        /// <returns>An ValueTask that runs both of the computations sequentially.</returns>
-        member inline _.Combine
-            (
-                task1: ValueTaskCode<'TOverall, unit, 'Builder>,
-                task2: ValueTaskCode<'TOverall, 'T, 'Builder>
-            ) : ValueTaskCode<'TOverall, 'T, 'Builder> =
-            ResumableCode.Combine(task1, task2)
-
-        /// <summary>Creates an ValueTask that runs computation repeatedly
-        /// until guard() becomes false.</summary>
-        ///
-        /// <remarks>
-        ///
-        /// The existence of this method permits the use of while in the
-        /// valueTask { ... } computation expression syntax.</remarks>
-        ///
-        /// <param name="guard">The function to determine when to stop executing computation.</param>
-        /// <param name="computation">The function to be executed.  Equivalent to the body
-        /// of a while expression.</param>
-        ///
-        /// <returns>An ValueTask that behaves similarly to a while loop when run.</returns>
-        member inline _.While
-            (
-                guard: unit -> bool,
-                computation: ValueTaskCode<'TOverall, unit, 'Builder>
-            ) : ValueTaskCode<'TOverall, unit, 'Builder> =
-            ResumableCode.While(guard, computation)
-
-        /// <summary>Creates an ValueTask that runs computation and returns its result.
-        /// If an exception happens then catchHandler(exn) is called and the resulting computation executed instead.</summary>
-        ///
-        /// <remarks>
-        ///
-        /// The existence of this method permits the use of try/with in the
-        /// valueTask { ... } computation expression syntax.</remarks>
-        ///
-        /// <param name="computation">The input computation.</param>
-        /// <param name="catchHandler">The function to run when computation throws an exception.</param>
-        ///
-        /// <returns>An ValueTask that executes computation and calls catchHandler if an
-        /// exception is thrown.</returns>
-        member inline _.TryWith
-            (
-                computation: ValueTaskCode<'TOverall, 'T, 'Builder>,
-                catchHandler: exn -> ValueTaskCode<'TOverall, 'T, 'Builder>
-            ) : ValueTaskCode<'TOverall, 'T, 'Builder> =
-            ResumableCode.TryWith(computation, catchHandler)
-
-        /// <summary>Creates an ValueTask that runs computation. The action compensation is executed
-        /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
-        /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
-        ///
-        /// <remarks>
-        ///
-        /// The existence of this method permits the use of try/finally in the
-        /// valueTask { ... } computation expression syntax.</remarks>
-        ///
-        /// <param name="computation">The input computation.</param>
-        /// <param name="compensation">The action to be run after computation completes or raises an
-        /// exception (including cancellation).</param>
-        ///
-        /// <returns>An ValueTask that executes computation and compensation afterwards or
-        /// when an exception is raised.</returns>
-        member inline _.TryFinally
-            (
-                computation: ValueTaskCode<'TOverall, 'T, 'Builder>,
-                compensation: unit -> unit
-            ) : ValueTaskCode<'TOverall, 'T, 'Builder> =
-            ResumableCode.TryFinally(
-                computation,
-                ResumableCode<_, _>(fun _ ->
-                    compensation ()
-                    true
-                )
-            )
-
-        /// <summary>Creates an ValueTask that enumerates the sequence seq
-        /// on demand and runs body for each element.</summary>
-        ///
-        /// <remarks>A cancellation check is performed on each iteration of the loop.
-        ///
-        /// The existence of this method permits the use of for in the
-        /// valueTask { ... } computation expression syntax.</remarks>
-        ///
-        /// <param name="sequence">The sequence to enumerate.</param>
-        /// <param name="body">A function to take an item from the sequence and create
-        /// an ValueTask.  Can be seen as the body of the for expression.</param>
-        ///
-        /// <returns>An ValueTask that will enumerate the sequence and run body
-        /// for each element.</returns>
-        member inline _.For
-            (
-                sequence: seq<'T>,
-                body: 'T -> ValueTaskCode<'TOverall, unit, 'Builder>
-            ) : ValueTaskCode<'TOverall, unit, 'Builder> =
-            ResumableCode.For(sequence, body)
-
-        /// <summary>Creates an ValueTask that runs computation. The action compensation is executed
-        /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
-        /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
-        ///
-        /// <remarks>
-        ///
-        /// The existence of this method permits the use of try/finally in the
-        /// valueTask { ... } computation expression syntax.</remarks>
-        ///
-        /// <param name="computation">The input computation.</param>
-        /// <param name="compensation">The action to be run after computation completes or raises an
-        /// exception.</param>
-        ///
-        /// <returns>An ValueTask that executes computation and compensation afterwards or
-        /// when an exception is raised.</returns>
-        member inline internal this.TryFinallyAsync
-            (
-                computation: ValueTaskCode<'TOverall, 'T, 'Builder>,
-                compensation: unit -> 'Awaitable
-            ) : ValueTaskCode<'TOverall, 'T, 'Builder> =
-            ResumableCode.TryFinallyAsync(
-                computation,
-                ResumableCode<_, _>(fun sm ->
-
-                    if __useResumableCode then
-                        let mutable __stack_condition_fin = true
-                        // let __stack_vtask = compensation ()
-                        let mutable awaiter = compensation ()
-
-                        if not (Awaiter.IsCompleted awaiter) then
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-                            __stack_condition_fin <- __stack_yield_fin
-
-                        if __stack_condition_fin then
-                            Awaiter.GetResult awaiter
-                        else
-                            MethodBuilder.AwaitUnsafeOnCompleted(
-                                &sm.Data.MethodBuilder,
-                                &awaiter,
-                                &sm
-                            )
-
-                        __stack_condition_fin
-                    else
-                        // let vtask = compensation ()
-                        let mutable awaiter = compensation ()
-
-                        let cont =
-                            ValueTaskResumptionFunc<'TOverall, 'Builder>(fun sm ->
-                                Awaiter.GetResult awaiter
-                                true
-                            )
-
-                        // shortcut to continue immediately
-                        if Awaiter.IsCompleted awaiter then
-                            cont.Invoke(&sm)
-                        else
-                            sm.ResumptionDynamicInfo.ResumptionData <-
-                                (awaiter :> ICriticalNotifyCompletion)
-
-                            sm.ResumptionDynamicInfo.ResumptionFunc <- cont
-                            false
-                )
-            )
-
-        /// <summary>Creates an ValueTask that runs binder(resource).
-        /// The action resource.DisposeAsync() is executed as this computation yields its result
-        /// or if the ValueTask exits by an exception or by cancellation.</summary>
-        ///
-        /// <remarks>
-        ///
-        /// The existence of this method permits the use of use and use! in the
-        /// valueTask { ... } computation expression syntax.</remarks>
-        ///
-        /// <param name="resource">The resource to be used and disposed.</param>
-        /// <param name="binder">The function that takes the resource and returns an asynchronous
-        /// computation.</param>
-        ///
-        /// <returns>An ValueTask that binds and eventually disposes resource.</returns>
-        ///
-        member inline this.Using
-            (
-                resource: #IAsyncDisposable,
-                binder: #IAsyncDisposable -> ValueTaskCode<'TOverall, 'T, 'Builder>
-            ) : ValueTaskCode<'TOverall, 'T, 'Builder> =
-            this.TryFinallyAsync(
-                (fun sm -> (binder resource).Invoke(&sm)),
-                (fun () ->
-                    if not (isNull (box resource)) then
-                        resource.DisposeAsync()
-                        |> Awaitable.GetAwaiter
-                    else
-                        ValueTask()
-                        |> Awaitable.GetAwaiter
-                )
-            )
-
     ///<summary>
     /// Contains methods to build ValueTasks using the F# computation expression syntax
     /// </summary>
-    type ValueTaskBuilder() =
+    type ValueTaskUnitBuilder() =
 
-        inherit ValueTaskBuilderBase()
+        inherit TaskBuilderBase()
 
         // This is the dynamic implementation - this is not used
         // for statically compiled tasks.  An executor (resumptionFuncExecutor) is
@@ -378,15 +107,15 @@ module ValueTasks =
         /// <summary>
         /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
         /// </summary>
-        static member inline RunDynamic(code: ValueTaskCode<'T, 'T, _>) : ValueTask<'T> =
+        static member inline RunDynamic(code: TaskBaseCode<'T, 'T, _>) : ValueTask<'T> =
 
-            let mutable sm = ValueTaskStateMachine<'T, _>()
+            let mutable sm = TaskBaseStateMachine<'T, _>()
 
             let initialResumptionFunc =
-                ValueTaskResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm))
+                TaskBaseResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm))
 
             let resumptionInfo =
-                { new ValueTaskResumptionDynamicInfo<'T, _>(initialResumptionFunc) with
+                { new TaskBaseResumptionDynamicInfo<'T, _>(initialResumptionFunc) with
                     member info.MoveNext(sm) =
                         let mutable savedExn = null
 
@@ -426,9 +155,9 @@ module ValueTasks =
             MethodBuilder.get_Task (&sm.Data.MethodBuilder)
 
         /// Hosts the task code in a state machine and starts the task.
-        member inline _.Run(code: ValueTaskCode<'T, 'T, _>) : ValueTask<'T> =
+        member inline _.Run(code: TaskBaseCode<'T, 'T, _>) : ValueTask<'T> =
             if __useResumableCode then
-                __stateMachine<ValueTaskStateMachineData<'T, _>, ValueTask<'T>>
+                __stateMachine<TaskBaseStateMachineData<'T, _>, ValueTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
@@ -456,83 +185,10 @@ module ValueTasks =
                         MethodBuilder.get_Task (&sm.Data.MethodBuilder)
                     ))
             else
-                ValueTaskBuilder.RunDynamic(code)
+                ValueTaskUnitBuilder.RunDynamic(code)
 
-    // /// Contains methods to build ValueTasks using the F# computation expression syntax
-    // type BackgroundValueTaskBuilder() =
-
-    //     inherit ValueTaskBuilderBase()
-
-    //     /// <summary>
-    //     /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
-    //     /// </summary>
-    //     static member inline RunDynamic(code: ValueTaskCode<'T, 'T>) : ValueTask<'T> =
-    //         // backgroundTask { .. } escapes to a background thread where necessary
-    //         // See spec of ConfigureAwait(false) at https://devblogs.microsoft.com/dotnet/configureawait-faq/
-    //         if
-    //             isNull SynchronizationContext.Current
-    //             && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
-    //         then
-    //             ValueTaskBuilder.RunDynamic(code)
-    //         else
-    //             Task.Run<'T>((fun () -> (ValueTaskBuilder.RunDynamic code).AsTask()))
-    //             |> ValueTask<'T>
-
-    //     /// <summary>
-    //     /// Hosts the task code in a state machine and starts the task, executing in the threadpool using Task.Run
-    //     /// </summary>
-    //     member inline _.Run(code: ValueTaskCode<'T, 'T>) : ValueTask<'T> =
-    //         if __useResumableCode then
-    //             __stateMachine<ValueTaskStateMachineData<'T>, ValueTask<'T>>
-    //                 (MoveNextMethodImpl<_>(fun sm ->
-    //                     //-- RESUMABLE CODE START
-    //                     __resumeAt sm.ResumptionPoint
-
-    //                     try
-    //                         let __stack_code_fin = code.Invoke(&sm)
-
-    //                         if __stack_code_fin then
-    //                             MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
-    //                     with exn ->
-    //                         MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
-
-    //                 //-- RESUMABLE CODE END
-    //                 ))
-    //                 (SetStateMachineMethodImpl<_>(fun sm state ->
-    //                     MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
-    //                 ))
-    //                 (AfterCode<_, ValueTask<'T>>(fun sm ->
-    //                     // backgroundTask { .. } escapes to a background thread where necessary
-    //                     // See spec of ConfigureAwait(false) at https://devblogs.microsoft.com/dotnet/configureawait-faq/
-    //                     if
-    //                         isNull SynchronizationContext.Current
-    //                         && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
-    //                     then
-
-    //                         sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
-
-    //                         MethodBuilder.Start(&sm.Data.MethodBuilder, &sm)
-    //                         MethodBuilder.get_Task (&sm.Data.MethodBuilder)
-    //                     else
-    //                         let sm = sm
-
-    //                         Task.Run<'T>(
-    //                             (fun () ->
-    //                                 let mutable sm = sm // host local mutable copy of contents of state machine on this thread pool thread
-
-    //                                 sm.Data.MethodBuilder <-
-    //                                     AsyncValueTaskMethodBuilder<'T>.Create()
-
-    //                                 sm.Data.MethodBuilder.Start(&sm)
-    //                                 sm.Data.MethodBuilder.Task.AsTask()
-    //                             )
-    //                         )
-    //                         |> ValueTask<'T>
-    //                 ))
-
-    //         else
-    //             BackgroundValueTaskBuilder.RunDynamic(code)
-
+        /// Specify a Source of ValueTask<_> on the real type to allow type inference to work
+        member inline _.Source(v: ValueTask<_>) = Awaitable.GetAwaiter v
 
     /// Contains the valueTask computation expression builder.
     [<AutoOpen>]
@@ -541,232 +197,28 @@ module ValueTasks =
         /// <summary>
         /// Builds a valueTask using computation expression syntax.
         /// </summary>
-        let valueTask = ValueTaskBuilder()
+        let valueTask = ValueTaskUnitBuilder()
 
         /// <summary>
         /// Builds a valueTask using computation expression syntax.
         /// </summary>
         let vTask = valueTask
 
-    /// <exclude/>
-    [<AutoOpen>]
-    module LowPriority =
-        // Low priority extensions
-        type ValueTaskBuilderBase with
-
-            /// <summary>
-            /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
-            /// </summary>
-            [<NoEagerConstraintApplication>]
-            static member inline BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall, 'Builder
-                when Awaiter<'Awaiter, 'TResult1>>
-                (
-                    sm: byref<ResumableStateMachine<ValueTaskStateMachineData<'TOverall, 'Builder>>>,
-                    getAwaiter: 'Awaiter,
-                    continuation: ('TResult1 -> ValueTaskCode<'TOverall, 'TResult2, 'Builder>)
-                ) : bool =
-
-                let mutable awaiter = getAwaiter
-
-                let cont =
-                    (ValueTaskResumptionFunc<'TOverall, 'Builder>(fun sm ->
-                        let result = Awaiter.GetResult awaiter
-                        (continuation result).Invoke(&sm)
-                    ))
-
-                // shortcut to continue immediately
-                if Awaiter.IsCompleted awaiter then
-                    cont.Invoke(&sm)
-                else
-                    sm.ResumptionDynamicInfo.ResumptionData <-
-                        (awaiter :> ICriticalNotifyCompletion)
-
-                    sm.ResumptionDynamicInfo.ResumptionFunc <- cont
-                    false
-
-            /// <summary>Creates an ValueTask that runs computation, and when
-            /// computation generates a result T, runs binder res.</summary>
-            ///
-            /// <remarks>A cancellation check is performed when the computation is executed.
-            ///
-            /// The existence of this method permits the use of let! in the
-            /// valueTask { ... } computation expression syntax.</remarks>
-            ///
-            /// <param name="getAwaiter">The computation to provide an unbound result.</param>
-            /// <param name="continuation">The function to bind the result of computation.</param>
-            ///
-            /// <returns>An ValueTask that performs a monadic bind on the result
-            /// of computation.</returns>
-            [<NoEagerConstraintApplication>]
-            member inline _.Bind
-                (
-                    getAwaiter: 'Awaiter,
-                    continuation: ('TResult1 -> ValueTaskCode<'TOverall, 'TResult2, _>)
-                ) : ValueTaskCode<'TOverall, 'TResult2, _> =
-
-                ValueTaskCode<'TOverall, 'TResult2, 'Builder>(fun sm ->
-                    if __useResumableCode then
-                        //-- RESUMABLE CODE START
-                        // Get an awaiter from the Awaiter
-                        let mutable awaiter = getAwaiter
-
-                        let mutable __stack_fin = true
-
-                        if not (Awaiter.IsCompleted awaiter) then
-                            // This will yield with __stack_yield_fin = false
-                            // This will resume with __stack_yield_fin = true
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-                            __stack_fin <- __stack_yield_fin
-
-                        if __stack_fin then
-                            let result = Awaiter.GetResult awaiter
-
-                            (continuation result).Invoke(&sm)
-                        else
-                            // sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
-
-                            MethodBuilder.AwaitUnsafeOnCompleted(
-                                &sm.Data.MethodBuilder,
-                                &awaiter,
-                                &sm
-                            )
-
-                            false
-                    else
-                        failwith ""
-
-                        ValueTaskBuilderBase.BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall, 'Builder>(
-                            &sm,
-                            getAwaiter,
-                            continuation
-                        )
-                //-- RESUMABLE CODE END
-                )
-
-
-            /// <summary>Delegates to the input computation.</summary>
-            ///
-            /// <remarks>The existence of this method permits the use of return! in the
-            /// valueTask { ... } computation expression syntax.</remarks>
-            ///
-            /// <param name="getAwaiter">The input computation.</param>
-            ///
-            /// <returns>The input computation.</returns>
-            [<NoEagerConstraintApplication>]
-            member inline this.ReturnFrom(getAwaiter: 'Awaiter) : ValueTaskCode<_, _, 'Builder> =
-                this.Bind(getAwaiter, (fun v -> this.Return v))
-
-            [<NoEagerConstraintApplication>]
-            member inline this.BindReturn
-                (
-                    getAwaiter: 'Awaiter,
-                    f
-                ) : ValueTaskCode<'TResult2, 'TResult2, 'Builder> =
-                this.Bind(getAwaiter, (fun v -> this.Return(f v)))
-
-
-            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
-            ///
-            /// <remarks>This is the identify function.</remarks>
-            ///
-            /// <returns>'Awaiter</returns>
-            [<NoEagerConstraintApplication>]
-            member inline _.Source<'TResult1, 'TResult2, 'Awaiter, 'TOverall
-                when Awaiter<'Awaiter, 'TResult1>>
-                (getAwaiter: 'Awaiter)
-                : 'Awaiter =
-                getAwaiter
-
-
-            /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>
-            ///
-            /// <remarks>This turns a ^Awaitable into a 'Awaiter.</remarks>
-            ///
-            /// <returns>'Awaiter</returns>
-            [<NoEagerConstraintApplication>]
-            member inline _.Source<'Awaitable, 'TResult1, 'TResult2, 'Awaiter, 'TOverall
-                when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
-                (task: 'Awaitable)
-                : 'Awaiter =
-                Awaitable.GetAwaiter task
-
-
-            /// <summary>Creates an ValueTask that runs binder(resource).
-            /// The action resource.Dispose() is executed as this computation yields its result
-            /// or if the ValueTask exits by an exception or by cancellation.</summary>
-            ///
-            /// <remarks>
-            ///
-            /// The existence of this method permits the use of use and use! in the
-            /// valueTask { ... } computation expression syntax.</remarks>
-            ///
-            /// <param name="resource">The resource to be used and disposed.</param>
-            /// <param name="binder">The function that takes the resource and returns an asynchronous
-            /// computation.</param>
-            ///
-            /// <returns>An ValueTask that binds and eventually disposes resource.</returns>
-            ///
-            member inline _.Using
-                (
-                    resource: #IDisposable,
-                    binder: #IDisposable -> ValueTaskCode<'TOverall, 'T, 'Builder>
-                ) =
-                ResumableCode.Using(resource, binder)
-
-    /// <exclude/>
-    [<AutoOpen>]
-    module HighPriority =
-
-        // High priority extensions
-        type ValueTaskBuilderBase with
-
-            /// <summary>Allows the computation expression to turn other types into other types</summary>
-            ///
-            /// <remarks>This is the identify function for For binds.</remarks>
-            ///
-            /// <returns>IEnumerable</returns>
-            member inline _.Source(s: #seq<_>) : #seq<_> = s
-
-            /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>
-            ///
-            /// <remarks>This turns a Task&lt;'T&gt; into a 'Awaiter.</remarks>
-            ///
-            /// <returns>'Awaiter</returns>
-            member inline _.Source(task: Task<'T>) = task.GetAwaiter()
-
-            /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>
-            ///
-            /// <remarks>This turns a Async&lt;'T&gt; into a 'Awaiter.</remarks>
-            ///
-            /// <returns>'Awaiter</returns>
-            member inline this.Source(computation: Async<'TResult1>) =
-                this.Source(Async.StartImmediateAsTask(computation))
-
-
-            /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>
-            ///
-            /// <remarks>This turns a Async&lt;'T&gt; into a 'Awaiter.</remarks>
-            ///
-            /// <returns>'Awaiter</returns>
-            member inline this.Source(awaiter: TaskAwaiter<'TResult1>) = awaiter
-
     /// Contains a set of standard functional helper function
     [<RequireQualifiedAccess>]
     module ValueTask =
-        open System.Threading.Tasks
 
         /// <summary>Lifts an item to a ValueTask.</summary>
         /// <param name="item">The item to be the result of the ValueTask.</param>
         /// <returns>A ValueTask with the item as the result.</returns>
         let inline singleton (item: 'item) : ValueTask<'item> = ValueTask<'item> item
 
-
         /// <summary>Allows chaining of ValueTasks.</summary>
         /// <param name="binder">The continuation.</param>
         /// <param name="cTask">The value.</param>
         /// <returns>The result of the binder.</returns>
         let inline bind
-            ([<InlineIfLambda>] binder: 'input -> ValueTask<'output>)
+            ([<InlineIfLambda>] (binder: 'input -> ValueTask<'output>))
             (cTask: ValueTask<'input>)
             =
             valueTask {
@@ -855,7 +307,7 @@ module ValueTasks =
     [<AutoOpen>]
     module MergeSourcesExtensions =
 
-        type ValueTaskBuilderBase with
+        type TaskBuilderBase with
 
             [<NoEagerConstraintApplication>]
             member inline this.MergeSources<'TResult1, 'TResult2, 'Awaiter1, 'Awaiter2

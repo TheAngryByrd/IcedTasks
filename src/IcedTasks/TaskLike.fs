@@ -66,16 +66,15 @@ type Awaitable =
 
 /// <summary>Represents a builder for asynchronous methods.</summary>
 type MethodBuilder =
+
     /// <summary>Marks the task as successfully completed.</summary>
-    /// <param name="result">The result to use to complete the task.</param>
     static member inline SetResult<'Builder, 'TResult
-        when 'Builder: (member SetResult: 'TResult -> unit)>
+        when 'Builder: (member SetResult: unit -> unit)>
         (
             builder: byref<'Builder>,
-            result: 'TResult
+            result: unit
         ) =
         builder.SetResult(result)
-
 
     /// <summary>Marks the task as failed and binds the specified exception to the task.</summary>
     /// <param name="ex">The exception to bind to the task.</param>
@@ -149,3 +148,17 @@ type MethodBuilder =
             stateMachine: byref<'TStateMachine>
         ) =
         builder.AwaitOnCompleted(&awaiter, &stateMachine)
+
+[<AutoOpen>]
+module MethodBuilderOverloads =
+    type MethodBuilder with
+
+        /// <summary>Marks the task as successfully completed.</summary>
+        /// <param name="result">The result to use to complete the task.</param>
+        static member inline SetResult<'Builder, 'TResult
+            when 'Builder: (member SetResult: 'TResult -> unit)>
+            (
+                builder: byref<'Builder>,
+                result: 'TResult
+            ) =
+            builder.SetResult(result)
