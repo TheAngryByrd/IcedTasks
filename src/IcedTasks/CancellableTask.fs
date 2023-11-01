@@ -994,7 +994,6 @@ module CancellableTasks =
         /// <returns>A CancellableTask with the item as the result.</returns>
         let inline singleton (item: 'item) : CancellableTask<'item> = fun _ -> Task.FromResult(item)
 
-
         /// <summary>Allows chaining of CancellableTasks.</summary>
         /// <param name="binder">The continuation.</param>
         /// <param name="cTask">The value.</param>
@@ -1148,6 +1147,42 @@ module CancellableTasks =
 
         let inline internal getAwaiter ([<InlineIfLambda>] ctask: CancellableTask<_>) =
             fun ct -> (ctask ct).GetAwaiter()
+
+        [<RequiresExplicitTypeArguments>]
+        let inline ignore<'a> ([<InlineIfLambda>] ctask: CancellableTask<'a>) = toUnit ctask
+
+        let inline start (ct: CancellationToken) ([<InlineIfLambda>] ctask: CancellableTask<_>) =
+            ctask ct
+
+        let inline withCancellationToken
+            (explicitToken: CancellationToken)
+            ([<InlineIfLambda>] ctask: CancellableTask<_>)
+            =
+            cancellableTask {
+                let! implicitToken = getCancellationToken ()
+
+                use cts =
+                    CancellationTokenSource.CreateLinkedTokenSource(explicitToken, implicitToken)
+
+                return! ctask cts.Token
+            }
+
+        let inline withCancellationTokens
+            (explicitTokens: CancellationToken seq)
+            ([<InlineIfLambda>] ctask: CancellableTask<_>)
+            =
+            cancellableTask {
+                let! implicitToken = getCancellationToken ()
+                let col = ArrayCollector()
+                col.Add implicitToken
+
+                use cts =
+                    CancellationTokenSource.CreateLinkedTokenSource(
+                        col.AddManyAndClose explicitTokens
+                    )
+
+                return! ctask cts.Token
+            }
 
     /// <exclude />
     [<AutoOpen>]

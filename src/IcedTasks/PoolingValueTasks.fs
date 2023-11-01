@@ -3,8 +3,6 @@ namespace IcedTasks
 
 open System.Threading.Tasks
 
-#if NET6_0_OR_GREATER
-
 
 // Task builder for F# that compiles to allocation-free paths for synchronous code.
 //
@@ -39,8 +37,17 @@ module PoolingValueTasks =
         [<DefaultValue(false)>]
         val mutable Result: 'T
 
+
         [<DefaultValue(false)>]
+#if NET6_0_OR_GREATER
         val mutable MethodBuilder: PoolingAsyncValueTaskMethodBuilder<'T>
+#else
+#if NETSTANDARD2_1
+        val mutable MethodBuilder: AsyncValueTaskMethodBuilder<'T>
+#else
+        val mutable MethodBuilder: AsyncTaskMethodBuilder<'T>
+#endif
+#endif
 
     /// This is used by the compiler as a template for creating state machine structs
     and PoolingValueTaskStateMachine<'TOverall> =
@@ -206,6 +213,7 @@ module PoolingValueTasks =
             ) : PoolingValueTaskCode<'TOverall, unit> =
             ResumableCode.For(sequence, body)
 
+#if NETSTANDARD2_1 || NET6_0_OR_GREATER
         /// <summary>Creates an ValueTask that runs computation. The action compensation is executed
         /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
         /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
@@ -296,7 +304,7 @@ module PoolingValueTasks =
                         ValueTask()
                 )
             )
-
+#endif
     ///<summary>
     /// Contains methods to build PoolingValueTasks using the F# computation expression syntax
     /// </summary>
@@ -313,7 +321,7 @@ module PoolingValueTasks =
         /// <summary>
         /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
         /// </summary>
-        static member inline RunDynamic(code: PoolingValueTaskCode<'T, 'T>) : ValueTask<'T> =
+        static member inline RunDynamic(code: PoolingValueTaskCode<'T, 'T>) =
 
             let mutable sm = PoolingValueTaskStateMachine<'T>()
 
@@ -351,14 +359,23 @@ module PoolingValueTasks =
                 }
 
             sm.ResumptionDynamicInfo <- resumptionInfo
+
+#if NET6_0_OR_GREATER
             sm.Data.MethodBuilder <- PoolingAsyncValueTaskMethodBuilder<'T>.Create()
+#else
+#if NETSTANDARD2_1
+            sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
+#else
+            sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
+#endif
+#endif
             sm.Data.MethodBuilder.Start(&sm)
             sm.Data.MethodBuilder.Task
 
         /// Hosts the task code in a state machine and starts the task.
-        member inline _.Run(code: PoolingValueTaskCode<'T, 'T>) : ValueTask<'T> =
+        member inline _.Run(code: PoolingValueTaskCode<'T, 'T>) =
             if __useResumableCode then
-                __stateMachine<PoolingValueTaskStateMachineData<'T>, ValueTask<'T>>
+                __stateMachine<PoolingValueTaskStateMachineData<'T>, _>
                     (MoveNextMethodImpl<_>(fun sm ->
                         //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
@@ -381,42 +398,34 @@ module PoolingValueTasks =
                         sm.Data.MethodBuilder.SetStateMachine(state)
                     ))
                     (AfterCode<_, _>(fun sm ->
+#if NET6_0_OR_GREATER
                         sm.Data.MethodBuilder <- PoolingAsyncValueTaskMethodBuilder<'T>.Create()
+#else
+#if NETSTANDARD2_1
+                        sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
+#else
+                        sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
+#endif
+#endif
                         sm.Data.MethodBuilder.Start(&sm)
                         sm.Data.MethodBuilder.Task
                     ))
             else
                 PoolingValueTaskBuilder.RunDynamic(code)
 
-    /// Contains methods to build PoolingValueTasks using the F# computation expression syntax
-    type BackgroundPoolingValueTaskBuilder() =
+#if NETSTANDARD2_1 || NET6_0_OR_GREATER
 
+    type TaskBuilder2() =
         inherit PoolingValueTaskBuilderBase()
 
-        /// <summary>
-        /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
-        /// </summary>
-        static member inline RunDynamic(code: PoolingValueTaskCode<'T, 'T>) : ValueTask<'T> =
-            // backgroundTask { .. } escapes to a background thread where necessary
-            // See spec of ConfigureAwait(false) at https://devblogs.microsoft.com/dotnet/configureawait-faq/
-            if
-                isNull SynchronizationContext.Current
-                && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
-            then
-                PoolingValueTaskBuilder.RunDynamic(code)
-            else
-                Task.Run<'T>((fun () -> (PoolingValueTaskBuilder.RunDynamic code).AsTask()))
-                |> ValueTask<'T>
-
-        /// <summary>
-        /// Hosts the task code in a state machine and starts the task, executing in the threadpool using Task.Run
-        /// </summary>
-        member inline _.Run(code: PoolingValueTaskCode<'T, 'T>) : ValueTask<'T> =
+        /// Hosts the task code in a state machine and starts the task.
+        member inline _.Run(code: PoolingValueTaskCode<'T, 'T>) =
             if __useResumableCode then
-                __stateMachine<PoolingValueTaskStateMachineData<'T>, ValueTask<'T>>
+                __stateMachine<PoolingValueTaskStateMachineData<'T>, _>
                     (MoveNextMethodImpl<_>(fun sm ->
                         //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
+                        let mutable __stack_exn: Exception = null
 
                         try
                             let __stack_code_fin = code.Invoke(&sm)
@@ -424,65 +433,129 @@ module PoolingValueTasks =
                             if __stack_code_fin then
                                 sm.Data.MethodBuilder.SetResult(sm.Data.Result)
                         with exn ->
-                            sm.Data.MethodBuilder.SetException exn
-
+                            __stack_exn <- exn
+                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
+                        match __stack_exn with
+                        | null -> ()
+                        | exn -> sm.Data.MethodBuilder.SetException exn
                     //-- RESUMABLE CODE END
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         sm.Data.MethodBuilder.SetStateMachine(state)
                     ))
-                    (AfterCode<_, ValueTask<'T>>(fun sm ->
-                        // backgroundTask { .. } escapes to a background thread where necessary
-                        // See spec of ConfigureAwait(false) at https://devblogs.microsoft.com/dotnet/configureawait-faq/
-                        if
-                            isNull SynchronizationContext.Current
-                            && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
-                        then
-
-                            sm.Data.MethodBuilder <-
-                                PoolingAsyncValueTaskMethodBuilder<'T>.Create()
-
-                            sm.Data.MethodBuilder.Start(&sm)
-                            sm.Data.MethodBuilder.Task
-                        else
-                            let sm = sm
-
-                            Task.Run<'T>(
-                                (fun () ->
-                                    let mutable sm = sm // host local mutable copy of contents of state machine on this thread pool thread
-
-                                    sm.Data.MethodBuilder <-
-                                        PoolingAsyncValueTaskMethodBuilder<'T>.Create()
-
-                                    sm.Data.MethodBuilder.Start(&sm)
-                                    sm.Data.MethodBuilder.Task.AsTask()
-                                )
-                            )
-                            |> ValueTask<'T>
+                    (AfterCode<_, _>(fun sm ->
+#if NET6_0_OR_GREATER
+                        sm.Data.MethodBuilder <- PoolingAsyncValueTaskMethodBuilder<'T>.Create()
+#else
+#if NETSTANDARD2_1
+                        sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
+#endif
+#endif
+                        sm.Data.MethodBuilder.Start(&sm)
+                        sm.Data.MethodBuilder.Task.AsTask()
                     ))
-
             else
-                BackgroundPoolingValueTaskBuilder.RunDynamic(code)
+                PoolingValueTaskBuilder.RunDynamic(code).AsTask()
+#endif
+    // /// Contains methods to build PoolingValueTasks using the F# computation expression syntax
+    // type BackgroundPoolingValueTaskBuilder() =
+
+    //     inherit PoolingValueTaskBuilderBase()
+
+    //     /// <summary>
+    //     /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
+    //     /// </summary>
+    //     static member inline RunDynamic(code: PoolingValueTaskCode<'T, 'T>) : ValueTask<'T> =
+    //         // backgroundTask { .. } escapes to a background thread where necessary
+    //         // See spec of ConfigureAwait(false) at https://devblogs.microsoft.com/dotnet/configureawait-faq/
+    //         if
+    //             isNull SynchronizationContext.Current
+    //             && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
+    //         then
+    //             PoolingValueTaskBuilder.RunDynamic(code)
+    //         else
+    //             Task.Run<'T>((fun () -> (PoolingValueTaskBuilder.RunDynamic code).AsTask()))
+    //             |> ValueTask<'T>
+
+    //     /// <summary>
+    //     /// Hosts the task code in a state machine and starts the task, executing in the threadpool using Task.Run
+    //     /// </summary>
+    //     member inline _.Run(code: PoolingValueTaskCode<'T, 'T>) : ValueTask<'T> =
+    //         if __useResumableCode then
+    //             __stateMachine<PoolingValueTaskStateMachineData<'T>, ValueTask<'T>>
+    //                 (MoveNextMethodImpl<_>(fun sm ->
+    //                     //-- RESUMABLE CODE START
+    //                     __resumeAt sm.ResumptionPoint
+
+    //                     try
+    //                         let __stack_code_fin = code.Invoke(&sm)
+
+    //                         if __stack_code_fin then
+    //                             sm.Data.MethodBuilder.SetResult(sm.Data.Result)
+    //                     with exn ->
+    //                         sm.Data.MethodBuilder.SetException exn
+
+    //                 //-- RESUMABLE CODE END
+    //                 ))
+    //                 (SetStateMachineMethodImpl<_>(fun sm state ->
+    //                     sm.Data.MethodBuilder.SetStateMachine(state)
+    //                 ))
+    //                 (AfterCode<_, ValueTask<'T>>(fun sm ->
+    //                     // backgroundTask { .. } escapes to a background thread where necessary
+    //                     // See spec of ConfigureAwait(false) at https://devblogs.microsoft.com/dotnet/configureawait-faq/
+    //                     if
+    //                         isNull SynchronizationContext.Current
+    //                         && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
+    //                     then
+
+    //                         sm.Data.MethodBuilder <-
+    //                             PoolingAsyncValueTaskMethodBuilder<'T>.Create()
+
+    //                         sm.Data.MethodBuilder.Start(&sm)
+    //                         sm.Data.MethodBuilder.Task
+    //                     else
+    //                         let sm = sm
+
+    //                         Task.Run<'T>(
+    //                             (fun () ->
+    //                                 let mutable sm = sm // host local mutable copy of contents of state machine on this thread pool thread
+
+    //                                 sm.Data.MethodBuilder <-
+    //                                     PoolingAsyncValueTaskMethodBuilder<'T>.Create()
+
+    //                                 sm.Data.MethodBuilder.Start(&sm)
+    //                                 sm.Data.MethodBuilder.Task.AsTask()
+    //                             )
+    //                         )
+    //                         |> ValueTask<'T>
+    //                 ))
+
+    //         else
+    //             BackgroundPoolingValueTaskBuilder.RunDynamic(code)
 
 
     /// Contains the poolingValueTask computation expression builder.
     [<AutoOpen>]
     module ValueTaskBuilder =
 
-        /// <summary>
-        /// Builds a poolingValueTask using computation expression syntax.
-        /// </summary>
-        let poolingValueTask = PoolingValueTaskBuilder()
 
-        /// <summary>
-        /// Builds a poolingValueTask using computation expression syntax.
-        /// </summary>
-        let pvTask = poolingValueTask
+#if NET6_0_OR_GREATER ||NETSTANDARD2_1
+        let valueTask = PoolingValueTaskBuilder()
+        let poolingValueTask = valueTask
+        let task = TaskBuilder2()
 
-        /// <summary>
-        /// Builds a poolingValueTask using computation expression syntax which switches to execute on a background thread if not already doing so.
-        /// </summary>
-        let backgroundPoolingValueTask = BackgroundPoolingValueTaskBuilder()
+        let foo = task { return "lol" }
+#else
+        let task = PoolingValueTaskBuilder()
+
+        let foo = task { return "lol" }
+#endif
+
+
+    // /// <summary>
+    // /// Builds a poolingValueTask using computation expression syntax which switches to execute on a background thread if not already doing so.
+    // /// </summary>
+    // let backgroundPoolingValueTask = BackgroundPoolingValueTaskBuilder()
 
     /// <exclude/>
     [<AutoOpen>]
@@ -682,6 +755,7 @@ module PoolingValueTasks =
             /// <returns>'Awaiter</returns>
             member inline this.Source(awaiter: TaskAwaiter<'TResult1>) = awaiter
 
+#if NETSTANDARD2_1 || NET6_0_OR_GREATER
     /// Contains a set of standard functional helper function
     [<RequireQualifiedAccess>]
     module ValueTask =
@@ -805,5 +879,4 @@ module PoolingValueTasks =
                     return leftResult, rightResult
                 }
                 |> Awaitable.GetAwaiter
-
 #endif

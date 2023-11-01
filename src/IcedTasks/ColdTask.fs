@@ -775,14 +775,12 @@ module ColdTasks =
 
             member inline this.Source(coldTask: ColdTask) = (coldTask ()).GetAwaiter()
 #endif
-#if NET6_0_OR_GREATER
         type PoolingValueTaskBuilderBase with
 
             member inline this.Source(coldTask: ColdTask<'T>) = (coldTask ()).GetAwaiter()
 
             member inline this.Source(coldTask: ColdTask) = (coldTask ()).GetAwaiter()
 
-#endif
     /// Contains a set of standard functional helper function
     [<RequireQualifiedAccess>]
     module ColdTask =

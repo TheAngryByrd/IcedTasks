@@ -1117,6 +1117,41 @@ module CancellableValueTasks =
             fun ct -> (ctask ct).GetAwaiter()
 
 
+        [<RequiresExplicitTypeArguments>]
+        let inline ignore<'a> ([<InlineIfLambda>] ctask: CancellableValueTask<'a>) = toUnit ctask
+
+        let inline start
+            (ct: CancellationToken)
+            ([<InlineIfLambda>] ctask: CancellableValueTask<_>)
+            =
+            ctask ct
+
+        let inline withCancellationToken
+            (explicitToken: CancellationToken)
+            ([<InlineIfLambda>] ctask: CancellableValueTask<_>)
+            : CancellableValueTask<_> =
+            cancellableValueTask {
+                let! implicitToken = getCancellationToken ()
+
+                use cts =
+                    CancellationTokenSource.CreateLinkedTokenSource(explicitToken, implicitToken)
+
+                return! ctask cts.Token
+            }
+
+        let inline withCancellationTokens
+            (explicitTokens: CancellationToken seq)
+            ([<InlineIfLambda>] ctask: CancellableValueTask<_>)
+            =
+            cancellableValueTask {
+                let! implicitToken = getCancellationToken ()
+                let col = ArrayCollector()
+                col.Add implicitToken
+                col.AddMany explicitTokens
+                use cts = CancellationTokenSource.CreateLinkedTokenSource(col.Close())
+                return! ctask cts.Token
+            }
+
     /// <exclude />
     [<AutoOpen>]
     module MergeSourcesExtensions =
