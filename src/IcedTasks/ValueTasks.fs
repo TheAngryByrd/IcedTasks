@@ -299,7 +299,11 @@ module ValueTasks =
                         if __stack_condition_fin then
                             Awaiter.GetResult awaiter
                         else
-                            sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
+                            MethodBuilder.AwaitUnsafeOnCompleted(
+                                &sm.Data.MethodBuilder,
+                                &awaiter,
+                                &sm
+                            )
 
                         __stack_condition_fin
                     else
@@ -386,30 +390,35 @@ module ValueTasks =
                             let step = info.ResumptionFunc.Invoke(&sm)
 
                             if step then
-                                sm.Data.MethodBuilder.SetResult(sm.Data.Result)
+                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
                             else
                                 let mutable awaiter =
                                     sm.ResumptionDynamicInfo.ResumptionData
                                     :?> ICriticalNotifyCompletion
 
                                 assert not (isNull awaiter)
-                                sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
+
+                                MethodBuilder.AwaitUnsafeOnCompleted(
+                                    &sm.Data.MethodBuilder,
+                                    &awaiter,
+                                    &sm
+                                )
 
                         with exn ->
                             savedExn <- exn
                         // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
                         match savedExn with
                         | null -> ()
-                        | exn -> sm.Data.MethodBuilder.SetException exn
+                        | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
 
                     member _.SetStateMachine(sm, state) =
-                        sm.Data.MethodBuilder.SetStateMachine(state)
+                        MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
                 }
 
             sm.ResumptionDynamicInfo <- resumptionInfo
             sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
-            sm.Data.MethodBuilder.Start(&sm)
-            sm.Data.MethodBuilder.Task
+            MethodBuilder.Start(&sm.Data.MethodBuilder, &sm)
+            MethodBuilder.get_Task (&sm.Data.MethodBuilder)
 
         /// Hosts the task code in a state machine and starts the task.
         member inline _.Run(code: ValueTaskCode<'T, 'T>) : ValueTask<'T> =
@@ -424,100 +433,100 @@ module ValueTasks =
                             let __stack_code_fin = code.Invoke(&sm)
 
                             if __stack_code_fin then
-                                sm.Data.MethodBuilder.SetResult(sm.Data.Result)
+                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
                         with exn ->
                             __stack_exn <- exn
                         // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
                         match __stack_exn with
                         | null -> ()
-                        | exn -> sm.Data.MethodBuilder.SetException exn
+                        | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
                     //-- RESUMABLE CODE END
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
-                        sm.Data.MethodBuilder.SetStateMachine(state)
+                        MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
                     ))
                     (AfterCode<_, _>(fun sm ->
                         sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
-                        sm.Data.MethodBuilder.Start(&sm)
-                        sm.Data.MethodBuilder.Task
+                        MethodBuilder.Start(&sm.Data.MethodBuilder, &sm)
+                        MethodBuilder.get_Task (&sm.Data.MethodBuilder)
                     ))
             else
                 ValueTaskBuilder.RunDynamic(code)
 
-    /// Contains methods to build ValueTasks using the F# computation expression syntax
-    type BackgroundValueTaskBuilder() =
+    // /// Contains methods to build ValueTasks using the F# computation expression syntax
+    // type BackgroundValueTaskBuilder() =
 
-        inherit ValueTaskBuilderBase()
+    //     inherit ValueTaskBuilderBase()
 
-        /// <summary>
-        /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
-        /// </summary>
-        static member inline RunDynamic(code: ValueTaskCode<'T, 'T>) : ValueTask<'T> =
-            // backgroundTask { .. } escapes to a background thread where necessary
-            // See spec of ConfigureAwait(false) at https://devblogs.microsoft.com/dotnet/configureawait-faq/
-            if
-                isNull SynchronizationContext.Current
-                && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
-            then
-                ValueTaskBuilder.RunDynamic(code)
-            else
-                Task.Run<'T>((fun () -> (ValueTaskBuilder.RunDynamic code).AsTask()))
-                |> ValueTask<'T>
+    //     /// <summary>
+    //     /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
+    //     /// </summary>
+    //     static member inline RunDynamic(code: ValueTaskCode<'T, 'T>) : ValueTask<'T> =
+    //         // backgroundTask { .. } escapes to a background thread where necessary
+    //         // See spec of ConfigureAwait(false) at https://devblogs.microsoft.com/dotnet/configureawait-faq/
+    //         if
+    //             isNull SynchronizationContext.Current
+    //             && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
+    //         then
+    //             ValueTaskBuilder.RunDynamic(code)
+    //         else
+    //             Task.Run<'T>((fun () -> (ValueTaskBuilder.RunDynamic code).AsTask()))
+    //             |> ValueTask<'T>
 
-        /// <summary>
-        /// Hosts the task code in a state machine and starts the task, executing in the threadpool using Task.Run
-        /// </summary>
-        member inline _.Run(code: ValueTaskCode<'T, 'T>) : ValueTask<'T> =
-            if __useResumableCode then
-                __stateMachine<ValueTaskStateMachineData<'T>, ValueTask<'T>>
-                    (MoveNextMethodImpl<_>(fun sm ->
-                        //-- RESUMABLE CODE START
-                        __resumeAt sm.ResumptionPoint
+    //     /// <summary>
+    //     /// Hosts the task code in a state machine and starts the task, executing in the threadpool using Task.Run
+    //     /// </summary>
+    //     member inline _.Run(code: ValueTaskCode<'T, 'T>) : ValueTask<'T> =
+    //         if __useResumableCode then
+    //             __stateMachine<ValueTaskStateMachineData<'T>, ValueTask<'T>>
+    //                 (MoveNextMethodImpl<_>(fun sm ->
+    //                     //-- RESUMABLE CODE START
+    //                     __resumeAt sm.ResumptionPoint
 
-                        try
-                            let __stack_code_fin = code.Invoke(&sm)
+    //                     try
+    //                         let __stack_code_fin = code.Invoke(&sm)
 
-                            if __stack_code_fin then
-                                sm.Data.MethodBuilder.SetResult(sm.Data.Result)
-                        with exn ->
-                            sm.Data.MethodBuilder.SetException exn
+    //                         if __stack_code_fin then
+    //                             MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
+    //                     with exn ->
+    //                         MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
 
-                    //-- RESUMABLE CODE END
-                    ))
-                    (SetStateMachineMethodImpl<_>(fun sm state ->
-                        sm.Data.MethodBuilder.SetStateMachine(state)
-                    ))
-                    (AfterCode<_, ValueTask<'T>>(fun sm ->
-                        // backgroundTask { .. } escapes to a background thread where necessary
-                        // See spec of ConfigureAwait(false) at https://devblogs.microsoft.com/dotnet/configureawait-faq/
-                        if
-                            isNull SynchronizationContext.Current
-                            && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
-                        then
+    //                 //-- RESUMABLE CODE END
+    //                 ))
+    //                 (SetStateMachineMethodImpl<_>(fun sm state ->
+    //                     MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
+    //                 ))
+    //                 (AfterCode<_, ValueTask<'T>>(fun sm ->
+    //                     // backgroundTask { .. } escapes to a background thread where necessary
+    //                     // See spec of ConfigureAwait(false) at https://devblogs.microsoft.com/dotnet/configureawait-faq/
+    //                     if
+    //                         isNull SynchronizationContext.Current
+    //                         && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
+    //                     then
 
-                            sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
+    //                         sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
 
-                            sm.Data.MethodBuilder.Start(&sm)
-                            sm.Data.MethodBuilder.Task
-                        else
-                            let sm = sm
+    //                         MethodBuilder.Start(&sm.Data.MethodBuilder, &sm)
+    //                         MethodBuilder.get_Task (&sm.Data.MethodBuilder)
+    //                     else
+    //                         let sm = sm
 
-                            Task.Run<'T>(
-                                (fun () ->
-                                    let mutable sm = sm // host local mutable copy of contents of state machine on this thread pool thread
+    //                         Task.Run<'T>(
+    //                             (fun () ->
+    //                                 let mutable sm = sm // host local mutable copy of contents of state machine on this thread pool thread
 
-                                    sm.Data.MethodBuilder <-
-                                        AsyncValueTaskMethodBuilder<'T>.Create()
+    //                                 sm.Data.MethodBuilder <-
+    //                                     AsyncValueTaskMethodBuilder<'T>.Create()
 
-                                    sm.Data.MethodBuilder.Start(&sm)
-                                    sm.Data.MethodBuilder.Task.AsTask()
-                                )
-                            )
-                            |> ValueTask<'T>
-                    ))
+    //                                 sm.Data.MethodBuilder.Start(&sm)
+    //                                 sm.Data.MethodBuilder.Task.AsTask()
+    //                             )
+    //                         )
+    //                         |> ValueTask<'T>
+    //                 ))
 
-            else
-                BackgroundValueTaskBuilder.RunDynamic(code)
+    //         else
+    //             BackgroundValueTaskBuilder.RunDynamic(code)
 
 
     /// Contains the valueTask computation expression builder.
@@ -533,11 +542,6 @@ module ValueTasks =
         /// Builds a valueTask using computation expression syntax.
         /// </summary>
         let vTask = valueTask
-
-        /// <summary>
-        /// Builds a valueTask using computation expression syntax which switches to execute on a background thread if not already doing so.
-        /// </summary>
-        let backgroundValueTask = BackgroundValueTaskBuilder()
 
     /// <exclude/>
     [<AutoOpen>]
@@ -615,7 +619,14 @@ module ValueTasks =
 
                             (continuation result).Invoke(&sm)
                         else
-                            sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
+                            // sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
+
+                            MethodBuilder.AwaitUnsafeOnCompleted(
+                                &sm.Data.MethodBuilder,
+                                &awaiter,
+                                &sm
+                            )
+
                             false
                     else
                         ValueTaskBuilderBase.BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall>(
