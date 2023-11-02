@@ -24,13 +24,11 @@ namespace IcedTasks
 module ValueTasksUnit =
     open System
     open System.Runtime.CompilerServices
-    open System.Threading
     open System.Threading.Tasks
     open Microsoft.FSharp.Core
     open Microsoft.FSharp.Core.CompilerServices
     open Microsoft.FSharp.Core.CompilerServices.StateMachineHelpers
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
-    open Microsoft.FSharp.Collections
 
     ///<summary>
     /// Contains methods to build ValueTasks using the F# computation expression syntax
@@ -128,6 +126,17 @@ module ValueTasksUnit =
             else
                 ValueTaskUnitBuilder.RunDynamic(code)
 
+        /// Specify a Source of ValueTask on the real type to allow type inference to work
+        member inline _.Source(v: ValueTask) = Awaitable.GetAwaiter v
+
+        member inline this.MergeSources(left, right) =
+            this.Run(
+                this.Bind(
+                    left,
+                    fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+                )
+            )
+            |> Awaitable.GetAwaiter
 
     /// Contains the valueTask computation expression builder.
     [<AutoOpen>]
@@ -142,29 +151,5 @@ module ValueTasksUnit =
         /// Builds a valueTask using computation expression syntax.
         /// </summary>
         let vTaskUnit = valueTaskUnit
-
-    [<AutoOpen>]
-    module MergeSourcesExtensions =
-        open Microsoft.FSharp.Core.CompilerServices
-        open System.Runtime.CompilerServices
-
-        type ValueTaskUnitBuilder with
-
-            [<NoEagerConstraintApplication>]
-            member inline this.MergeSources<'TResult1, 'TResult2, 'Awaiter1, 'Awaiter2
-                when Awaiter<'Awaiter1, 'TResult1> and Awaiter<'Awaiter2, 'TResult2>>
-                (
-                    left: 'Awaiter1,
-                    right: 'Awaiter2
-                ) : ValueTaskAwaiter =
-
-                valueTaskUnit {
-                    let leftStarted = left
-                    let rightStarted = right
-                    let! leftResult = leftStarted
-                    let! rightResult = rightStarted
-                    return struct (leftResult, rightResult)
-                }
-                |> Awaitable.GetAwaiter
 
 #endif

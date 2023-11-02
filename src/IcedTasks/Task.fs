@@ -120,6 +120,18 @@ module TasksUnit =
             else
                 TaskBuilder.RunDynamic(code)
 
+        /// Specify a Source of Task<_> on the real type to allow type inference to work
+        member inline _.Source(v: Task<_>) = Awaitable.GetTaskAwaiter v
+
+        member inline this.MergeSources(left, right) =
+            this.Run(
+                this.Bind(
+                    left,
+                    fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+                )
+            )
+            |> Awaitable.GetTaskAwaiter
+
 
     /// Contains methods to build Tasks using the F# computation expression syntax
     type BackgroundTaskBuilder() =
@@ -193,6 +205,19 @@ module TasksUnit =
             else
                 BackgroundTaskBuilder.RunDynamic(code)
 
+
+        /// Specify a Source of Task<_> on the real type to allow type inference to work
+        member inline _.Source(v: Task<_>) = Awaitable.GetTaskAwaiter v
+
+        member inline this.MergeSources(left, right) =
+            this.Run(
+                this.Bind(
+                    left,
+                    fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+                )
+            )
+            |> Awaitable.GetTaskAwaiter
+
     /// Contains the task computation expression builder.
     [<AutoOpen>]
     module TaskUnitBuilder =
@@ -206,44 +231,3 @@ module TasksUnit =
         /// Builds a taskUnit using computation expression syntax which switches to execute on a background thread if not already doing so.
         /// </summary>
         let backgroundTask = BackgroundTaskBuilder()
-
-    [<AutoOpen>]
-    module MergeSourcesExtensions =
-
-        type TaskBuilder with
-
-            [<NoEagerConstraintApplication>]
-            member inline this.MergeSources<'TResult1, 'TResult2, 'Awaiter1, 'Awaiter2
-                when Awaiter<'Awaiter1, 'TResult1> and Awaiter<'Awaiter2, 'TResult2>>
-                (
-                    left: 'Awaiter1,
-                    right: 'Awaiter2
-                ) : TaskAwaiter<_> =
-
-                task {
-                    let leftStarted = left
-                    let rightStarted = right
-                    let! leftResult = leftStarted
-                    let! rightResult = rightStarted
-                    return struct (leftResult, rightResult)
-                }
-                |> Awaitable.GetTaskAwaiter
-
-        type BackgroundTaskBuilder with
-
-            [<NoEagerConstraintApplication>]
-            member inline this.MergeSources<'TResult1, 'TResult2, 'Awaiter1, 'Awaiter2
-                when Awaiter<'Awaiter1, 'TResult1> and Awaiter<'Awaiter2, 'TResult2>>
-                (
-                    left: 'Awaiter1,
-                    right: 'Awaiter2
-                ) : TaskAwaiter<_> =
-
-                backgroundTask {
-                    let leftStarted = left
-                    let rightStarted = right
-                    let! leftResult = leftStarted
-                    let! rightResult = rightStarted
-                    return struct (leftResult, rightResult)
-                }
-                |> Awaitable.GetTaskAwaiter

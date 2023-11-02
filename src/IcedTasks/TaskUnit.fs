@@ -24,7 +24,6 @@ module TasksUnit =
     open Microsoft.FSharp.Core.CompilerServices
     open Microsoft.FSharp.Core.CompilerServices.StateMachineHelpers
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
-    open Microsoft.FSharp.Collections
 
     ///<summary>
     /// Contains methods to build Tasks using the F# computation expression syntax
@@ -122,6 +121,18 @@ module TasksUnit =
             else
                 TaskUnitBuilder.RunDynamic(code)
 
+        /// Specify a Source of Task on the real type to allow type inference to work
+        member inline _.Source(v: Task) = Awaitable.GetAwaiter v
+
+        member inline this.MergeSources(left, right) =
+            this.Run(
+                this.Bind(
+                    left,
+                    fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+                )
+            )
+            |> Awaitable.GetAwaiter
+
 
     /// Contains methods to build Tasks using the F# computation expression syntax
     type BackgroundTaskUnitBuilder() =
@@ -195,6 +206,19 @@ module TasksUnit =
             else
                 BackgroundTaskUnitBuilder.RunDynamic(code)
 
+
+        /// Specify a Source of Task on the real type to allow type inference to work
+        member inline _.Source(v: Task) = Awaitable.GetAwaiter v
+
+        member inline this.MergeSources(left, right) =
+            this.Run(
+                this.Bind(
+                    left,
+                    fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+                )
+            )
+            |> Awaitable.GetAwaiter
+
     /// Contains the taskUnit computation expression builder.
     [<AutoOpen>]
     module TaskUnitBuilder =
@@ -208,44 +232,3 @@ module TasksUnit =
         /// Builds a taskUnit using computation expression syntax which switches to execute on a background thread if not already doing so.
         /// </summary>
         let backgroundTaskUnit = BackgroundTaskUnitBuilder()
-
-    [<AutoOpen>]
-    module MergeSourcesExtensions =
-
-        type TaskUnitBuilder with
-
-            [<NoEagerConstraintApplication>]
-            member inline this.MergeSources<'TResult1, 'TResult2, 'Awaiter1, 'Awaiter2
-                when Awaiter<'Awaiter1, 'TResult1> and Awaiter<'Awaiter2, 'TResult2>>
-                (
-                    left: 'Awaiter1,
-                    right: 'Awaiter2
-                ) : TaskAwaiter =
-
-                taskUnit {
-                    let leftStarted = left
-                    let rightStarted = right
-                    let! leftResult = leftStarted
-                    let! rightResult = rightStarted
-                    return struct (leftResult, rightResult)
-                }
-                |> Awaitable.GetAwaiter
-
-        type BackgroundTaskUnitBuilder with
-
-            [<NoEagerConstraintApplication>]
-            member inline this.MergeSources<'TResult1, 'TResult2, 'Awaiter1, 'Awaiter2
-                when Awaiter<'Awaiter1, 'TResult1> and Awaiter<'Awaiter2, 'TResult2>>
-                (
-                    left: 'Awaiter1,
-                    right: 'Awaiter2
-                ) : TaskAwaiter =
-
-                backgroundTaskUnit {
-                    let leftStarted = left
-                    let rightStarted = right
-                    let! leftResult = leftStarted
-                    let! rightResult = rightStarted
-                    return struct (leftResult, rightResult)
-                }
-                |> Awaitable.GetAwaiter

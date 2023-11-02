@@ -83,13 +83,11 @@ namespace IcedTasks
 module ValueTasks =
     open System
     open System.Runtime.CompilerServices
-    open System.Threading
     open System.Threading.Tasks
     open Microsoft.FSharp.Core
     open Microsoft.FSharp.Core.CompilerServices
     open Microsoft.FSharp.Core.CompilerServices.StateMachineHelpers
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
-    open Microsoft.FSharp.Collections
 
     ///<summary>
     /// Contains methods to build ValueTasks using the F# computation expression syntax
@@ -190,6 +188,22 @@ module ValueTasks =
         /// Specify a Source of ValueTask<_> on the real type to allow type inference to work
         member inline _.Source(v: ValueTask<_>) = Awaitable.GetAwaiter v
 
+        member inline this.MergeSources(left, right) =
+            this.Run(
+                this.Bind(
+                    left,
+                    fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+                )
+            )
+            |> Awaitable.GetAwaiter
+
+
+    type DVBuilder() =
+        inherit ValueTaskBuilder()
+
+        [<MethodImpl(MethodImplOptions.NoInlining)>]
+        member _.Run(code) = base.Run(code)
+
 
     /// Contains the valueTask computation expression builder.
     [<AutoOpen>]
@@ -205,27 +219,27 @@ module ValueTasks =
         /// </summary>
         let vTask = valueTask
 
-    [<AutoOpen>]
-    module MergeSourcesExtensions =
+    // [<AutoOpen>]
+    // module MergeSourcesExtensions =
 
-        type ValueTaskBuilder with
+    //     type ValueTaskBuilder with
 
-            [<NoEagerConstraintApplication>]
-            member inline this.MergeSources<'TResult1, 'TResult2, 'Awaiter1, 'Awaiter2
-                when Awaiter<'Awaiter1, 'TResult1> and Awaiter<'Awaiter2, 'TResult2>>
-                (
-                    left: 'Awaiter1,
-                    right: 'Awaiter2
-                ) : ValueTaskAwaiter<_> =
+    //         [<NoEagerConstraintApplication>]
+    //         member inline this.MergeSources<'TResult1, 'TResult2, 'Awaiter1, 'Awaiter2
+    //             when Awaiter<'Awaiter1, 'TResult1> and Awaiter<'Awaiter2, 'TResult2>>
+    //             (
+    //                 left: 'Awaiter1,
+    //                 right: 'Awaiter2
+    //             ) : ValueTaskAwaiter<_> =
 
-                valueTask {
-                    let leftStarted = left
-                    let rightStarted = right
-                    let! leftResult = leftStarted
-                    let! rightResult = rightStarted
-                    return struct (leftResult, rightResult)
-                }
-                |> Awaitable.GetAwaiter
+    //             valueTask {
+    //                 let leftStarted = left
+    //                 let rightStarted = right
+    //                 let! leftResult = leftStarted
+    //                 let! rightResult = rightStarted
+    //                 return struct (leftResult, rightResult)
+    //             }
+    //             |> Awaitable.GetAwaiter
 
 
     /// Contains a set of standard functional helper function
