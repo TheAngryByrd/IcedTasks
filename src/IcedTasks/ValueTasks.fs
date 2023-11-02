@@ -94,7 +94,7 @@ module ValueTasks =
     ///<summary>
     /// Contains methods to build ValueTasks using the F# computation expression syntax
     /// </summary>
-    type ValueTaskUnitBuilder() =
+    type ValueTaskBuilder() =
 
         inherit TaskBuilderBase()
 
@@ -185,10 +185,11 @@ module ValueTasks =
                         MethodBuilder.get_Task (&sm.Data.MethodBuilder)
                     ))
             else
-                ValueTaskUnitBuilder.RunDynamic(code)
+                ValueTaskBuilder.RunDynamic(code)
 
         /// Specify a Source of ValueTask<_> on the real type to allow type inference to work
         member inline _.Source(v: ValueTask<_>) = Awaitable.GetAwaiter v
+
 
     /// Contains the valueTask computation expression builder.
     [<AutoOpen>]
@@ -197,12 +198,35 @@ module ValueTasks =
         /// <summary>
         /// Builds a valueTask using computation expression syntax.
         /// </summary>
-        let valueTask = ValueTaskUnitBuilder()
+        let valueTask = ValueTaskBuilder()
 
         /// <summary>
         /// Builds a valueTask using computation expression syntax.
         /// </summary>
         let vTask = valueTask
+
+    [<AutoOpen>]
+    module MergeSourcesExtensions =
+
+        type ValueTaskBuilder with
+
+            [<NoEagerConstraintApplication>]
+            member inline this.MergeSources<'TResult1, 'TResult2, 'Awaiter1, 'Awaiter2
+                when Awaiter<'Awaiter1, 'TResult1> and Awaiter<'Awaiter2, 'TResult2>>
+                (
+                    left: 'Awaiter1,
+                    right: 'Awaiter2
+                ) : ValueTaskAwaiter<_> =
+
+                valueTask {
+                    let leftStarted = left
+                    let rightStarted = right
+                    let! leftResult = leftStarted
+                    let! rightResult = rightStarted
+                    return struct (leftResult, rightResult)
+                }
+                |> Awaitable.GetAwaiter
+
 
     /// Contains a set of standard functional helper function
     [<RequireQualifiedAccess>]
@@ -303,27 +327,5 @@ module ValueTasks =
             else
                 ValueTask(vtask.AsTask())
 
-    /// <exclude/>
-    [<AutoOpen>]
-    module MergeSourcesExtensions =
-
-        type TaskBuilderBase with
-
-            [<NoEagerConstraintApplication>]
-            member inline this.MergeSources<'TResult1, 'TResult2, 'Awaiter1, 'Awaiter2
-                when Awaiter<'Awaiter1, 'TResult1> and Awaiter<'Awaiter2, 'TResult2>>
-                (
-                    left: 'Awaiter1,
-                    right: 'Awaiter2
-                ) : ValueTaskAwaiter<'TResult1 * 'TResult2> =
-
-                valueTask {
-                    let leftStarted = left
-                    let rightStarted = right
-                    let! leftResult = leftStarted
-                    let! rightResult = rightStarted
-                    return leftResult, rightResult
-                }
-                |> Awaitable.GetAwaiter
 
 #endif

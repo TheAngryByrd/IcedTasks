@@ -1,6 +1,7 @@
 namespace IcedTasks
 
 open System.Runtime.CompilerServices
+open Microsoft.FSharp.Core.CompilerServices
 
 /// <namespacedoc>
 ///   <summary>
@@ -30,7 +31,6 @@ type Awaiter =
         (awaiter: 'Awaiter)
         =
         awaiter.GetResult()
-
 
     /// Schedules the continuation action that's invoked when the instance completes
     static member inline OnCompleted<'Awaiter, 'TResult, 'Continuation
@@ -63,6 +63,9 @@ type Awaitable =
         =
         awaitable.GetAwaiter()
 
+    /// Creates an awaiter for this value.
+    static member inline GetTaskAwaiter(t: System.Threading.Tasks.Task<'T>) = t.GetAwaiter()
+
 
 /// <summary>Represents a builder for asynchronous methods.</summary>
 type MethodBuilder =
@@ -70,9 +73,18 @@ type MethodBuilder =
     /// <summary>Marks the task as successfully completed.</summary>
     static member inline SetResult<'Builder, 'TResult
         when 'Builder: (member SetResult: unit -> unit)>
+        (builder: byref<'Builder>)
+        =
+        builder.SetResult()
+
+
+    /// <summary>Marks the task as successfully completed.</summary>
+    /// <param name="result">The result to use to complete the task.</param>
+    static member inline SetResult<'Builder, 'TResult
+        when 'Builder: (member SetResult: 'TResult -> unit)>
         (
             builder: byref<'Builder>,
-            result: unit
+            result: 'TResult
         ) =
         builder.SetResult(result)
 
@@ -148,17 +160,3 @@ type MethodBuilder =
             stateMachine: byref<'TStateMachine>
         ) =
         builder.AwaitOnCompleted(&awaiter, &stateMachine)
-
-[<AutoOpen>]
-module MethodBuilderOverloads =
-    type MethodBuilder with
-
-        /// <summary>Marks the task as successfully completed.</summary>
-        /// <param name="result">The result to use to complete the task.</param>
-        static member inline SetResult<'Builder, 'TResult
-            when 'Builder: (member SetResult: 'TResult -> unit)>
-            (
-                builder: byref<'Builder>,
-                result: 'TResult
-            ) =
-            builder.SetResult(result)

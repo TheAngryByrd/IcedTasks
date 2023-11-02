@@ -43,8 +43,6 @@ module TaskBase =
     /// Contains methods to build ValueTasks using the F# computation expression syntax
     /// </summary>
     type TaskBuilderBase() =
-
-
         /// <summary>Creates a ValueTask that runs generator</summary>
         /// <param name="generator">The function to run</param>
         /// <returns>A valueTask that runs generator</returns>
@@ -52,7 +50,6 @@ module TaskBase =
             ([<InlineIfLambdaAttribute>] generator: unit -> TaskBaseCode<'TOverall, 'T, 'Builder>)
             : TaskBaseCode<'TOverall, 'T, 'Builder> =
             ResumableCode.Delay(fun () -> generator ())
-
 
         /// <summary>Creates an ValueTask that just returns ().</summary>
         /// <remarks>
@@ -74,7 +71,7 @@ module TaskBase =
         ///
         /// <returns>An ValueTask that returns value when executed.</returns>
         member inline _.Return(value: 'T) : TaskBaseCode<'T, 'T, 'Builder> =
-            TaskBaseCode<'T, _, 'Builder>(fun sm ->
+            TaskBaseCode<'T, 'T, 'Builder>(fun sm ->
                 sm.Data.Result <- value
                 true
             )
@@ -295,8 +292,7 @@ module TaskBase =
             /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
             /// </summary>
             [<NoEagerConstraintApplication>]
-            static member inline BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall, 'Builder
-                when Awaiter<'Awaiter, 'TResult1>>
+            static member inline BindDynamic
                 (
                     sm: byref<ResumableStateMachine<TaskBaseStateMachineData<'TOverall, 'Builder>>>,
                     getAwaiter: 'Awaiter,
@@ -346,7 +342,6 @@ module TaskBase =
                         //-- RESUMABLE CODE START
                         // Get an awaiter from the Awaiter
                         let mutable awaiter = getAwaiter
-
                         let mutable __stack_fin = true
 
                         if not (Awaiter.IsCompleted awaiter) then
@@ -360,7 +355,7 @@ module TaskBase =
 
                             (continuation result).Invoke(&sm)
                         else
-                            // sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
+                            // let mutable awaiter = awaiter :> ICriticalNotifyCompletion
 
                             MethodBuilder.AwaitUnsafeOnCompleted(
                                 &sm.Data.MethodBuilder,
@@ -370,15 +365,19 @@ module TaskBase =
 
                             false
                     else
-                        failwith ""
-
-                        TaskBuilderBase.BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall, 'Builder>(
-                            &sm,
-                            getAwaiter,
-                            continuation
-                        )
+                        TaskBuilderBase.BindDynamic(&sm, getAwaiter, continuation)
                 //-- RESUMABLE CODE END
                 )
+
+
+            // MergeSources is used generated like:
+            // builder.Bind(builder.MergeSourcesN(e1, ..., eN), (fun (pat1, ..., patN) -> ... )
+            // Meaning we'd have to implement some bind in terms of `TaskBaseCode`
+            // Currently easier to implement per instance of a CE
+            // TODO look at something like: https://github.com/Cysharp/ValueTaskSupplement/blob/9f733d5163e048b192b0d27af28ec0eb0c9b51ec/src/ValueTaskSupplement/ValueTaskEx.WhenAll_NonGenerics.cs#L39
+            // [<NoEagerConstraintApplication>]
+            // member inline this.MergeSources(left: 'Awaiter1, right: 'Awaiter2) =
+            //     this.Bind(left, (fun v -> this.Bind(right, (fun vr -> this.Return(v, vr)))))
 
 
             /// <summary>Delegates to the input computation.</summary>

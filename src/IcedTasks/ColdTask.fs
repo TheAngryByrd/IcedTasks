@@ -885,6 +885,7 @@ module ColdTasks =
                 ) : unit -> TaskAwaiter<'TResult1 * 'TResult2> =
 
                 coldTask {
+
                     let leftStarted = left ()
                     let rightStarted = right ()
                     let! leftResult = leftStarted
