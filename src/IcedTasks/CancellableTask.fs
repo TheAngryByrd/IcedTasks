@@ -420,13 +420,13 @@ module CancellableTasks =
         /// <param name="applicable">A function wrapped in a CancellableTasks</param>
         /// <param name="cTask">The value.</param>
         /// <returns>The result of the applicable.</returns>
-        let inline apply
+        let inline apply<'input, 'output>
             ([<InlineIfLambda>] applicable: CancellableTask<'input -> 'output>)
             ([<InlineIfLambda>] cTask: CancellableTask<'input>)
             =
             cancellableTask {
-                let! applier = applicable
-                let! cResult = cTask
+                let! (applier: 'input -> 'output) = applicable
+                let! (cResult: 'input) = cTask
                 return applier cResult
             }
 
@@ -540,6 +540,3 @@ module CancellableTasks =
         /// <returns>a CancellableTask.</returns>
         let inline toUnit ([<InlineIfLambda>] ctask: CancellableTask<_>) : CancellableTask =
             fun ct -> ctask ct
-
-        let inline internal getAwaiter ([<InlineIfLambda>] ctask: CancellableTask<_>) =
-            fun ct -> (ctask ct).GetAwaiter()
