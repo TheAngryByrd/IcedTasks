@@ -223,11 +223,11 @@ module TasksUnit =
     module TaskUnitBuilder =
 
         /// <summary>
-        /// Builds a taskUnit using computation expression syntax.
+        /// Builds a task using computation expression syntax.
         /// </summary>
         let task = TaskBuilder()
 
         /// <summary>
-        /// Builds a taskUnit using computation expression syntax which switches to execute on a background thread if not already doing so.
+        /// Builds a task using computation expression syntax which switches to execute on a background thread if not already doing so.
         /// </summary>
         let backgroundTask = BackgroundTaskBuilder()

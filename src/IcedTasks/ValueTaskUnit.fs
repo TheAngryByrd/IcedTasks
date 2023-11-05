@@ -1,10 +1,7 @@
 namespace IcedTasks
 
 
-open System.Threading.Tasks
-
 #if NETSTANDARD2_1 || NET6_0_OR_GREATER
-
 
 // Task builder for F# that compiles to allocation-free paths for synchronous code.
 //

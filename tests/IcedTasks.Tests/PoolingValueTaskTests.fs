@@ -5,12 +5,11 @@ open Expecto
 open System.Threading
 open System.Threading.Tasks
 open IcedTasks
-#if !NETSTANDARD2_0
 
 module PoolingValueTaskTests =
 
     let builderTests =
-        testList "ValueTaskBuilder" [
+        testList "PoolingValueTaskBuilder" [
             testList "Return" [
                 testCaseAsync "Simple Return"
                 <| async {
@@ -586,55 +585,6 @@ module PoolingValueTaskTests =
             ]
         ]
 
-
-    // let asyncBuilderTests =
-    //     testList "AsyncBuilder" [
-
-    //         testCase "AsyncBuilder can Bind PoolingValueTask<T>"
-    //         <| fun () ->
-    //             let innerTask = poolingValueTask { return! poolingValueTask { return "lol" } }
-
-    //             let outerAsync = async {
-    //                 let! result = innerTask |> Async.AwaitValueTask
-    //                 return result
-    //             }
-
-    //             let actual = Async.RunSynchronously(outerAsync)
-    //             Expect.equal actual "lol" ""
-
-
-    //         testCase "AsyncBuilder can ReturnFrom PoolingValueTask<T>"
-    //         <| fun () ->
-    //             let innerTask = poolingValueTask { return! poolingValueTask { return "lol" } }
-
-    //             let outerAsync = async { return! innerTask }
-
-    //             let actual = Async.RunSynchronously(outerAsync)
-    //             Expect.equal actual "lol" ""
-
-    //         testCase "AsyncBuilder can Bind PoolingValueTask"
-    //         <| fun () ->
-    //             let innerTask: PoolingValueTask = fun () -> Task.CompletedTask
-
-    //             let outerAsync = async {
-    //                 let! result = innerTask
-    //                 return result
-    //             }
-
-    //             let actual = Async.RunSynchronously(outerAsync)
-    //             Expect.equal actual () ""
-
-    //         testCase "AsyncBuilder can ReturnFrom PoolingValueTask"
-    //         <| fun () ->
-    //             let innerTask: PoolingValueTask = fun () -> Task.CompletedTask
-
-    //             let outerAsync = async { return! innerTask }
-
-    //             let actual = Async.RunSynchronously(outerAsync)
-    //             Expect.equal actual () ""
-    //     ]
-
-
     let functionTests =
         testList "functions" [
             testList "singleton" [
@@ -741,8 +691,5 @@ module PoolingValueTaskTests =
     let valueTaskTests =
         testList "IcedTasks.PoolingValueTask" [
             builderTests
-            // asyncBuilderTests
             functionTests
         ]
-
-#endif

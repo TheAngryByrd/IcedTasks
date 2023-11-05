@@ -197,14 +197,6 @@ module ValueTasks =
             )
             |> Awaitable.GetAwaiter
 
-
-    type DVBuilder() =
-        inherit ValueTaskBuilder()
-
-        [<MethodImpl(MethodImplOptions.NoInlining)>]
-        member _.Run(code) = base.Run(code)
-
-
     /// Contains the valueTask computation expression builder.
     [<AutoOpen>]
     module ValueTaskBuilder =

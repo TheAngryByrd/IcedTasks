@@ -17,8 +17,8 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="TaskLike.fs" />
     <Compile Include="TaskBuilderBase.fs" />
-    <Compile Include="ValueTasks.fs" />
-    <Compile Include="PoolingValueTasks.fs" />
+    <Compile Include="ValueTask.fs" />
+    <Compile Include="PoolingValueTask.fs" />
     <Compile Include="ValueTaskUnit.fs" />
     <Compile Include="TaskUnit.fs" />
     <Compile Include="Task.fs" />

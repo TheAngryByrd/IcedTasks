@@ -1,6 +1,5 @@
 namespace IcedTasks
 
-
 #if NET6_0_OR_GREATER
 
 // Task builder for F# that compiles to allocation-free paths for synchronous code.
@@ -21,7 +20,6 @@ namespace IcedTasks
 module PoolingValueTasks =
     open System
     open System.Runtime.CompilerServices
-    open System.Threading
     open System.Threading.Tasks
     open Microsoft.FSharp.Core
     open Microsoft.FSharp.Core.CompilerServices

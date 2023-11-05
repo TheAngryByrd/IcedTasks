@@ -5,7 +5,6 @@ namespace IcedTasks
 module TaskBase =
     open System
     open System.Runtime.CompilerServices
-    open System.Threading
     open System.Threading.Tasks
     open Microsoft.FSharp.Core
     open Microsoft.FSharp.Core.CompilerServices
@@ -40,7 +39,7 @@ module TaskBase =
         ResumableCode<TaskBaseStateMachineData<'TOverall, 'Builder>, 'T>
 
     /// <summary>
-    /// Contains methods to build ValueTasks using the F# computation expression syntax
+    /// Contains methods to build TaskLikes using the F# computation expression syntax
     /// </summary>
     type TaskBuilderBase() =
         /// <summary>Creates a ValueTask that runs generator</summary>
@@ -355,8 +354,6 @@ module TaskBase =
 
                             (continuation result).Invoke(&sm)
                         else
-                            // let mutable awaiter = awaiter :> ICriticalNotifyCompletion
-
                             MethodBuilder.AwaitUnsafeOnCompleted(
                                 &sm.Data.MethodBuilder,
                                 &awaiter,

@@ -426,6 +426,7 @@ let watchTests _ =
                 (fun opt ->
                     opt
                     |> DotNet.Options.withWorkingDirectory (IO.Path.GetDirectoryName proj)
+                    |> DotNet.Options.withVerbosity (Some DotNet.Verbosity.Quiet)
                 )
                 "test"
                 ""

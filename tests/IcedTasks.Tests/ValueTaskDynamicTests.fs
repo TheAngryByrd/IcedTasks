@@ -1,19 +1,31 @@
 namespace IcedTasks.Tests
 
+#nowarn "3511"
+
 open System
 open Expecto
 open System.Threading
 open System.Threading.Tasks
 open IcedTasks
 
-module ValueTaskTests =
+module ValueTaskDynamicTests =
+    open System.Runtime.CompilerServices
+
+    type ValueTaskDynamicBuilder() =
+        inherit ValueTaskBuilder()
+
+        [<MethodImpl(MethodImplOptions.NoInlining)>]
+        member _.Run(code) = base.Run(code)
+
+
+    let dValueTask = ValueTaskDynamicBuilder()
 
     let builderTests =
-        testList "ValueTaskBuilder" [
+        testList "ValueTaskBuilderDynamic" [
             testList "Return" [
                 testCaseAsync "Simple Return"
                 <| async {
-                    let foo = valueTask { return "lol" }
+                    let foo = dValueTask { return "lol" }
 
                     let! result =
                         foo
@@ -26,7 +38,7 @@ module ValueTaskTests =
                 testCaseAsync "Can ReturnFrom ValueTask"
                 <| async {
                     let fooTask: ValueTask = ValueTask.CompletedTask
-                    let outerTask = valueTask { return! fooTask }
+                    let outerTask = dValueTask { return! fooTask }
                     // Compiling is sufficient expect
                     do!
                         outerTask
@@ -37,7 +49,7 @@ module ValueTaskTests =
                 <| async {
                     let expected = "lol"
                     let fooTask: ValueTask<_> = ValueTask.FromResult expected
-                    let outerTask = valueTask { return! fooTask }
+                    let outerTask = dValueTask { return! fooTask }
 
                     let! actual =
                         outerTask
@@ -47,7 +59,7 @@ module ValueTaskTests =
                 }
                 testCaseAsync "Can ReturnFrom Task"
                 <| async {
-                    let outerTask = valueTask { return! Task.CompletedTask }
+                    let outerTask = dValueTask { return! Task.CompletedTask }
                     // Compiling is sufficient expect
                     do!
                         outerTask
@@ -57,7 +69,7 @@ module ValueTaskTests =
                 testCaseAsync "Can ReturnFrom Task<T>"
                 <| async {
                     let expected = "lol"
-                    let outerTask = valueTask { return! Task.FromResult expected }
+                    let outerTask = dValueTask { return! Task.FromResult expected }
 
                     let! actual =
                         outerTask
@@ -69,7 +81,7 @@ module ValueTaskTests =
                 testCaseAsync "Can ReturnFrom TaskLike"
                 <| async {
                     let fooTask = Task.Yield()
-                    let outerTask = valueTask { return! fooTask }
+                    let outerTask = dValueTask { return! fooTask }
 
                     do!
                         outerTask
@@ -81,7 +93,7 @@ module ValueTaskTests =
                 <| async {
                     let expected = "lol"
                     let fooTask = async.Return expected
-                    let outerTask = valueTask { return! fooTask }
+                    let outerTask = dValueTask { return! fooTask }
 
 
                     let! actual =
@@ -96,7 +108,7 @@ module ValueTaskTests =
                 testCaseAsync "Can Bind ValueTask"
                 <| async {
                     let fooTask: ValueTask = ValueTask.CompletedTask
-                    let outerTask = valueTask { do! fooTask }
+                    let outerTask = dValueTask { do! fooTask }
 
                     do!
                         outerTask
@@ -109,7 +121,7 @@ module ValueTaskTests =
                     let fooTask: ValueTask<_> = ValueTask.FromResult expected
 
                     let outerTask =
-                        valueTask {
+                        dValueTask {
                             let! result = fooTask
                             return result
                         }
@@ -122,7 +134,7 @@ module ValueTaskTests =
                 }
                 testCaseAsync "Can Bind Task"
                 <| async {
-                    let outerTask = valueTask { do! Task.CompletedTask }
+                    let outerTask = dValueTask { do! Task.CompletedTask }
 
                     do!
                         outerTask
@@ -135,7 +147,7 @@ module ValueTaskTests =
                     let expected = "lol"
 
                     let outerTask =
-                        valueTask {
+                        dValueTask {
                             let! result = Task.FromResult expected
                             return result
                         }
@@ -154,7 +166,7 @@ module ValueTaskTests =
                     let fooTask = async.Return expected
 
                     let outerTask =
-                        valueTask {
+                        dValueTask {
                             let! result = fooTask
                             return result
                         }
@@ -174,7 +186,7 @@ module ValueTaskTests =
                     let data = 42
 
                     let! actual =
-                        valueTask {
+                        dValueTask {
                             let result = data
 
                             if true then
@@ -194,7 +206,7 @@ module ValueTaskTests =
                     let data = 42
 
                     let! actual =
-                        valueTask {
+                        dValueTask {
                             let data = data
 
                             try
@@ -216,7 +228,7 @@ module ValueTaskTests =
                     let data = 42
 
                     let! actual =
-                        valueTask {
+                        dValueTask {
                             let data = data
 
                             try
@@ -241,7 +253,7 @@ module ValueTaskTests =
                     let doDispose () = wasDisposed <- true
 
                     let! actual =
-                        valueTask {
+                        dValueTask {
                             use d = TestHelpers.makeDisposable (doDispose)
                             return data
                         }
@@ -257,7 +269,7 @@ module ValueTaskTests =
                     let doDispose () = wasDisposed <- true
 
                     let! actual =
-                        valueTask {
+                        dValueTask {
                             use! d =
                                 TestHelpers.makeDisposable (doDispose)
                                 |> async.Return
@@ -281,7 +293,7 @@ module ValueTaskTests =
                         ValueTask.CompletedTask
 
                     let! actual =
-                        valueTask {
+                        dValueTask {
                             use d = TestHelpers.makeAsyncDisposable (doDispose)
 
                             return data
@@ -301,7 +313,7 @@ module ValueTaskTests =
                         ValueTask.CompletedTask
 
                     let! actual =
-                        valueTask {
+                        dValueTask {
                             use! d =
                                 TestHelpers.makeAsyncDisposable (doDispose)
                                 |> async.Return
@@ -327,7 +339,7 @@ module ValueTaskTests =
                     do!
                         Expect.throwsValueTask<Exception>
                             (fun () ->
-                                valueTask {
+                                dValueTask {
                                     use d = TestHelpers.makeAsyncDisposable (doDispose)
                                     return ()
                                 }
@@ -352,7 +364,7 @@ module ValueTaskTests =
 
 
                     let! actual =
-                        valueTask {
+                        dValueTask {
                             use d = TestHelpers.makeAsyncDisposable (doDispose)
                             Expect.isFalse wasDisposed ""
 
@@ -378,7 +390,7 @@ module ValueTaskTests =
 
 
                     let! actual =
-                        valueTask {
+                        dValueTask {
                             use! d =
                                 TestHelpers.makeAsyncDisposable (doDispose)
                                 |> async.Return
@@ -399,7 +411,7 @@ module ValueTaskTests =
                     let data = 42
 
                     let! actual =
-                        valueTask {
+                        dValueTask {
                             use d = null
                             return data
                         }
@@ -423,7 +435,7 @@ module ValueTaskTests =
                             let mutable index = 0
 
                             let! actual =
-                                valueTask {
+                                dValueTask {
                                     while index < loops do
                                         index <- index + 1
 
@@ -448,7 +460,7 @@ module ValueTaskTests =
                             let mutable index = 0
 
                             let! actual =
-                                valueTask {
+                                dValueTask {
                                     while index < loops do
                                         do! Task.Yield()
                                         index <- index + 1
@@ -476,7 +488,7 @@ module ValueTaskTests =
                             let mutable index = 0
 
                             let! actual =
-                                valueTask {
+                                dValueTask {
                                     for i in [ 1..10 ] do
                                         index <- i + i
 
@@ -501,7 +513,7 @@ module ValueTaskTests =
                             let mutable index = 0
 
                             let! actual =
-                                valueTask {
+                                dValueTask {
                                     for i = 1 to loops do
                                         index <- i + i
 
@@ -525,7 +537,7 @@ module ValueTaskTests =
                             let mutable index = 0
 
                             let! actual =
-                                valueTask {
+                                dValueTask {
                                     for i in [ 1..10 ] do
                                         do! Task.Yield()
                                         index <- i + i
@@ -551,7 +563,7 @@ module ValueTaskTests =
                             let mutable index = 0
 
                             let! actual =
-                                valueTask {
+                                dValueTask {
                                     for i = 1 to loops do
                                         do! Task.Yield()
                                         index <- i + i
@@ -568,13 +580,12 @@ module ValueTaskTests =
                 testCaseAsync "and! 5"
                 <| async {
                     let! actual =
-                        valueTask {
+                        dValueTask {
                             let! a = ValueTask.FromResult 1
                             and! b = Task.FromResult 2
                             and! c = coldTask { return 3 }
                             and! _ = Task.Yield()
                             and! _ = ValueTask.CompletedTask
-                            // and! c = fun () -> ValueTask.FromResult(3)
                             return a + b + c
                         }
                         |> Async.AwaitValueTask
@@ -585,111 +596,6 @@ module ValueTaskTests =
             ]
         ]
 
-    let functionTests =
-        testList "functions" [
-            testList "singleton" [
-                testCaseAsync "Simple"
-                <| async {
-                    let innerCall = ValueTask.singleton "lol"
-
-                    let! someTask =
-                        innerCall
-                        |> Async.AwaitValueTask
-
-                    Expect.equal "lol" someTask ""
-                }
-            ]
-            testList "bind" [
-                testCaseAsync "Simple"
-                <| async {
-                    let innerCall = valueTask { return "lol" }
-
-                    let! someTask =
-                        innerCall
-                        |> ValueTask.bind (fun x -> valueTask { return x + "fooo" })
-                        |> Async.AwaitValueTask
-
-                    Expect.equal "lolfooo" someTask ""
-                }
-            ]
-            testList "map" [
-                testCaseAsync "Simple"
-                <| async {
-                    let innerCall = valueTask { return "lol" }
-
-                    let! someTask =
-                        innerCall
-                        |> ValueTask.map (fun x -> x + "fooo")
-                        |> Async.AwaitValueTask
-
-                    Expect.equal "lolfooo" someTask ""
-                }
-            ]
-            testList "apply" [
-                testCaseAsync "Simple"
-                <| async {
-                    let innerCall = valueTask { return "lol" }
-                    let applier = valueTask { return fun x -> x + "fooo" }
-
-                    let! someTask =
-                        innerCall
-                        |> ValueTask.apply applier
-                        |> Async.AwaitValueTask
-
-                    Expect.equal "lolfooo" someTask ""
-                }
-            ]
-
-            testList "zip" [
-                testCaseAsync "Simple"
-                <| async {
-                    let leftCall = valueTask { return "lol" }
-                    let rightCall = valueTask { return "fooo" }
-
-                    let! someTask =
-                        ValueTask.zip leftCall rightCall
-                        |> Async.AwaitValueTask
-
-                    Expect.equal ("lol", "fooo") someTask ""
-                }
-            ]
-
-
-            testList "ofUnit" [
-                testCaseAsync "Simple"
-                <| async {
-                    let innerCall = ValueTask.CompletedTask
-
-                    let! someTask =
-                        innerCall
-                        |> ValueTask.ofUnit
-                        |> Async.AwaitValueTask
-
-                    Expect.equal () someTask ""
-                }
-            ]
-
-
-            testList "toUnit" [
-                testCaseAsync "Simple"
-                <| async {
-                    let innerCall = ValueTask.FromResult "lol"
-
-                    let! someTask =
-                        innerCall
-                        |> ValueTask.toUnit
-                        |> Async.AwaitValueTask
-
-                    Expect.equal () someTask ""
-                }
-            ]
-
-        ]
-
 
     [<Tests>]
-    let valueTaskTests =
-        testList "IcedTasks.ValueTask" [
-            builderTests
-            functionTests
-        ]
+    let valueTaskTests = testList "IcedTasks.ValueTask" [ builderTests ]

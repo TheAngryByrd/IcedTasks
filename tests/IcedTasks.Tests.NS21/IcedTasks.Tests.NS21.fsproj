@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
     <GenerateProgramFile>false</GenerateProgramFile>
-    <DefineConstants>$(DefineConstants);NETSTANDARD2_1</DefineConstants>
+    <DefineConstants>$(DefineConstants);NETSTANDARD2_1;TEST_NETSTANDARD2_1</DefineConstants>
   </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" AdditionalProperties="TargetFramework=netstandard2.1" />
@@ -12,7 +12,10 @@
   <ItemGroup>
     <Compile Include="../IcedTasks.Tests/Expect.fs" />
     <Compile Include="../IcedTasks.Tests/AsyncExTests.fs" />
+    <Compile Include="../IcedTasks.Tests/TaskTests.fs" />
+    <Compile Include="../IcedTasks.Tests/TaskDynamicTests.fs" />
     <Compile Include="../IcedTasks.Tests/ValueTaskTests.fs" />
+    <Compile Include="../IcedTasks.Tests/ValueTaskDynamicTests.fs" />
     <Compile Include="../IcedTasks.Tests/CancellableTaskTests.fs" />
     <Compile Include="../IcedTasks.Tests/CancellableValueTaskTests.fs" />
     <Compile Include="../IcedTasks.Tests/ColdTaskTests.fs" />

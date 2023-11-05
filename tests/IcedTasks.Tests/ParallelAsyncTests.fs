@@ -8,7 +8,7 @@ module ParallelAsyncTests =
 
     [<Tests>]
     let tests =
-        testList "ParallelAsync" [
+        testList "IcedTasks.ParallelAsync" [
             testList "Return" [
                 testCaseAsync "return"
                 <| async {

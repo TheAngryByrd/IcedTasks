@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFrameworks>net7.0;net6.0</TargetFrameworks>
     <GenerateProgramFile>false</GenerateProgramFile>
+    <DefineConstants>$(DefineConstants);TEST_NET6_0_OR_GREATER</DefineConstants>
   </PropertyGroup>
     <ItemGroup >
         <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" />
@@ -11,8 +12,12 @@
   <ItemGroup>
     <Compile Include="Expect.fs" />
     <Compile Include="AsyncExTests.fs" />
+    <Compile Include="TaskTests.fs" />
+    <Compile Include="TaskDynamicTests.fs" />
     <Compile Include="ValueTaskTests.fs" />
+    <Compile Include="ValueTaskDynamicTests.fs" />
     <Compile Include="PoolingValueTaskTests.fs" />
+    <Compile Include="PoolingValueTaskDynamicTests.fs" />
     <Compile Include="CancellableTaskTests.fs" />
     <Compile Include="CancellableValueTaskTests.fs" />
     <Compile Include="ColdTaskTests.fs" />
