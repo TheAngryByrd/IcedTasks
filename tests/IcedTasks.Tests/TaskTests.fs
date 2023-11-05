@@ -589,4 +589,4 @@ module TaskTests =
 
 
     [<Tests>]
-    let valueTaskTests = testList "IcedTasks.Polyfill.Task" [ builderTests ]
+    let tests = testList "IcedTasks.Polyfill.Task" [ builderTests ]

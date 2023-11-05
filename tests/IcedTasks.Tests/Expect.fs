@@ -5,6 +5,8 @@ open System.Threading.Tasks
 open IcedTasks
 
 module TestHelpers =
+    open System.Threading
+
     let makeDisposable (callback) =
         { new System.IDisposable with
             member this.Dispose() = callback ()
@@ -14,6 +16,11 @@ module TestHelpers =
         { new System.IAsyncDisposable with
             member this.DisposeAsync() = callback ()
         }
+
+    let setSyncContext newContext =
+        let oldContext = SynchronizationContext.Current
+        SynchronizationContext.SetSynchronizationContext newContext
+        makeDisposable (fun () -> SynchronizationContext.SetSynchronizationContext oldContext)
 
 module Expect =
     open Expecto

@@ -598,4 +598,4 @@ module ValueTaskDynamicTests =
 
 
     [<Tests>]
-    let valueTaskTests = testList "IcedTasks.ValueTask" [ builderTests ]
+    let tests = testList "IcedTasks.ValueTask" [ builderTests ]

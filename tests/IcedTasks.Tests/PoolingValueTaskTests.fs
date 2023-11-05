@@ -688,7 +688,7 @@ module PoolingValueTaskTests =
 
 
     [<Tests>]
-    let valueTaskTests =
+    let tests =
         testList "IcedTasks.PoolingValueTask" [
             builderTests
             functionTests

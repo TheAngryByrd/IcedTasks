@@ -13,6 +13,7 @@
     <Compile Include="../IcedTasks.Tests/Expect.fs" />
     <Compile Include="../IcedTasks.Tests/AsyncExTests.fs" />
     <Compile Include="../IcedTasks.Tests/TaskTests.fs" />
+    <Compile Include="../IcedTasks.Tests/TaskBackgroundTests.fs" />
     <Compile Include="../IcedTasks.Tests/TaskDynamicTests.fs" />
     <Compile Include="../IcedTasks.Tests/ValueTaskTests.fs" />
     <Compile Include="../IcedTasks.Tests/ValueTaskDynamicTests.fs" />

@@ -1,7 +1,5 @@
 namespace IcedTasks.Tests
 
-#nowarn "3511"
-
 open System
 open Expecto
 open System.Threading
@@ -9,24 +7,14 @@ open System.Threading.Tasks
 open IcedTasks
 open IcedTasks.Polyfill
 
-module TaskDynamicTests =
-    open System.Runtime.CompilerServices
-
-    type TaskDynamicBuilder() =
-        inherit TaskBuilder()
-
-        [<MethodImpl(MethodImplOptions.NoInlining)>]
-        member _.Run(code) = base.Run(code)
-
-
-    let dTask = TaskDynamicBuilder()
+module TaskBackgroundTests =
 
     let builderTests =
-        testList "TaskBuilderDynamic" [
+        testList "BackgroundTaskBuilder" [
             testList "Return" [
                 testCaseAsync "Simple Return"
                 <| async {
-                    let foo = dTask { return "lol" }
+                    let foo = backgroundTask { return "lol" }
 
                     let! result =
                         foo
@@ -35,11 +23,12 @@ module TaskDynamicTests =
                     Expect.equal result "lol" "Should be able to Return value"
                 }
             ]
+
             testList "ReturnFrom" [
                 testCaseAsync "Can ReturnFrom ValueTask"
                 <| async {
                     let fooTask: ValueTask = ValueTask.CompletedTask
-                    let outerTask = dTask { return! fooTask }
+                    let outerTask = backgroundTask { return! fooTask }
                     // Compiling is sufficient expect
                     do!
                         outerTask
@@ -50,7 +39,7 @@ module TaskDynamicTests =
                 <| async {
                     let expected = "lol"
                     let fooTask: ValueTask<_> = ValueTask.FromResult expected
-                    let outerTask = dTask { return! fooTask }
+                    let outerTask = backgroundTask { return! fooTask }
 
                     let! actual =
                         outerTask
@@ -60,7 +49,7 @@ module TaskDynamicTests =
                 }
                 testCaseAsync "Can ReturnFrom Task"
                 <| async {
-                    let outerTask = dTask { return! Task.CompletedTask }
+                    let outerTask = backgroundTask { return! Task.CompletedTask }
                     // Compiling is sufficient expect
                     do!
                         outerTask
@@ -70,7 +59,7 @@ module TaskDynamicTests =
                 testCaseAsync "Can ReturnFrom Task<T>"
                 <| async {
                     let expected = "lol"
-                    let outerTask = dTask { return! Task.FromResult expected }
+                    let outerTask = backgroundTask { return! Task.FromResult expected }
 
                     let! actual =
                         outerTask
@@ -82,7 +71,7 @@ module TaskDynamicTests =
                 testCaseAsync "Can ReturnFrom TaskLike"
                 <| async {
                     let fooTask = Task.Yield()
-                    let outerTask = dTask { return! fooTask }
+                    let outerTask = backgroundTask { return! fooTask }
 
                     do!
                         outerTask
@@ -94,7 +83,7 @@ module TaskDynamicTests =
                 <| async {
                     let expected = "lol"
                     let fooTask = async.Return expected
-                    let outerTask = dTask { return! fooTask }
+                    let outerTask = backgroundTask { return! fooTask }
 
 
                     let! actual =
@@ -109,7 +98,7 @@ module TaskDynamicTests =
                 testCaseAsync "Can Bind ValueTask"
                 <| async {
                     let fooTask: ValueTask = ValueTask.CompletedTask
-                    let outerTask = dTask { do! fooTask }
+                    let outerTask = backgroundTask { do! fooTask }
 
                     do!
                         outerTask
@@ -122,7 +111,7 @@ module TaskDynamicTests =
                     let fooTask: ValueTask<_> = ValueTask.FromResult expected
 
                     let outerTask =
-                        dTask {
+                        backgroundTask {
                             let! result = fooTask
                             return result
                         }
@@ -135,7 +124,7 @@ module TaskDynamicTests =
                 }
                 testCaseAsync "Can Bind Task"
                 <| async {
-                    let outerTask = dTask { do! Task.CompletedTask }
+                    let outerTask = backgroundTask { do! Task.CompletedTask }
 
                     do!
                         outerTask
@@ -148,7 +137,7 @@ module TaskDynamicTests =
                     let expected = "lol"
 
                     let outerTask =
-                        dTask {
+                        backgroundTask {
                             let! result = Task.FromResult expected
                             return result
                         }
@@ -167,7 +156,7 @@ module TaskDynamicTests =
                     let fooTask = async.Return expected
 
                     let outerTask =
-                        dTask {
+                        backgroundTask {
                             let! result = fooTask
                             return result
                         }
@@ -187,7 +176,7 @@ module TaskDynamicTests =
                     let data = 42
 
                     let! actual =
-                        dTask {
+                        backgroundTask {
                             let result = data
 
                             if true then
@@ -207,7 +196,7 @@ module TaskDynamicTests =
                     let data = 42
 
                     let! actual =
-                        dTask {
+                        backgroundTask {
                             let data = data
 
                             try
@@ -229,7 +218,7 @@ module TaskDynamicTests =
                     let data = 42
 
                     let! actual =
-                        dTask {
+                        backgroundTask {
                             let data = data
 
                             try
@@ -254,7 +243,7 @@ module TaskDynamicTests =
                     let doDispose () = wasDisposed <- true
 
                     let! actual =
-                        dTask {
+                        backgroundTask {
                             use d = TestHelpers.makeDisposable (doDispose)
                             return data
                         }
@@ -270,7 +259,7 @@ module TaskDynamicTests =
                     let doDispose () = wasDisposed <- true
 
                     let! actual =
-                        dTask {
+                        backgroundTask {
                             use! d =
                                 TestHelpers.makeDisposable (doDispose)
                                 |> async.Return
@@ -295,7 +284,7 @@ module TaskDynamicTests =
                         ValueTask.CompletedTask
 
                     let! actual =
-                        dTask {
+                        backgroundTask {
                             use d = TestHelpers.makeAsyncDisposable (doDispose)
 
                             return data
@@ -315,7 +304,7 @@ module TaskDynamicTests =
                         ValueTask.CompletedTask
 
                     let! actual =
-                        dTask {
+                        backgroundTask {
                             use! d =
                                 TestHelpers.makeAsyncDisposable (doDispose)
                                 |> async.Return
@@ -332,7 +321,7 @@ module TaskDynamicTests =
                 testCaseAsync "use IAsyncDisposable propagate exception"
                 <| async {
                     let doDispose () =
-                        task {
+                        backgroundTask {
                             do! Task.Yield()
                             failwith "boom"
                         }
@@ -341,7 +330,7 @@ module TaskDynamicTests =
                     do!
                         Expect.throwsTask<Exception>
                             (fun () ->
-                                dTask {
+                                backgroundTask {
                                     use d = TestHelpers.makeAsyncDisposable (doDispose)
                                     return ()
                                 }
@@ -357,7 +346,7 @@ module TaskDynamicTests =
                     let mutable wasDisposed = false
 
                     let doDispose () =
-                        task {
+                        backgroundTask {
                             Expect.isFalse wasDisposed ""
                             do! Task.Yield()
                             wasDisposed <- true
@@ -366,7 +355,7 @@ module TaskDynamicTests =
 
 
                     let! actual =
-                        dTask {
+                        backgroundTask {
                             use d = TestHelpers.makeAsyncDisposable (doDispose)
                             Expect.isFalse wasDisposed ""
 
@@ -383,7 +372,7 @@ module TaskDynamicTests =
                     let mutable wasDisposed = false
 
                     let doDispose () =
-                        task {
+                        backgroundTask {
                             Expect.isFalse wasDisposed ""
                             do! Task.Yield()
                             wasDisposed <- true
@@ -392,7 +381,7 @@ module TaskDynamicTests =
 
 
                     let! actual =
-                        dTask {
+                        backgroundTask {
                             use! d =
                                 TestHelpers.makeAsyncDisposable (doDispose)
                                 |> async.Return
@@ -413,7 +402,7 @@ module TaskDynamicTests =
                     let data = 42
 
                     let! actual =
-                        dTask {
+                        backgroundTask {
                             use d = null
                             return data
                         }
@@ -437,7 +426,7 @@ module TaskDynamicTests =
                             let mutable index = 0
 
                             let! actual =
-                                dTask {
+                                backgroundTask {
                                     while index < loops do
                                         index <- index + 1
 
@@ -462,7 +451,7 @@ module TaskDynamicTests =
                             let mutable index = 0
 
                             let! actual =
-                                dTask {
+                                backgroundTask {
                                     while index < loops do
                                         do! Task.Yield()
                                         index <- index + 1
@@ -490,7 +479,7 @@ module TaskDynamicTests =
                             let mutable index = 0
 
                             let! actual =
-                                dTask {
+                                backgroundTask {
                                     for i in [ 1..10 ] do
                                         index <- i + i
 
@@ -515,7 +504,7 @@ module TaskDynamicTests =
                             let mutable index = 0
 
                             let! actual =
-                                dTask {
+                                backgroundTask {
                                     for i = 1 to loops do
                                         index <- i + i
 
@@ -539,7 +528,7 @@ module TaskDynamicTests =
                             let mutable index = 0
 
                             let! actual =
-                                dTask {
+                                backgroundTask {
                                     for i in [ 1..10 ] do
                                         do! Task.Yield()
                                         index <- i + i
@@ -565,7 +554,7 @@ module TaskDynamicTests =
                             let mutable index = 0
 
                             let! actual =
-                                dTask {
+                                backgroundTask {
                                     for i = 1 to loops do
                                         do! Task.Yield()
                                         index <- i + i
@@ -582,7 +571,7 @@ module TaskDynamicTests =
                 testCaseAsync "and! 5"
                 <| async {
                     let! actual =
-                        dTask {
+                        backgroundTask {
                             let! a = ValueTask.FromResult 1
                             and! b = Task.FromResult 2
                             and! c = coldTask { return 3 }
@@ -598,6 +587,136 @@ module TaskDynamicTests =
             ]
         ]
 
+    let syncContextTests =
+        testSequencedGroup "SyncContextTests"
+        <| testList "SyncContextTests" [
+            testCase "Task Uses Sync Context"
+            <| fun () ->
+
+                let mutable ran = false
+                let mutable posted = false
+
+                let syncContext =
+                    { new SynchronizationContext() with
+                        member _.Post(d, state) =
+                            posted <- true
+                            d.Invoke(state)
+                    }
+
+                use _sync = TestHelpers.setSyncContext syncContext
+                let tid = System.Threading.Thread.CurrentThread.ManagedThreadId
+
+                Expect.isNotNull
+                    SynchronizationContext.Current
+                    "need sync context non null on foreground thread A"
+
+                Expect.equal
+                    SynchronizationContext.Current
+                    syncContext
+                    "need sync context known on foreground thread A"
+
+                let t =
+                    task {
+                        let tid2 = System.Threading.Thread.CurrentThread.ManagedThreadId
+
+                        Expect.isNotNull
+                            SynchronizationContext.Current
+                            "need sync context non null on foreground thread B"
+
+                        Expect.equal
+                            SynchronizationContext.Current
+                            syncContext
+                            "need sync context known on foreground thread B"
+
+                        Expect.equal tid2 tid "expected synchronous start for task B2"
+                        do! Task.Yield()
+
+                        Expect.isNotNull
+                            SynchronizationContext.Current
+                            "need sync context non null on foreground thread C"
+
+                        Expect.equal
+                            SynchronizationContext.Current
+                            syncContext
+                            "need sync context known on foreground thread C"
+
+                        ran <- true
+                    }
+
+                t.Wait()
+                Expect.isTrue ran "expected task to run"
+                Expect.isTrue posted "expected task to post"
+            testCase "BackgroundTask Escapes SyncContext"
+            <| fun () ->
+
+                let mutable ran = false
+                let mutable posted = false
+
+                let syncContext =
+                    { new SynchronizationContext() with
+                        member _.Post(d, state) =
+                            posted <- true
+                            d.Invoke(state)
+                    }
+
+                use _sync = TestHelpers.setSyncContext syncContext
+
+                let t =
+                    backgroundTask {
+                        Expect.isTrue
+                            Thread.CurrentThread.IsThreadPoolThread
+                            "expected thread pool thread"
+
+                        ran <- true
+                    }
+
+                t.Wait()
+
+                Expect.isTrue ran "expected task to run"
+                Expect.isFalse posted "expected task to not post"
+            testCase "BackgroundTask Stays On Same Thread If Already On Background"
+            <| fun () ->
+
+                let mutable ran = false
+
+                let outer =
+                    Task.Run(fun () ->
+                        let tid = System.Threading.Thread.CurrentThread.ManagedThreadId
+                        use _sync = TestHelpers.setSyncContext null
+
+                        Expect.isTrue
+                            System.Threading.Thread.CurrentThread.IsThreadPoolThread
+                            "expected thread pool thread (1)"
+
+                        let t =
+                            backgroundTask {
+                                Expect.isTrue
+                                    System.Threading.Thread.CurrentThread.IsThreadPoolThread
+                                    "expected thread pool thread (2)"
+
+                                let tid2 = System.Threading.Thread.CurrentThread.ManagedThreadId
+
+                                Expect.equal
+                                    tid2
+                                    tid
+                                    "expected synchronous starts when already on background thread"
+
+                                do! Task.Delay(200)
+                                ran <- true
+                            }
+
+                        t.Wait()
+                        Expect.isTrue ran "expected task to run"
+
+                    )
+
+                outer.Wait()
+
+        ]
 
     [<Tests>]
-    let tests = testList "IcedTasks.Polyfill.Task" [ builderTests ]
+    let tests =
+        testList "IcedTasks.Polyfill.Task.BackgroundTask" [
+            builderTests
+            syncContextTests
+        ]

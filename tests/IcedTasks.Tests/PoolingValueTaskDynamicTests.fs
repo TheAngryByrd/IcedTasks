@@ -598,4 +598,4 @@ module PoolingValueTaskDynamicTests =
         ]
 
     [<Tests>]
-    let valueTaskTests = testList "IcedTasks.PoolingValueTask" [ builderTests ]
+    let tests = testList "IcedTasks.PoolingValueTask" [ builderTests ]

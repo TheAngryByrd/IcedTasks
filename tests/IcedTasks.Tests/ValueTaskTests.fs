@@ -688,7 +688,7 @@ module ValueTaskTests =
 
 
     [<Tests>]
-    let valueTaskTests =
+    let tests =
         testList "IcedTasks.ValueTask" [
             builderTests
             functionTests
