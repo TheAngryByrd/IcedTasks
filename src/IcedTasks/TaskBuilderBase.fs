@@ -393,7 +393,7 @@ module TaskBase =
             member inline this.BindReturn
                 (
                     getAwaiter: 'Awaiter,
-                    mapper: 'a -> 'TResult2
+                    [<InlineIfLambda>] mapper: 'a -> 'TResult2
                 ) : TaskBaseCode<'TResult2, 'TResult2, 'Builder> =
                 this.Bind(getAwaiter, (fun v -> this.Return(mapper v)))
 

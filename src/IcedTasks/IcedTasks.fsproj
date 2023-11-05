@@ -25,6 +25,7 @@
     <Compile Include="AsyncEx.fs" />
     <Compile Include="ParallelAsync.fs" />
     <Compile Include="ColdTask.fs" />
+    <Compile Include="CancellableTaskBuilderBase.fs" />
     <Compile Include="CancellableValueTask.fs" />
     <Compile Include="CancellableTask.fs" />
     <!-- <Compile Include="CancellableEffect.fs" /> -->
