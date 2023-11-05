@@ -27,8 +27,8 @@
     <Compile Include="ColdTask.fs" />
     <Compile Include="CancellableTaskBuilderBase.fs" />
     <Compile Include="CancellableValueTask.fs" />
+    <Compile Include="CancellablePoolingValueTask.fs" />
     <Compile Include="CancellableTask.fs" />
-    <!-- <Compile Include="CancellableEffect.fs" /> -->
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
