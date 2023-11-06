@@ -179,6 +179,24 @@ module TaskDynamicTests =
                     Expect.equal actual expected ""
                 }
 
+                testCaseAsync "Can Bind Type inference"
+                <| async {
+                    let expected = "lol"
+
+                    let outerTask fooTask =
+                        dTask {
+                            let! result = fooTask
+                            return result
+                        }
+
+                    let! actual =
+                        outerTask (Task.FromResult expected)
+                        |> Async.AwaitTask
+
+                    Expect.equal actual expected ""
+                }
+
+
             ]
 
             testList "Zero/Combine/Delay" [

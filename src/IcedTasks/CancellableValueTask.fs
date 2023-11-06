@@ -142,7 +142,7 @@ module CancellableValueTasks =
                 CancellableValueTaskBuilder.RunDynamic(code)
 
 
-        // Used for type inference priority
+        /// Specify a Source of CancellationToken -> ValueTask<_> on the real type to allow type inference to work
         member inline _.Source
             (x: CancellationToken -> ValueTask<_>)
             : CancellationToken -> Awaiter<ValueTaskAwaiter<_>, _> =

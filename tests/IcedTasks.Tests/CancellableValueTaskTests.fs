@@ -348,6 +348,24 @@ module CancellableValueTaskTests =
                     Expect.equal actual expected ""
                 }
 
+
+                testCaseAsync "Can Bind Type inference"
+                <| async {
+                    let expected = "lol"
+
+                    let outerTask fooTask =
+                        cancellableValueTask {
+                            let! result = fooTask
+                            return result
+                        }
+
+                    let! actual =
+                        outerTask (fun ct -> ValueTask.FromResult expected)
+                        |> Async.AwaitCancellableValueTask
+
+                    Expect.equal actual expected ""
+                }
+
             ]
 
             testList "Zero/Combine/Delay" [

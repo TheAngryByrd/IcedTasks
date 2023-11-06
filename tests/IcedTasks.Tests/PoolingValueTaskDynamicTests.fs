@@ -179,6 +179,23 @@ module PoolingValueTaskDynamicTests =
                     Expect.equal actual expected ""
                 }
 
+                testCaseAsync "Can Bind Type inference"
+                <| async {
+                    let expected = "lol"
+
+                    let outerTask fooTask =
+                        dPoolingValueTask {
+                            let! result = fooTask
+                            return result
+                        }
+
+                    let! actual =
+                        outerTask (ValueTask.FromResult expected)
+                        |> Async.AwaitValueTask
+
+                    Expect.equal actual expected ""
+                }
+
             ]
 
             testList "Zero/Combine/Delay" [

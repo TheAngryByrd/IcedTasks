@@ -141,7 +141,7 @@ module CancellableTasks =
             else
                 CancellableTaskBuilder.RunDynamic(code)
 
-        // Used for type inference priority
+        /// Specify a Source of CancellationToken -> Task<_> on the real type to allow type inference to work
         member inline _.Source
             (x: CancellationToken -> Task<_>)
             : CancellationToken -> Awaiter<TaskAwaiter<_>, _> =
