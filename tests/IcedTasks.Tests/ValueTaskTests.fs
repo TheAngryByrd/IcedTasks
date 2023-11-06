@@ -5,7 +5,6 @@ open Expecto
 open System.Threading
 open System.Threading.Tasks
 open IcedTasks
-#if !NETSTANDARD2_0
 
 module ValueTaskTests =
 
@@ -28,18 +27,17 @@ module ValueTaskTests =
                 <| async {
                     let fooTask: ValueTask = ValueTask.CompletedTask
                     let outerTask = valueTask { return! fooTask }
-
+                    // Compiling is sufficient expect
                     do!
                         outerTask
                         |> Async.AwaitValueTask
-                // Compiling is sufficient expect
+
                 }
                 testCaseAsync "Can ReturnFrom ValueTask<T>"
                 <| async {
                     let expected = "lol"
                     let fooTask: ValueTask<_> = ValueTask.FromResult expected
                     let outerTask = valueTask { return! fooTask }
-
 
                     let! actual =
                         outerTask
@@ -50,11 +48,11 @@ module ValueTaskTests =
                 testCaseAsync "Can ReturnFrom Task"
                 <| async {
                     let outerTask = valueTask { return! Task.CompletedTask }
-
+                    // Compiling is sufficient expect
                     do!
                         outerTask
                         |> Async.AwaitValueTask
-                // Compiling is sufficient expect
+
                 }
                 testCaseAsync "Can ReturnFrom Task<T>"
                 <| async {
@@ -163,6 +161,23 @@ module ValueTaskTests =
 
                     let! actual =
                         outerTask
+                        |> Async.AwaitValueTask
+
+                    Expect.equal actual expected ""
+                }
+
+                testCaseAsync "Can Bind Type inference"
+                <| async {
+                    let expected = "lol"
+
+                    let outerTask fooTask =
+                        valueTask {
+                            let! result = fooTask
+                            return result
+                        }
+
+                    let! actual =
+                        outerTask (ValueTask.FromResult expected)
                         |> Async.AwaitValueTask
 
                     Expect.equal actual expected ""
@@ -587,55 +602,6 @@ module ValueTaskTests =
             ]
         ]
 
-
-    // let asyncBuilderTests =
-    //     testList "AsyncBuilder" [
-
-    //         testCase "AsyncBuilder can Bind ValueTask<T>"
-    //         <| fun () ->
-    //             let innerTask = valueTask { return! valueTask { return "lol" } }
-
-    //             let outerAsync = async {
-    //                 let! result = innerTask |> Async.AwaitValueTask
-    //                 return result
-    //             }
-
-    //             let actual = Async.RunSynchronously(outerAsync)
-    //             Expect.equal actual "lol" ""
-
-
-    //         testCase "AsyncBuilder can ReturnFrom ValueTask<T>"
-    //         <| fun () ->
-    //             let innerTask = valueTask { return! valueTask { return "lol" } }
-
-    //             let outerAsync = async { return! innerTask }
-
-    //             let actual = Async.RunSynchronously(outerAsync)
-    //             Expect.equal actual "lol" ""
-
-    //         testCase "AsyncBuilder can Bind ValueTask"
-    //         <| fun () ->
-    //             let innerTask: ValueTask = fun () -> Task.CompletedTask
-
-    //             let outerAsync = async {
-    //                 let! result = innerTask
-    //                 return result
-    //             }
-
-    //             let actual = Async.RunSynchronously(outerAsync)
-    //             Expect.equal actual () ""
-
-    //         testCase "AsyncBuilder can ReturnFrom ValueTask"
-    //         <| fun () ->
-    //             let innerTask: ValueTask = fun () -> Task.CompletedTask
-
-    //             let outerAsync = async { return! innerTask }
-
-    //             let actual = Async.RunSynchronously(outerAsync)
-    //             Expect.equal actual () ""
-    //     ]
-
-
     let functionTests =
         testList "functions" [
             testList "singleton" [
@@ -739,11 +705,8 @@ module ValueTaskTests =
 
 
     [<Tests>]
-    let valueTaskTests =
+    let tests =
         testList "IcedTasks.ValueTask" [
             builderTests
-            // asyncBuilderTests
             functionTests
         ]
-
-#endif

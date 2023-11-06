@@ -10,12 +10,11 @@
 // to this software to the public domain worldwide. This software is distributed without any warranty.
 
 namespace IcedTasks
-
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
+#if NET6_0_OR_GREATER
 
 /// Contains methods to build CancellableTasks using the F# computation expression syntax
 [<AutoOpen>]
-module CancellableValueTasks =
+module CancellablePoolingValueTasks =
 
     open System
     open System.Runtime.CompilerServices
@@ -32,8 +31,8 @@ module CancellableValueTasks =
     /// CancellationToken -> ValueTask
     type CancellableValueTask = CancellationToken -> ValueTask
 
-    /// Contains methods to build CancellableValueTasks using the F# computation expression syntax
-    type CancellableValueTaskBuilder() =
+    /// Contains methods to build CancellablePoolingValueTaskBuilder using the F# computation expression syntax
+    type CancellablePoolingValueTaskBuilder() =
 
         inherit CancellableTaskBuilderBase()
 
@@ -96,7 +95,7 @@ module CancellableValueTasks =
                 else
                     sm.Data.CancellationToken <- ct
                     sm.ResumptionDynamicInfo <- resumptionInfo
-                    sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
+                    sm.Data.MethodBuilder <- PoolingAsyncValueTaskMethodBuilder<'T>.Create()
                     sm.Data.MethodBuilder.Start(&sm)
                     sm.Data.MethodBuilder.Task
 
@@ -134,12 +133,15 @@ module CancellableValueTasks =
                             else
                                 let mutable sm = sm
                                 sm.Data.CancellationToken <- ct
-                                sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
+
+                                sm.Data.MethodBuilder <-
+                                    PoolingAsyncValueTaskMethodBuilder<'T>.Create()
+
                                 sm.Data.MethodBuilder.Start(&sm)
                                 sm.Data.MethodBuilder.Task
                     ))
             else
-                CancellableValueTaskBuilder.RunDynamic(code)
+                CancellablePoolingValueTaskBuilder.RunDynamic(code)
 
 
         /// Specify a Source of CancellationToken -> ValueTask<_> on the real type to allow type inference to work
@@ -207,9 +209,15 @@ module CancellableValueTasks =
     module CancellableValueTaskBuilder =
 
         /// <summary>
-        /// Builds a cancellableValueTask using computation expression syntax.
+        /// Builds a cancellablePoolingValueTask using computation expression syntax.
         /// </summary>
-        let cancellableValueTask = CancellableValueTaskBuilder()
+        let cancellablePoolingValueTask = CancellablePoolingValueTaskBuilder()
+
+
+        /// <summary>
+        /// Builds a cancellablePoolingValueTask using computation expression syntax.
+        /// </summary>
+        let cancelablePVTask = poolingValueTask
 
 
     /// <exclude />
@@ -371,7 +379,7 @@ module CancellableValueTasks =
             ([<InlineIfLambda>] binder: 'input -> CancellableValueTask<'output>)
             ([<InlineIfLambda>] cTask: CancellableValueTask<'input>)
             =
-            cancellableValueTask {
+            cancellablePoolingValueTask {
                 let! cResult = cTask
                 return! binder cResult
             }
@@ -384,7 +392,7 @@ module CancellableValueTasks =
             ([<InlineIfLambda>] mapper: 'input -> 'output)
             ([<InlineIfLambda>] cTask: CancellableValueTask<'input>)
             =
-            cancellableValueTask {
+            cancellablePoolingValueTask {
                 let! cResult = cTask
                 return mapper cResult
             }
@@ -397,7 +405,7 @@ module CancellableValueTasks =
             ([<InlineIfLambda>] applicable: CancellableValueTask<'input -> 'output>)
             ([<InlineIfLambda>] cTask: CancellableValueTask<'input>)
             =
-            cancellableValueTask {
+            cancellablePoolingValueTask {
                 let! applier = applicable
                 let! cResult = cTask
                 return applier cResult
@@ -411,7 +419,7 @@ module CancellableValueTasks =
             ([<InlineIfLambda>] left: CancellableValueTask<'left>)
             ([<InlineIfLambda>] right: CancellableValueTask<'right>)
             =
-            cancellableValueTask {
+            cancellablePoolingValueTask {
                 let! r1 = left
                 let! r2 = right
                 return r1, r2
@@ -425,7 +433,7 @@ module CancellableValueTasks =
             ([<InlineIfLambda>] left: CancellableValueTask<'left>)
             ([<InlineIfLambda>] right: CancellableValueTask<'right>)
             =
-            cancellableValueTask {
+            cancellablePoolingValueTask {
                 let! ct = getCancellationToken ()
                 let r1 = left ct
                 let r2 = right ct
@@ -439,7 +447,7 @@ module CancellableValueTasks =
         /// <param name="unitCancellableTask">The CancellableValueTask to convert.</param>
         /// <returns>a CancellableValueTask\&lt;unit\&gt;.</returns>
         let inline ofUnit ([<InlineIfLambda>] unitCancellableTask: CancellableValueTask) =
-            cancellableValueTask { return! unitCancellableTask }
+            cancellablePoolingValueTask { return! unitCancellableTask }
 
         /// <summary>Coverts a CancellableValueTask\&lt;_\&gt; to a CancellableValueTask.</summary>
         /// <param name="Task">The CancellableValueTask to convert.</param>

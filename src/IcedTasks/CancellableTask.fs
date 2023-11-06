@@ -31,275 +31,6 @@ module CancellableTasks =
     /// CancellationToken -> Task
     type CancellableTask = CancellationToken -> Task
 
-    /// The extra data stored in ResumableStateMachine for tasks
-    [<Struct; NoComparison; NoEquality>]
-    type CancellableTaskStateMachineData<'T> =
-        [<DefaultValue(false)>]
-        val mutable CancellationToken: CancellationToken
-
-        [<DefaultValue(false)>]
-        val mutable Result: 'T
-
-        [<DefaultValue(false)>]
-        val mutable MethodBuilder: AsyncTaskMethodBuilder<'T>
-
-        member inline this.ThrowIfCancellationRequested() =
-            this.CancellationToken.ThrowIfCancellationRequested()
-
-    /// This is used by the compiler as a template for creating state machine structs
-    and CancellableTaskStateMachine<'TOverall> =
-        ResumableStateMachine<CancellableTaskStateMachineData<'TOverall>>
-
-    /// Represents the runtime continuation of a CancellableTask state machine created dynamically
-    and CancellableTaskResumptionFunc<'TOverall> =
-        ResumptionFunc<CancellableTaskStateMachineData<'TOverall>>
-
-    /// Represents the runtime continuation of a CancellableTask state machine created dynamically
-    and CancellableTaskResumptionDynamicInfo<'TOverall> =
-        ResumptionDynamicInfo<CancellableTaskStateMachineData<'TOverall>>
-
-    /// A special compiler-recognized delegate type for specifying blocks of CancellableTask code with access to the state machine
-    and CancellableTaskCode<'TOverall, 'T> =
-        ResumableCode<CancellableTaskStateMachineData<'TOverall>, 'T>
-
-    /// Contains methods to build CancellableTasks using the F# computation expression syntax
-    type CancellableTaskBuilderBase() =
-
-
-        /// <summary>Creates a CancellableTask that runs generator</summary>
-        /// <param name="generator">The function to run</param>
-        /// <returns>A cancellableTask that runs generator</returns>
-        member inline _.Delay
-            ([<InlineIfLambdaAttribute>] generator: unit -> CancellableTaskCode<'TOverall, 'T>)
-            : CancellableTaskCode<'TOverall, 'T> =
-            ResumableCode.Delay(fun () -> generator ())
-
-
-        /// <summary>Creates an CancellableTask that just returns ().</summary>
-        /// <remarks>
-        /// The existence of this method permits the use of empty else branches in the
-        /// cancellableTask { ... } computation expression syntax.
-        /// </remarks>
-        /// <returns>An CancellableTask that returns ().</returns>
-        [<DefaultValue>]
-        member inline _.Zero() : CancellableTaskCode<'TOverall, unit> = ResumableCode.Zero()
-
-        /// <summary>Creates an computation that returns the result v.</summary>
-        ///
-        /// <remarks>A cancellation check is performed when the computation is executed.
-        ///
-        /// The existence of this method permits the use of return in the
-        /// cancellableTask { ... } computation expression syntax.</remarks>
-        ///
-        /// <param name="value">The value to return from the computation.</param>
-        ///
-        /// <returns>An CancellableTask that returns value when executed.</returns>
-        member inline _.Return(value: 'T) : CancellableTaskCode<'T, 'T> =
-            CancellableTaskCode<'T, _>(fun sm ->
-                sm.Data.Result <- value
-                true
-            )
-
-        /// <summary>Creates an CancellableTask that first runs task1
-        /// and then runs computation2, returning the result of computation2.</summary>
-        ///
-        /// <remarks>
-        ///
-        /// The existence of this method permits the use of expression sequencing in the
-        /// cancellableTask { ... } computation expression syntax.</remarks>
-        ///
-        /// <param name="task1">The first part of the sequenced computation.</param>
-        /// <param name="task2">The second part of the sequenced computation.</param>
-        ///
-        /// <returns>An CancellableTask that runs both of the computations sequentially.</returns>
-        member inline _.Combine
-            (
-                task1: CancellableTaskCode<'TOverall, unit>,
-                task2: CancellableTaskCode<'TOverall, 'T>
-            ) : CancellableTaskCode<'TOverall, 'T> =
-            ResumableCode.Combine(task1, task2)
-
-        /// <summary>Creates an CancellableTask that runs computation repeatedly
-        /// until guard() becomes false.</summary>
-        ///
-        /// <remarks>
-        ///
-        /// The existence of this method permits the use of while in the
-        /// cancellableTask { ... } computation expression syntax.</remarks>
-        ///
-        /// <param name="guard">The function to determine when to stop executing computation.</param>
-        /// <param name="computation">The function to be executed.  Equivalent to the body
-        /// of a while expression.</param>
-        ///
-        /// <returns>An CancellableTask that behaves similarly to a while loop when run.</returns>
-        member inline _.While
-            (
-                [<InlineIfLambda>] guard: unit -> bool,
-                computation: CancellableTaskCode<'TOverall, unit>
-            ) : CancellableTaskCode<'TOverall, unit> =
-            ResumableCode.While(guard, computation)
-
-        /// <summary>Creates an CancellableTask that runs computation and returns its result.
-        /// If an exception happens then catchHandler(exn) is called and the resulting computation executed instead.</summary>
-        ///
-        /// <remarks>
-        ///
-        /// The existence of this method permits the use of try/with in the
-        /// cancellableTask { ... } computation expression syntax.</remarks>
-        ///
-        /// <param name="computation">The input computation.</param>
-        /// <param name="catchHandler">The function to run when computation throws an exception.</param>
-        ///
-        /// <returns>An CancellableTask that executes computation and calls catchHandler if an
-        /// exception is thrown.</returns>
-        member inline _.TryWith
-            (
-                computation: CancellableTaskCode<'TOverall, 'T>,
-                catchHandler: exn -> CancellableTaskCode<'TOverall, 'T>
-            ) : CancellableTaskCode<'TOverall, 'T> =
-            ResumableCode.TryWith(computation, catchHandler)
-
-        /// <summary>Creates an CancellableTask that runs computation. The action compensation is executed
-        /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
-        /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
-        ///
-        /// <remarks>
-        ///
-        /// The existence of this method permits the use of try/finally in the
-        /// cancellableTask { ... } computation expression syntax.</remarks>
-        ///
-        /// <param name="computation">The input computation.</param>
-        /// <param name="compensation">The action to be run after computation completes or raises an
-        /// exception (including cancellation).</param>
-        ///
-        /// <returns>An CancellableTask that executes computation and compensation afterwards or
-        /// when an exception is raised.</returns>
-        member inline _.TryFinally
-            (
-                computation: CancellableTaskCode<'TOverall, 'T>,
-                [<InlineIfLambda>] compensation: unit -> unit
-            ) : CancellableTaskCode<'TOverall, 'T> =
-            ResumableCode.TryFinally(
-                computation,
-                ResumableCode<_, _>(fun _ ->
-                    compensation ()
-                    true
-                )
-            )
-
-        /// <summary>Creates an CancellableTask that enumerates the sequence seq
-        /// on demand and runs body for each element.</summary>
-        ///
-        /// <remarks>A cancellation check is performed on each iteration of the loop.
-        ///
-        /// The existence of this method permits the use of for in the
-        /// cancellableTask { ... } computation expression syntax.</remarks>
-        ///
-        /// <param name="sequence">The sequence to enumerate.</param>
-        /// <param name="body">A function to take an item from the sequence and create
-        /// an CancellableTask.  Can be seen as the body of the for expression.</param>
-        ///
-        /// <returns>An CancellableTask that will enumerate the sequence and run body
-        /// for each element.</returns>
-        member inline _.For
-            (
-                sequence: seq<'T>,
-                body: 'T -> CancellableTaskCode<'TOverall, unit>
-            ) : CancellableTaskCode<'TOverall, unit> =
-            ResumableCode.For(sequence, body)
-
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
-        /// <summary>Creates an CancellableTask that runs computation. The action compensation is executed
-        /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
-        /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
-        ///
-        /// <remarks>
-        ///
-        /// The existence of this method permits the use of try/finally in the
-        /// cancellableTask { ... } computation expression syntax.</remarks>
-        ///
-        /// <param name="computation">The input computation.</param>
-        /// <param name="compensation">The action to be run after computation completes or raises an
-        /// exception.</param>
-        ///
-        /// <returns>An CancellableTask that executes computation and compensation afterwards or
-        /// when an exception is raised.</returns>
-        member inline internal this.TryFinallyAsync
-            (
-                computation: CancellableTaskCode<'TOverall, 'T>,
-                compensation: unit -> ValueTask
-            ) : CancellableTaskCode<'TOverall, 'T> =
-            ResumableCode.TryFinallyAsync(
-                computation,
-                ResumableCode<_, _>(fun sm ->
-
-                    if __useResumableCode then
-                        let mutable __stack_condition_fin = true
-                        let __stack_vtask = compensation ()
-                        let mutable awaiter = Awaitable.GetAwaiter __stack_vtask
-
-                        if not (Awaiter.IsCompleted awaiter) then
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-                            __stack_condition_fin <- __stack_yield_fin
-
-                        if __stack_condition_fin then
-                            Awaiter.GetResult awaiter
-                        else
-                            sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
-
-                        __stack_condition_fin
-                    else
-                        let vtask = compensation ()
-                        let mutable awaiter = vtask.GetAwaiter()
-
-                        let cont =
-                            CancellableTaskResumptionFunc<'TOverall>(fun sm ->
-                                Awaiter.GetResult awaiter
-                                true
-                            )
-
-                        // shortcut to continue immediately
-                        if awaiter.IsCompleted then
-                            cont.Invoke(&sm)
-                        else
-                            sm.ResumptionDynamicInfo.ResumptionData <-
-                                (awaiter :> ICriticalNotifyCompletion)
-
-                            sm.ResumptionDynamicInfo.ResumptionFunc <- cont
-                            false
-                )
-            )
-
-        /// <summary>Creates an CancellableTask that runs binder(resource).
-        /// The action resource.DisposeAsync() is executed as this computation yields its result
-        /// or if the CancellableTask exits by an exception or by cancellation.</summary>
-        ///
-        /// <remarks>
-        ///
-        /// The existence of this method permits the use of use and use! in the
-        /// cancellableTask { ... } computation expression syntax.</remarks>
-        ///
-        /// <param name="resource">The resource to be used and disposed.</param>
-        /// <param name="binder">The function that takes the resource and returns an asynchronous
-        /// computation.</param>
-        ///
-        /// <returns>An CancellableTask that binds and eventually disposes resource.</returns>
-        ///
-        member inline this.Using<'Resource, 'TOverall, 'T when 'Resource :> IAsyncDisposable>
-            (
-                resource: 'Resource,
-                binder: 'Resource -> CancellableTaskCode<'TOverall, 'T>
-            ) : CancellableTaskCode<'TOverall, 'T> =
-            this.TryFinallyAsync(
-                (fun sm -> (binder resource).Invoke(&sm)),
-                (fun () ->
-                    if not (isNull (box resource)) then
-                        resource.DisposeAsync()
-                    else
-                        ValueTask()
-                )
-            )
-#endif
     /// Contains methods to build CancellableTasks using the F# computation expression syntax
     type CancellableTaskBuilder() =
 
@@ -314,15 +45,17 @@ module CancellableTasks =
         /// <summary>
         /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
         /// </summary>
-        static member inline RunDynamic(code: CancellableTaskCode<'T, 'T>) : CancellableTask<'T> =
+        static member inline RunDynamic
+            (code: CancellableTaskBaseCode<'T, 'T, _>)
+            : CancellableTask<'T> =
 
-            let mutable sm = CancellableTaskStateMachine<'T>()
+            let mutable sm = CancellableTaskBaseStateMachine<'T, _>()
 
             let initialResumptionFunc =
-                CancellableTaskResumptionFunc<'T>(fun sm -> code.Invoke(&sm))
+                CancellableTaskBaseResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm))
 
             let resumptionInfo =
-                { new CancellableTaskResumptionDynamicInfo<'T>(initialResumptionFunc) with
+                { new CancellableTaskBaseResumptionDynamicInfo<'T, _>(initialResumptionFunc) with
                     member info.MoveNext(sm) =
                         let mutable savedExn = null
 
@@ -331,24 +64,29 @@ module CancellableTasks =
                             let step = info.ResumptionFunc.Invoke(&sm)
 
                             if step then
-                                sm.Data.MethodBuilder.SetResult(sm.Data.Result)
+                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
                             else
                                 let mutable awaiter =
                                     sm.ResumptionDynamicInfo.ResumptionData
                                     :?> ICriticalNotifyCompletion
 
                                 assert not (isNull awaiter)
-                                sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
+
+                                MethodBuilder.AwaitUnsafeOnCompleted(
+                                    &sm.Data.MethodBuilder,
+                                    &awaiter,
+                                    &sm
+                                )
 
                         with exn ->
                             savedExn <- exn
                         // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
                         match savedExn with
                         | null -> ()
-                        | exn -> sm.Data.MethodBuilder.SetException exn
+                        | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
 
                     member _.SetStateMachine(sm, state) =
-                        sm.Data.MethodBuilder.SetStateMachine(state)
+                        MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
                 }
 
             fun (ct) ->
@@ -363,9 +101,9 @@ module CancellableTasks =
 
 
         /// Hosts the task code in a state machine and starts the task.
-        member inline _.Run(code: CancellableTaskCode<'T, 'T>) : CancellableTask<'T> =
+        member inline _.Run(code: CancellableTaskBaseCode<'T, 'T, _>) : CancellableTask<'T> =
             if __useResumableCode then
-                __stateMachine<CancellableTaskStateMachineData<'T>, CancellableTask<'T>>
+                __stateMachine<CancellableTaskBaseStateMachineData<'T, _>, CancellableTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
@@ -375,17 +113,17 @@ module CancellableTasks =
                             let __stack_code_fin = code.Invoke(&sm)
 
                             if __stack_code_fin then
-                                sm.Data.MethodBuilder.SetResult(sm.Data.Result)
+                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
                         with exn ->
                             __stack_exn <- exn
                         // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
                         match __stack_exn with
                         | null -> ()
-                        | exn -> sm.Data.MethodBuilder.SetException exn
+                        | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
                     //-- RESUMABLE CODE END
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
-                        sm.Data.MethodBuilder.SetStateMachine(state)
+                        MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
                     ))
                     (AfterCode<_, _>(fun sm ->
                         let sm = sm
@@ -403,6 +141,64 @@ module CancellableTasks =
             else
                 CancellableTaskBuilder.RunDynamic(code)
 
+        /// Specify a Source of CancellationToken -> Task<_> on the real type to allow type inference to work
+        member inline _.Source
+            (x: CancellationToken -> Task<_>)
+            : CancellationToken -> Awaiter<TaskAwaiter<_>, _> =
+            fun ct -> (x ct).GetAwaiter()
+
+        member inline this.MergeSources
+            (
+                [<InlineIfLambda>] left: CancellationToken -> 'Awaiter1,
+                [<InlineIfLambda>] right: CancellationToken -> 'Awaiter2
+            ) =
+            this.Run(
+                this.Bind(
+                    left,
+                    fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+                )
+            )
+            >> Awaitable.GetTaskAwaiter
+
+
+        member inline this.MergeSources
+            (
+                left: 'Awaiter1,
+                [<InlineIfLambda>] right: CancellationToken -> 'Awaiter2
+            ) =
+            this.Run(
+                this.Bind(
+                    left,
+                    fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+                )
+            )
+            >> Awaitable.GetTaskAwaiter
+
+
+        member inline this.MergeSources
+            (
+                [<InlineIfLambda>] left: CancellationToken -> 'Awaiter1,
+                right: 'Awaiter2
+            ) =
+            this.Run(
+                this.Bind(
+                    left,
+                    fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+                )
+            )
+            >> Awaitable.GetTaskAwaiter
+
+
+        member inline this.MergeSources(left: 'Awaiter1, right: 'Awaiter2) =
+            this.Run(
+                this.Bind(
+                    left,
+                    fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+                )
+            )
+            >> Awaitable.GetTaskAwaiter
+
+
     /// Contains methods to build CancellableTasks using the F# computation expression syntax
     type BackgroundCancellableTaskBuilder() =
 
@@ -411,7 +207,9 @@ module CancellableTasks =
         /// <summary>
         /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
         /// </summary>
-        static member inline RunDynamic(code: CancellableTaskCode<'T, 'T>) : CancellableTask<'T> =
+        static member inline RunDynamic
+            (code: CancellableTaskBaseCode<'T, 'T, _>)
+            : CancellableTask<'T> =
             // backgroundTask { .. } escapes to a background thread where necessary
             // See spec of ConfigureAwait(false) at https://devblogs.microsoft.com/dotnet/configureawait-faq/
             if
@@ -426,24 +224,29 @@ module CancellableTasks =
         /// <summary>
         /// Hosts the task code in a state machine and starts the task, executing in the ThreadPool using Task.Run
         /// </summary>
-        member inline _.Run(code: CancellableTaskCode<'T, 'T>) : CancellableTask<'T> =
+        member inline _.Run(code: CancellableTaskBaseCode<'T, 'T, _>) : CancellableTask<'T> =
             if __useResumableCode then
-                __stateMachine<CancellableTaskStateMachineData<'T>, CancellableTask<'T>>
+                __stateMachine<CancellableTaskBaseStateMachineData<'T, _>, CancellableTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
+                        let mutable __stack_exn: Exception = null
 
                         try
                             let __stack_code_fin = code.Invoke(&sm)
 
                             if __stack_code_fin then
-                                sm.Data.MethodBuilder.SetResult(sm.Data.Result)
+                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
                         with exn ->
-                            sm.Data.MethodBuilder.SetException exn
+                            __stack_exn <- exn
+                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
+                        match __stack_exn with
+                        | null -> ()
+                        | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
                     //-- RESUMABLE CODE END
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
-                        sm.Data.MethodBuilder.SetStateMachine(state)
+                        MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
                     ))
                     (AfterCode<_, CancellableTask<'T>>(fun sm ->
                         // backgroundTask { .. } escapes to a background thread where necessary
@@ -501,414 +304,6 @@ module CancellableTasks =
         /// </summary>
         let backgroundCancellableTask = BackgroundCancellableTaskBuilder()
 
-    /// <exclude />
-    [<AutoOpen>]
-    module LowPriority =
-        // Low priority extensions
-        type CancellableTaskBuilderBase with
-
-            /// <summary>
-            /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
-            /// </summary>
-            [<NoEagerConstraintApplication>]
-            static member inline BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall
-                when Awaiter<'Awaiter, 'TResult1>>
-                (
-                    sm: byref<ResumableStateMachine<CancellableTaskStateMachineData<'TOverall>>>,
-                    [<InlineIfLambda>] getAwaiter: CancellationToken -> 'Awaiter,
-                    continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
-                ) : bool =
-                sm.Data.ThrowIfCancellationRequested()
-
-                let mutable awaiter = getAwaiter sm.Data.CancellationToken
-
-                let cont =
-                    (CancellableTaskResumptionFunc<'TOverall>(fun sm ->
-                        let result = Awaiter.GetResult awaiter
-                        (continuation result).Invoke(&sm)
-                    ))
-
-                // shortcut to continue immediately
-                if Awaiter.IsCompleted awaiter then
-                    cont.Invoke(&sm)
-                else
-                    sm.ResumptionDynamicInfo.ResumptionData <-
-                        (awaiter :> ICriticalNotifyCompletion)
-
-                    sm.ResumptionDynamicInfo.ResumptionFunc <- cont
-                    false
-
-            /// <summary>Creates an CancellableTask that runs computation, and when
-            /// computation generates a result T, runs binder res.</summary>
-            ///
-            /// <remarks>A cancellation check is performed when the computation is executed.
-            ///
-            /// The existence of this method permits the use of let! in the
-            /// cancellableTask { ... } computation expression syntax.</remarks>
-            ///
-            /// <param name="getAwaiter">The computation to provide an unbound result.</param>
-            /// <param name="continuation">The function to bind the result of computation.</param>
-            ///
-            /// <returns>An CancellableTask that performs a monadic bind on the result
-            /// of computation.</returns>
-            [<NoEagerConstraintApplication>]
-            member inline _.Bind<'TResult1, 'TResult2, 'Awaiter, 'TOverall
-                when Awaiter<'Awaiter, 'TResult1>>
-                (
-                    [<InlineIfLambda>] getAwaiter: CancellationToken -> 'Awaiter,
-                    continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
-                ) : CancellableTaskCode<'TOverall, 'TResult2> =
-
-                CancellableTaskCode<'TOverall, _>(fun sm ->
-                    if __useResumableCode then
-                        //-- RESUMABLE CODE START
-                        sm.Data.ThrowIfCancellationRequested()
-                        // Get an awaiter from the Awaiter
-                        let mutable awaiter = getAwaiter sm.Data.CancellationToken
-
-                        let mutable __stack_fin = true
-
-                        if not (Awaiter.IsCompleted awaiter) then
-                            // This will yield with __stack_yield_fin = false
-                            // This will resume with __stack_yield_fin = true
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-                            __stack_fin <- __stack_yield_fin
-
-                        if __stack_fin then
-                            let result = Awaiter.GetResult awaiter
-                            (continuation result).Invoke(&sm)
-                        else
-                            sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
-                            false
-                    else
-                        CancellableTaskBuilderBase.BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall>(
-                            &sm,
-                            getAwaiter,
-                            continuation
-                        )
-                //-- RESUMABLE CODE END
-                )
-
-
-            /// <summary>
-            /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
-            /// </summary>
-            [<NoEagerConstraintApplication>]
-            static member inline BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall
-                when Awaiter<'Awaiter, 'TResult1>>
-                (
-                    sm: byref<ResumableStateMachine<CancellableTaskStateMachineData<'TOverall>>>,
-                    getAwaiter: 'Awaiter,
-                    continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
-                ) : bool =
-                sm.Data.ThrowIfCancellationRequested()
-
-                let mutable awaiter = getAwaiter
-
-                let cont =
-                    (CancellableTaskResumptionFunc<'TOverall>(fun sm ->
-                        let result = Awaiter.GetResult awaiter
-                        (continuation result).Invoke(&sm)
-                    ))
-
-                // shortcut to continue immediately
-                if Awaiter.IsCompleted awaiter then
-                    cont.Invoke(&sm)
-                else
-                    sm.ResumptionDynamicInfo.ResumptionData <-
-                        (awaiter :> ICriticalNotifyCompletion)
-
-                    sm.ResumptionDynamicInfo.ResumptionFunc <- cont
-                    false
-
-            /// <summary>Creates an CancellableTask that runs computation, and when
-            /// computation generates a result T, runs binder res.</summary>
-            ///
-            /// <remarks>A cancellation check is performed when the computation is executed.
-            ///
-            /// The existence of this method permits the use of let! in the
-            /// cancellableTask { ... } computation expression syntax.</remarks>
-            ///
-            /// <param name="getAwaiter">The computation to provide an unbound result.</param>
-            /// <param name="continuation">The function to bind the result of computation.</param>
-            ///
-            /// <returns>An CancellableTask that performs a monadic bind on the result
-            /// of computation.</returns>
-            [<NoEagerConstraintApplication>]
-            member inline _.Bind<'TResult1, 'TResult2, 'Awaiter, 'TOverall
-                when Awaiter<'Awaiter, 'TResult1>>
-                (
-                    getAwaiter: 'Awaiter,
-                    continuation: ('TResult1 -> CancellableTaskCode<'TOverall, 'TResult2>)
-                ) : CancellableTaskCode<'TOverall, 'TResult2> =
-
-                CancellableTaskCode<'TOverall, _>(fun sm ->
-                    if __useResumableCode then
-                        //-- RESUMABLE CODE START
-                        sm.Data.ThrowIfCancellationRequested()
-                        // Get an awaiter from the Awaiter
-                        let mutable awaiter = getAwaiter
-
-                        let mutable __stack_fin = true
-
-                        if not (Awaiter.IsCompleted awaiter) then
-                            // This will yield with __stack_yield_fin = false
-                            // This will resume with __stack_yield_fin = true
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-                            __stack_fin <- __stack_yield_fin
-
-                        if __stack_fin then
-                            let result = Awaiter.GetResult awaiter
-                            (continuation result).Invoke(&sm)
-                        else
-                            sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
-                            false
-                    else
-                        CancellableTaskBuilderBase.BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall>(
-                            &sm,
-                            getAwaiter,
-                            continuation
-                        )
-                //-- RESUMABLE CODE END
-                )
-
-
-            /// <summary>Delegates to the input computation.</summary>
-            ///
-            /// <remarks>The existence of this method permits the use of return! in the
-            /// cancellableTask { ... } computation expression syntax.</remarks>
-            ///
-            /// <param name="getAwaiter">The input computation.</param>
-            ///
-            /// <returns>The input computation.</returns>
-            [<NoEagerConstraintApplication>]
-            member inline this.ReturnFrom<'TResult1, 'TResult2, 'Awaiter, 'TOverall
-                when Awaiter<'Awaiter, 'TResult1>>
-                ([<InlineIfLambda>] getAwaiter: CancellationToken -> 'Awaiter)
-                : CancellableTaskCode<_, _> =
-                this.Bind((fun ct -> getAwaiter ct), (fun v -> this.Return v))
-
-
-            [<NoEagerConstraintApplication>]
-            member inline this.ReturnFrom<'TResult1, 'TResult2, 'Awaiter, 'TOverall
-                when Awaiter<'Awaiter, 'TResult1>>
-                (getAwaiter: 'Awaiter)
-                : CancellableTaskCode<_, _> =
-                this.Bind(getAwaiter, (fun v -> this.Return v))
-
-
-            [<NoEagerConstraintApplication>]
-            member inline this.BindReturn<'TResult1, 'TResult2, 'Awaiter, 'TOverall
-                when Awaiter<'Awaiter, 'TResult1>>
-                (
-                    [<InlineIfLambda>] getAwaiter: CancellationToken -> 'Awaiter,
-                    mapper: 'TResult1 -> 'TResult2
-                ) : CancellableTaskCode<'TResult2, 'TResult2> =
-                this.Bind((fun ct -> getAwaiter ct), (fun v -> this.Return(mapper v)))
-
-
-            [<NoEagerConstraintApplication>]
-            member inline this.BindReturn<'TResult1, 'TResult2, 'Awaiter, 'TOverall
-                when Awaiter<'Awaiter, 'TResult1>>
-                (
-                    getAwaiter: 'Awaiter,
-                    mapper: 'TResult1 -> 'TResult2
-                ) : CancellableTaskCode<'TResult2, 'TResult2> =
-                this.Bind(getAwaiter, (fun v -> this.Return(mapper v)))
-
-            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
-            ///
-            /// <remarks>This is the identify function.</remarks>
-            ///
-            /// <returns>CancellationToken -> 'Awaiter</returns>
-            [<NoEagerConstraintApplication>]
-            member inline _.Source<'TResult1, 'TResult2, 'Awaiter, 'TOverall
-                when Awaiter<'Awaiter, 'TResult1>>
-                ([<InlineIfLambda>] getAwaiter: CancellationToken -> 'Awaiter)
-                : CancellationToken -> 'Awaiter =
-                getAwaiter
-
-
-            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
-            ///
-            /// <remarks>This is the identify function.</remarks>
-            ///
-            /// <returns>CancellationToken -> 'Awaiter</returns>
-            [<NoEagerConstraintApplication>]
-            member inline _.Source<'TResult1, 'TResult2, 'Awaiter, 'TOverall
-                when Awaiter<'Awaiter, 'TResult1>>
-                (getAwaiter: 'Awaiter)
-                : 'Awaiter =
-                getAwaiter
-
-
-            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
-            ///
-            /// <remarks>This turns a 'Awaitable into a CancellationToken -> 'Awaiter.</remarks>
-            ///
-            /// <returns>CancellationToken -> 'Awaiter</returns>
-            [<NoEagerConstraintApplication>]
-            member inline _.Source<'Awaitable, 'TResult1, 'TResult2, 'Awaiter, 'TOverall
-                when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
-                (task: 'Awaitable)
-                : 'Awaiter =
-                Awaitable.GetAwaiter task
-
-
-            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
-            ///
-            /// <remarks>This turns a CancellationToken -> 'Awaitable into a CancellationToken -> 'Awaiter.</remarks>
-            ///
-            /// <returns>CancellationToken -> 'Awaiter</returns>
-            [<NoEagerConstraintApplication>]
-            member inline _.Source<'Awaitable, 'TResult1, 'TResult2, 'Awaiter, 'TOverall
-                when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
-                ([<InlineIfLambda>] task: CancellationToken -> 'Awaitable)
-                : CancellationToken -> 'Awaiter =
-                (fun ct -> Awaitable.GetAwaiter(task ct))
-
-
-            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
-            ///
-            /// <remarks>This turns a unit -> 'Awaitable into a CancellationToken -> 'Awaiter.</remarks>
-            ///
-            /// <returns>CancellationToken -> 'Awaiter</returns>
-            [<NoEagerConstraintApplication>]
-            member inline _.Source<'Awaitable, 'TResult1, 'TResult2, 'Awaiter, 'TOverall
-                when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
-                ([<InlineIfLambda>] task: unit -> 'Awaitable)
-                : CancellationToken -> 'Awaiter =
-                (fun ct -> Awaitable.GetAwaiter(task ()))
-
-
-            /// <summary>Creates an CancellableTask that runs binder(resource).
-            /// The action resource.Dispose() is executed as this computation yields its result
-            /// or if the CancellableTask exits by an exception or by cancellation.</summary>
-            ///
-            /// <remarks>
-            ///
-            /// The existence of this method permits the use of use and use! in the
-            /// cancellableTask { ... } computation expression syntax.</remarks>
-            ///
-            /// <param name="resource">The resource to be used and disposed.</param>
-            /// <param name="binder">The function that takes the resource and returns an asynchronous
-            /// computation.</param>
-            ///
-            /// <returns>An CancellableTask that binds and eventually disposes resource.</returns>
-            ///
-            member inline _.Using<'Resource, 'TOverall, 'T when 'Resource :> IDisposable>
-                (
-                    resource: 'Resource,
-                    binder: 'Resource -> CancellableTaskCode<'TOverall, 'T>
-                ) =
-                ResumableCode.Using(resource, binder)
-
-    /// <exclude />
-    [<AutoOpen>]
-    module HighPriority =
-
-        type AsyncEx with
-
-            /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
-            /// its result.</summary>
-            ///
-            /// <remarks>
-            /// This is based on <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
-            /// </remarks>
-            static member inline AwaitCancellableTask([<InlineIfLambda>] t: CancellableTask<'T>) =
-                asyncEx {
-                    let! ct = Async.CancellationToken
-                    return! t ct
-                }
-
-            /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
-            /// its result.</summary>
-            ///
-            /// <remarks>
-            /// This is based on <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
-            /// </remarks>
-            static member inline AwaitCancellableTask([<InlineIfLambda>] t: CancellableTask) =
-                asyncEx {
-                    let! ct = Async.CancellationToken
-                    return! t ct
-                }
-
-        type Microsoft.FSharp.Control.Async with
-
-            /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
-            /// its result.</summary>
-            static member inline AwaitCancellableTask([<InlineIfLambda>] t: CancellableTask<'T>) =
-                async {
-                    let! ct = Async.CancellationToken
-
-                    return!
-                        t ct
-                        |> Async.AwaitTask
-                }
-
-            /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
-            /// its result.</summary>
-            static member inline AwaitCancellableTask([<InlineIfLambda>] t: CancellableTask) =
-                async {
-                    let! ct = Async.CancellationToken
-
-                    return!
-                        t ct
-                        |> Async.AwaitTask
-                }
-
-            /// <summary>Runs an asynchronous computation, starting on the current operating system thread.</summary>
-            static member inline AsCancellableTask(computation: Async<'T>) : CancellableTask<_> =
-                fun ct -> Async.StartImmediateAsTask(computation, cancellationToken = ct)
-
-        // High priority extensions
-        type CancellableTaskBuilderBase with
-
-
-            /// <summary>Allows the computation expression to turn other types into other types</summary>
-            ///
-            /// <remarks>This is the identify function for For binds.</remarks>
-            ///
-            /// <returns>IEnumerable</returns>
-            member inline _.Source(s: #seq<_>) : #seq<_> = s
-
-            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
-            ///
-            /// <remarks>This turns a Task&lt;'T&gt; into a CancellationToken -> 'Awaiter.</remarks>
-            ///
-            /// <returns>CancellationToken -> 'Awaiter</returns>
-            member inline _.Source(task: Task<'T>) = task.GetAwaiter()
-
-            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
-            ///
-            /// <remarks>This turns a ColdTask&lt;'T&gt; into a CancellationToken -> 'Awaiter.</remarks>
-            ///
-            /// <returns>CancellationToken -> 'Awaiter</returns>
-            member inline _.Source([<InlineIfLambda>] task: unit -> Task<'TResult1>) =
-                (fun (ct: CancellationToken) -> (task ()).GetAwaiter())
-
-            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
-            ///
-            /// <remarks>This turns a CancellableTask&lt;'T&gt; into a CancellationToken -> 'Awaiter.</remarks>
-            ///
-            /// <returns>CancellationToken -> 'Awaiter</returns>
-            member inline _.Source([<InlineIfLambda>] task: CancellableTask<'TResult1>) =
-                (fun ct -> (task ct).GetAwaiter())
-
-            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
-            ///
-            /// <remarks>This turns a Async&lt;'T&gt; into a CancellationToken -> 'Awaiter.</remarks>
-            ///
-            /// <returns>CancellationToken -> 'Awaiter</returns>
-            member inline this.Source(computation: Async<'TResult1>) =
-                this.Source(fun ct -> Async.AsCancellableTask (computation) ct)
-
-            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
-            ///
-            /// <remarks>This turns a CancellableTask&lt;'T&gt; into a CancellationToken -> 'Awaiter.</remarks>
-            ///
-            /// <returns>CancellationToken -> 'Awaiter</returns>
-            member inline _.Source(awaiter: TaskAwaiter<'TResult1>) = awaiter
 
     /// <summary>
     /// A set of extension methods making it possible to bind against <see cref='T:IcedTasks.CancellableTasks.CancellableTask`1'/> in async computations.
@@ -1025,13 +420,13 @@ module CancellableTasks =
         /// <param name="applicable">A function wrapped in a CancellableTasks</param>
         /// <param name="cTask">The value.</param>
         /// <returns>The result of the applicable.</returns>
-        let inline apply
+        let inline apply<'input, 'output>
             ([<InlineIfLambda>] applicable: CancellableTask<'input -> 'output>)
             ([<InlineIfLambda>] cTask: CancellableTask<'input>)
             =
             cancellableTask {
-                let! applier = applicable
-                let! cResult = cTask
+                let! (applier: 'input -> 'output) = applicable
+                let! (cResult: 'input) = cTask
                 return applier cResult
             }
 
@@ -1145,83 +540,3 @@ module CancellableTasks =
         /// <returns>a CancellableTask.</returns>
         let inline toUnit ([<InlineIfLambda>] ctask: CancellableTask<_>) : CancellableTask =
             fun ct -> ctask ct
-
-        let inline internal getAwaiter ([<InlineIfLambda>] ctask: CancellableTask<_>) =
-            fun ct -> (ctask ct).GetAwaiter()
-
-    /// <exclude />
-    [<AutoOpen>]
-    module MergeSourcesExtensions =
-
-        type CancellableTaskBuilderBase with
-
-            [<NoEagerConstraintApplication>]
-            member inline this.MergeSources<'TResult1, 'TResult2, 'Awaiter1, 'Awaiter2
-                when Awaiter<'Awaiter1, 'TResult1> and Awaiter<'Awaiter2, 'TResult2>>
-                (
-                    [<InlineIfLambda>] left: CancellationToken -> 'Awaiter1,
-                    [<InlineIfLambda>] right: CancellationToken -> 'Awaiter2
-                ) : CancellationToken -> TaskAwaiter<'TResult1 * 'TResult2> =
-
-                cancellableTask {
-                    let! ct = CancellableTask.getCancellationToken ()
-                    let leftStarted = left ct
-                    let rightStarted = right ct
-                    let! leftResult = leftStarted
-                    let! rightResult = rightStarted
-                    return leftResult, rightResult
-                }
-                |> CancellableTask.getAwaiter
-
-
-            [<NoEagerConstraintApplication>]
-            member inline this.MergeSources<'TResult1, 'TResult2, 'Awaiter1, 'Awaiter2
-                when Awaiter<'Awaiter1, 'TResult1> and Awaiter<'Awaiter2, 'TResult2>>
-                (
-                    left: 'Awaiter1,
-                    right: 'Awaiter2
-                ) : CancellationToken -> TaskAwaiter<'TResult1 * 'TResult2> =
-
-                cancellableTask {
-                    let! leftResult = left
-                    let! rightResult = right
-                    return leftResult, rightResult
-                }
-                |> CancellableTask.getAwaiter
-
-            [<NoEagerConstraintApplication>]
-            member inline this.MergeSources<'TResult1, 'TResult2, 'Awaiter1, 'Awaiter2
-                when Awaiter<'Awaiter1, 'TResult1> and Awaiter<'Awaiter2, 'TResult2>>
-                (
-                    left: CancellationToken -> 'Awaiter1,
-                    right: 'Awaiter2
-                ) : CancellationToken -> TaskAwaiter<'TResult1 * 'TResult2> =
-
-                cancellableTask {
-                    let! ct = CancellableTask.getCancellationToken ()
-                    let leftStarted = left ct
-                    let rightStarted = right
-                    let! leftResult = leftStarted
-                    let! rightResult = rightStarted
-                    return leftResult, rightResult
-                }
-                |> CancellableTask.getAwaiter
-
-
-            [<NoEagerConstraintApplication>]
-            member inline this.MergeSources<'TResult1, 'TResult2, 'Awaiter1, 'Awaiter2
-                when Awaiter<'Awaiter1, 'TResult1> and Awaiter<'Awaiter2, 'TResult2>>
-                (
-                    left: 'Awaiter1,
-                    right: CancellationToken -> 'Awaiter2
-                ) : CancellationToken -> TaskAwaiter<'TResult1 * 'TResult2> =
-
-                cancellableTask {
-                    let! ct = CancellableTask.getCancellationToken ()
-                    let leftStarted = left
-                    let rightStarted = right ct
-                    let! leftResult = leftStarted
-                    let! rightResult = rightStarted
-                    return leftResult, rightResult
-                }
-                |> CancellableTask.getAwaiter

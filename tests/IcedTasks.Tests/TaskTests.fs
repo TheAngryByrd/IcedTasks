@@ -5,64 +5,65 @@ open Expecto
 open System.Threading
 open System.Threading.Tasks
 open IcedTasks
+open IcedTasks.Polyfill
 
-module PoolingValueTaskTests =
+module TaskTests =
 
     let builderTests =
-        testList "PoolingValueTaskBuilder" [
+        testList "TaskBuilder" [
             testList "Return" [
                 testCaseAsync "Simple Return"
                 <| async {
-                    let foo = poolingValueTask { return "lol" }
+                    let foo = task { return "lol" }
 
                     let! result =
                         foo
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
 
                     Expect.equal result "lol" "Should be able to Return value"
                 }
             ]
+
             testList "ReturnFrom" [
-                testCaseAsync "Can ReturnFrom PoolingValueTask"
+                testCaseAsync "Can ReturnFrom ValueTask"
                 <| async {
                     let fooTask: ValueTask = ValueTask.CompletedTask
-                    let outerTask = poolingValueTask { return! fooTask }
-
+                    let outerTask = task { return! fooTask }
+                    // Compiling is sufficient expect
                     do!
                         outerTask
-                        |> Async.AwaitValueTask
-                // Compiling is sufficient expect
+                        |> Async.AwaitTask
+
                 }
-                testCaseAsync "Can ReturnFrom PoolingValueTask<T>"
+                testCaseAsync "Can ReturnFrom ValueTask<T>"
                 <| async {
                     let expected = "lol"
                     let fooTask: ValueTask<_> = ValueTask.FromResult expected
-                    let outerTask = poolingValueTask { return! fooTask }
-
+                    let outerTask = task { return! fooTask }
 
                     let! actual =
                         outerTask
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
 
                     Expect.equal actual expected "Should be able to Return! value"
                 }
                 testCaseAsync "Can ReturnFrom Task"
                 <| async {
-                    let outerTask = poolingValueTask { return! Task.CompletedTask }
-
+                    let outerTask = task { return! Task.CompletedTask }
+                    // Compiling is sufficient expect
                     do!
                         outerTask
-                        |> Async.AwaitValueTask
-                // Compiling is sufficient expect
+                        |> Async.AwaitTask
+
                 }
                 testCaseAsync "Can ReturnFrom Task<T>"
                 <| async {
                     let expected = "lol"
-                    let outerTask = poolingValueTask { return! Task.FromResult expected }
+                    let outerTask = task { return! Task.FromResult expected }
 
                     let! actual =
                         outerTask
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
 
                     Expect.equal actual expected "Should be able to Return! value"
                 }
@@ -70,11 +71,11 @@ module PoolingValueTaskTests =
                 testCaseAsync "Can ReturnFrom TaskLike"
                 <| async {
                     let fooTask = Task.Yield()
-                    let outerTask = poolingValueTask { return! fooTask }
+                    let outerTask = task { return! fooTask }
 
                     do!
                         outerTask
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
                 // Compiling is sufficient expect
                 }
 
@@ -82,52 +83,52 @@ module PoolingValueTaskTests =
                 <| async {
                     let expected = "lol"
                     let fooTask = async.Return expected
-                    let outerTask = poolingValueTask { return! fooTask }
+                    let outerTask = task { return! fooTask }
 
 
                     let! actual =
                         outerTask
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
 
                     Expect.equal actual expected ""
                 }
             ]
 
             testList "Binds" [
-                testCaseAsync "Can Bind PoolingValueTask"
+                testCaseAsync "Can Bind ValueTask"
                 <| async {
                     let fooTask: ValueTask = ValueTask.CompletedTask
-                    let outerTask = poolingValueTask { do! fooTask }
+                    let outerTask = task { do! fooTask }
 
                     do!
                         outerTask
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
                 // Compiling is a sufficient Expect
                 }
-                testCaseAsync "Can Bind PoolingValueTask<T>"
+                testCaseAsync "Can Bind ValueTask<T>"
                 <| async {
                     let expected = "lol"
                     let fooTask: ValueTask<_> = ValueTask.FromResult expected
 
                     let outerTask =
-                        poolingValueTask {
+                        task {
                             let! result = fooTask
                             return result
                         }
 
                     let! actual =
                         outerTask
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
 
                     Expect.equal actual expected ""
                 }
                 testCaseAsync "Can Bind Task"
                 <| async {
-                    let outerTask = poolingValueTask { do! Task.CompletedTask }
+                    let outerTask = task { do! Task.CompletedTask }
 
                     do!
                         outerTask
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
                 // Compiling is a sufficient Expect
                 }
 
@@ -136,14 +137,14 @@ module PoolingValueTaskTests =
                     let expected = "lol"
 
                     let outerTask =
-                        poolingValueTask {
+                        task {
                             let! result = Task.FromResult expected
                             return result
                         }
 
                     let! actual =
                         outerTask
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
 
                     Expect.equal actual expected ""
                 }
@@ -155,31 +156,32 @@ module PoolingValueTaskTests =
                     let fooTask = async.Return expected
 
                     let outerTask =
-                        poolingValueTask {
+                        task {
                             let! result = fooTask
                             return result
                         }
 
                     let! actual =
                         outerTask
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
 
                     Expect.equal actual expected ""
                 }
+
 
                 testCaseAsync "Can Bind Type inference"
                 <| async {
                     let expected = "lol"
 
                     let outerTask fooTask =
-                        poolingValueTask {
+                        task {
                             let! result = fooTask
                             return result
                         }
 
                     let! actual =
-                        outerTask (ValueTask.FromResult expected)
-                        |> Async.AwaitValueTask
+                        outerTask (Task.FromResult expected)
+                        |> Async.AwaitTask
 
                     Expect.equal actual expected ""
                 }
@@ -192,7 +194,7 @@ module PoolingValueTaskTests =
                     let data = 42
 
                     let! actual =
-                        poolingValueTask {
+                        task {
                             let result = data
 
                             if true then
@@ -200,7 +202,7 @@ module PoolingValueTaskTests =
 
                             return result
                         }
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
 
                     Expect.equal actual data "Zero/Combine/Delay should work"
                 }
@@ -212,7 +214,7 @@ module PoolingValueTaskTests =
                     let data = 42
 
                     let! actual =
-                        poolingValueTask {
+                        task {
                             let data = data
 
                             try
@@ -222,7 +224,7 @@ module PoolingValueTaskTests =
 
                             return data
                         }
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
 
                     Expect.equal actual data "TryWith should work"
                 }
@@ -234,7 +236,7 @@ module PoolingValueTaskTests =
                     let data = 42
 
                     let! actual =
-                        poolingValueTask {
+                        task {
                             let data = data
 
                             try
@@ -244,7 +246,7 @@ module PoolingValueTaskTests =
 
                             return data
                         }
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
 
                     Expect.equal actual data "TryFinally should work"
                 }
@@ -259,11 +261,11 @@ module PoolingValueTaskTests =
                     let doDispose () = wasDisposed <- true
 
                     let! actual =
-                        poolingValueTask {
+                        task {
                             use d = TestHelpers.makeDisposable (doDispose)
                             return data
                         }
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -275,20 +277,21 @@ module PoolingValueTaskTests =
                     let doDispose () = wasDisposed <- true
 
                     let! actual =
-                        poolingValueTask {
+                        task {
                             use! d =
                                 TestHelpers.makeDisposable (doDispose)
                                 |> async.Return
 
                             return data
                         }
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
                 }
 
 
+#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 testCaseAsync "use IAsyncDisposable sync"
                 <| async {
                     let data = 42
@@ -299,12 +302,12 @@ module PoolingValueTaskTests =
                         ValueTask.CompletedTask
 
                     let! actual =
-                        poolingValueTask {
+                        task {
                             use d = TestHelpers.makeAsyncDisposable (doDispose)
 
                             return data
                         }
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -319,18 +322,19 @@ module PoolingValueTaskTests =
                         ValueTask.CompletedTask
 
                     let! actual =
-                        poolingValueTask {
+                        task {
                             use! d =
                                 TestHelpers.makeAsyncDisposable (doDispose)
                                 |> async.Return
 
                             return data
                         }
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
                 }
+
 
                 testCaseAsync "use IAsyncDisposable propagate exception"
                 <| async {
@@ -342,15 +346,15 @@ module PoolingValueTaskTests =
                         |> ValueTask
 
                     do!
-                        Expect.throwsValueTask<Exception>
+                        Expect.throwsTask<Exception>
                             (fun () ->
-                                poolingValueTask {
+                                task {
                                     use d = TestHelpers.makeAsyncDisposable (doDispose)
                                     return ()
                                 }
                             )
                             ""
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
                 }
 
 
@@ -369,13 +373,13 @@ module PoolingValueTaskTests =
 
 
                     let! actual =
-                        poolingValueTask {
+                        task {
                             use d = TestHelpers.makeAsyncDisposable (doDispose)
                             Expect.isFalse wasDisposed ""
 
                             return data
                         }
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
@@ -395,7 +399,7 @@ module PoolingValueTaskTests =
 
 
                     let! actual =
-                        poolingValueTask {
+                        task {
                             use! d =
                                 TestHelpers.makeAsyncDisposable (doDispose)
                                 |> async.Return
@@ -404,23 +408,23 @@ module PoolingValueTaskTests =
 
                             return data
                         }
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
 
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
                 }
-
+#endif
 
                 testCaseAsync "null"
                 <| async {
                     let data = 42
 
                     let! actual =
-                        poolingValueTask {
+                        task {
                             use d = null
                             return data
                         }
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
 
                     Expect.equal actual data "Should be able to use use"
                 }
@@ -440,13 +444,13 @@ module PoolingValueTaskTests =
                             let mutable index = 0
 
                             let! actual =
-                                poolingValueTask {
+                                task {
                                     while index < loops do
                                         index <- index + 1
 
                                     return index
                                 }
-                                |> Async.AwaitValueTask
+                                |> Async.AwaitTask
 
                             Expect.equal actual loops "Should be ok"
                         }
@@ -465,14 +469,14 @@ module PoolingValueTaskTests =
                             let mutable index = 0
 
                             let! actual =
-                                poolingValueTask {
+                                task {
                                     while index < loops do
                                         do! Task.Yield()
                                         index <- index + 1
 
                                     return index
                                 }
-                                |> Async.AwaitValueTask
+                                |> Async.AwaitTask
 
                             Expect.equal actual loops "Should be ok"
                         }
@@ -493,13 +497,13 @@ module PoolingValueTaskTests =
                             let mutable index = 0
 
                             let! actual =
-                                poolingValueTask {
+                                task {
                                     for i in [ 1..10 ] do
                                         index <- i + i
 
                                     return index
                                 }
-                                |> Async.AwaitValueTask
+                                |> Async.AwaitTask
 
                             Expect.equal actual index "Should be ok"
                         }
@@ -518,13 +522,13 @@ module PoolingValueTaskTests =
                             let mutable index = 0
 
                             let! actual =
-                                poolingValueTask {
+                                task {
                                     for i = 1 to loops do
                                         index <- i + i
 
                                     return index
                                 }
-                                |> Async.AwaitValueTask
+                                |> Async.AwaitTask
 
                             Expect.equal actual index "Should be ok"
                         }
@@ -542,14 +546,14 @@ module PoolingValueTaskTests =
                             let mutable index = 0
 
                             let! actual =
-                                poolingValueTask {
+                                task {
                                     for i in [ 1..10 ] do
                                         do! Task.Yield()
                                         index <- i + i
 
                                     return index
                                 }
-                                |> Async.AwaitValueTask
+                                |> Async.AwaitTask
 
                             Expect.equal actual index "Should be ok"
                         }
@@ -568,14 +572,14 @@ module PoolingValueTaskTests =
                             let mutable index = 0
 
                             let! actual =
-                                poolingValueTask {
+                                task {
                                     for i = 1 to loops do
                                         do! Task.Yield()
                                         index <- i + i
 
                                     return index
                                 }
-                                |> Async.AwaitValueTask
+                                |> Async.AwaitTask
 
                             Expect.equal actual index "Should be ok"
                         }
@@ -585,16 +589,15 @@ module PoolingValueTaskTests =
                 testCaseAsync "and! 5"
                 <| async {
                     let! actual =
-                        poolingValueTask {
+                        task {
                             let! a = ValueTask.FromResult 1
                             and! b = Task.FromResult 2
                             and! c = coldTask { return 3 }
                             and! _ = Task.Yield()
                             and! _ = ValueTask.CompletedTask
-                            // and! c = fun () -> PoolingValueTask.FromResult(3)
                             return a + b + c
                         }
-                        |> Async.AwaitValueTask
+                        |> Async.AwaitTask
 
                     Expect.equal actual 6 ""
 
@@ -602,111 +605,6 @@ module PoolingValueTaskTests =
             ]
         ]
 
-    let functionTests =
-        testList "functions" [
-            testList "singleton" [
-                testCaseAsync "Simple"
-                <| async {
-                    let innerCall = ValueTask.singleton "lol"
-
-                    let! someTask =
-                        innerCall
-                        |> Async.AwaitValueTask
-
-                    Expect.equal "lol" someTask ""
-                }
-            ]
-            testList "bind" [
-                testCaseAsync "Simple"
-                <| async {
-                    let innerCall = poolingValueTask { return "lol" }
-
-                    let! someTask =
-                        innerCall
-                        |> ValueTask.bind (fun x -> poolingValueTask { return x + "fooo" })
-                        |> Async.AwaitValueTask
-
-                    Expect.equal "lolfooo" someTask ""
-                }
-            ]
-            testList "map" [
-                testCaseAsync "Simple"
-                <| async {
-                    let innerCall = poolingValueTask { return "lol" }
-
-                    let! someTask =
-                        innerCall
-                        |> ValueTask.map (fun x -> x + "fooo")
-                        |> Async.AwaitValueTask
-
-                    Expect.equal "lolfooo" someTask ""
-                }
-            ]
-            testList "apply" [
-                testCaseAsync "Simple"
-                <| async {
-                    let innerCall = poolingValueTask { return "lol" }
-                    let applier = poolingValueTask { return fun x -> x + "fooo" }
-
-                    let! someTask =
-                        innerCall
-                        |> ValueTask.apply applier
-                        |> Async.AwaitValueTask
-
-                    Expect.equal "lolfooo" someTask ""
-                }
-            ]
-
-            testList "zip" [
-                testCaseAsync "Simple"
-                <| async {
-                    let leftCall = poolingValueTask { return "lol" }
-                    let rightCall = poolingValueTask { return "fooo" }
-
-                    let! someTask =
-                        ValueTask.zip leftCall rightCall
-                        |> Async.AwaitValueTask
-
-                    Expect.equal ("lol", "fooo") someTask ""
-                }
-            ]
-
-
-            testList "ofUnit" [
-                testCaseAsync "Simple"
-                <| async {
-                    let innerCall = ValueTask.CompletedTask
-
-                    let! someTask =
-                        innerCall
-                        |> ValueTask.ofUnit
-                        |> Async.AwaitValueTask
-
-                    Expect.equal () someTask ""
-                }
-            ]
-
-
-            testList "toUnit" [
-                testCaseAsync "Simple"
-                <| async {
-                    let innerCall = ValueTask.FromResult "lol"
-
-                    let! someTask =
-                        innerCall
-                        |> ValueTask.toUnit
-                        |> Async.AwaitValueTask
-
-                    Expect.equal () someTask ""
-                }
-            ]
-
-        ]
-
 
     [<Tests>]
-    let tests =
-        testList "IcedTasks.PoolingValueTask" [
-            builderTests
-            functionTests
-        ]
+    let tests = testList "IcedTasks.Polyfill.Task" [ builderTests ]

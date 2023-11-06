@@ -6,7 +6,6 @@ open System.Threading
 open System.Threading.Tasks
 open IcedTasks
 
-#if !NETSTANDARD2_0
 module CancellableValueTaskTests =
     open TimeProviderExtensions
 
@@ -345,6 +344,24 @@ module CancellableValueTaskTests =
                     let! actual =
                         outerTask cts.Token
                         |> Async.AwaitValueTask
+
+                    Expect.equal actual expected ""
+                }
+
+
+                testCaseAsync "Can Bind Type inference"
+                <| async {
+                    let expected = "lol"
+
+                    let outerTask fooTask =
+                        cancellableValueTask {
+                            let! result = fooTask
+                            return result
+                        }
+
+                    let! actual =
+                        outerTask (fun ct -> ValueTask.FromResult expected)
+                        |> Async.AwaitCancellableValueTask
 
                     Expect.equal actual expected ""
                 }
@@ -1195,4 +1212,3 @@ module CancellableValueTaskTests =
             asyncExBuilderTests
             functionTests
         ]
-#endif
