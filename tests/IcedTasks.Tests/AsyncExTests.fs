@@ -53,7 +53,7 @@ module AsyncExTests =
                     Expect.equal result () "Should return the data"
                 }
 #if !NETSTANDARD2_0
-                testCaseAsync "Can ReturnFrom an ValueTask<T>"
+                testCaseAsync "Can ReturnFrom a ValueTask<T>"
                 <| async {
                     let data = "foo"
                     let inner = valueTask { return data }
@@ -61,7 +61,7 @@ module AsyncExTests =
                     let! result = outer
                     Expect.equal result data "Should return the data"
                 }
-                testCaseAsync "Can ReturnFrom an ValueTask"
+                testCaseAsync "Can ReturnFrom a ValueTask"
                 <| async {
                     let inner: ValueTask = ValueTask.CompletedTask
                     let outer = asyncEx { return! inner }
@@ -134,7 +134,7 @@ module AsyncExTests =
                     Expect.equal result () "Should return the data"
                 }
 #if !NETSTANDARD2_0
-                testCaseAsync "Can bind an ValueTask<T>"
+                testCaseAsync "Can bind a ValueTask<T>"
                 <| async {
                     let data = "foo"
                     let inner = valueTask { return data }
@@ -148,7 +148,7 @@ module AsyncExTests =
                     let! result = outer
                     Expect.equal result data "Should return the data"
                 }
-                testCaseAsync "Can bind an ValueTask"
+                testCaseAsync "Can bind a ValueTask"
                 <| async {
                     let inner: ValueTask = ValueTask.CompletedTask
 

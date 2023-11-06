@@ -1,6 +1,6 @@
 namespace IcedTasks
 
-/// Contains methods to build ValueTasks using the F# computation expression syntax
+/// Contains methods to build Tasks using the F# computation expression syntax
 [<AutoOpen>]
 module TaskBase =
     open System
@@ -26,15 +26,15 @@ module TaskBase =
     and TaskBaseStateMachine<'TOverall, 'Builder> =
         ResumableStateMachine<TaskBaseStateMachineData<'TOverall, 'Builder>>
 
-    /// Represents the runtime continuation of a valueTask state machine created dynamically
+    /// Represents the runtime continuation of a task state machine created dynamically
     and TaskBaseResumptionFunc<'TOverall, 'Builder> =
         ResumptionFunc<TaskBaseStateMachineData<'TOverall, 'Builder>>
 
-    /// Represents the runtime continuation of a valueTask state machine created dynamically
+    /// Represents the runtime continuation of a task state machine created dynamically
     and TaskBaseResumptionDynamicInfo<'TOverall, 'Builder> =
         ResumptionDynamicInfo<TaskBaseStateMachineData<'TOverall, 'Builder>>
 
-    /// A special compiler-recognised delegate type for specifying blocks of valueTask code with access to the state machine
+    /// A special compiler-recognised delegate type for specifying blocks of task code with access to the state machine
     and TaskBaseCode<'TOverall, 'T, 'Builder> =
         ResumableCode<TaskBaseStateMachineData<'TOverall, 'Builder>, 'T>
 
@@ -44,18 +44,18 @@ module TaskBase =
     type TaskBuilderBase() =
         /// <summary>Creates a ValueTask that runs generator</summary>
         /// <param name="generator">The function to run</param>
-        /// <returns>A valueTask that runs generator</returns>
+        /// <returns>A task that runs generator</returns>
         member inline _.Delay
             ([<InlineIfLambdaAttribute>] generator: unit -> TaskBaseCode<'TOverall, 'T, 'Builder>)
             : TaskBaseCode<'TOverall, 'T, 'Builder> =
             ResumableCode.Delay(fun () -> generator ())
 
-        /// <summary>Creates an ValueTask that just returns ().</summary>
+        /// <summary>Creates a Task that just returns ().</summary>
         /// <remarks>
         /// The existence of this method permits the use of empty else branches in the
-        /// valueTask { ... } computation expression syntax.
+        /// task { ... } computation expression syntax.
         /// </remarks>
-        /// <returns>An ValueTask that returns ().</returns>
+        /// <returns>a Task that returns ().</returns>
         [<DefaultValue>]
         member inline _.Zero() : TaskBaseCode<'TOverall, unit, 'Builder> = ResumableCode.Zero()
 
@@ -64,29 +64,29 @@ module TaskBase =
         /// <remarks>A cancellation check is performed when the computation is executed.
         ///
         /// The existence of this method permits the use of return in the
-        /// valueTask { ... } computation expression syntax.</remarks>
+        /// task { ... } computation expression syntax.</remarks>
         ///
         /// <param name="value">The value to return from the computation.</param>
         ///
-        /// <returns>An ValueTask that returns value when executed.</returns>
+        /// <returns>a Task that returns value when executed.</returns>
         member inline _.Return(value: 'T) : TaskBaseCode<'T, 'T, 'Builder> =
             TaskBaseCode<'T, 'T, 'Builder>(fun sm ->
                 sm.Data.Result <- value
                 true
             )
 
-        /// <summary>Creates an ValueTask that first runs task1
+        /// <summary>Creates a Task that first runs task1
         /// and then runs computation2, returning the result of computation2.</summary>
         ///
         /// <remarks>
         ///
         /// The existence of this method permits the use of expression sequencing in the
-        /// valueTask { ... } computation expression syntax.</remarks>
+        /// task { ... } computation expression syntax.</remarks>
         ///
         /// <param name="task1">The first part of the sequenced computation.</param>
         /// <param name="task2">The second part of the sequenced computation.</param>
         ///
-        /// <returns>An ValueTask that runs both of the computations sequentially.</returns>
+        /// <returns>a Task that runs both of the computations sequentially.</returns>
         member inline _.Combine
             (
                 task1: TaskBaseCode<'TOverall, unit, 'Builder>,
@@ -94,19 +94,19 @@ module TaskBase =
             ) : TaskBaseCode<'TOverall, 'T, 'Builder> =
             ResumableCode.Combine(task1, task2)
 
-        /// <summary>Creates an ValueTask that runs computation repeatedly
+        /// <summary>Creates a Task that runs computation repeatedly
         /// until guard() becomes false.</summary>
         ///
         /// <remarks>
         ///
         /// The existence of this method permits the use of while in the
-        /// valueTask { ... } computation expression syntax.</remarks>
+        /// task { ... } computation expression syntax.</remarks>
         ///
         /// <param name="guard">The function to determine when to stop executing computation.</param>
         /// <param name="computation">The function to be executed.  Equivalent to the body
         /// of a while expression.</param>
         ///
-        /// <returns>An ValueTask that behaves similarly to a while loop when run.</returns>
+        /// <returns>a Task that behaves similarly to a while loop when run.</returns>
         member inline _.While
             (
                 guard: unit -> bool,
@@ -114,18 +114,18 @@ module TaskBase =
             ) : TaskBaseCode<'TOverall, unit, 'Builder> =
             ResumableCode.While(guard, computation)
 
-        /// <summary>Creates an ValueTask that runs computation and returns its result.
+        /// <summary>Creates a Task that runs computation and returns its result.
         /// If an exception happens then catchHandler(exn) is called and the resulting computation executed instead.</summary>
         ///
         /// <remarks>
         ///
         /// The existence of this method permits the use of try/with in the
-        /// valueTask { ... } computation expression syntax.</remarks>
+        /// task { ... } computation expression syntax.</remarks>
         ///
         /// <param name="computation">The input computation.</param>
         /// <param name="catchHandler">The function to run when computation throws an exception.</param>
         ///
-        /// <returns>An ValueTask that executes computation and calls catchHandler if an
+        /// <returns>a Task that executes computation and calls catchHandler if an
         /// exception is thrown.</returns>
         member inline _.TryWith
             (
@@ -134,20 +134,20 @@ module TaskBase =
             ) : TaskBaseCode<'TOverall, 'T, 'Builder> =
             ResumableCode.TryWith(computation, catchHandler)
 
-        /// <summary>Creates an ValueTask that runs computation. The action compensation is executed
+        /// <summary>Creates a Task that runs computation. The action compensation is executed
         /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
         /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
         ///
         /// <remarks>
         ///
         /// The existence of this method permits the use of try/finally in the
-        /// valueTask { ... } computation expression syntax.</remarks>
+        /// task { ... } computation expression syntax.</remarks>
         ///
         /// <param name="computation">The input computation.</param>
         /// <param name="compensation">The action to be run after computation completes or raises an
         /// exception (including cancellation).</param>
         ///
-        /// <returns>An ValueTask that executes computation and compensation afterwards or
+        /// <returns>a Task that executes computation and compensation afterwards or
         /// when an exception is raised.</returns>
         member inline _.TryFinally
             (
@@ -162,19 +162,19 @@ module TaskBase =
                 )
             )
 
-        /// <summary>Creates an ValueTask that enumerates the sequence seq
+        /// <summary>Creates a Task that enumerates the sequence seq
         /// on demand and runs body for each element.</summary>
         ///
         /// <remarks>A cancellation check is performed on each iteration of the loop.
         ///
         /// The existence of this method permits the use of for in the
-        /// valueTask { ... } computation expression syntax.</remarks>
+        /// task { ... } computation expression syntax.</remarks>
         ///
         /// <param name="sequence">The sequence to enumerate.</param>
         /// <param name="body">A function to take an item from the sequence and create
-        /// an ValueTask.  Can be seen as the body of the for expression.</param>
+        /// a Task.  Can be seen as the body of the for expression.</param>
         ///
-        /// <returns>An ValueTask that will enumerate the sequence and run body
+        /// <returns>a Task that will enumerate the sequence and run body
         /// for each element.</returns>
         member inline _.For
             (
@@ -183,20 +183,20 @@ module TaskBase =
             ) : TaskBaseCode<'TOverall, unit, 'Builder> =
             ResumableCode.For(sequence, body)
 #if NETSTANDARD2_1 || NET6_0_OR_GREATER
-        /// <summary>Creates an ValueTask that runs computation. The action compensation is executed
+        /// <summary>Creates a Task that runs computation. The action compensation is executed
         /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
         /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
         ///
         /// <remarks>
         ///
         /// The existence of this method permits the use of try/finally in the
-        /// valueTask { ... } computation expression syntax.</remarks>
+        /// task { ... } computation expression syntax.</remarks>
         ///
         /// <param name="computation">The input computation.</param>
         /// <param name="compensation">The action to be run after computation completes or raises an
         /// exception.</param>
         ///
-        /// <returns>An ValueTask that executes computation and compensation afterwards or
+        /// <returns>a Task that executes computation and compensation afterwards or
         /// when an exception is raised.</returns>
         member inline internal this.TryFinallyAsync
             (
@@ -248,20 +248,20 @@ module TaskBase =
                 )
             )
 
-        /// <summary>Creates an ValueTask that runs binder(resource).
+        /// <summary>Creates a Task that runs binder(resource).
         /// The action resource.DisposeAsync() is executed as this computation yields its result
         /// or if the ValueTask exits by an exception or by cancellation.</summary>
         ///
         /// <remarks>
         ///
         /// The existence of this method permits the use of use and use! in the
-        /// valueTask { ... } computation expression syntax.</remarks>
+        /// task { ... } computation expression syntax.</remarks>
         ///
         /// <param name="resource">The resource to be used and disposed.</param>
         /// <param name="binder">The function that takes the resource and returns an asynchronous
         /// computation.</param>
         ///
-        /// <returns>An ValueTask that binds and eventually disposes resource.</returns>
+        /// <returns>a Task that binds and eventually disposes resource.</returns>
         ///
         member inline this.Using
             (
@@ -316,18 +316,18 @@ module TaskBase =
                     sm.ResumptionDynamicInfo.ResumptionFunc <- cont
                     false
 
-            /// <summary>Creates an ValueTask that runs computation, and when
+            /// <summary>Creates a Task that runs computation, and when
             /// computation generates a result T, runs binder res.</summary>
             ///
             /// <remarks>A cancellation check is performed when the computation is executed.
             ///
             /// The existence of this method permits the use of let! in the
-            /// valueTask { ... } computation expression syntax.</remarks>
+            /// task { ... } computation expression syntax.</remarks>
             ///
             /// <param name="getAwaiter">The computation to provide an unbound result.</param>
             /// <param name="continuation">The function to bind the result of computation.</param>
             ///
-            /// <returns>An ValueTask that performs a monadic bind on the result
+            /// <returns>a Task that performs a monadic bind on the result
             /// of computation.</returns>
             [<NoEagerConstraintApplication>]
             member inline _.Bind
@@ -380,7 +380,7 @@ module TaskBase =
             /// <summary>Delegates to the input computation.</summary>
             ///
             /// <remarks>The existence of this method permits the use of return! in the
-            /// valueTask { ... } computation expression syntax.</remarks>
+            /// task { ... } computation expression syntax.</remarks>
             ///
             /// <param name="getAwaiter">The input computation.</param>
             ///
@@ -424,20 +424,20 @@ module TaskBase =
                 Awaitable.GetAwaiter task
 
 
-            /// <summary>Creates an ValueTask that runs binder(resource).
+            /// <summary>Creates a Task that runs binder(resource).
             /// The action resource.Dispose() is executed as this computation yields its result
             /// or if the ValueTask exits by an exception or by cancellation.</summary>
             ///
             /// <remarks>
             ///
             /// The existence of this method permits the use of use and use! in the
-            /// valueTask { ... } computation expression syntax.</remarks>
+            /// task { ... } computation expression syntax.</remarks>
             ///
             /// <param name="resource">The resource to be used and disposed.</param>
             /// <param name="binder">The function that takes the resource and returns an asynchronous
             /// computation.</param>
             ///
-            /// <returns>An ValueTask that binds and eventually disposes resource.</returns>
+            /// <returns>a Task that binds and eventually disposes resource.</returns>
             ///
             member inline _.Using
                 (

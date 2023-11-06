@@ -31,7 +31,7 @@ module CancellablePoolingValueTasks =
     /// CancellationToken -> ValueTask
     type CancellableValueTask = CancellationToken -> ValueTask
 
-    /// Contains methods to build CancellableValueTasks using the F# computation expression syntax
+    /// Contains methods to build CancellablePoolingValueTaskBuilder using the F# computation expression syntax
     type CancellablePoolingValueTaskBuilder() =
 
         inherit CancellableTaskBuilderBase()
