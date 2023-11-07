@@ -1,6 +1,6 @@
 namespace IcedTasks
 
-/// Contains methods to build CancellableTasks using the F# computation expression syntax
+/// Contains methods to build Tasks using the F# computation expression syntax
 [<AutoOpen>]
 module CancellableTaskBase =
     open System
@@ -220,7 +220,6 @@ module CancellableTaskBase =
 
                     if __useResumableCode then
                         let mutable __stack_condition_fin = true
-                        // let __stack_vtask = compensation ()
                         let mutable awaiter = compensation ()
 
                         if not (Awaiter.IsCompleted awaiter) then
@@ -241,7 +240,6 @@ module CancellableTaskBase =
 
                         __stack_condition_fin
                     else
-                        // let vtask = compensation ()
                         let mutable awaiter = compensation ()
 
                         let cont =
@@ -309,9 +307,10 @@ module CancellableTaskBase =
             static member inline BindDynamic
                 (
                     sm:
-                        byref<ResumableStateMachine<CancellableTaskBaseStateMachineData<'TOverall, _>>>,
+                        byref<ResumableStateMachine<CancellableTaskBaseStateMachineData<'TOverall, 'Builder>>>,
                     [<InlineIfLambda>] getAwaiter: CancellationToken -> 'Awaiter,
-                    continuation: ('TResult1 -> CancellableTaskBaseCode<'TOverall, 'TResult2, _>)
+                    continuation:
+                        ('TResult1 -> CancellableTaskBaseCode<'TOverall, 'TResult2, 'Builder>)
                 ) : bool =
                 sm.Data.ThrowIfCancellationRequested()
 
@@ -350,7 +349,8 @@ module CancellableTaskBase =
             member inline _.Bind
                 (
                     [<InlineIfLambda>] getAwaiter: CancellationToken -> 'Awaiter,
-                    continuation: ('TResult1 -> CancellableTaskBaseCode<'TOverall, 'TResult2, _>)
+                    continuation:
+                        ('TResult1 -> CancellableTaskBaseCode<'TOverall, 'TResult2, 'Builder>)
                 ) =
 
                 CancellableTaskBaseCode<'TOverall, _, _>(fun sm ->
@@ -387,6 +387,58 @@ module CancellableTaskBase =
                 )
 
 
+            /// <summary>Delegates to the input computation.</summary>
+            ///
+            /// <remarks>The existence of this method permits the use of return! in the
+            /// cancellableTask { ... } computation expression syntax.</remarks>
+            ///
+            /// <param name="getAwaiter">The input computation.</param>
+            ///
+            /// <returns>The input computation.</returns>
+            [<NoEagerConstraintApplication>]
+            member inline this.ReturnFrom
+                ([<InlineIfLambda>] getAwaiter: CancellationToken -> 'Awaiter)
+                =
+                this.Bind(
+                    getAwaiter = (fun ct -> getAwaiter ct),
+                    continuation = (fun v -> this.Return v)
+                )
+
+
+            [<NoEagerConstraintApplication>]
+            member inline this.BindReturn
+                (
+                    [<InlineIfLambda>] getAwaiter: CancellationToken -> 'Awaiter,
+                    mapper: 'TResult1 -> 'TResult2
+                ) : CancellableTaskBaseCode<_, _, _> =
+                this.Bind((fun ct -> getAwaiter ct), (fun v -> this.Return(mapper v)))
+
+
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
+            ///
+            /// <remarks>This turns a CancellationToken -> 'Awaitable into a CancellationToken -> 'Awaiter.</remarks>
+            ///
+            /// <returns>CancellationToken -> 'Awaiter</returns>
+            [<NoEagerConstraintApplication>]
+            member inline _.Source<'Awaitable, 'TResult1, 'Awaiter, 'TOverall
+                when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
+                ([<InlineIfLambda>] task: CancellationToken -> 'Awaitable)
+                : CancellationToken -> 'Awaiter =
+                (fun ct -> Awaitable.GetAwaiter(task ct))
+
+
+            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
+            ///
+            /// <remarks>This turns a unit -> 'Awaitable into a CancellationToken -> 'Awaiter.</remarks>
+            ///
+            /// <returns>CancellationToken -> 'Awaiter</returns>
+            [<NoEagerConstraintApplication>]
+            member inline _.Source<'Awaitable, 'TResult1, 'Awaiter, 'TOverall
+                when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
+                ([<InlineIfLambda>] task: unit -> 'Awaitable)
+                : CancellationToken -> 'Awaiter =
+                (fun ct -> Awaitable.GetAwaiter(task ()))
+
             /// <summary>
             /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
             /// </summary>
@@ -394,16 +446,16 @@ module CancellableTaskBase =
             static member inline BindDynamic
                 (
                     sm:
-                        byref<ResumableStateMachine<CancellableTaskBaseStateMachineData<'TOverall, _>>>,
-                    getAwaiter: 'Awaiter,
-                    continuation: ('TResult1 -> CancellableTaskBaseCode<'TOverall, 'TResult2, _>)
+                        byref<ResumableStateMachine<CancellableTaskBaseStateMachineData<'TOverall, 'Builder>>>,
+                    awaiter: 'Awaiter,
+                    continuation:
+                        ('TResult1 -> CancellableTaskBaseCode<'TOverall, 'TResult2, 'Builder>)
                 ) : bool =
                 sm.Data.ThrowIfCancellationRequested()
-
-                let mutable awaiter = getAwaiter
+                let mutable awaiter = awaiter
 
                 let cont =
-                    (CancellableTaskBaseResumptionFunc<'TOverall, _>(fun sm ->
+                    (CancellableTaskBaseResumptionFunc<'TOverall, 'Builder>(fun sm ->
                         let result = Awaiter.GetResult awaiter
                         (continuation result).Invoke(&sm)
                     ))
@@ -435,10 +487,11 @@ module CancellableTaskBase =
             member inline _.Bind
                 (
                     awaiter: 'Awaiter,
-                    continuation: ('TResult1 -> CancellableTaskBaseCode<'TOverall, 'TResult2, _>)
-                ) =
+                    continuation:
+                        ('TResult1 -> CancellableTaskBaseCode<'TOverall, 'TResult2, 'Builder>)
+                ) : CancellableTaskBaseCode<'TOverall, 'TResult2, 'Builder> =
 
-                CancellableTaskBaseCode<'TOverall, _, _>(fun sm ->
+                CancellableTaskBaseCode<'TOverall, 'TResult2, 'Builder>(fun sm ->
                     if __useResumableCode then
                         //-- RESUMABLE CODE START
                         sm.Data.ThrowIfCancellationRequested()
@@ -471,75 +524,47 @@ module CancellableTaskBase =
                 //-- RESUMABLE CODE END
                 )
 
-
             /// <summary>Delegates to the input computation.</summary>
             ///
             /// <remarks>The existence of this method permits the use of return! in the
-            /// cancellableTask { ... } computation expression syntax.</remarks>
+            /// task { ... } computation expression syntax.</remarks>
             ///
             /// <param name="getAwaiter">The input computation.</param>
             ///
             /// <returns>The input computation.</returns>
             [<NoEagerConstraintApplication>]
             member inline this.ReturnFrom
-                ([<InlineIfLambda>] getAwaiter: CancellationToken -> 'Awaiter)
-                =
-                this.Bind(
-                    getAwaiter = (fun ct -> getAwaiter ct),
-                    continuation = (fun v -> this.Return v)
-                )
-
-
-            [<NoEagerConstraintApplication>]
-            member inline this.ReturnFrom(awaiter: 'Awaiter) =
+                (awaiter: 'Awaiter)
+                : CancellableTaskBaseCode<_, _, 'Builder> =
                 this.Bind(awaiter = awaiter, continuation = (fun v -> this.Return v))
 
             [<NoEagerConstraintApplication>]
             member inline this.BindReturn
                 (
-                    [<InlineIfLambda>] getAwaiter: CancellationToken -> 'Awaiter,
-                    mapper: 'TResult1 -> 'TResult2
-                ) : CancellableTaskBaseCode<_, _, _> =
-                this.Bind((fun ct -> getAwaiter ct), (fun v -> this.Return(mapper v)))
-
-
-            [<NoEagerConstraintApplication>]
-            member inline this.BindReturn
-                (
                     awaiter: 'Awaiter,
-                    mapper: 'TResult1 -> 'TResult2
-                ) : CancellableTaskBaseCode<_, _, _> =
-                this.Bind(awaiter, (fun v -> this.Return(mapper v)))
-
-            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
-            ///
-            /// <remarks>This is the identify function.</remarks>
-            ///
-            /// <returns>CancellationToken -> 'Awaiter</returns>
-            [<NoEagerConstraintApplication>]
-            member inline _.Source<'TResult1, 'Awaiter, 'TOverall when Awaiter<'Awaiter, 'TResult1>>
-                ([<InlineIfLambda>] getAwaiter: CancellationToken -> 'Awaiter)
-                : CancellationToken -> 'Awaiter =
-                getAwaiter
+                    [<InlineIfLambda>] mapper: 'a -> 'TResult2
+                ) : CancellableTaskBaseCode<'TResult2, 'TResult2, 'Builder> =
+                this.Bind(awaiter = awaiter, continuation = (fun v -> this.Return(mapper v)))
 
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This is the identify function.</remarks>
             ///
-            /// <returns>CancellationToken -> 'Awaiter</returns>
+            /// <returns>'Awaiter</returns>
             [<NoEagerConstraintApplication>]
-            member inline _.Source<'TResult1, 'Awaiter, 'TOverall when Awaiter<'Awaiter, 'TResult1>>
-                (getAwaiter: 'Awaiter)
+            member inline _.Source<'TResult1, 'TResult2, 'Awaiter, 'TOverall
+                when Awaiter<'Awaiter, 'TResult1>>
+                (awaiter: 'Awaiter)
                 : 'Awaiter =
-                getAwaiter
+                awaiter
 
 
-            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
+            /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>
             ///
-            /// <remarks>This turns a 'Awaitable into a CancellationToken -> 'Awaiter.</remarks>
+            /// <remarks>This turns a ^Awaitable into a 'Awaiter.</remarks>
             ///
-            /// <returns>CancellationToken -> 'Awaiter</returns>
+            /// <returns>'Awaiter</returns>
             [<NoEagerConstraintApplication>]
             member inline _.Source<'Awaitable, 'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
@@ -547,31 +572,6 @@ module CancellableTaskBase =
                 : 'Awaiter =
                 Awaitable.GetAwaiter task
 
-
-            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
-            ///
-            /// <remarks>This turns a CancellationToken -> 'Awaitable into a CancellationToken -> 'Awaiter.</remarks>
-            ///
-            /// <returns>CancellationToken -> 'Awaiter</returns>
-            [<NoEagerConstraintApplication>]
-            member inline _.Source<'Awaitable, 'TResult1, 'Awaiter, 'TOverall
-                when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
-                ([<InlineIfLambda>] task: CancellationToken -> 'Awaitable)
-                : CancellationToken -> 'Awaiter =
-                (fun ct -> Awaitable.GetAwaiter(task ct))
-
-
-            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
-            ///
-            /// <remarks>This turns a unit -> 'Awaitable into a CancellationToken -> 'Awaiter.</remarks>
-            ///
-            /// <returns>CancellationToken -> 'Awaiter</returns>
-            [<NoEagerConstraintApplication>]
-            member inline _.Source<'Awaitable, 'TResult1, 'Awaiter, 'TOverall
-                when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
-                ([<InlineIfLambda>] task: unit -> 'Awaitable)
-                : CancellationToken -> 'Awaiter =
-                (fun ct -> Awaitable.GetAwaiter(task ()))
 
             /// <summary>Creates A CancellableTask that runs binder(resource).
             /// The action resource.Dispose() is executed as this computation yields its result
@@ -707,13 +707,4 @@ module CancellableTaskBase =
             ///
             /// <returns>CancellationToken -> 'Awaiter</returns>
             member inline this.Source(computation: Async<'TResult1>) =
-                this.Source(fun ct -> Async.AsCancellableTask (computation) ct)
-
-            /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
-            ///
-            /// <remarks>This turns a CancellableTask&lt;'T&gt; into a CancellationToken -> 'Awaiter.</remarks>
-            ///
-            /// <returns>CancellationToken -> 'Awaiter</returns>
-            // [<NoEagerConstraintApplication>]
-            member inline _.Source(awaiter: TaskAwaiter<'T>) : Awaiter<TaskAwaiter<'T>, 'T> =
-                awaiter
+                this.Source(Async.AsCancellableTask(computation))

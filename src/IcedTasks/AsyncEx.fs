@@ -329,23 +329,8 @@ type AsyncExBuilder() =
 
     member inline _.Source(async: Async<'a>) = async
 
-    member inline _.Source(seq: #seq<_>) = seq
-
-    // Required because SRTP can't determine the type of the awaiter
-    //     Candidates:
-    //  - Task.GetAwaiter() : Runtime.CompilerServices.TaskAwaiter
-    //  - Task.GetAwaiter() : Runtime.CompilerServices.TaskAwaiter<string>F# Compiler43
-    member inline _.Source(task: Task<_>) = AsyncEx.AwaitTask task
-
-    member inline _.Source(task: Task) = AsyncEx.AwaitTask task
-
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
-    member inline _.Source(vtask: ValueTask<_>) = AsyncEx.AwaitValueTask vtask
-
-    member inline _.Source(vtask: ValueTask) = AsyncEx.AwaitValueTask vtask
-#endif
 [<AutoOpen>]
-module AsyncExExtensions =
+module AsyncExExtensionsLowPriority =
     open FSharp.Core.CompilerServices
 
     type AsyncExBuilder with
@@ -380,3 +365,45 @@ module AsyncExExtensions =
     ///
     /// </remarks>
     let asyncEx = new AsyncExBuilder()
+
+
+[<AutoOpen>]
+module AsyncExExtensionsHighPriority =
+
+    type AsyncExBuilder with
+
+        member inline _.Source(seq: #seq<_>) = seq
+
+        // Required because SRTP can't determine the type of the awaiter
+        //     Candidates:
+        //  - Task.GetAwaiter() : Runtime.CompilerServices.TaskAwaiter
+        //  - Task.GetAwaiter() : Runtime.CompilerServices.TaskAwaiter<string>F# Compiler43
+        member inline _.Source(task: Task<_>) = AsyncEx.AwaitTask task
+
+        member inline _.Source(task: Task) = AsyncEx.AwaitTask task
+
+#if NETSTANDARD2_1 || NET6_0_OR_GREATER
+        member inline _.Source(vtask: ValueTask<_>) = AsyncEx.AwaitValueTask vtask
+
+        member inline _.Source(vtask: ValueTask) = AsyncEx.AwaitValueTask vtask
+#endif
+namespace IcedTasks.Polyfill.Async
+
+[<AutoOpen>]
+module PolyfillBuilders =
+    open IcedTasks
+
+    /// <summary>
+    /// Builds an asynchronous workflow using computation expression syntax.
+    ///
+    /// <b>NOTE:</b> This is the AsyncExBuilder defined in IcedTasks.</summary>
+    /// <remarks>
+    /// The difference between the AsyncBuilder and AsyncExBuilder is follows:
+    /// <list type="bullet">
+    /// <item><description>Allows <c>use</c> on <see cref="T:System.IAsyncDisposable">System.IAsyncDisposable</see></description></item>
+    /// <item><description>Allows <c>let!</c> for Tasks, ValueTasks, and any Awaitable Type</description></item>
+    /// <item><description>When Tasks throw exceptions they will use the behavior described in <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see></description></item>
+    /// </list>
+    ///
+    /// </remarks>
+    let async = asyncEx
