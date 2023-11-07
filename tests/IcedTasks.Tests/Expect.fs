@@ -57,7 +57,7 @@ module Expect =
             message
         |> Async.StartImmediateAsTask
 
-#if !NETSTANDARD2_0
+#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
     [<RequiresExplicitTypeArguments>]
     let throwsValueTask<'texn when 'texn :> exn> (f: unit -> ValueTask<unit>) message =
         throwsTAsync<'texn>
@@ -75,7 +75,7 @@ type Expect =
             (fun () -> operation)
             "Should have been cancelled"
 
-#if !NETSTANDARD2_0
+#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
     static member CancellationRequested(operation: ValueTask<unit>) =
         Expect.CancellationRequested(Async.AwaitValueTask operation)
         |> Async.AsValueTask
@@ -92,7 +92,7 @@ type Expect =
         Expect.CancellationRequested(Async.AwaitCancellableTask operation)
         |> Async.AsCancellableTask
 
-#if !NETSTANDARD2_0
+#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
     static member CancellationRequested(operation: CancellableValueTask<_>) =
         Expect.CancellationRequested(Async.AwaitCancellableValueTask operation)
         |> Async.AsCancellableValueTask

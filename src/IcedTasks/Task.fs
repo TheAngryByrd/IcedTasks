@@ -9,11 +9,11 @@
 // To the extent possible under law, the author(s) have dedicated all copyright and related and neighboring rights
 // to this software to the public domain worldwide. This software is distributed without any warranty.
 
-namespace IcedTasks.Polyfill
+namespace IcedTasks.Polyfill.Task
 
 /// Contains methods to build Tasks using the F# computation expression syntax
 [<AutoOpen>]
-module TasksUnit =
+module Tasks =
     open System
     open System.Runtime.CompilerServices
     open System.Threading
@@ -220,14 +220,18 @@ module TasksUnit =
 
     /// Contains the task computation expression builder.
     [<AutoOpen>]
-    module TaskUnitBuilder =
+    module TaskBuilder =
 
         /// <summary>
-        /// Builds a task using computation expression syntax.
+        /// Builds a task using computation expression syntax
+        ///
+        /// <b>NOTE:</b> This is the TaskBuilder defined in IcedTasks. This fixes any issues with the TaskBuilder defined in FSharp.Core that can't be backported.
         /// </summary>
         let task = TaskBuilder()
 
         /// <summary>
         /// Builds a task using computation expression syntax which switches to execute on a background thread if not already doing so.
+        ///
+        /// <b>NOTE:</b> This is the BackgroundTaskBuilder defined in IcedTasks. This fixes any issues with the BackgroundTaskBuilder defined in FSharp.Core that can't be backported.
         /// </summary>
         let backgroundTask = BackgroundTaskBuilder()

@@ -52,7 +52,7 @@ module AsyncExTests =
                     let! result = outer
                     Expect.equal result () "Should return the data"
                 }
-#if !NETSTANDARD2_0
+#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 testCaseAsync "Can ReturnFrom a ValueTask<T>"
                 <| async {
                     let data = "foo"
@@ -133,7 +133,7 @@ module AsyncExTests =
                     let! result = outer
                     Expect.equal result () "Should return the data"
                 }
-#if !NETSTANDARD2_0
+#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 testCaseAsync "Can bind a ValueTask<T>"
                 <| async {
                     let data = "foo"
@@ -174,6 +174,20 @@ module AsyncExTests =
 
                     let! result = outer
                     Expect.equal result () "Should return the data"
+                }
+                testCaseAsync "Can Bind Type inference"
+                <| async {
+                    let expected = "lol"
+
+                    let outerTask fooTask =
+                        asyncEx {
+                            let! result = fooTask
+                            return result
+                        }
+
+                    let! actual = outerTask (async.Return expected)
+
+                    Expect.equal actual expected ""
                 }
             ]
             testList "Zero/Combine/Delay" [
@@ -282,7 +296,7 @@ module AsyncExTests =
                     let! result = outer
                     Expect.equal result () "Should return the data"
                 }
-#if !NETSTANDARD2_0
+#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 testCaseAsync
                     "Awaiting Failed ValueTask<'T> should only contain one exception and not aggregation"
                 <| async {
@@ -412,7 +426,7 @@ module AsyncExTests =
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
                 }
-#if !NETSTANDARD2_0
+#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 testCaseAsync "use IAsyncDisposable sync"
                 <| async {
                     let data = 42
@@ -669,3 +683,73 @@ module AsyncExTests =
 
     [<Tests>]
     let asyncExTests = testList "IcedTasks.AsyncEx" [ builderTests ]
+
+module PolyfillTest =
+    open IcedTasks.Polyfill.Async
+
+    let builderTests =
+        testList "SmokeTests" [
+            testCaseAsync "Bind any awaitable"
+            <| async {
+                // Compiling this code will fail if Bind is not defined for any awaitable
+                let! result = async { do! Task.Yield() }
+                return result
+            }
+#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
+            testCaseAsync "use IAsyncDisposable sync"
+            <| async {
+                let data = 42
+                let mutable wasDisposed = false
+
+                let doDispose () =
+                    wasDisposed <- true
+                    ValueTask.CompletedTask
+
+                let! actual =
+                    async {
+                        use d = TestHelpers.makeAsyncDisposable (doDispose)
+                        return data
+                    }
+
+                Expect.equal actual data "Should be able to use use"
+                Expect.isTrue wasDisposed ""
+            }
+#endif
+
+            testCaseAsync
+                "Awaiting Failed Task<'T> should only contain one exception and not aggregation"
+            <| async {
+                let data = "lol"
+
+                let inner =
+                    asyncEx {
+                        let! result =
+                            task {
+                                do! Task.Yield()
+                                raise (ArgumentException "foo")
+                                return data
+                            }
+
+                        return result
+                    }
+
+                let outer =
+                    async {
+                        try
+                            let! result = inner
+                            return ()
+                        with
+                        | :? ArgumentException ->
+                            // Should be this exception and not AggregationException
+                            return ()
+                        | ex ->
+                            return raise (Exception("Should not throw this type of exception", ex))
+                    }
+
+                let! result = outer
+                Expect.equal result () "Should return the data"
+            }
+        ]
+
+    [<Tests>]
+    let asyncExTests = testList "IcedTasks.Polyfill.Async" [ builderTests ]

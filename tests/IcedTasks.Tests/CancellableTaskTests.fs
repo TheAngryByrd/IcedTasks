@@ -5,7 +5,7 @@ open Expecto
 open System.Threading
 open System.Threading.Tasks
 open IcedTasks
-#if !NETSTANDARD2_0
+#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
 open IcedTasks.ValueTaskExtensions
 #endif
 module CancellableTaskTests =
@@ -182,7 +182,7 @@ module CancellableTaskTests =
 
                     Expect.equal actual expected ""
                 }
-#if !NETSTANDARD2_0
+#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 testCaseAsync "Can Bind Cancellable TaskLike"
                 <| async {
                     let fooTask = fun (ct: CancellationToken) -> Task.Yield()

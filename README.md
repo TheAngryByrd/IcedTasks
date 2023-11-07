@@ -25,12 +25,14 @@ This library contains additional [computation expressions](https://docs.microsof
 
 - `AsyncEx<'T>` - Variation of F# async semantics described further below with examples.
     - `asyncEx`
+    - This can also be accessed under `IcedTasks.Polyfill.Async` which will [shadow](https://stackoverflow.com/a/39645319) the F# Async CE.
+      - `async`
 
-- `Task<'T>` - Polyfill for fixes to F# Task CE. Can be accessed under `IcedTasks.Polyfill`
+- `Task<'T>` - Polyfill for fixes to F# Task CE. Can be accessed under `IcedTasks.Polyfill.Task` which will [shadow](https://stackoverflow.com/a/39645319) the F# Task CE.
     - `task`
     - `backgroundTask`
 
-- `Task` - a CE for a`Task` that has no return value.
+- `Task` - a CE for a `Task` that has no return value.
     - `taskUnit`
     - `backgroundTaskUnit`
 

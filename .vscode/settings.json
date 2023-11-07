@@ -5,5 +5,8 @@
     ],
     "[fsharp]": {
         "editor.formatOnSave": true
-    }
+    },
+    "cSpell.words": [
+        "backported"
+    ]
 }

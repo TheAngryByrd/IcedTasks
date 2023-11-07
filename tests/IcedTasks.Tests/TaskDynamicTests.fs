@@ -7,7 +7,7 @@ open Expecto
 open System.Threading
 open System.Threading.Tasks
 open IcedTasks
-open IcedTasks.Polyfill
+open IcedTasks.Polyfill.Task
 
 module TaskDynamicTests =
     open System.Runtime.CompilerServices

@@ -209,7 +209,6 @@ module TaskBase =
 
                     if __useResumableCode then
                         let mutable __stack_condition_fin = true
-                        // let __stack_vtask = compensation ()
                         let mutable awaiter = compensation ()
 
                         if not (Awaiter.IsCompleted awaiter) then
@@ -227,7 +226,6 @@ module TaskBase =
 
                         __stack_condition_fin
                     else
-                        // let vtask = compensation ()
                         let mutable awaiter = compensation ()
 
                         let cont =
