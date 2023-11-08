@@ -145,7 +145,7 @@ module CancellableTasks =
         member inline _.Source
             (x: CancellationToken -> Task<_>)
             : CancellationToken -> Awaiter<TaskAwaiter<_>, _> =
-            fun ct -> (x ct).GetAwaiter()
+            fun ct -> Awaitable.GetTaskAwaiter(x ct)
 
         member inline this.MergeSources
             (
