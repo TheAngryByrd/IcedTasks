@@ -463,7 +463,7 @@ module TaskBase =
             /// <remarks>This turns a Task&lt;'T&gt; into a 'Awaiter.</remarks>
             ///
             /// <returns>'Awaiter</returns>
-            member inline _.Source(task: Task<'T>) = task.GetAwaiter()
+            member inline _.Source(task: Task<'T>) = Awaitable.GetTaskAwaiter task
 
             /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>
             ///
