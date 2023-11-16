@@ -43,10 +43,10 @@ AsyncEx is similar to Async except in the following ways:
 
     ```fsharp
     open IcedTasks
-    let fakeDisposable = { new IAsyncDisposable with member __.DisposeAsync() = ValueTask.CompletedTask }
-
+    let fakeDisposable () = { new IAsyncDisposable with member __.DisposeAsync() = ValueTask.CompletedTask }
+    
     let myAsyncEx = asyncEx {
-        use! _ = fakeDisposable
+        use _ = fakeDisposable ()
         return 42
     }
     ````
