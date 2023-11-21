@@ -11,6 +11,8 @@ module TaskBase =
     open Microsoft.FSharp.Core.CompilerServices.StateMachineHelpers
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
     open Microsoft.FSharp.Collections
+    open System.Collections.Generic
+    open System.Threading
 
     /// The extra data stored in ResumableStateMachine for tasks
     [<Struct; NoComparison; NoEquality>]
@@ -162,26 +164,6 @@ module TaskBase =
                 )
             )
 
-        /// <summary>Creates a Task that enumerates the sequence seq
-        /// on demand and runs body for each element.</summary>
-        ///
-        /// <remarks>A cancellation check is performed on each iteration of the loop.
-        ///
-        /// The existence of this method permits the use of for in the
-        /// task { ... } computation expression syntax.</remarks>
-        ///
-        /// <param name="sequence">The sequence to enumerate.</param>
-        /// <param name="body">A function to take an item from the sequence and create
-        /// a Task.  Can be seen as the body of the for expression.</param>
-        ///
-        /// <returns>a Task that will enumerate the sequence and run body
-        /// for each element.</returns>
-        member inline _.For
-            (
-                sequence: seq<'T>,
-                body: 'T -> TaskBaseCode<'TOverall, unit, 'Builder>
-            ) : TaskBaseCode<'TOverall, unit, 'Builder> =
-            ResumableCode.For(sequence, body)
 #if NETSTANDARD2_1 || NET6_0_OR_GREATER
         /// <summary>Creates a Task that runs computation. The action compensation is executed
         /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
@@ -218,11 +200,14 @@ module TaskBase =
                         if __stack_condition_fin then
                             Awaiter.GetResult awaiter
                         else
+                            let mutable awaiter = awaiter :> ICriticalNotifyCompletion
+
                             MethodBuilder.AwaitUnsafeOnCompleted(
                                 &sm.Data.MethodBuilder,
                                 &awaiter,
                                 &sm
                             )
+
 
                         __stack_condition_fin
                     else
@@ -277,7 +262,112 @@ module TaskBase =
                         |> Awaitable.GetAwaiter
                 )
             )
+
+        member inline internal _.WhileAsync
+            (
+                [<InlineIfLambda>] condition,
+                body: TaskBaseCode<_, unit, 'Builder>
+            ) : TaskBaseCode<_, unit, 'Builder> =
+            let mutable condition_res = true
+
+            ResumableCode.While(
+                (fun () -> condition_res),
+                TaskBaseCode<_, unit, 'Builder>(fun sm ->
+                    if __useResumableCode then
+                        let mutable __stack_condition_fin = true
+                        let mutable awaiter = condition ()
+
+                        if Awaiter.IsCompleted awaiter then
+
+                            __stack_condition_fin <- true
+
+                            condition_res <- Awaiter.GetResult awaiter
+                        else
+
+                            // This will yield with __stack_fin = false
+                            // This will resume with __stack_fin = true
+                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
+                            __stack_condition_fin <- __stack_yield_fin
+
+                            if __stack_condition_fin then
+                                condition_res <- Awaiter.GetResult awaiter
+
+
+                        if __stack_condition_fin then
+                            if condition_res then body.Invoke(&sm) else true
+                        else
+                            let mutable awaiter = awaiter :> ICriticalNotifyCompletion
+
+                            MethodBuilder.AwaitUnsafeOnCompleted(
+                                &sm.Data.MethodBuilder,
+                                &awaiter,
+                                &sm
+                            )
+
+                            false
+                    else
+                        let mutable awaiter = condition ()
+
+                        let cont =
+                            TaskBaseResumptionFunc<'TOverall, 'Builder>(fun sm ->
+                                condition_res <- Awaiter.GetResult awaiter
+                                if condition_res then body.Invoke(&sm) else true
+                            )
+
+                        if Awaiter.IsCompleted awaiter then
+                            cont.Invoke(&sm)
+                        else
+                            sm.ResumptionDynamicInfo.ResumptionData <-
+                                (awaiter :> ICriticalNotifyCompletion)
+
+                            sm.ResumptionDynamicInfo.ResumptionFunc <- cont
+                            false
+                )
+            )
+
+        member inline this.For
+            (
+                source: #IAsyncEnumerable<'T>,
+                body: 'T -> TaskBaseCode<_, unit, 'Builder>
+            ) : TaskBaseCode<_, _, 'Builder> =
+
+            TaskBaseCode<_, _, 'Builder>(fun sm ->
+                this
+                    .Using(
+                        source.GetAsyncEnumerator CancellationToken.None,
+                        (fun (e: IAsyncEnumerator<'T>) ->
+                            this.WhileAsync(
+                                (fun () -> Awaitable.GetAwaiter(e.MoveNextAsync())),
+                                (fun sm -> (body e.Current).Invoke(&sm))
+                            )
+                        )
+
+                    )
+                    .Invoke(&sm)
+            )
 #endif
+
+        /// <summary>Creates a Task that enumerates the sequence seq
+        /// on demand and runs body for each element.</summary>
+        ///
+        /// <remarks>A cancellation check is performed on each iteration of the loop.
+        ///
+        /// The existence of this method permits the use of for in the
+        /// task { ... } computation expression syntax.</remarks>
+        ///
+        /// <param name="sequence">The sequence to enumerate.</param>
+        /// <param name="body">A function to take an item from the sequence and create
+        /// a Task.  Can be seen as the body of the for expression.</param>
+        ///
+        /// <returns>a Task that will enumerate the sequence and run body
+        /// for each element.</returns>
+        member inline _.For
+            (
+                sequence: seq<'T>,
+                body: 'T -> TaskBaseCode<'TOverall, unit, 'Builder>
+            ) : TaskBaseCode<'TOverall, unit, 'Builder> =
+            ResumableCode.For(sequence, body)
+
 
     /// <exclude/>
     [<AutoOpen>]
@@ -352,6 +442,9 @@ module TaskBase =
 
                             (continuation result).Invoke(&sm)
                         else
+
+                            let mutable awaiter = awaiter :> ICriticalNotifyCompletion
+
                             MethodBuilder.AwaitUnsafeOnCompleted(
                                 &sm.Data.MethodBuilder,
                                 &awaiter,
@@ -369,7 +462,6 @@ module TaskBase =
             // builder.Bind(builder.MergeSourcesN(e1, ..., eN), (fun (pat1, ..., patN) -> ... )
             // Meaning we'd have to implement some bind in terms of `TaskBaseCode`
             // Currently easier to implement per instance of a CE
-            // TODO look at something like: https://github.com/Cysharp/ValueTaskSupplement/blob/9f733d5163e048b192b0d27af28ec0eb0c9b51ec/src/ValueTaskSupplement/ValueTaskEx.WhenAll_NonGenerics.cs#L39
             // [<NoEagerConstraintApplication>]
             // member inline this.MergeSources(left: 'Awaiter1, right: 'Awaiter2) =
             //     this.Bind(left, (fun v -> this.Bind(right, (fun vr -> this.Return(v, vr)))))
@@ -444,6 +536,13 @@ module TaskBase =
                 ) =
                 ResumableCode.Using(resource, binder)
 
+            /// <summary>Allows the computation expression to turn other types into other types</summary>
+            ///
+            /// <remarks>This is the identify function for For binds.</remarks>
+            ///
+            /// <returns>IEnumerable</returns>
+            member inline _.Source(s: #seq<_>) : #seq<_> = s
+
     /// <exclude/>
     [<AutoOpen>]
     module HighPriority =
@@ -451,12 +550,15 @@ module TaskBase =
         // High priority extensions
         type TaskBuilderBase with
 
+#if NETSTANDARD2_1 || NET6_0_OR_GREATER
             /// <summary>Allows the computation expression to turn other types into other types</summary>
             ///
             /// <remarks>This is the identify function for For binds.</remarks>
             ///
             /// <returns>IEnumerable</returns>
-            member inline _.Source(s: #seq<_>) : #seq<_> = s
+            member inline _.Source(s: #IAsyncEnumerable<_>) = s
+#endif
+
 
             /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>
             ///
@@ -472,7 +574,6 @@ module TaskBase =
             /// <returns>'Awaiter</returns>
             member inline this.Source(computation: Async<'TResult1>) =
                 this.Source(Async.StartImmediateAsTask(computation))
-
 
             /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>
             ///

@@ -6,6 +6,7 @@ open System.Threading
 open System.Threading.Tasks
 open IcedTasks
 open IcedTasks.Polyfill.Task
+open System.Collections.Generic
 
 module TaskBackgroundTests =
 
@@ -584,6 +585,42 @@ module TaskBackgroundTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
+#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
+                yield!
+                    [
+                        10
+                        10000
+                        1000000
+                    ]
+                    |> List.map (fun loops ->
+                        testCaseAsync $"IAsyncEnumerable for in {loops}"
+                        <| async {
+                            let mutable index = 0
+
+                            let asyncSeq: IAsyncEnumerable<_> =
+                                FSharp.Control.TaskSeq.initAsync
+                                    loops
+                                    (fun i ->
+                                        backgroundTask {
+                                            do! Task.Yield()
+                                            return i
+                                        }
+                                    )
+
+                            let! actual =
+                                backgroundTask {
+                                    for (i: int) in asyncSeq do
+                                        do! Task.Yield()
+                                        index <- i + i
+
+                                    return index
+                                }
+                                |> Async.AwaitTask
+
+                            Expect.equal actual index "Should be ok"
+                        }
+                    )
+#endif
             ]
             testList "MergeSources" [
                 testCaseAsync "and! 5"

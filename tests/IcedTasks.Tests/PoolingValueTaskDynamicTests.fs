@@ -7,9 +7,11 @@ open Expecto
 open System.Threading
 open System.Threading.Tasks
 open IcedTasks
+open System.Collections.Generic
 
 module PoolingValueTaskDynamicTests =
     open System.Runtime.CompilerServices
+    open System.Collections.Generic
 
     type PoolingValueTaskDynamicBuilder() =
         inherit PoolingValueTaskBuilder()
@@ -582,6 +584,42 @@ module PoolingValueTaskDynamicTests =
                             let! actual =
                                 dPoolingValueTask {
                                     for i = 1 to loops do
+                                        do! Task.Yield()
+                                        index <- i + i
+
+                                    return index
+                                }
+                                |> Async.AwaitValueTask
+
+                            Expect.equal actual index "Should be ok"
+                        }
+                    )
+
+
+                yield!
+                    [
+                        10
+                        10000
+                        1000000
+                    ]
+                    |> List.map (fun loops ->
+                        testCaseAsync $"IAsyncEnumerable for in {loops}"
+                        <| async {
+                            let mutable index = 0
+
+                            let asyncSeq: IAsyncEnumerable<_> =
+                                FSharp.Control.TaskSeq.initAsync
+                                    loops
+                                    (fun i ->
+                                        task {
+                                            do! Task.Yield()
+                                            return i
+                                        }
+                                    )
+
+                            let! actual =
+                                dPoolingValueTask {
+                                    for (i: int) in asyncSeq do
                                         do! Task.Yield()
                                         index <- i + i
 
