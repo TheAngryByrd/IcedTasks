@@ -5,6 +5,7 @@ open Expecto
 open System.Threading
 open System.Threading.Tasks
 open IcedTasks
+open System.Collections.Generic
 
 
 module AsyncExTests =
@@ -677,6 +678,83 @@ module AsyncExTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
+
+
+#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
+                yield!
+                    [
+                        10
+                        10000
+                        1000000
+                    ]
+                    |> List.map (fun loops ->
+                        testCaseAsync $"IAsyncEnumerable for in {loops}"
+                        <| async {
+                            let mutable index = 0
+
+                            let asyncSeq: IAsyncEnumerable<_> =
+                                FSharp.Control.TaskSeq.initAsync
+                                    loops
+                                    (fun i ->
+                                        task {
+                                            do! Task.Yield()
+                                            return i
+                                        }
+                                    )
+
+                            let! actual =
+                                asyncEx {
+                                    for (i: int) in asyncSeq do
+                                        do! Task.Yield()
+                                        index <- i + i
+
+                                    return index
+                                }
+
+                            Expect.equal actual index "Should be ok"
+                        }
+                    )
+                // https://github.com/fsprojects/FSharp.Control.TaskSeq/issues/179
+                testCaseAsync "IAsyncEnumerable cancellation"
+                <| async {
+
+                    do!
+                        Expect.CancellationRequested(
+                            async {
+
+                                let mutable index = 0
+
+                                let asyncSeq: IAsyncEnumerable<_> =
+                                    FSharp.Control.TaskSeq.initAsync
+                                        10
+                                        (fun i ->
+                                            task {
+                                                do! Task.Yield()
+                                                return i
+                                            }
+                                        )
+
+                                use cts = new CancellationTokenSource()
+
+                                let actual =
+                                    asyncEx {
+                                        for (i: int) in asyncSeq do
+                                            do! Task.Yield()
+
+                                            if index >= 5 then
+                                                cts.Cancel()
+
+                                            index <- index + 1
+                                    }
+
+                                do!
+                                    Async.StartAsTask(actual, cancellationToken = cts.Token)
+                                    |> Async.AwaitTask
+                            }
+                        )
+                }
+
+#endif
             ]
         ]
 

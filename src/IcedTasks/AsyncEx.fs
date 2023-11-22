@@ -4,6 +4,7 @@ open System
 open System.Threading
 open System.Threading.Tasks
 open System.Runtime.ExceptionServices
+open System.Collections.Generic
 
 type private Async =
     static member inline map f x =
@@ -303,12 +304,46 @@ type AsyncExBuilder() =
             )
         )
 
+
+    member inline internal _.WhileAsync(guard: Async<bool>, computation: Async<unit>) =
+        async {
+            let mutable keepGoing = true
+
+            while keepGoing do
+                let! guardResult = guard
+                if guardResult then do! computation else keepGoing <- false
+        }
+
+    member inline this.For
+        (
+            sequence: IAsyncEnumerable<'e>,
+            [<InlineIfLambda>] body: 'e -> Async<unit>
+        ) =
+        this.Bind(
+            Async.CancellationToken,
+            fun (ct: CancellationToken) ->
+                this.Using(
+                    sequence.GetAsyncEnumerator ct,
+                    (fun enumerator ->
+                        this.WhileAsync(
+                            (this.Delay(fun () ->
+                                enumerator.MoveNextAsync()
+                                |> AsyncEx.AwaitValueTask
+                            )),
+                            (body enumerator.Current)
+                        )
+
+                    )
+                )
+        )
+
 #endif
     member inline _.While([<InlineIfLambda>] guard: unit -> bool, computation: Async<unit>) =
         async.While(guard, computation)
 
     member inline _.For(sequence: seq<'e>, [<InlineIfLambda>] body: 'e -> Async<unit>) =
         async.For(sequence, body)
+
 
     member inline _.Combine(computation1, computation2) =
         async.Combine(computation1, computation2)
@@ -334,6 +369,8 @@ module AsyncExExtensionsLowPriority =
     open FSharp.Core.CompilerServices
 
     type AsyncExBuilder with
+
+        member inline _.Source(seq: #seq<_>) = seq
 
         member inline _.Using(resource: #IDisposable, [<InlineIfLambda>] binder) =
             async.Using(resource, binder)
@@ -372,8 +409,9 @@ module AsyncExExtensionsHighPriority =
 
     type AsyncExBuilder with
 
-        member inline _.Source(seq: #seq<_>) = seq
-
+#if NETSTANDARD2_1 || NET6_0_OR_GREATER
+        member inline _.Source(seq: #IAsyncEnumerable<_>) = seq
+#endif
         // Required because SRTP can't determine the type of the awaiter
         //     Candidates:
         //  - Task.GetAwaiter() : Runtime.CompilerServices.TaskAwaiter
