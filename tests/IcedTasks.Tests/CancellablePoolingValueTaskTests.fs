@@ -8,6 +8,7 @@ open IcedTasks
 
 module CancellablePoolingValueTaskTests =
     open TimeProviderExtensions
+    open System.Collections.Generic
 
     let builderTests =
         testList "CancellablePoolingValueTaskBuilder" [
@@ -783,6 +784,80 @@ module CancellablePoolingValueTaskTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
+
+
+                yield!
+                    [
+                        10
+                        10000
+                        1000000
+                    ]
+                    |> List.map (fun loops ->
+                        testCaseAsync $"IAsyncEnumerable for in {loops}"
+                        <| async {
+                            let mutable index = 0
+
+                            let asyncSeq: IAsyncEnumerable<_> =
+                                FSharp.Control.TaskSeq.initAsync
+                                    loops
+                                    (fun i ->
+                                        task {
+                                            do! Task.Yield()
+                                            return i
+                                        }
+                                    )
+
+                            let! actual =
+                                cancellablePoolingValueTask {
+                                    for (i: int) in asyncSeq do
+                                        do! Task.Yield()
+                                        index <- i + i
+
+                                    return index
+                                }
+                                |> Async.AwaitCancellableValueTask
+
+                            Expect.equal actual index "Should be ok"
+                        }
+                    )
+
+                //https://github.com/fsprojects/FSharp.Control.TaskSeq/issues/179
+                testCaseAsync "IAsyncEnumerable cancellation"
+                <| async {
+
+                    do!
+                        Expect.CancellationRequested(
+                            cancellablePoolingValueTask {
+
+                                let mutable index = 0
+
+                                let asyncSeq: IAsyncEnumerable<_> =
+                                    FSharp.Control.TaskSeq.initAsync
+                                        10
+                                        (fun i ->
+                                            task {
+                                                do! Task.Yield()
+                                                return i
+                                            }
+                                        )
+
+                                use cts = new CancellationTokenSource()
+
+                                let actual =
+                                    cancellablePoolingValueTask {
+                                        for (i: int) in asyncSeq do
+                                            do! Task.Yield()
+
+                                            if index >= 5 then
+                                                cts.Cancel()
+
+                                            index <- index + 1
+                                    }
+
+                                do! actual cts.Token
+                            }
+                        )
+                }
             ]
 
             testList "MergeSources" [
