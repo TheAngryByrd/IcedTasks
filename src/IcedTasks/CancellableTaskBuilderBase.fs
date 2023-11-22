@@ -12,6 +12,7 @@ module CancellableTaskBase =
     open Microsoft.FSharp.Core.CompilerServices.StateMachineHelpers
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
     open Microsoft.FSharp.Collections
+    open System.Collections.Generic
 
     /// The extra data stored in ResumableStateMachine for tasks
     [<Struct; NoComparison; NoEquality>]
@@ -290,6 +291,93 @@ module CancellableTaskBase =
                         ValueTask()
                         |> Awaitable.GetAwaiter
                 )
+            )
+
+
+        member inline internal _.WhileAsync
+            (
+                [<InlineIfLambda>] condition,
+                body: CancellableTaskBaseCode<_, unit, 'Builder>
+            ) : CancellableTaskBaseCode<_, unit, 'Builder> =
+            let mutable condition_res = true
+
+            ResumableCode.While(
+                (fun () -> condition_res),
+                CancellableTaskBaseCode<_, unit, 'Builder>(fun sm ->
+                    if __useResumableCode then
+
+                        let mutable __stack_condition_fin = true
+                        let mutable awaiter = condition ()
+
+                        if Awaiter.IsCompleted awaiter then
+
+                            __stack_condition_fin <- true
+
+                            condition_res <- Awaiter.GetResult awaiter
+                        else
+
+                            // This will yield with __stack_fin = false
+                            // This will resume with __stack_fin = true
+                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
+                            __stack_condition_fin <- __stack_yield_fin
+
+                            if __stack_condition_fin then
+                                condition_res <- Awaiter.GetResult awaiter
+
+
+                        if __stack_condition_fin then
+
+                            if condition_res then body.Invoke(&sm) else true
+                        else
+                            let mutable awaiter = awaiter :> ICriticalNotifyCompletion
+
+                            MethodBuilder.AwaitUnsafeOnCompleted(
+                                &sm.Data.MethodBuilder,
+                                &awaiter,
+                                &sm
+                            )
+
+                            false
+                    else
+
+                        let mutable awaiter = condition ()
+
+                        let cont =
+                            CancellableTaskBaseResumptionFunc<'TOverall, 'Builder>(fun sm ->
+                                condition_res <- Awaiter.GetResult awaiter
+                                if condition_res then body.Invoke(&sm) else true
+                            )
+
+                        if Awaiter.IsCompleted awaiter then
+                            cont.Invoke(&sm)
+                        else
+                            sm.ResumptionDynamicInfo.ResumptionData <-
+                                (awaiter :> ICriticalNotifyCompletion)
+
+                            sm.ResumptionDynamicInfo.ResumptionFunc <- cont
+                            false
+                )
+            )
+
+        member inline this.For
+            (
+                source: #IAsyncEnumerable<'T>,
+                body: 'T -> CancellableTaskBaseCode<_, unit, 'Builder>
+            ) : CancellableTaskBaseCode<_, _, 'Builder> =
+
+            CancellableTaskBaseCode<_, _, 'Builder>(fun sm ->
+                this
+                    .Using(
+                        source.GetAsyncEnumerator sm.Data.CancellationToken,
+                        (fun (e: IAsyncEnumerator<'T>) ->
+                            this.WhileAsync(
+                                (fun () -> Awaitable.GetAwaiter(e.MoveNextAsync())),
+                                (fun sm -> (body e.Current).Invoke(&sm))
+                            )
+                        )
+
+                    )
+                    .Invoke(&sm)
             )
 #endif
 
@@ -595,6 +683,15 @@ module CancellableTaskBase =
                 ) =
                 ResumableCode.Using(resource, binder)
 
+
+            /// <summary>Allows the computation expression to turn other types into other types</summary>
+            ///
+            /// <remarks>This is the identify function for For binds.</remarks>
+            ///
+            /// <returns>IEnumerable</returns>
+            member inline _.Source(s: #seq<_>) : #seq<_> = s
+
+
     /// <exclude/>
     [<AutoOpen>]
     module HighPriority =
@@ -667,13 +764,14 @@ module CancellableTaskBase =
         // High priority extensions
         type CancellableTaskBuilderBase with
 
-
+#if NETSTANDARD2_1 || NET6_0_OR_GREATER
             /// <summary>Allows the computation expression to turn other types into other types</summary>
             ///
             /// <remarks>This is the identify function for For binds.</remarks>
             ///
             /// <returns>IEnumerable</returns>
-            member inline _.Source(s: #seq<_>) : #seq<_> = s
+            member inline _.Source(s: #IAsyncEnumerable<_>) = s
+#endif
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///

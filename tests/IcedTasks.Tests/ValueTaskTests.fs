@@ -7,6 +7,7 @@ open System.Threading.Tasks
 open IcedTasks
 
 module ValueTaskTests =
+    open System.Collections.Generic
 
     let builderTests =
         testList "ValueTaskBuilder" [
@@ -570,6 +571,40 @@ module ValueTaskTests =
                             let! actual =
                                 valueTask {
                                     for i = 1 to loops do
+                                        do! Task.Yield()
+                                        index <- i + i
+
+                                    return index
+                                }
+                                |> Async.AwaitValueTask
+
+                            Expect.equal actual index "Should be ok"
+                        }
+                    )
+                yield!
+                    [
+                        10
+                        10000
+                        1000000
+                    ]
+                    |> List.map (fun loops ->
+                        testCaseAsync $"IAsyncEnumerable for in {loops}"
+                        <| async {
+                            let mutable index = 0
+
+                            let asyncSeq: IAsyncEnumerable<_> =
+                                FSharp.Control.TaskSeq.initAsync
+                                    loops
+                                    (fun i ->
+                                        task {
+                                            do! Task.Yield()
+                                            return i
+                                        }
+                                    )
+
+                            let! actual =
+                                valueTask {
+                                    for (i: int) in asyncSeq do
                                         do! Task.Yield()
                                         index <- i + i
 
