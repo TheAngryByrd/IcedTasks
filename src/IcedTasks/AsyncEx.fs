@@ -398,6 +398,7 @@ module AsyncExExtensionsLowPriority =
     /// <item><description>Allows <c>use</c> on <see cref="T:System.IAsyncDisposable">System.IAsyncDisposable</see></description></item>
     /// <item><description>Allows <c>let!</c> for Tasks, ValueTasks, and any Awaitable Type</description></item>
     /// <item><description>When Tasks throw exceptions they will use the behavior described in <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see></description></item>
+    /// <item><description>Allow <c>for</c> on <see cref="T:System.Collections.Generic.IAsyncEnumerable`1">System.Collections.Generic.IAsyncDisposable</see></description></item>
     /// </list>
     ///
     /// </remarks>
@@ -441,6 +442,7 @@ module PolyfillBuilders =
     /// <item><description>Allows <c>use</c> on <see cref="T:System.IAsyncDisposable">System.IAsyncDisposable</see></description></item>
     /// <item><description>Allows <c>let!</c> for Tasks, ValueTasks, and any Awaitable Type</description></item>
     /// <item><description>When Tasks throw exceptions they will use the behavior described in <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see></description></item>
+    /// <item><description>Allow <c>for</c> on <see cref="T:System.Collections.Generic.IAsyncEnumerable`1">System.Collections.Generic.IAsyncDisposable</see></description></item>
     /// </list>
     ///
     /// </remarks>

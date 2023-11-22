@@ -119,6 +119,24 @@ AsyncEx is similar to Async except in the following ways:
     }
     ```
 
+4. Use [IAsyncEnumerable](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.iasyncenumerable-1?view=net-8.0) with `for` keyword. This example uses [TaskSeq](https://github.com/fsprojects/FSharp.Control.TaskSeq) but you can use any `IAsyncEnumerable<T>`.
+
+
+    ```fsharp
+    open IcedTasks
+    open FSharp.Control
+    let myAsyncEx = asyncEx {
+        let items = taskSeq {  // IAsyncEnumerable<T>
+            yield 42
+            do! Task.Delay(100)
+            yield 1701
+        }
+        let mutable sum = 0
+        for i in items do
+            sum <- sum + i
+        return sum
+    }
+    ```
 
 ### For [ValueTasks](https://devblogs.microsoft.com/dotnet/understanding-the-whys-whats-and-whens-of-valuetask/)
 

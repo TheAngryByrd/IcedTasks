@@ -9,6 +9,7 @@ open System.Collections.Generic
 
 
 module AsyncExTests =
+    open FSharp.Control
 
     let builderTests =
         testList "AsyncExBuilder" [
@@ -678,7 +679,6 @@ module AsyncExTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
-
 
 #if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 yield!
