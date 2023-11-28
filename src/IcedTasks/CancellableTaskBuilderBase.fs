@@ -306,27 +306,18 @@ module CancellableTaskBase =
                 CancellableTaskBaseCode<_, unit, 'Builder>(fun sm ->
                     if __useResumableCode then
 
-                        let mutable __stack_condition_fin = true
+                        let mutable __stack_fin = true
                         let mutable awaiter = condition ()
 
-                        if Awaiter.IsCompleted awaiter then
-
-                            __stack_condition_fin <- true
-
-                            condition_res <- Awaiter.GetResult awaiter
-                        else
+                        if not (Awaiter.IsCompleted awaiter) then
 
                             // This will yield with __stack_fin = false
                             // This will resume with __stack_fin = true
                             let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-                            __stack_condition_fin <- __stack_yield_fin
+                            __stack_fin <- __stack_yield_fin
 
-                            if __stack_condition_fin then
-                                condition_res <- Awaiter.GetResult awaiter
-
-
-                        if __stack_condition_fin then
-
+                        if __stack_fin then
+                            condition_res <- Awaiter.GetResult awaiter
                             if condition_res then body.Invoke(&sm) else true
                         else
                             let mutable awaiter = awaiter :> ICriticalNotifyCompletion
