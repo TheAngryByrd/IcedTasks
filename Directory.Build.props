@@ -10,5 +10,9 @@
         <!-- owners is not supported in MSBuild -->
         <OtherFlags>$(OtherFlags) --test:GraphBasedChecking --test:ParallelIlxGen --test:ParallelOptimization </OtherFlags>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+       <!--
+        * FS3517 InlineIfLambda didn't get inlined
+        -->
+        <!-- <WarnOn>$(WarnOn);3517</WarnOn> -->
     </PropertyGroup>
 </Project>

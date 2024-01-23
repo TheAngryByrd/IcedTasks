@@ -63,7 +63,6 @@ AsyncEx is similar to Async except in the following ways:
     ```
 3. When Tasks throw exceptions they will use the behavior described in [Async.Await overload (esp. AwaitTask without throwing AggregateException](https://github.com/fsharp/fslang-suggestions/issues/840)
 
-
     ```fsharp
     let data = "lol"
 
@@ -89,9 +88,7 @@ AsyncEx is similar to Async except in the following ways:
             return raise (Exception("Should not throw this type of exception", ex))
     }
     ```
-
 4. Use [IAsyncEnumerable](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.iasyncenumerable-1?view=net-8.0) with `for` keyword. This example uses [TaskSeq](https://github.com/fsprojects/FSharp.Control.TaskSeq) but you can use any `IAsyncEnumerable<T>`.
-
 
     ```fsharp
     open IcedTasks

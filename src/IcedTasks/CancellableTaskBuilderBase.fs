@@ -56,10 +56,9 @@ module CancellableTaskBase =
         /// <param name="generator">The function to run</param>
         /// <returns>A CancellableTasks that runs generator</returns>
         member inline _.Delay
-            ([<InlineIfLambdaAttribute>] generator:
-                unit -> CancellableTaskBaseCode<'TOverall, 'T, 'Builder>)
+            (generator: unit -> CancellableTaskBaseCode<'TOverall, 'T, 'Builder>)
             : CancellableTaskBaseCode<'TOverall, 'T, 'Builder> =
-            ResumableCode.Delay(fun () -> generator ())
+            ResumableCode.Delay(generator)
 
         /// <summary>Creates A CancellableTasks that just returns ().</summary>
         /// <remarks>
@@ -296,7 +295,7 @@ module CancellableTaskBase =
 
         member inline internal _.WhileAsync
             (
-                [<InlineIfLambda>] condition,
+                [<InlineIfLambda>] condition: unit -> 'Awaitable,
                 body: CancellableTaskBaseCode<_, unit, 'Builder>
             ) : CancellableTaskBaseCode<_, unit, 'Builder> =
             let mutable condition_res = true
@@ -307,7 +306,7 @@ module CancellableTaskBase =
                     if __useResumableCode then
 
                         let mutable __stack_fin = true
-                        let mutable awaiter = condition ()
+                        let awaiter = condition ()
 
                         if not (Awaiter.IsCompleted awaiter) then
 
@@ -331,7 +330,7 @@ module CancellableTaskBase =
                             false
                     else
 
-                        let mutable awaiter = condition ()
+                        let awaiter = condition ()
 
                         let cont =
                             CancellableTaskBaseResumptionFunc<'TOverall, 'Builder>(fun sm ->

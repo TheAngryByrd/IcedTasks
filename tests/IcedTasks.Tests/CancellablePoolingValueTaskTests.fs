@@ -805,7 +805,7 @@ module CancellablePoolingValueTaskTests =
 
                             let! actual =
                                 cancellablePoolingValueTask {
-                                    for (i: int) in asyncSeq do
+                                    for i in asyncSeq do
                                         do! Task.Yield()
                                         index <- i + i
 

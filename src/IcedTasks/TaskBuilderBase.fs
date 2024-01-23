@@ -47,10 +47,8 @@ module TaskBase =
         /// <summary>Creates a ValueTask that runs generator</summary>
         /// <param name="generator">The function to run</param>
         /// <returns>A task that runs generator</returns>
-        member inline _.Delay
-            ([<InlineIfLambdaAttribute>] generator: unit -> TaskBaseCode<'TOverall, 'T, 'Builder>)
-            : TaskBaseCode<'TOverall, 'T, 'Builder> =
-            ResumableCode.Delay(fun () -> generator ())
+        member inline _.Delay(generator: unit -> ResumableCode<'TOverall, 'T>) =
+            ResumableCode.Delay(generator)
 
         /// <summary>Creates a Task that just returns ().</summary>
         /// <remarks>
@@ -111,7 +109,7 @@ module TaskBase =
         /// <returns>a Task that behaves similarly to a while loop when run.</returns>
         member inline _.While
             (
-                guard: unit -> bool,
+                [<InlineIfLambda>] guard: unit -> bool,
                 computation: TaskBaseCode<'TOverall, unit, 'Builder>
             ) : TaskBaseCode<'TOverall, unit, 'Builder> =
             ResumableCode.While(guard, computation)
@@ -164,6 +162,103 @@ module TaskBase =
                 )
             )
 
+
+        /// <summary>
+        /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
+        /// </summary>
+        [<NoEagerConstraintApplication>]
+        static member inline BindDynamic
+            (
+                sm: byref<ResumableStateMachine<TaskBaseStateMachineData<'TOverall, 'Builder>>>,
+                awaiter: 'Awaiter,
+                continuation: ('TResult1 -> TaskBaseCode<'TOverall, 'TResult2, 'Builder>)
+            ) : bool =
+
+            let cont =
+                (TaskBaseResumptionFunc<'TOverall, 'Builder>(fun sm ->
+                    let result = Awaiter.GetResult awaiter
+                    (continuation result).Invoke(&sm)
+                ))
+
+            // shortcut to continue immediately
+            if Awaiter.IsCompleted awaiter then
+                cont.Invoke(&sm)
+            else
+                sm.ResumptionDynamicInfo.ResumptionData <- (awaiter :> ICriticalNotifyCompletion)
+
+                sm.ResumptionDynamicInfo.ResumptionFunc <- cont
+                false
+
+        /// <summary>Creates a Task that runs computation, and when
+        /// computation generates a result T, runs binder res.</summary>
+        ///
+        /// <remarks>A cancellation check is performed when the computation is executed.
+        ///
+        /// The existence of this method permits the use of let! in the
+        /// task { ... } computation expression syntax.</remarks>
+        ///
+        /// <param name="getAwaiter">The computation to provide an unbound result.</param>
+        /// <param name="continuation">The function to bind the result of computation.</param>
+        ///
+        /// <returns>a Task that performs a monadic bind on the result
+        /// of computation.</returns>
+        [<NoEagerConstraintApplication>]
+        member inline _.Bind
+            (
+                awaiter: 'Awaiter,
+                continuation: ('TResult1 -> TaskBaseCode<'TOverall, 'TResult2, 'Builder>)
+            ) : TaskBaseCode<'TOverall, 'TResult2, 'Builder> =
+
+            TaskBaseCode<'TOverall, 'TResult2, 'Builder>(fun sm ->
+                if __useResumableCode then
+                    //-- RESUMABLE CODE START
+
+                    let mutable __stack_fin = true
+
+                    if not (Awaiter.IsCompleted awaiter) then
+                        // This will yield with __stack_yield_fin = false
+                        // This will resume with __stack_yield_fin = true
+                        let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
+                        __stack_fin <- __stack_yield_fin
+
+                    if __stack_fin then
+                        let result = Awaiter.GetResult awaiter
+
+                        (continuation result).Invoke(&sm)
+                    else
+
+                        let mutable awaiter = awaiter :> ICriticalNotifyCompletion
+
+                        MethodBuilder.AwaitUnsafeOnCompleted(&sm.Data.MethodBuilder, &awaiter, &sm)
+
+                        false
+                else
+                    TaskBuilderBase.BindDynamic(&sm, awaiter, continuation)
+            //-- RESUMABLE CODE END
+            )
+
+        /// <summary>Delegates to the input computation.</summary>
+        ///
+        /// <remarks>The existence of this method permits the use of return! in the
+        /// task { ... } computation expression syntax.</remarks>
+        ///
+        /// <param name="getAwaiter">The input computation.</param>
+        ///
+        /// <returns>The input computation.</returns>
+        [<NoEagerConstraintApplication>]
+        member inline this.ReturnFrom(awaiter: 'Awaiter) : TaskBaseCode<_, _, 'Builder> =
+            this.Bind(awaiter, (fun v -> this.Return v))
+
+
+        [<NoEagerConstraintApplication>]
+        member inline this.BindReturn
+            (
+                awaiter: 'Awaiter,
+                [<InlineIfLambda>] mapper: 'a -> 'TResult
+            ) =
+            this.Bind(awaiter, (fun v -> this.Return(mapper v)))
+
+
         /// <summary>Creates a Task that runs computation. The action compensation is executed
         /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
         /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
@@ -179,55 +274,14 @@ module TaskBase =
         ///
         /// <returns>a Task that executes computation and compensation afterwards or
         /// when an exception is raised.</returns>
-        member inline internal this.TryFinallyAsync
+        member inline internal x.TryFinallyAsync
             (
                 computation: TaskBaseCode<'TOverall, 'T, 'Builder>,
-                compensation: unit -> 'Awaitable
+                [<InlineIfLambda>] compensation: unit -> 'Awaitable
             ) : TaskBaseCode<'TOverall, 'T, 'Builder> =
             ResumableCode.TryFinallyAsync(
                 computation,
-                ResumableCode<_, _>(fun sm ->
-
-                    if __useResumableCode then
-                        let mutable __stack_condition_fin = true
-                        let mutable awaiter = compensation ()
-
-                        if not (Awaiter.IsCompleted awaiter) then
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-                            __stack_condition_fin <- __stack_yield_fin
-
-                        if __stack_condition_fin then
-                            Awaiter.GetResult awaiter
-                        else
-                            let mutable awaiter = awaiter :> ICriticalNotifyCompletion
-
-                            MethodBuilder.AwaitUnsafeOnCompleted(
-                                &sm.Data.MethodBuilder,
-                                &awaiter,
-                                &sm
-                            )
-
-
-                        __stack_condition_fin
-                    else
-                        let mutable awaiter = compensation ()
-
-                        let cont =
-                            TaskBaseResumptionFunc<'TOverall, 'Builder>(fun sm ->
-                                Awaiter.GetResult awaiter
-                                true
-                            )
-
-                        // shortcut to continue immediately
-                        if Awaiter.IsCompleted awaiter then
-                            cont.Invoke(&sm)
-                        else
-                            sm.ResumptionDynamicInfo.ResumptionData <-
-                                (awaiter :> ICriticalNotifyCompletion)
-
-                            sm.ResumptionDynamicInfo.ResumptionFunc <- cont
-                            false
-                )
+                ResumableCode<_, _>(fun sm -> x.Bind((compensation ()), (x.Zero)).Invoke(&sm))
             )
 
         /// <summary>Creates a Task that runs binder(resource).
@@ -254,66 +308,35 @@ module TaskBase =
                 (fun sm -> (binder resource).Invoke(&sm)),
                 (fun () ->
                     if not (isNull (box resource)) then
-                        resource.DisposeAsync()
-                        |> Awaitable.GetAwaiter
+                        Awaitable.GetAwaiter(resource.DisposeAsync())
                     else
-                        ValueTask()
-                        |> Awaitable.GetAwaiter
+                        Awaitable.GetAwaiter(ValueTask())
                 )
             )
 
-        member inline internal _.WhileAsync
+        member inline internal x.WhileAsync
             (
-                [<InlineIfLambda>] condition,
+                [<InlineIfLambda>] condition: unit -> 'Awaitable,
                 body: TaskBaseCode<_, unit, 'Builder>
-            ) : TaskBaseCode<_, unit, 'Builder> =
+            ) : TaskBaseCode<_, _, 'Builder> =
             let mutable condition_res = true
 
-            ResumableCode.While(
+            x.While(
                 (fun () -> condition_res),
-                TaskBaseCode<_, unit, 'Builder>(fun sm ->
-                    if __useResumableCode then
+                ResumableCode<_, _>(fun sm ->
+                    x
+                        .Bind(
+                            (condition ()),
+                            (fun result ->
+                                condition_res <- result
 
-                        let mutable __stack_fin = true
-                        let mutable awaiter = condition ()
-
-                        if not (Awaiter.IsCompleted awaiter) then
-                            // This will yield with __stack_fin = false
-                            // This will resume with __stack_fin = true
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-                            __stack_fin <- __stack_yield_fin
-
-                        if __stack_fin then
-                            condition_res <- Awaiter.GetResult awaiter
-                            if condition_res then body.Invoke(&sm) else true
-                        else
-                            let mutable awaiter = awaiter :> ICriticalNotifyCompletion
-
-                            MethodBuilder.AwaitUnsafeOnCompleted(
-                                &sm.Data.MethodBuilder,
-                                &awaiter,
-                                &sm
+                                ResumableCode<_, _>(fun sm ->
+                                    if condition_res then body.Invoke(&sm) else true
+                                )
                             )
+                        )
+                        .Invoke(&sm)
 
-                            false
-                    else
-
-                        let mutable awaiter = condition ()
-
-                        let cont =
-                            TaskBaseResumptionFunc<'TOverall, 'Builder>(fun sm ->
-                                condition_res <- Awaiter.GetResult awaiter
-                                if condition_res then body.Invoke(&sm) else true
-                            )
-
-                        if Awaiter.IsCompleted awaiter then
-                            cont.Invoke(&sm)
-                        else
-                            sm.ResumptionDynamicInfo.ResumptionData <-
-                                (awaiter :> ICriticalNotifyCompletion)
-
-                            sm.ResumptionDynamicInfo.ResumptionFunc <- cont
-                            false
                 )
             )
 
@@ -323,19 +346,14 @@ module TaskBase =
                 body: 'T -> TaskBaseCode<_, unit, 'Builder>
             ) : TaskBaseCode<_, _, 'Builder> =
 
-            TaskBaseCode<_, _, 'Builder>(fun sm ->
-                this
-                    .Using(
-                        source.GetAsyncEnumerator CancellationToken.None,
-                        (fun (e: IAsyncEnumerator<'T>) ->
-                            this.WhileAsync(
-                                (fun () -> Awaitable.GetAwaiter(e.MoveNextAsync())),
-                                (fun sm -> (body e.Current).Invoke(&sm))
-                            )
-                        )
-
+            this.Using(
+                source.GetAsyncEnumerator CancellationToken.None,
+                (fun (e: IAsyncEnumerator<'T>) ->
+                    this.WhileAsync(
+                        (fun () -> Awaitable.GetAwaiter(e.MoveNextAsync())),
+                        (fun sm -> (body e.Current).Invoke(&sm))
                     )
-                    .Invoke(&sm)
+                )
             )
 
         /// <summary>Creates a Task that enumerates the sequence seq
@@ -366,118 +384,6 @@ module TaskBase =
         // Low priority extensions
         type TaskBuilderBase with
 
-            /// <summary>
-            /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
-            /// </summary>
-            [<NoEagerConstraintApplication>]
-            static member inline BindDynamic
-                (
-                    sm: byref<ResumableStateMachine<TaskBaseStateMachineData<'TOverall, 'Builder>>>,
-                    getAwaiter: 'Awaiter,
-                    continuation: ('TResult1 -> TaskBaseCode<'TOverall, 'TResult2, 'Builder>)
-                ) : bool =
-
-                let mutable awaiter = getAwaiter
-
-                let cont =
-                    (TaskBaseResumptionFunc<'TOverall, 'Builder>(fun sm ->
-                        let result = Awaiter.GetResult awaiter
-                        (continuation result).Invoke(&sm)
-                    ))
-
-                // shortcut to continue immediately
-                if Awaiter.IsCompleted awaiter then
-                    cont.Invoke(&sm)
-                else
-                    sm.ResumptionDynamicInfo.ResumptionData <-
-                        (awaiter :> ICriticalNotifyCompletion)
-
-                    sm.ResumptionDynamicInfo.ResumptionFunc <- cont
-                    false
-
-            /// <summary>Creates a Task that runs computation, and when
-            /// computation generates a result T, runs binder res.</summary>
-            ///
-            /// <remarks>A cancellation check is performed when the computation is executed.
-            ///
-            /// The existence of this method permits the use of let! in the
-            /// task { ... } computation expression syntax.</remarks>
-            ///
-            /// <param name="getAwaiter">The computation to provide an unbound result.</param>
-            /// <param name="continuation">The function to bind the result of computation.</param>
-            ///
-            /// <returns>a Task that performs a monadic bind on the result
-            /// of computation.</returns>
-            [<NoEagerConstraintApplication>]
-            member inline _.Bind
-                (
-                    getAwaiter: 'Awaiter,
-                    continuation: ('TResult1 -> TaskBaseCode<'TOverall, 'TResult2, 'Builder>)
-                ) : TaskBaseCode<'TOverall, 'TResult2, 'Builder> =
-
-                TaskBaseCode<'TOverall, 'TResult2, 'Builder>(fun sm ->
-                    if __useResumableCode then
-                        //-- RESUMABLE CODE START
-                        // Get an awaiter from the Awaiter
-                        let mutable awaiter = getAwaiter
-                        let mutable __stack_fin = true
-
-                        if not (Awaiter.IsCompleted awaiter) then
-                            // This will yield with __stack_yield_fin = false
-                            // This will resume with __stack_yield_fin = true
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-                            __stack_fin <- __stack_yield_fin
-
-                        if __stack_fin then
-                            let result = Awaiter.GetResult awaiter
-
-                            (continuation result).Invoke(&sm)
-                        else
-
-                            let mutable awaiter = awaiter :> ICriticalNotifyCompletion
-
-                            MethodBuilder.AwaitUnsafeOnCompleted(
-                                &sm.Data.MethodBuilder,
-                                &awaiter,
-                                &sm
-                            )
-
-                            false
-                    else
-                        TaskBuilderBase.BindDynamic(&sm, getAwaiter, continuation)
-                //-- RESUMABLE CODE END
-                )
-
-
-            // MergeSources is used generated like:
-            // builder.Bind(builder.MergeSourcesN(e1, ..., eN), (fun (pat1, ..., patN) -> ... )
-            // Meaning we'd have to implement some bind in terms of `TaskBaseCode`
-            // Currently easier to implement per instance of a CE
-            // [<NoEagerConstraintApplication>]
-            // member inline this.MergeSources(left: 'Awaiter1, right: 'Awaiter2) =
-            //     this.Bind(left, (fun v -> this.Bind(right, (fun vr -> this.Return(v, vr)))))
-
-
-            /// <summary>Delegates to the input computation.</summary>
-            ///
-            /// <remarks>The existence of this method permits the use of return! in the
-            /// task { ... } computation expression syntax.</remarks>
-            ///
-            /// <param name="getAwaiter">The input computation.</param>
-            ///
-            /// <returns>The input computation.</returns>
-            [<NoEagerConstraintApplication>]
-            member inline this.ReturnFrom(getAwaiter: 'Awaiter) : TaskBaseCode<_, _, 'Builder> =
-                this.Bind(getAwaiter, (fun v -> this.Return v))
-
-            [<NoEagerConstraintApplication>]
-            member inline this.BindReturn
-                (
-                    getAwaiter: 'Awaiter,
-                    [<InlineIfLambda>] mapper: 'a -> 'TResult2
-                ) : TaskBaseCode<'TResult2, 'TResult2, 'Builder> =
-                this.Bind(getAwaiter, (fun v -> this.Return(mapper v)))
-
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
@@ -487,9 +393,9 @@ module TaskBase =
             [<NoEagerConstraintApplication>]
             member inline _.Source<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
-                (getAwaiter: 'Awaiter)
+                (awaiter: 'Awaiter)
                 : 'Awaiter =
-                getAwaiter
+                awaiter
 
 
             /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>
@@ -500,9 +406,9 @@ module TaskBase =
             [<NoEagerConstraintApplication>]
             member inline _.Source<'Awaitable, 'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
-                (task: 'Awaitable)
+                (awaitable: 'Awaitable)
                 : 'Awaiter =
-                Awaitable.GetAwaiter task
+                Awaitable.GetAwaiter awaitable
 
 
             /// <summary>Creates a Task that runs binder(resource).
@@ -532,7 +438,7 @@ module TaskBase =
             /// <remarks>This is the identify function for For binds.</remarks>
             ///
             /// <returns>IEnumerable</returns>
-            member inline _.Source(s: #seq<_>) : #seq<_> = s
+            member inline _.Source(enumerable: #seq<_>) : #seq<_> = enumerable
 
     /// <exclude/>
     [<AutoOpen>]
@@ -546,7 +452,7 @@ module TaskBase =
             /// <remarks>This is the identify function for For binds.</remarks>
             ///
             /// <returns>IEnumerable</returns>
-            member inline _.Source(s: #IAsyncEnumerable<_>) = s
+            member inline _.Source(asyncEnumerable: #IAsyncEnumerable<_>) = asyncEnumerable
 
             /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>
             ///
@@ -560,12 +466,12 @@ module TaskBase =
             /// <remarks>This turns a Async&lt;'T&gt; into a 'Awaiter.</remarks>
             ///
             /// <returns>'Awaiter</returns>
-            member inline this.Source(computation: Async<'TResult1>) =
-                this.Source(Async.StartImmediateAsTask(computation))
+            member inline this.Source(async: Async<'TResult1>) =
+                this.Source(Async.StartImmediateAsTask(async))
 
             /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>
             ///
             /// <remarks>This turns a TaskAwaiter&lt;'T&gt; into a 'Awaiter.</remarks>
             ///
             /// <returns>'Awaiter</returns>
-            member inline this.Source(awaiter: TaskAwaiter<'TResult1>) = awaiter
+            member inline this.Source(taskAwaiter: TaskAwaiter<'TResult1>) = taskAwaiter
