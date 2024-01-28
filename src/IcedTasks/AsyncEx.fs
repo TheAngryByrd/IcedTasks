@@ -193,6 +193,7 @@ type AsyncEx =
 
 #endif
 
+/// <exclude/>
 [<AutoOpen>]
 module AsyncExtensions =
 
@@ -429,6 +430,11 @@ module AsyncExExtensionsHighPriority =
 #endif
 namespace IcedTasks.Polyfill.Async
 
+/// <namespacedoc>
+///   <summary>
+///     Namespace contains polyfills for <see cref='T:IcedTasks.AsyncExBuilder'/>. This will  <a href="https://en.wikipedia.org/wiki/Variable_shadowing">shadow</a> the <c>async {...}</c> builder with the version in IcedTasks.
+///     </summary>
+/// </namespacedoc>
 [<AutoOpen>]
 module PolyfillBuilders =
     open IcedTasks

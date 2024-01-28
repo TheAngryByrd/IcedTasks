@@ -11,6 +11,11 @@
 
 namespace IcedTasks.Polyfill.Task
 
+/// <namespacedoc>
+///   <summary>
+///     Namespace contains polyfills for <see cref='T:IcedTasks.Polyfill.Task.Tasks.TaskBuilder'/>. Opening this namespace will <a href="https://en.wikipedia.org/wiki/Variable_shadowing">shadow</a> the <c>task {...}</c> builder with the version in IcedTasks.
+///     </summary>
+/// </namespacedoc>
 /// Contains methods to build Tasks using the F# computation expression syntax
 [<AutoOpen>]
 module Tasks =
