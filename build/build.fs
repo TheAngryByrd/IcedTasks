@@ -233,7 +233,7 @@ module DocsTool =
                     "root", quoted documentationUrl
                     "fsdocs-collection-name", quoted productName
                     "fsdocs-repository-branch", quoted releaseBranch
-                    "fsdocs-repository-link", quoted (productName)
+                    "fsdocs-repository-link", quoted gitHubRepoUrl
                     "fsdocs-package-version", quoted latestEntry.NuGetVersion
                     "fsdocs-readme-link", quoted (READMElink.ToString())
                     "fsdocs-release-notes-link", quoted (CHANGELOGlink.ToString())

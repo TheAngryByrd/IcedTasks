@@ -210,14 +210,28 @@ module CancellablePoolingValueTasks =
 
         /// <summary>
         /// Builds a cancellablePoolingValueTask using computation expression syntax.
+        ///
+        /// This utilizes <see cref="T:System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1">System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder</see>
+        /// as described in <see href="https://devblogs.microsoft.com/dotnet/async-valuetask-pooling-in-net-5/">Async ValueTask Pooling in .NET 5</see>.
         /// </summary>
+        ///
+        /// <remarks>
+        /// Instead of needing an attribute the compiler needs to know about like in <see href="https://github.com/dotnet/runtime/issues/49903">dotnet/runtime/issues/49903</see> this is a specific computation expression.
+        /// </remarks>
         let cancellablePoolingValueTask = CancellablePoolingValueTaskBuilder()
 
 
         /// <summary>
         /// Builds a cancellablePoolingValueTask using computation expression syntax.
+        ///
+        /// This utilizes <see cref="T:System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1">System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder</see>
+        /// as described in <see href="https://devblogs.microsoft.com/dotnet/async-valuetask-pooling-in-net-5/">Async ValueTask Pooling in .NET 5</see>.
         /// </summary>
-        let cancelablePVTask = poolingValueTask
+        ///
+        /// <remarks>
+        /// Instead of needing an attribute the compiler needs to know about like in <see href="https://github.com/dotnet/runtime/issues/49903">dotnet/runtime/issues/49903</see> this is a specific computation expression.
+        /// </remarks>
+        let cancelablePVTask = cancellablePoolingValueTask
 
 
     /// <exclude />

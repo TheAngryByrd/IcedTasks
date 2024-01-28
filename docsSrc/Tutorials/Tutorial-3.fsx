@@ -106,7 +106,7 @@ businessLayerCall "buzz" tokenSource.Token
 
 For examples on how to use this technique in other contexts checkout:
 
-* [Giraffe](How-To-Guides/Cancellable-Task-In-Giraffe.html)
-* [Falco](How-To-Guides/Cancellable-Task-In-Falco.html)
+* [Giraffe](../How-To-Guides/Cancellable-Task-In-Giraffe.html)
+* [Falco](../How-To-Guides/Cancellable-Task-In-Falco.html)
 
 *)

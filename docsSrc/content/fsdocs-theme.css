@@ -1,0 +1,43 @@
+:root {
+    --table-background: #eeeeee;
+    --table-head-background: #d7d7d7;
+}
+[data-theme=dark] {
+    --table-background: #28282D;
+    --table-head-background: #202024;
+}
+
+.fsharp-icon-logo {
+    width: 1.4em;
+    -webkit-filter: grayscale(100%) brightness(1) invert(1); /* Safari 6.0 - 9.0 */
+    filter: grayscale(100%) brightness(1) invert(1);
+    vertical-align:middle;
+}
+
+.menu i {
+    margin-right: 0.3em;
+}
+
+.menu img.fsharp-icon-logo {
+    /* Hacks for fsdocs theme */
+    margin: inherit;
+    margin-left: -0.1em;
+    margin-right: 0.2em;
+    border-radius: inherit;
+    height: inherit;
+}
+
+table {
+    background-color: var(--table-background);
+    overflow-x: auto;
+}
+
+table th {
+    background-color: var(--table-head-background);
+}
+
+table, th, td {
+    border: 1px solid;
+    border-collapse: collapse;
+    padding: 0.5em;
+}

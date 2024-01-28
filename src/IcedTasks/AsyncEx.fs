@@ -364,6 +364,7 @@ type AsyncExBuilder() =
 
     member inline _.Source(async: Async<'a>) = async
 
+/// <exclude/>
 [<AutoOpen>]
 module AsyncExExtensionsLowPriority =
     open FSharp.Core.CompilerServices
@@ -404,7 +405,7 @@ module AsyncExExtensionsLowPriority =
     /// </remarks>
     let asyncEx = new AsyncExBuilder()
 
-
+/// <exclude/>
 [<AutoOpen>]
 module AsyncExExtensionsHighPriority =
 

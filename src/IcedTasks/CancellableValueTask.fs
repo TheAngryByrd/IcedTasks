@@ -208,7 +208,13 @@ module CancellableValueTasks =
 
         /// <summary>
         /// Builds a cancellableValueTask using computation expression syntax.
+        ///
+        /// This utilizes <see cref="T:System.Runtime.CompilerServices.AsyncValueTaskMethodBuilder`1">System.Runtime.CompilerServices.AsyncValueTaskMethodBuilder</see>
         /// </summary>
+        ///
+        /// <remarks>
+        /// Instead of needing an attribute the compiler needs to know about like in <see href="https://github.com/dotnet/runtime/issues/49903">dotnet/runtime/issues/49903</see> this is a specific computation expression.
+        /// </remarks>
         let cancellableValueTask = CancellableValueTaskBuilder()
 
 
