@@ -370,7 +370,7 @@ NUGET
     FSharp.Core (7.0.401) - restriction: >= netstandard2.1
     Microsoft.Bcl.AsyncInterfaces (7.0) - restriction: || (&& (>= net462) (>= net6.0)) (&& (>= net462) (>= netstandard2.0)) (&& (>= net6.0) (< net8.0)) (&& (< net6.0) (>= netstandard2.0))
       System.Threading.Tasks.Extensions (>= 4.5.4) - restriction: || (>= net462) (&& (>= netstandard2.0) (< netstandard2.1))
-    Microsoft.Bcl.TimeProvider (8.0) - restriction: || (&& (>= net6.0) (< net8.0)) (&& (< net6.0) (>= netstandard2.0))
+    Microsoft.Bcl.TimeProvider (8.0)
       Microsoft.Bcl.AsyncInterfaces (>= 6.0) - restriction: || (>= net462) (&& (< net8.0) (>= netstandard2.0))
       System.ValueTuple (>= 4.5) - restriction: >= net462
     Microsoft.CodeCoverage (17.7.2) - restriction: || (>= net462) (>= netcoreapp3.1)
