@@ -271,6 +271,14 @@ let isOnCI () =
 // https://github.com/actions/runner-images/discussions/7188#discussioncomment-6672934
 let maxCpuCount = lazy (if isCI.Value then Some(Some 1) else None)
 
+/// MaxCpu not used on unix https://github.com/fsprojects/FAKE/blob/82e38df01e4b31e5daa3623abff57e6462430395/src/app/Fake.DotNet.MSBuild/MSBuild.fs#L858-L861
+let maxCpuMsBuild =
+    lazy
+        (match maxCpuCount.Value with
+         | None -> ""
+         | Some None -> "/m:"
+         | Some(Some x) -> $"/m:%d{x}")
+
 let allPublishChecks () =
     isOnCI ()
     Changelog.failOnEmptyChangelog latestEntry
@@ -323,14 +331,18 @@ let deleteChangelogBackupFile _ =
 
 let dotnetBuild ctx =
 
+    let args = [ maxCpuMsBuild.Value ]
+
     DotNet.build
         (fun c -> {
             c with
+                Common =
+                    c.Common
+                    |> DotNet.Options.withAdditionalArgs args
                 Configuration = configuration (ctx.Context.AllExecutingTargets)
                 NoRestore = true
                 MSBuildParams = {
                     c.MSBuildParams with
-                        MaxCpuCount = maxCpuCount.Value
                         Properties = [ "PackageVersion", latestEntry.NuGetVersion ]
                 }
 
@@ -360,17 +372,19 @@ let fsharpAnalyzers _ =
     )
 
 let dotnetTest ctx =
+
+    let args = [ maxCpuMsBuild.Value ]
+
     DotNet.test
         (fun c ->
 
             {
                 c with
+                    Common =
+                        c.Common
+                        |> DotNet.Options.withAdditionalArgs args
                     Configuration = configuration (ctx.Context.AllExecutingTargets)
                     NoBuild = true
-                    MSBuildParams = {
-                        c.MSBuildParams with
-                            MaxCpuCount = maxCpuCount.Value
-                    }
             })
         sln
 
@@ -465,19 +479,18 @@ let dotnetPack ctx =
     // Get release notes with properly-linked version number
     let releaseNotes = Changelog.mkReleaseNotes changelog latestEntry gitHubRepoUrl
 
-    let args = [
-        $"/p:PackageVersion={latestEntry.NuGetVersion}"
-        $"/p:PackageReleaseNotes=\"{releaseNotes}\""
-    ]
+    let args = [ maxCpuMsBuild.Value ]
 
     DotNet.pack
         (fun c -> {
             c with
+                Common =
+                    c.Common
+                    |> DotNet.Options.withAdditionalArgs args
                 Configuration = configuration (ctx.Context.AllExecutingTargets)
                 OutputPath = Some distDir
                 MSBuildParams = {
                     c.MSBuildParams with
-                        MaxCpuCount = maxCpuCount.Value
                         Properties = [
                             "PackageVersion", latestEntry.NuGetVersion
                             "PackageReleaseNotes", $"\"{releaseNotes}\""
