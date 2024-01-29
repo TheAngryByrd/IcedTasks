@@ -493,7 +493,7 @@ let dotnetPack ctx =
                     c.MSBuildParams with
                         Properties = [
                             "PackageVersion", latestEntry.NuGetVersion
-                            "PackageReleaseNotes", $"\"{releaseNotes}\""
+                            "PackageReleaseNotes", $"{releaseNotes}"
                         ]
                 }
         })
