@@ -61,3 +61,5 @@ jobs:
           runCmd: |
             chmod +x ./build.sh
             ./build.sh
+        env:
+          CI: true
