@@ -18,7 +18,6 @@ group Test
   nuget TimeProviderExtensions
   nuget YoloDev.Expecto.TestSdk >= 0.14.2
   nuget Microsoft.NET.Test.Sdk >= 17.7.2
-  nuget altcover >= 8.6.68
   nuget FSharp.Control.TaskSeq
 
 // [ FAKE GROUP ]

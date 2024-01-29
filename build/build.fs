@@ -61,13 +61,6 @@ let distGlob =
     distDir
     </> "*.nupkg"
 
-let coverageThresholdPercent = 80
-
-let coverageReportDir =
-    rootDirectory
-    </> "docs"
-    </> "coverage"
-
 let docsDir =
     rootDirectory
     </> "docs"
@@ -121,8 +114,6 @@ let mutable changelogBackupFilename = ""
 let publishUrl = "https://www.nuget.org"
 
 let docsSiteBaseUrl = sprintf "https://%s.github.io/%s" gitOwner gitRepoName
-
-let disableCodeCoverage = environVarAsBoolOrDefault "DISABLE_COVERAGE" true
 
 let githubToken = Environment.environVarOrNone "GITHUB_TOKEN"
 
@@ -293,7 +284,6 @@ let clean _ =
         "bin"
         "temp"
         distDir
-        coverageReportDir
     ]
     |> Shell.cleanDirs
 
@@ -370,11 +360,6 @@ let fsharpAnalyzers _ =
     )
 
 let dotnetTest ctx =
-    let excludeCoverage =
-        !!testsGlob
-        |> Seq.map IO.Path.GetFileNameWithoutExtension
-        |> String.concat "|"
-
     DotNet.test
         (fun c ->
 
@@ -385,41 +370,9 @@ let dotnetTest ctx =
                     MSBuildParams = {
                         c.MSBuildParams with
                             MaxCpuCount = maxCpuCount.Value
-                            Properties = [
-                                "AltCover", $"%b{not disableCodeCoverage}"
-                                // "AltCoverThreshold", $"%d{coverageThresholdPercent}"
-                                "AltCoverAssemblyExcludeFilter", excludeCoverage
-                                "AltCoverLocalSource", "true"
-                            ]
                     }
             })
         sln
-
-let generateCoverageReport _ =
-    let coverageReports =
-        !! "tests/**/coverage*.xml"
-        |> String.concat ";"
-
-    let sourceDirs =
-        !!srcGlob
-        |> Seq.map Path.getDirectory
-        |> String.concat ";"
-
-    let independentArgs = [
-        sprintf "-reports:\"%s\"" coverageReports
-        sprintf "-targetdir:\"%s\"" coverageReportDir
-        // Add source dir
-        sprintf "-sourcedirs:\"%s\"" sourceDirs
-        // Ignore Tests and if AltCover.Recorder.g sneaks in
-        sprintf "-assemblyfilters:\"%s\"" "-*.Tests;-AltCover.Recorder.g"
-        sprintf "-Reporttypes:%s" "Html"
-    ]
-
-    let args =
-        independentArgs
-        |> String.concat " "
-
-    dotnet.reportGenerator id args
 
 let watchTests _ =
     !!testsGlob
@@ -673,7 +626,6 @@ let initTargets () =
     Target.create "DotnetBuild" dotnetBuild
     Target.create "FSharpAnalyzers" fsharpAnalyzers
     Target.create "DotnetTest" dotnetTest
-    Target.create "GenerateCoverageReport" generateCoverageReport
     Target.create "WatchTests" watchTests
     Target.create "GenerateAssemblyInfo" generateAssemblyInfo
     Target.create "DotnetPack" dotnetPack
