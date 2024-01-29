@@ -61,7 +61,8 @@
     "containerEnv": {
         // Expose the local environment variable to the container
         // They are used for releasing and publishing from the container
-        "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}"
+        "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}",
+        "CI": "${localEnv:CI}"
     },
     "onCreateCommand": {
         "enable-starship": "echo 'eval \"$(starship init zsh)\"' >> ~/.zshrc"
