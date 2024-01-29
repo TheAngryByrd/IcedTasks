@@ -276,6 +276,10 @@ let isOnCI () =
     if not isCI.Value then
         failwith "Not on CI. If you want to publish, please use CI."
 
+// github actions are terrible and will cancel runner operations if using too much CPU
+// https://github.com/actions/runner-images/discussions/7188#discussioncomment-6672934
+let maxCpuCount = lazy (if isCI.Value then Some(Some 1) else None)
+
 let allPublishChecks () =
     isOnCI ()
     Changelog.failOnEmptyChangelog latestEntry
@@ -328,18 +332,17 @@ let deleteChangelogBackupFile _ =
         Shell.rm changelogBackupFilename
 
 let dotnetBuild ctx =
-    let args = [
-        sprintf "/p:PackageVersion=%s" latestEntry.NuGetVersion
-        "--no-restore"
-    ]
 
     DotNet.build
         (fun c -> {
             c with
                 Configuration = configuration (ctx.Context.AllExecutingTargets)
-                Common =
-                    c.Common
-                    |> DotNet.Options.withAdditionalArgs args
+                NoRestore = true
+                MSBuildParams = {
+                    c.MSBuildParams with
+                        MaxCpuCount = maxCpuCount.Value
+                        Properties = [ "PackageVersion", latestEntry.NuGetVersion ]
+                }
 
         })
         sln
@@ -372,23 +375,23 @@ let dotnetTest ctx =
         |> Seq.map IO.Path.GetFileNameWithoutExtension
         |> String.concat "|"
 
-    let args = [
-        "--no-build"
-        sprintf "/p:AltCover=%b" (not disableCodeCoverage)
-        // sprintf "/p:AltCoverThreshold=%d" coverageThresholdPercent
-        sprintf "/p:AltCoverAssemblyExcludeFilter=%s" excludeCoverage
-        "/p:AltCoverLocalSource=true"
-    ]
-
     DotNet.test
         (fun c ->
 
             {
                 c with
                     Configuration = configuration (ctx.Context.AllExecutingTargets)
-                    Common =
-                        c.Common
-                        |> DotNet.Options.withAdditionalArgs args
+                    NoBuild = true
+                    MSBuildParams = {
+                        c.MSBuildParams with
+                            MaxCpuCount = maxCpuCount.Value
+                            Properties = [
+                                "AltCover", $"%b{not disableCodeCoverage}"
+                                // "AltCoverThreshold", $"%d{coverageThresholdPercent}"
+                                "AltCoverAssemblyExcludeFilter", excludeCoverage
+                                "AltCoverLocalSource", "true"
+                            ]
+                    }
             })
         sln
 
@@ -519,9 +522,14 @@ let dotnetPack ctx =
             c with
                 Configuration = configuration (ctx.Context.AllExecutingTargets)
                 OutputPath = Some distDir
-                Common =
-                    c.Common
-                    |> DotNet.Options.withAdditionalArgs args
+                MSBuildParams = {
+                    c.MSBuildParams with
+                        MaxCpuCount = maxCpuCount.Value
+                        Properties = [
+                            "PackageVersion", latestEntry.NuGetVersion
+                            "PackageReleaseNotes", $"\"{releaseNotes}\""
+                        ]
+                }
         })
         sln
 
