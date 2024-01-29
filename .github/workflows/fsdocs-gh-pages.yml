@@ -24,6 +24,7 @@ jobs:
   # Build job
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -40,6 +41,9 @@ jobs:
       - name: Build Docs
         run: |
           ./build.sh builddocs
+        env:
+          CONFIGURATION: Release
+          CI: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1

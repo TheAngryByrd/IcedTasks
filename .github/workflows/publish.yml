@@ -49,6 +49,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FAKE_DETAILED_ERRORS: true
           CI: true
+          CONFIGURATION: Release
         run: |
           chmod +x ./build.sh
           ./build.sh Publish

@@ -150,7 +150,7 @@ let failOnBadExitAndPrint (p: ProcessResult) =
         failwithf "failed with exitcode %d" p.ExitCode
 
 
-let isCI = lazy environVarAsBoolOrDefault "CI" false
+let isCI = lazy (environVarAsBoolOrDefault "CI" false)
 
 // CI Servers can have bizarre failures that have nothing to do with your code
 let rec retryIfInCI times fn =
