@@ -196,7 +196,6 @@ module ColdTasks =
             ) : ColdTaskCode<'TOverall, unit> =
             ResumableCode.For(sequence, body)
 
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
         /// <summary>Creates an ColdTask that runs computation. The action compensation is executed
         /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
         /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
@@ -287,7 +286,6 @@ module ColdTasks =
                 )
             )
 
-#endif
     /// Contains methods to build ColdTasks using the F# computation expression syntax
     type ColdTaskBuilder() =
 

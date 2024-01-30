@@ -155,7 +155,6 @@ type AsyncEx =
                 )
                 |> ignore
         )
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
 
 
     /// <summary>
@@ -191,7 +190,6 @@ type AsyncEx =
         else
             AsyncEx.AwaitTask(vTask.AsTask())
 
-#endif
 
 /// <exclude/>
 [<AutoOpen>]
@@ -274,8 +272,6 @@ type AsyncExBuilder() =
     member inline _.Bind(computation: Async<'f>, [<InlineIfLambda>] binder: 'f -> Async<'f0>) =
         async.Bind(computation, binder)
 
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
-
     member inline _.TryFinallyAsync
         (
             computation: Async<'ok>,
@@ -338,7 +334,6 @@ type AsyncExBuilder() =
                 )
         )
 
-#endif
     member inline _.While([<InlineIfLambda>] guard: unit -> bool, computation: Async<unit>) =
         async.While(guard, computation)
 
@@ -412,9 +407,8 @@ module AsyncExExtensionsHighPriority =
 
     type AsyncExBuilder with
 
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
         member inline _.Source(seq: #IAsyncEnumerable<_>) = seq
-#endif
+
         // Required because SRTP can't determine the type of the awaiter
         //     Candidates:
         //  - Task.GetAwaiter() : Runtime.CompilerServices.TaskAwaiter
@@ -423,11 +417,10 @@ module AsyncExExtensionsHighPriority =
 
         member inline _.Source(task: Task) = AsyncEx.AwaitTask task
 
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
         member inline _.Source(vtask: ValueTask<_>) = AsyncEx.AwaitValueTask vtask
 
         member inline _.Source(vtask: ValueTask) = AsyncEx.AwaitValueTask vtask
-#endif
+
 namespace IcedTasks.Polyfill.Async
 
 /// <namespacedoc>

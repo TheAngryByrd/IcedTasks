@@ -54,7 +54,6 @@ module AsyncExTests =
                     let! result = outer
                     Expect.equal result () "Should return the data"
                 }
-#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 testCaseAsync "Can ReturnFrom a ValueTask<T>"
                 <| async {
                     let data = "foo"
@@ -70,7 +69,6 @@ module AsyncExTests =
                     let! result = outer
                     Expect.equal result () "Should return the data"
                 }
-#endif
                 testCaseAsync "Can ReturnFrom an TaskLike"
                 <| async {
                     let inner = Task.Yield()
@@ -135,7 +133,6 @@ module AsyncExTests =
                     let! result = outer
                     Expect.equal result () "Should return the data"
                 }
-#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 testCaseAsync "Can bind a ValueTask<T>"
                 <| async {
                     let data = "foo"
@@ -163,7 +160,7 @@ module AsyncExTests =
                     let! result = outer
                     Expect.equal result () "Should return the data"
                 }
-#endif
+
                 testCaseAsync "Can bind an TaskLike"
                 <| async {
                     let inner = Task.Yield()
@@ -298,7 +295,6 @@ module AsyncExTests =
                     let! result = outer
                     Expect.equal result () "Should return the data"
                 }
-#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 testCaseAsync
                     "Awaiting Failed ValueTask<'T> should only contain one exception and not aggregation"
                 <| async {
@@ -333,7 +329,7 @@ module AsyncExTests =
                     let! result = outer
                     Expect.equal result () "Should return the data"
                 }
-#endif
+
                 testCaseAsync
                     "Awaiting Failed CustomAwaiter should only contain one exception and not aggregation"
                 <| async {
@@ -428,7 +424,6 @@ module AsyncExTests =
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
                 }
-#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 testCaseAsync "use IAsyncDisposable sync"
                 <| async {
                     let data = 42
@@ -517,7 +512,7 @@ module AsyncExTests =
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
                 }
-#endif
+
                 testCaseAsync "null"
                 <| async {
                     let data = 42
@@ -773,7 +768,6 @@ module PolyfillTest =
                 let! result = async { do! Task.Yield() }
                 return result
             }
-#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
             testCaseAsync "use IAsyncDisposable sync"
             <| async {
                 let data = 42
@@ -792,7 +786,6 @@ module PolyfillTest =
                 Expect.equal actual data "Should be able to use use"
                 Expect.isTrue wasDisposed ""
             }
-#endif
 
             testCaseAsync
                 "Awaiting Failed Task<'T> should only contain one exception and not aggregation"

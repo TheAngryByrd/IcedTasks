@@ -3,7 +3,6 @@ namespace IcedTasks
 
 open System.Threading.Tasks
 
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
 
 /// <summary>
 /// Module with extension methods for <see cref="T:System.Threading.Tasks.ValueTask`1"/>.
@@ -310,6 +309,3 @@ module ValueTasks =
                 ValueTask()
             else
                 ValueTask(vtask.AsTask())
-
-
-#endif

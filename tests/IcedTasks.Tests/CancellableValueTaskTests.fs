@@ -786,6 +786,7 @@ module CancellableValueTaskTests =
                         }
                     )
 
+#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 yield!
                     [
                         10
@@ -857,6 +858,7 @@ module CancellableValueTaskTests =
                             }
                         )
                 }
+#endif
             ]
 
             testList "MergeSources" [

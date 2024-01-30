@@ -1,8 +1,6 @@
 namespace IcedTasks
 
 
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
-
 // Task builder for F# that compiles to allocation-free paths for synchronous code.
 //
 // Originally written in 2016 by Robert Peele (humbobst@gmail.com)
@@ -148,5 +146,3 @@ module ValueTasksUnit =
         /// Builds a valueTask using computation expression syntax.
         /// </summary>
         let vTaskUnit = valueTaskUnit
-
-#endif

@@ -164,7 +164,6 @@ module TaskBase =
                 )
             )
 
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
         /// <summary>Creates a Task that runs computation. The action compensation is executed
         /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
         /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
@@ -345,7 +344,6 @@ module TaskBase =
                     )
                     .Invoke(&sm)
             )
-#endif
 
         /// <summary>Creates a Task that enumerates the sequence seq
         /// on demand and runs body for each element.</summary>
@@ -550,14 +548,12 @@ module TaskBase =
         // High priority extensions
         type TaskBuilderBase with
 
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
             /// <summary>Allows the computation expression to turn other types into other types</summary>
             ///
             /// <remarks>This is the identify function for For binds.</remarks>
             ///
             /// <returns>IEnumerable</returns>
             member inline _.Source(s: #IAsyncEnumerable<_>) = s
-#endif
 
 
             /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>

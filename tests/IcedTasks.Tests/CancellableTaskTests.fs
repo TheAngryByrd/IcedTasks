@@ -5,9 +5,7 @@ open Expecto
 open System.Threading
 open System.Threading.Tasks
 open IcedTasks
-#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
-open IcedTasks.ValueTaskExtensions
-#endif
+
 module CancellableTaskTests =
     open System.Collections.Concurrent
     open TimeProviderExtensions
@@ -183,7 +181,6 @@ module CancellableTaskTests =
 
                     Expect.equal actual expected ""
                 }
-#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 testCaseAsync "Can Bind Cancellable TaskLike"
                 <| async {
                     let fooTask = fun (ct: CancellationToken) -> Task.Yield()
@@ -201,7 +198,6 @@ module CancellableTaskTests =
                         |> Async.AwaitValueTask
                 // Compiling is sufficient expect
                 }
-#endif
                 testCaseAsync "Can Bind Task"
                 <| async {
                     let outerTask = cancellableTask { do! Task.CompletedTask }
@@ -427,7 +423,6 @@ module CancellableTaskTests =
                 }
 
 
-#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 testCaseAsync "use IAsyncDisposable sync"
                 <| async {
                     let data = 42
@@ -589,7 +584,7 @@ module CancellableTaskTests =
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
                 }
-#endif
+
                 testCaseAsync "null"
                 <| async {
                     let data = 42

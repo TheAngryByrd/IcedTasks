@@ -7,6 +7,7 @@ nuget FSharp.Core >= 6.0.1
 nuget Microsoft.SourceLink.GitHub 1.1.1 copy_local: true
 nuget BenchmarkDotNet >= 0.13.9
 nuget Ply >= 0.3.1
+nuget Microsoft.Bcl.AsyncInterfaces >= 6.0.0 framework:netstandard2.0
 
 
 group Test
@@ -15,6 +16,7 @@ group Test
   source https://api.nuget.org/v3/index.json
   nuget Expecto >= 10.1.0
   nuget Microsoft.Bcl.TimeProvider
+  nuget Microsoft.Bcl.AsyncInterfaces >= 8
   nuget TimeProviderExtensions
   nuget YoloDev.Expecto.TestSdk >= 0.14.2
   nuget Microsoft.NET.Test.Sdk >= 17.7.2

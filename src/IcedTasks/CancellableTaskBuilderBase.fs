@@ -194,7 +194,7 @@ module CancellableTaskBase =
                 body: 'T -> CancellableTaskBaseCode<'TOverall, unit, 'Builder>
             ) : CancellableTaskBaseCode<'TOverall, unit, 'Builder> =
             ResumableCode.For(sequence, body)
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
+
         /// <summary>Creates A CancellableTask that runs computation. The action compensation is executed
         /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
         /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
@@ -379,8 +379,6 @@ module CancellableTaskBase =
                     )
                     .Invoke(&sm)
             )
-#endif
-
 
     /// <exclude/>
     [<AutoOpen>]
@@ -764,14 +762,12 @@ module CancellableTaskBase =
         // High priority extensions
         type CancellableTaskBuilderBase with
 
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
             /// <summary>Allows the computation expression to turn other types into other types</summary>
             ///
             /// <remarks>This is the identify function for For binds.</remarks>
             ///
             /// <returns>IEnumerable</returns>
             member inline _.Source(s: #IAsyncEnumerable<_>) = s
-#endif
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///

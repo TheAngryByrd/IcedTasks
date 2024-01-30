@@ -581,6 +581,8 @@ module ValueTaskTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
+
+#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 yield!
                     [
                         10
@@ -615,7 +617,9 @@ module ValueTaskTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
+#endif
             ]
+
             testList "MergeSources" [
                 testCaseAsync "and! 5"
                 <| async {
