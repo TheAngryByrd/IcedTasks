@@ -606,14 +606,10 @@ module ValueTaskDynamicTests =
                             let mutable index = 0
 
                             let asyncSeq: IAsyncEnumerable<_> =
-                                FSharp.Control.TaskSeq.initAsync
+                                AsyncEnumerable.forXtoY
+                                    0
                                     loops
-                                    (fun i ->
-                                        task {
-                                            do! Task.Yield()
-                                            return i
-                                        }
-                                    )
+                                    (fun _ -> valueTaskUnit { do! Task.Yield() })
 
                             let! actual =
                                 dValueTask {
@@ -628,6 +624,7 @@ module ValueTaskDynamicTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
+
             ]
             testList "MergeSources" [
                 testCaseAsync "and! 5"

@@ -377,12 +377,7 @@ module CancellableTasks =
         /// followed by "Tasks Finished".
         /// </example>
         let inline getCancellationToken () =
-            fun (ct: CancellationToken) ->
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
-                ValueTask<CancellationToken> ct
-#else
-                Task.FromResult ct
-#endif
+            fun (ct: CancellationToken) -> ValueTask<CancellationToken> ct
 
         /// <summary>Lifts an item to a CancellableTask.</summary>
         /// <param name="item">The item to be the result of the CancellableTask.</param>

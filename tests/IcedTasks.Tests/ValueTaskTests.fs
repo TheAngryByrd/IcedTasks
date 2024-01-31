@@ -581,6 +581,7 @@ module ValueTaskTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
+
                 yield!
                     [
                         10
@@ -593,14 +594,10 @@ module ValueTaskTests =
                             let mutable index = 0
 
                             let asyncSeq: IAsyncEnumerable<_> =
-                                FSharp.Control.TaskSeq.initAsync
+                                AsyncEnumerable.forXtoY
+                                    0
                                     loops
-                                    (fun i ->
-                                        task {
-                                            do! Task.Yield()
-                                            return i
-                                        }
-                                    )
+                                    (fun _ -> valueTaskUnit { do! Task.Yield() })
 
                             let! actual =
                                 valueTask {
@@ -615,7 +612,9 @@ module ValueTaskTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
+
             ]
+
             testList "MergeSources" [
                 testCaseAsync "and! 5"
                 <| async {

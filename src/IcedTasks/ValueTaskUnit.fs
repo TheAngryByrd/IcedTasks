@@ -1,8 +1,6 @@
 namespace IcedTasks
 
 
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
-
 // Task builder for F# that compiles to allocation-free paths for synchronous code.
 //
 // Originally written in 2016 by Robert Peele (humbobst@gmail.com)
@@ -43,7 +41,9 @@ module ValueTasksUnit =
         /// <summary>
         /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
         /// </summary>
-        static member inline RunDynamic(code: TaskBaseCode<'T, 'T, _>) : ValueTask =
+        static member inline RunDynamic
+            (code: TaskBaseCode<'T, 'T, AsyncValueTaskMethodBuilder>)
+            : ValueTask =
 
             let mutable sm = TaskBaseStateMachine<'T, _>()
 
@@ -60,7 +60,12 @@ module ValueTasksUnit =
                             let step = info.ResumptionFunc.Invoke(&sm)
 
                             if step then
+#if DEBUG
+                                sm.Data.MethodBuilder.SetResult()
+#else
+                                // SRTP fails here for some reason in debug mode
                                 MethodBuilder.SetResult(&sm.Data.MethodBuilder)
+#endif
                             else
                                 let mutable awaiter =
                                     sm.ResumptionDynamicInfo.ResumptionData
@@ -82,6 +87,7 @@ module ValueTasksUnit =
                         | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
 
                     member _.SetStateMachine(sm, state) =
+
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
                 }
 
@@ -91,9 +97,9 @@ module ValueTasksUnit =
             MethodBuilder.get_Task (&sm.Data.MethodBuilder)
 
         /// Hosts the task code in a state machine and starts the task.
-        member inline _.Run(code: TaskBaseCode<'T, 'T, _>) : ValueTask =
+        member inline _.Run(code: TaskBaseCode<'T, 'T, AsyncValueTaskMethodBuilder>) : ValueTask =
             if __useResumableCode then
-                __stateMachine<TaskBaseStateMachineData<'T, _>, ValueTask>
+                __stateMachine<TaskBaseStateMachineData<'T, AsyncValueTaskMethodBuilder>, ValueTask>
                     (MoveNextMethodImpl<_>(fun sm ->
                         //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
@@ -103,7 +109,12 @@ module ValueTasksUnit =
                             let __stack_code_fin = code.Invoke(&sm)
 
                             if __stack_code_fin then
+#if DEBUG
+                                sm.Data.MethodBuilder.SetResult()
+#else
+                                // SRTP fails here for some reason in debug mode
                                 MethodBuilder.SetResult(&sm.Data.MethodBuilder)
+#endif
                         with exn ->
                             __stack_exn <- exn
                         // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
@@ -148,5 +159,3 @@ module ValueTasksUnit =
         /// Builds a valueTask using computation expression syntax.
         /// </summary>
         let vTaskUnit = valueTaskUnit
-
-#endif

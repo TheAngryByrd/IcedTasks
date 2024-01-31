@@ -291,7 +291,6 @@ module TaskTests =
                 }
 
 
-#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 testCaseAsync "use IAsyncDisposable sync"
                 <| async {
                     let data = 42
@@ -414,7 +413,6 @@ module TaskTests =
                     Expect.equal actual data "Should be able to use use"
                     Expect.isTrue wasDisposed ""
                 }
-#endif
 
                 testCaseAsync "null"
                 <| async {
@@ -585,7 +583,6 @@ module TaskTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
-#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 yield!
                     [
                         10
@@ -598,14 +595,10 @@ module TaskTests =
                             let mutable index = 0
 
                             let asyncSeq: IAsyncEnumerable<_> =
-                                FSharp.Control.TaskSeq.initAsync
+                                AsyncEnumerable.forXtoY
+                                    0
                                     loops
-                                    (fun i ->
-                                        task {
-                                            do! Task.Yield()
-                                            return i
-                                        }
-                                    )
+                                    (fun _ -> valueTaskUnit { do! Task.Yield() })
 
                             let! actual =
                                 task {
@@ -620,7 +613,7 @@ module TaskTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
-#endif
+
             ]
             testList "MergeSources" [
                 testCaseAsync "and! 5"

@@ -238,7 +238,6 @@ module DocsTool =
     let build (configuration) =
         Fsdocs.build fsDocsDotnetOptions (fsDocsBuildParams configuration)
 
-
     let watch (configuration) =
         let buildParams bp =
             let bp =
@@ -276,7 +275,7 @@ let maxCpuMsBuild =
     lazy
         (match maxCpuCount.Value with
          | None -> ""
-         | Some None -> "/m:"
+         | Some None -> "/m"
          | Some(Some x) -> $"/m:%d{x}")
 
 let allPublishChecks () =

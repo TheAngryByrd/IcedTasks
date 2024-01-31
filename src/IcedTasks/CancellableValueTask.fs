@@ -11,7 +11,6 @@
 
 namespace IcedTasks
 
-#if NETSTANDARD2_1 || NET6_0_OR_GREATER
 
 /// Contains methods to build CancellableTasks using the F# computation expression syntax
 [<AutoOpen>]
@@ -456,4 +455,3 @@ module CancellableValueTasks =
             fun ct ->
                 cancellableTask ct
                 |> ValueTask.toUnit
-#endif

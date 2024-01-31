@@ -4,3 +4,4 @@ Expecto
 Microsoft.NET.Test.Sdk
 YoloDev.Expecto.TestSdk
 TimeProviderExtensions
+Microsoft.Bcl.AsyncInterfaces

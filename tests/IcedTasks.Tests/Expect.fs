@@ -57,7 +57,6 @@ module Expect =
             message
         |> Async.StartImmediateAsTask
 
-#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
     [<RequiresExplicitTypeArguments>]
     let throwsValueTask<'texn when 'texn :> exn> (f: unit -> ValueTask<unit>) message =
         throwsTAsync<'texn>
@@ -67,7 +66,7 @@ module Expect =
         |> Async.StartImmediateAsTask
         |> ValueTask<unit>
 
-#endif
+
 type Expect =
 
     static member CancellationRequested(operation: Async<_>) =
@@ -75,11 +74,10 @@ type Expect =
             (fun () -> operation)
             "Should have been cancelled"
 
-#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
     static member CancellationRequested(operation: ValueTask<unit>) =
         Expect.CancellationRequested(Async.AwaitValueTask operation)
         |> Async.AsValueTask
-#endif
+
     static member CancellationRequested(operation: Task<_>) =
         Expect.CancellationRequested(Async.AwaitTask operation)
         |> Async.StartImmediateAsTask
@@ -92,11 +90,11 @@ type Expect =
         Expect.CancellationRequested(Async.AwaitCancellableTask operation)
         |> Async.AsCancellableTask
 
-#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
+
     static member CancellationRequested(operation: CancellableValueTask<_>) =
         Expect.CancellationRequested(Async.AwaitCancellableValueTask operation)
         |> Async.AsCancellableValueTask
-#endif
+
 
 open TimeProviderExtensions
 open System.Runtime.CompilerServices
@@ -124,3 +122,32 @@ module CustomAwaiter =
         interface ICriticalNotifyCompletion with
             member this.UnsafeOnCompleted(continuation) = failwith "Not Implemented"
             member this.OnCompleted(continuation: Action) : unit = failwith "Not Implemented"
+
+
+module AsyncEnumerable =
+    open System.Collections.Generic
+    open System.Threading
+
+    type AsyncEnumerable<'T>(e: IEnumerable<'T>, beforeMoveNext: Func<_, ValueTask>) =
+
+        member this.GetAsyncEnumerator(ct) =
+            let enumerator = e.GetEnumerator()
+
+            { new IAsyncEnumerator<'T> with
+                member this.Current = enumerator.Current
+
+                member this.MoveNextAsync() =
+                    valueTask {
+                        do! beforeMoveNext.Invoke(ct)
+                        return enumerator.MoveNext()
+                    }
+
+                member this.DisposeAsync() = valueTaskUnit { enumerator.Dispose() }
+
+            }
+
+        interface IAsyncEnumerable<'T> with
+            member this.GetAsyncEnumerator(ct: CancellationToken) = this.GetAsyncEnumerator(ct)
+
+    let forXtoY<'T> x y beforeMoveNext =
+        AsyncEnumerable([ x..y ], Func<_, _>(beforeMoveNext))
