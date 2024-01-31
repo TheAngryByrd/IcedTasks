@@ -41,7 +41,7 @@ module TasksUnit =
         /// <summary>
         /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
         /// </summary>
-        static member inline RunDynamic(code: TaskBaseCode<'T, 'T, _>) : Task =
+        static member inline RunDynamic(code: TaskBaseCode<'T, 'T, AsyncTaskMethodBuilder>) : Task =
 
             let mutable sm = TaskBaseStateMachine<'T, _>()
 
@@ -58,7 +58,12 @@ module TasksUnit =
                             let step = info.ResumptionFunc.Invoke(&sm)
 
                             if step then
+#if DEBUG
+                                sm.Data.MethodBuilder.SetResult()
+#else
+                                // SRTP fails here for some reason in debug mode
                                 MethodBuilder.SetResult(&sm.Data.MethodBuilder)
+#endif
                             else
                                 let mutable awaiter =
                                     sm.ResumptionDynamicInfo.ResumptionData
@@ -89,7 +94,7 @@ module TasksUnit =
             MethodBuilder.get_Task (&sm.Data.MethodBuilder)
 
         /// Hosts the task code in a state machine and starts the task.
-        member inline _.Run(code: TaskBaseCode<'T, 'T, _>) : Task =
+        member inline _.Run(code: TaskBaseCode<'T, 'T, AsyncTaskMethodBuilder>) : Task =
             if __useResumableCode then
                 __stateMachine<TaskBaseStateMachineData<'T, _>, _>
                     (MoveNextMethodImpl<_>(fun sm ->
@@ -101,7 +106,12 @@ module TasksUnit =
                             let __stack_code_fin = code.Invoke(&sm)
 
                             if __stack_code_fin then
+#if DEBUG
+                                sm.Data.MethodBuilder.SetResult()
+#else
+                                // SRTP fails here for some reason in debug mode
                                 MethodBuilder.SetResult(&sm.Data.MethodBuilder)
+#endif
                         with exn ->
                             __stack_exn <- exn
                         // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
@@ -157,7 +167,7 @@ module TasksUnit =
         /// <summary>
         /// Hosts the task code in a state machine and starts the task, executing in the threadpool using Task.Run
         /// </summary>
-        member inline _.Run(code: TaskBaseCode<'T, 'T, _>) =
+        member inline _.Run(code: TaskBaseCode<'T, 'T, AsyncTaskMethodBuilder>) =
             if __useResumableCode then
                 __stateMachine<TaskBaseStateMachineData<'T, _>, _>
                     (MoveNextMethodImpl<_>(fun sm ->
@@ -169,7 +179,12 @@ module TasksUnit =
                             let __stack_code_fin = code.Invoke(&sm)
 
                             if __stack_code_fin then
+#if DEBUG
+                                sm.Data.MethodBuilder.SetResult()
+#else
+                                // SRTP fails here for some reason in debug mode
                                 MethodBuilder.SetResult(&sm.Data.MethodBuilder)
+#endif
                         with exn ->
                             __stack_exn <- exn
                         // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
