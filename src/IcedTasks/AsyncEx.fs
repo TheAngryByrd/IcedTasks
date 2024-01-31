@@ -272,17 +272,13 @@ type AsyncExBuilder() =
     member inline _.Bind(computation: Async<'f>, [<InlineIfLambda>] binder: 'f -> Async<'f0>) =
         async.Bind(computation, binder)
 
-    member inline _.TryFinallyAsync
+    member inline this.TryFinallyAsync
         (
             computation: Async<'ok>,
             [<InlineIfLambda>] compensation: unit -> ValueTask
         ) : Async<'ok> =
 
-        let compensation =
-            async {
-                let vTask = compensation ()
-                return! Async.AwaitValueTask vTask
-            }
+        let compensation = this.Delay(fun () -> AsyncEx.AwaitValueTask(compensation ()))
 
         Async.TryFinallyAsync(computation, compensation)
 
@@ -327,7 +323,7 @@ type AsyncExBuilder() =
                                 enumerator.MoveNextAsync()
                                 |> AsyncEx.AwaitValueTask
                             )),
-                            (body enumerator.Current)
+                            (this.Delay(fun () -> body enumerator.Current))
                         )
 
                     )
