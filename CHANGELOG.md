@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2024-01-30
+
+### Added
+- [Use Microsoft.Bcl.AsyncInterfaces in netstandard2.0](https://github.com/TheAngryByrd/IcedTasks/pull/39) This allows for IAsyncDisposable, IAsyncEnumerable, and IAsyncEnumerator, and ValueTask to be used in netstandard2.0.  Credits @TheAngryByrd.
+
 ## [0.10.2] - 2024-01-28
 
 ### Changed
@@ -281,7 +286,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Increased soeed and lowered memory usage of ColdTask and CancellableTask
 - Build for netstandard2.0 and netstandard2.1
 
-[Unreleased]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.10.2...HEAD
+[Unreleased]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.10.2...v0.11.0
 [0.10.2]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.10.0...v0.10.2
 [0.10.1]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.9.2...v0.10.0
