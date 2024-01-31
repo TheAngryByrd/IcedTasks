@@ -675,7 +675,6 @@ module AsyncExTests =
                         }
                     )
 
-#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 yield!
                     [
                         10
@@ -688,14 +687,10 @@ module AsyncExTests =
                             let mutable index = 0
 
                             let asyncSeq: IAsyncEnumerable<_> =
-                                FSharp.Control.TaskSeq.initAsync
+                                AsyncEnumerable.forXtoY
+                                    0
                                     loops
-                                    (fun i ->
-                                        task {
-                                            do! Task.Yield()
-                                            return i
-                                        }
-                                    )
+                                    (fun _ -> valueTaskUnit { do! Task.Yield() })
 
                             let! actual =
                                 asyncEx {
@@ -718,16 +713,13 @@ module AsyncExTests =
                             async {
 
                                 let mutable index = 0
+                                let loops = 10
 
                                 let asyncSeq: IAsyncEnumerable<_> =
-                                    FSharp.Control.TaskSeq.initAsync
-                                        10
-                                        (fun i ->
-                                            task {
-                                                do! Task.Yield()
-                                                return i
-                                            }
-                                        )
+                                    AsyncEnumerable.forXtoY
+                                        0
+                                        loops
+                                        (fun _ -> valueTaskUnit { do! Task.Yield() })
 
                                 use cts = new CancellationTokenSource()
 
@@ -749,7 +741,6 @@ module AsyncExTests =
                         )
                 }
 
-#endif
             ]
         ]
 

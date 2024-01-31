@@ -583,7 +583,6 @@ module TaskBackgroundTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
-#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 yield!
                     [
                         10
@@ -596,14 +595,10 @@ module TaskBackgroundTests =
                             let mutable index = 0
 
                             let asyncSeq: IAsyncEnumerable<_> =
-                                FSharp.Control.TaskSeq.initAsync
+                                AsyncEnumerable.forXtoY
+                                    0
                                     loops
-                                    (fun i ->
-                                        backgroundTask {
-                                            do! Task.Yield()
-                                            return i
-                                        }
-                                    )
+                                    (fun _ -> valueTaskUnit { do! Task.Yield() })
 
                             let! actual =
                                 backgroundTask {
@@ -618,7 +613,7 @@ module TaskBackgroundTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
-#endif
+
             ]
             testList "MergeSources" [
                 testCaseAsync "and! 5"

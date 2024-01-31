@@ -595,7 +595,6 @@ module TaskDynamicTests =
                     )
 
 
-#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 yield!
                     [
                         10
@@ -608,14 +607,10 @@ module TaskDynamicTests =
                             let mutable index = 0
 
                             let asyncSeq: IAsyncEnumerable<_> =
-                                FSharp.Control.TaskSeq.initAsync
+                                AsyncEnumerable.forXtoY
+                                    0
                                     loops
-                                    (fun i ->
-                                        dTask {
-                                            do! Task.Yield()
-                                            return i
-                                        }
-                                    )
+                                    (fun _ -> valueTaskUnit { do! Task.Yield() })
 
                             let! actual =
                                 dTask {
@@ -630,7 +625,7 @@ module TaskDynamicTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
-#endif
+
             ]
             testList "MergeSources" [
                 testCaseAsync "and! 5"

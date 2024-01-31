@@ -798,14 +798,10 @@ module CancellablePoolingValueTaskTests =
                             let mutable index = 0
 
                             let asyncSeq: IAsyncEnumerable<_> =
-                                FSharp.Control.TaskSeq.initAsync
+                                AsyncEnumerable.forXtoY
+                                    0
                                     loops
-                                    (fun i ->
-                                        task {
-                                            do! Task.Yield()
-                                            return i
-                                        }
-                                    )
+                                    (fun _ -> valueTaskUnit { do! Task.Yield() })
 
                             let! actual =
                                 cancellablePoolingValueTask {
@@ -830,16 +826,13 @@ module CancellablePoolingValueTaskTests =
                             cancellablePoolingValueTask {
 
                                 let mutable index = 0
+                                let loops = 10
 
                                 let asyncSeq: IAsyncEnumerable<_> =
-                                    FSharp.Control.TaskSeq.initAsync
-                                        10
-                                        (fun i ->
-                                            task {
-                                                do! Task.Yield()
-                                                return i
-                                            }
-                                        )
+                                    AsyncEnumerable.forXtoY
+                                        0
+                                        loops
+                                        (fun _ -> valueTaskUnit { do! Task.Yield() })
 
                                 use cts = new CancellationTokenSource()
 

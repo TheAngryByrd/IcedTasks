@@ -582,7 +582,6 @@ module ValueTaskTests =
                         }
                     )
 
-#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
                 yield!
                     [
                         10
@@ -595,14 +594,10 @@ module ValueTaskTests =
                             let mutable index = 0
 
                             let asyncSeq: IAsyncEnumerable<_> =
-                                FSharp.Control.TaskSeq.initAsync
+                                AsyncEnumerable.forXtoY
+                                    0
                                     loops
-                                    (fun i ->
-                                        task {
-                                            do! Task.Yield()
-                                            return i
-                                        }
-                                    )
+                                    (fun _ -> valueTaskUnit { do! Task.Yield() })
 
                             let! actual =
                                 valueTask {
@@ -617,7 +612,7 @@ module ValueTaskTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
-#endif
+
             ]
 
             testList "MergeSources" [
