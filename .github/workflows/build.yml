@@ -17,7 +17,7 @@ jobs:
         # Builds for Debug and Release configurations
         configuration: [Debug, Release]
         # Builds for Ubuntu, Windows, and macOS
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        os: [ubuntu-latest, windows-latest, macOS-latest, macos-14]
       fail-fast: false
     runs-on: ${{ matrix.os }}
 
