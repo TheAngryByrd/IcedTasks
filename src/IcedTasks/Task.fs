@@ -128,14 +128,16 @@ module Tasks =
         /// Specify a Source of Task<_> on the real type to allow type inference to work
         member inline _.Source(v: Task<_>) = Awaitable.GetTaskAwaiter v
 
+        [<NoEagerConstraintApplication>]
         member inline this.MergeSources(left, right) =
-            this.Run(
-                this.Bind(
-                    left,
-                    fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+            this.Source(
+                this.Run(
+                    this.Bind(
+                        left,
+                        fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+                    )
                 )
             )
-            |> Awaitable.GetTaskAwaiter
 
 
     /// Contains methods to build Tasks using the F# computation expression syntax
@@ -214,14 +216,16 @@ module Tasks =
         /// Specify a Source of Task<_> on the real type to allow type inference to work
         member inline _.Source(v: Task<_>) = Awaitable.GetTaskAwaiter v
 
+        [<NoEagerConstraintApplication>]
         member inline this.MergeSources(left, right) =
-            this.Run(
-                this.Bind(
-                    left,
-                    fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+            this.Source(
+                this.Run(
+                    this.Bind(
+                        left,
+                        fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+                    )
                 )
             )
-            |> Awaitable.GetTaskAwaiter
 
     /// Contains the task computation expression builder.
     [<AutoOpen>]

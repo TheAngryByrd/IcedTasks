@@ -188,13 +188,14 @@ module ValueTasks =
         member inline _.Source(v: ValueTask<_>) = Awaitable.GetAwaiter v
 
         member inline this.MergeSources(left, right) =
-            this.Run(
-                this.Bind(
-                    left,
-                    fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+            this.Source(
+                this.Run(
+                    this.Bind(
+                        left,
+                        fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+                    )
                 )
             )
-            |> Awaitable.GetAwaiter
 
     /// Contains the valueTask computation expression builder.
     [<AutoOpen>]

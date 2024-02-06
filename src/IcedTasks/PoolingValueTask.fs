@@ -125,14 +125,16 @@ module PoolingValueTasks =
         /// Specify a Source of ValueTask<_> on the real type to allow type inference to work
         member inline _.Source(v: ValueTask<_>) = Awaitable.GetAwaiter v
 
+        [<NoEagerConstraintApplication>]
         member inline this.MergeSources(left, right) =
-            this.Run(
-                this.Bind(
-                    left,
-                    fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+            this.Source(
+                this.Run(
+                    this.Bind(
+                        left,
+                        fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+                    )
                 )
             )
-            |> Awaitable.GetAwaiter
 
 
     /// Contains the poolingValueTask computation expression builder.
