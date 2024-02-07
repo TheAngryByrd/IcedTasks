@@ -626,9 +626,59 @@ module ValueTaskDynamicTests =
                     )
 
             ]
+
             testList "MergeSources" [
-                testCaseAsync "and! 5"
-                <| async {
+
+                testCaseAsync "and! task x task"
+                <| asyncEx {
+                    let! actual =
+                        dValueTask {
+                            let! a = task { return 1 }
+                            and! b = task { return 2 }
+                            return a + b
+                        }
+
+                    Expect.equal actual 3 ""
+                }
+
+                testCaseAsync "and! awaitableT x awaitableT"
+                <| asyncEx {
+                    let! actual =
+                        dValueTask {
+                            let! a = valueTask { return 1 }
+                            and! b = valueTask { return 2 }
+                            return a + b
+                        }
+
+                    Expect.equal actual 3 ""
+                }
+
+                testCaseAsync "and! awaitableT x awaitableUnit"
+                <| asyncEx {
+                    let! actual =
+                        dValueTask {
+                            let! a = valueTask { return 2 }
+                            and! _ = Task.Yield()
+                            return a
+                        }
+
+                    Expect.equal actual 2 ""
+                }
+
+                testCaseAsync "and! awaitableUnit x awaitableT "
+                <| asyncEx {
+                    let! actual =
+                        dValueTask {
+                            let! _ = Task.Yield()
+                            and! a = valueTask { return 2 }
+                            return a
+                        }
+
+                    Expect.equal actual 2 ""
+                }
+
+                testCaseAsync "and! 5 random"
+                <| asyncEx {
                     let! actual =
                         dValueTask {
                             let! a = ValueTask.FromResult 1
@@ -638,10 +688,8 @@ module ValueTaskDynamicTests =
                             and! _ = ValueTask.CompletedTask
                             return a + b + c
                         }
-                        |> Async.AwaitValueTask
 
                     Expect.equal actual 6 ""
-
                 }
             ]
         ]

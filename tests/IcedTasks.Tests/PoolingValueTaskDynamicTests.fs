@@ -627,9 +627,59 @@ module PoolingValueTaskDynamicTests =
                         }
                     )
             ]
+
             testList "MergeSources" [
-                testCaseAsync "and! 5"
-                <| async {
+
+                testCaseAsync "and! task x task"
+                <| asyncEx {
+                    let! actual =
+                        dPoolingValueTask {
+                            let! a = task { return 1 }
+                            and! b = task { return 2 }
+                            return a + b
+                        }
+
+                    Expect.equal actual 3 ""
+                }
+
+                testCaseAsync "and! awaitableT x awaitableT"
+                <| asyncEx {
+                    let! actual =
+                        dPoolingValueTask {
+                            let! a = valueTask { return 1 }
+                            and! b = valueTask { return 2 }
+                            return a + b
+                        }
+
+                    Expect.equal actual 3 ""
+                }
+
+                testCaseAsync "and! awaitableT x awaitableUnit"
+                <| asyncEx {
+                    let! actual =
+                        dPoolingValueTask {
+                            let! a = valueTask { return 2 }
+                            and! _ = Task.Yield()
+                            return a
+                        }
+
+                    Expect.equal actual 2 ""
+                }
+
+                testCaseAsync "and! awaitableUnit x awaitableT "
+                <| asyncEx {
+                    let! actual =
+                        dPoolingValueTask {
+                            let! _ = Task.Yield()
+                            and! a = valueTask { return 2 }
+                            return a
+                        }
+
+                    Expect.equal actual 2 ""
+                }
+
+                testCaseAsync "and! 5 random"
+                <| asyncEx {
                     let! actual =
                         dPoolingValueTask {
                             let! a = ValueTask.FromResult 1
@@ -637,13 +687,10 @@ module PoolingValueTaskDynamicTests =
                             and! c = coldTask { return 3 }
                             and! _ = Task.Yield()
                             and! _ = ValueTask.CompletedTask
-                            // and! c = fun () -> PoolingValueTask.FromResult(3)
                             return a + b + c
                         }
-                        |> Async.AwaitValueTask
 
                     Expect.equal actual 6 ""
-
                 }
             ]
         ]

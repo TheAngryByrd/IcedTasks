@@ -812,12 +812,94 @@ module CancellableTaskTests =
                             }
                         )
                 }
-
             ]
-
-
             testList "MergeSources" [
-                testCaseAsync "and! 6"
+
+                testCaseAsync "and! cancellableTask x cancellableTask"
+                <| async {
+                    let! actual =
+                        cancellableTask {
+                            let! a = cancellableTask { return 1 }
+                            and! b = cancellableTask { return 2 }
+                            return a + b
+                        }
+
+                    Expect.equal actual 3 ""
+                }
+
+                testCaseAsync "and! cancellableTask x task"
+                <| async {
+                    let! actual =
+                        cancellableTask {
+                            let! a = cancellableTask { return 1 }
+                            and! b = task { return 2 }
+                            return a + b
+                        }
+
+                    Expect.equal actual 3 ""
+                }
+
+                testCaseAsync "and! task x cancellableTask"
+                <| async {
+                    let! actual =
+                        cancellableTask {
+                            let! a = task { return 1 }
+                            and! b = cancellableTask { return 2 }
+                            return a + b
+                        }
+
+                    Expect.equal actual 3 ""
+                }
+
+                testCaseAsync "and! task x task"
+                <| async {
+                    let! actual =
+                        cancellableTask {
+                            let! a = task { return 1 }
+                            and! b = task { return 2 }
+                            return a + b
+                        }
+
+                    Expect.equal actual 3 ""
+                }
+
+                testCaseAsync "and! awaitableT x awaitableT"
+                <| async {
+                    let! actual =
+                        cancellableTask {
+                            let! a = valueTask { return 1 }
+                            and! b = valueTask { return 2 }
+                            return a + b
+                        }
+
+                    Expect.equal actual 3 ""
+                }
+
+                testCaseAsync "and! awaitableT x awaitableUnit"
+                <| async {
+                    let! actual =
+                        cancellableTask {
+                            let! a = valueTask { return 2 }
+                            and! _ = Task.Yield()
+                            return a
+                        }
+
+                    Expect.equal actual 2 ""
+                }
+
+                testCaseAsync "and! awaitableUnit x awaitableT "
+                <| async {
+                    let! actual =
+                        cancellableTask {
+                            let! _ = Task.Yield()
+                            and! a = valueTask { return 2 }
+                            return a
+                        }
+
+                    Expect.equal actual 2 ""
+                }
+
+                testCaseAsync "and! 6 random"
                 <| async {
                     let! actual =
                         cancellableTask {
@@ -830,8 +912,98 @@ module CancellableTaskTests =
                         }
 
                     Expect.equal actual 6 ""
-
                 }
+
+            ]
+
+            testList "MergeSourcesParallel" [
+                testPropertyWithConfig Expecto.fsCheckConfig "parallelism"
+                <| fun () ->
+                    asyncEx {
+                        let! ct = Async.CancellationToken
+                        let sequencedList = ResizeArray<_>()
+                        let parallelList = ResizeArray<_>()
+
+                        let doOtherStuff (l: ResizeArray<_>) x =
+                            cancellableTask {
+                                l.Add(x)
+                                do! Task.Delay(15)
+                                let dt = DateTimeOffset.UtcNow
+                                l.Add(x)
+                                return dt
+                            }
+
+                        let! sequenced =
+                            cancellableTask {
+                                let! a = doOtherStuff sequencedList 1
+                                let! b = doOtherStuff sequencedList 2
+                                let! c = doOtherStuff sequencedList 3
+                                let! d = doOtherStuff sequencedList 4
+                                let! e = doOtherStuff sequencedList 5
+                                let! f = doOtherStuff sequencedList 6
+
+                                return [
+                                    a
+                                    b
+                                    c
+                                    d
+                                    e
+                                    f
+                                ]
+                            }
+
+                        let! paralleled =
+                            cancellableTask {
+                                let! a = doOtherStuff parallelList 1
+                                and! b = doOtherStuff parallelList 2
+                                and! c = doOtherStuff parallelList 3
+                                and! d = doOtherStuff parallelList 4
+                                and! e = doOtherStuff parallelList 5
+                                and! f = doOtherStuff parallelList 6
+
+                                return [
+                                    a
+                                    b
+                                    c
+                                    d
+                                    e
+                                    f
+                                ]
+                            }
+
+                        let sequencedEntrances =
+                            sequencedList
+                            |> Seq.toList
+
+                        let parallelEntrances =
+                            parallelList
+                            |> Seq.toList
+
+                        let sequencedAlwaysOrdered =
+                            sequencedEntrances = [
+                                1
+                                1
+                                2
+                                2
+                                3
+                                3
+                                4
+                                4
+                                5
+                                5
+                                6
+                                6
+                            ]
+
+                        let parallelNotSequenced =
+                            parallelEntrances
+                            <> sequencedEntrances
+
+                        return
+                            sequencedAlwaysOrdered
+                            && parallelNotSequenced
+                    }
+                    |> Async.RunSynchronously
             ]
 
             testList "Cancellation Semantics" [

@@ -615,9 +615,59 @@ module TaskBackgroundTests =
                     )
 
             ]
+
             testList "MergeSources" [
-                testCaseAsync "and! 5"
-                <| async {
+
+                testCaseAsync "and! task x task"
+                <| asyncEx {
+                    let! actual =
+                        backgroundTask {
+                            let! a = task { return 1 }
+                            and! b = task { return 2 }
+                            return a + b
+                        }
+
+                    Expect.equal actual 3 ""
+                }
+
+                testCaseAsync "and! awaitableT x awaitableT"
+                <| asyncEx {
+                    let! actual =
+                        backgroundTask {
+                            let! a = valueTask { return 1 }
+                            and! b = valueTask { return 2 }
+                            return a + b
+                        }
+
+                    Expect.equal actual 3 ""
+                }
+
+                testCaseAsync "and! awaitableT x awaitableUnit"
+                <| asyncEx {
+                    let! actual =
+                        backgroundTask {
+                            let! a = valueTask { return 2 }
+                            and! _ = Task.Yield()
+                            return a
+                        }
+
+                    Expect.equal actual 2 ""
+                }
+
+                testCaseAsync "and! awaitableUnit x awaitableT "
+                <| asyncEx {
+                    let! actual =
+                        backgroundTask {
+                            let! _ = Task.Yield()
+                            and! a = valueTask { return 2 }
+                            return a
+                        }
+
+                    Expect.equal actual 2 ""
+                }
+
+                testCaseAsync "and! 5 random"
+                <| asyncEx {
                     let! actual =
                         backgroundTask {
                             let! a = ValueTask.FromResult 1
@@ -627,11 +677,10 @@ module TaskBackgroundTests =
                             and! _ = ValueTask.CompletedTask
                             return a + b + c
                         }
-                        |> Async.AwaitTask
 
                     Expect.equal actual 6 ""
-
                 }
+
             ]
         ]
 

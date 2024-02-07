@@ -146,62 +146,90 @@ module CancellablePoolingValueTasks =
 
         /// Specify a Source of CancellationToken -> ValueTask<_> on the real type to allow type inference to work
         member inline _.Source
-            (x: CancellationToken -> ValueTask<_>)
+            ([<InlineIfLambda>] x: CancellationToken -> ValueTask<_>)
             : CancellationToken -> Awaiter<ValueTaskAwaiter<_>, _> =
             fun ct ->
                 (x ct)
                 |> Awaitable.GetAwaiter
 
+        [<NoEagerConstraintApplication>]
         member inline this.MergeSources
             (
                 [<InlineIfLambda>] left: CancellationToken -> 'Awaiter1,
                 [<InlineIfLambda>] right: CancellationToken -> 'Awaiter2
             ) =
-            this.Run(
-                this.Bind(
-                    left,
-                    fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+            this.Source(
+                this.Run(
+                    this.Bind(
+                        (fun ct -> this.Source(ValueTask<_> ct)),
+                        fun ct ->
+                            let left = left ct
+                            let right = right ct
+
+                            (this.Bind(
+                                left,
+                                fun leftR ->
+                                    this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+                            ))
+                    )
                 )
             )
-            >> Awaitable.GetAwaiter
 
-
+        [<NoEagerConstraintApplication>]
         member inline this.MergeSources
             (
                 left: 'Awaiter1,
                 [<InlineIfLambda>] right: CancellationToken -> 'Awaiter2
             ) =
-            this.Run(
-                this.Bind(
-                    left,
-                    fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+            this.Source(
+                this.Run(
+                    this.Bind(
+                        (fun ct -> this.Source(ValueTask<_> ct)),
+                        fun ct ->
+                            let right = right ct
+
+                            (this.Bind(
+                                left,
+                                fun leftR ->
+                                    this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+                            ))
+                    )
                 )
             )
-            >> Awaitable.GetAwaiter
 
-
+        [<NoEagerConstraintApplication>]
         member inline this.MergeSources
             (
                 [<InlineIfLambda>] left: CancellationToken -> 'Awaiter1,
                 right: 'Awaiter2
             ) =
-            this.Run(
-                this.Bind(
-                    left,
-                    fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+
+            this.Source(
+                this.Run(
+                    this.Bind(
+                        (fun ct -> this.Source(ValueTask<_> ct)),
+                        fun ct ->
+                            let left = left ct
+
+                            (this.Bind(
+                                left,
+                                fun leftR ->
+                                    this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+                            ))
+                    )
                 )
             )
-            >> Awaitable.GetAwaiter
 
-
+        [<NoEagerConstraintApplication>]
         member inline this.MergeSources(left: 'Awaiter1, right: 'Awaiter2) =
-            this.Run(
-                this.Bind(
-                    left,
-                    fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+            this.Source(
+                this.Run(
+                    this.Bind(
+                        left,
+                        fun leftR -> this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
+                    )
                 )
             )
-            >> Awaitable.GetAwaiter
 
 
     /// Contains the cancellableTask computation expression builder.

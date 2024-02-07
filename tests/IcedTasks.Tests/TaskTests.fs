@@ -615,9 +615,59 @@ module TaskTests =
                     )
 
             ]
+
             testList "MergeSources" [
-                testCaseAsync "and! 5"
-                <| async {
+
+                testCaseAsync "and! task x task"
+                <| asyncEx {
+                    let! actual =
+                        task {
+                            let! a = task { return 1 }
+                            and! b = task { return 2 }
+                            return a + b
+                        }
+
+                    Expect.equal actual 3 ""
+                }
+
+                testCaseAsync "and! awaitableT x awaitableT"
+                <| asyncEx {
+                    let! actual =
+                        task {
+                            let! a = valueTask { return 1 }
+                            and! b = valueTask { return 2 }
+                            return a + b
+                        }
+
+                    Expect.equal actual 3 ""
+                }
+
+                testCaseAsync "and! awaitableT x awaitableUnit"
+                <| asyncEx {
+                    let! actual =
+                        task {
+                            let! a = valueTask { return 2 }
+                            and! _ = Task.Yield()
+                            return a
+                        }
+
+                    Expect.equal actual 2 ""
+                }
+
+                testCaseAsync "and! awaitableUnit x awaitableT "
+                <| asyncEx {
+                    let! actual =
+                        task {
+                            let! _ = Task.Yield()
+                            and! a = valueTask { return 2 }
+                            return a
+                        }
+
+                    Expect.equal actual 2 ""
+                }
+
+                testCaseAsync "and! 5 random"
+                <| asyncEx {
                     let! actual =
                         task {
                             let! a = ValueTask.FromResult 1
@@ -627,11 +677,100 @@ module TaskTests =
                             and! _ = ValueTask.CompletedTask
                             return a + b + c
                         }
-                        |> Async.AwaitTask
 
                     Expect.equal actual 6 ""
-
                 }
+
+            ]
+
+            testList "MergeSourcesParallel" [
+                testPropertyWithConfig Expecto.fsCheckConfig "parallelism"
+                <| fun () ->
+                    asyncEx {
+                        let! ct = Async.CancellationToken
+                        let sequencedList = ResizeArray<_>()
+                        let parallelList = ResizeArray<_>()
+
+                        let doOtherStuff (l: ResizeArray<_>) x =
+                            task {
+                                l.Add(x)
+                                do! Task.Delay(15)
+                                let dt = DateTimeOffset.UtcNow
+                                l.Add(x)
+                                return dt
+                            }
+
+                        let! sequenced =
+                            task {
+                                let! a = doOtherStuff sequencedList 1
+                                let! b = doOtherStuff sequencedList 2
+                                let! c = doOtherStuff sequencedList 3
+                                let! d = doOtherStuff sequencedList 4
+                                let! e = doOtherStuff sequencedList 5
+                                let! f = doOtherStuff sequencedList 6
+
+                                return [
+                                    a
+                                    b
+                                    c
+                                    d
+                                    e
+                                    f
+                                ]
+                            }
+
+                        let! paralleled =
+                            task {
+                                let! a = doOtherStuff parallelList 1
+                                and! b = doOtherStuff parallelList 2
+                                and! c = doOtherStuff parallelList 3
+                                and! d = doOtherStuff parallelList 4
+                                and! e = doOtherStuff parallelList 5
+                                and! f = doOtherStuff parallelList 6
+
+                                return [
+                                    a
+                                    b
+                                    c
+                                    d
+                                    e
+                                    f
+                                ]
+                            }
+
+                        let sequencedEntrances =
+                            sequencedList
+                            |> Seq.toList
+
+                        let parallelEntrances =
+                            parallelList
+                            |> Seq.toList
+
+                        let sequencedAlwaysOrdered =
+                            sequencedEntrances = [
+                                1
+                                1
+                                2
+                                2
+                                3
+                                3
+                                4
+                                4
+                                5
+                                5
+                                6
+                                6
+                            ]
+
+                        let parallelNotSequenced =
+                            parallelEntrances
+                            <> sequencedEntrances
+
+                        return
+                            sequencedAlwaysOrdered
+                            && parallelNotSequenced
+                    }
+                    |> Async.RunSynchronously
             ]
         ]
 

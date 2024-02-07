@@ -364,6 +364,11 @@ NUGET
     Expecto (10.1)
       FSharp.Core (>= 7.0.200) - restriction: >= net6.0
       Mono.Cecil (>= 0.11.4 < 1.0) - restriction: >= net6.0
+    Expecto.FsCheck (10.1)
+      Expecto (>= 10.1) - restriction: >= net6.0
+      FsCheck (>= 2.16.5 < 3.0) - restriction: >= net6.0
+    FsCheck (2.16.6) - restriction: >= net6.0
+      FSharp.Core (>= 4.2.3) - restriction: || (>= net452) (>= netstandard1.6)
     FSharp.Control.TaskSeq (0.3)
       FSharp.Core (>= 6.0.2) - restriction: >= netstandard2.1
     FSharp.Core (7.0.401) - restriction: >= netstandard2.1
