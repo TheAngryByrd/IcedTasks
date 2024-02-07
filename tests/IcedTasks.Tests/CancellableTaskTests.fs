@@ -916,27 +916,31 @@ module CancellableTaskTests =
 
             ]
 
-            testSequencedGroup "MergeSourcesParallel"
-            <| testList "MergeSourcesParallel" [
+            testList "MergeSourcesParallel" [
                 testPropertyWithConfig Expecto.fsCheckConfig "parallelism"
                 <| fun () ->
-                    async {
-                        let doOtherStuff =
+                    asyncEx {
+                        let! ct = Async.CancellationToken
+                        let sequencedList = ResizeArray<_>()
+                        let parallelList = ResizeArray<_>()
+
+                        let doOtherStuff (l: ResizeArray<_>) x =
                             cancellableTask {
-                                do! Task.Yield
+                                l.Add(x)
                                 do! Task.Delay(15)
                                 let dt = DateTimeOffset.UtcNow
+                                l.Add(x)
                                 return dt
                             }
 
                         let! sequenced =
                             cancellableTask {
-                                let! a = doOtherStuff
-                                let! b = doOtherStuff
-                                let! c = doOtherStuff
-                                let! d = doOtherStuff
-                                let! e = doOtherStuff
-                                let! f = doOtherStuff
+                                let! a = doOtherStuff sequencedList 1
+                                let! b = doOtherStuff sequencedList 2
+                                let! c = doOtherStuff sequencedList 3
+                                let! d = doOtherStuff sequencedList 4
+                                let! e = doOtherStuff sequencedList 5
+                                let! f = doOtherStuff sequencedList 6
 
                                 return [
                                     a
@@ -950,12 +954,12 @@ module CancellableTaskTests =
 
                         let! paralleled =
                             cancellableTask {
-                                let! a = doOtherStuff
-                                and! b = doOtherStuff
-                                and! c = doOtherStuff
-                                and! d = doOtherStuff
-                                and! e = doOtherStuff
-                                and! f = doOtherStuff
+                                let! a = doOtherStuff parallelList 1
+                                and! b = doOtherStuff parallelList 2
+                                and! c = doOtherStuff parallelList 3
+                                and! d = doOtherStuff parallelList 4
+                                and! e = doOtherStuff parallelList 5
+                                and! f = doOtherStuff parallelList 6
 
                                 return [
                                     a
@@ -967,31 +971,37 @@ module CancellableTaskTests =
                                 ]
                             }
 
-                        let maxSeq =
-                            sequenced
-                            |> List.maxBy (fun x -> x.Ticks)
+                        let sequencedEntrances =
+                            sequencedList
+                            |> Seq.toList
 
-                        let minSeq =
-                            sequenced
-                            |> List.minBy (fun x -> x.Ticks)
+                        let parallelEntrances =
+                            parallelList
+                            |> Seq.toList
 
-                        let maxPar =
-                            paralleled
-                            |> List.maxBy (fun x -> x.Ticks)
+                        let sequencedAlwaysOrdered =
+                            sequencedEntrances = [
+                                1
+                                1
+                                2
+                                2
+                                3
+                                3
+                                4
+                                4
+                                5
+                                5
+                                6
+                                6
+                            ]
 
-                        let minPar =
-                            paralleled
-                            |> List.minBy (fun x -> x.Ticks)
+                        let parallelNotSequenced =
+                            parallelEntrances
+                            <> sequencedEntrances
 
-                        let diffSeq =
-                            maxSeq
-                            - minSeq
-
-                        let diffPar =
-                            maxPar
-                            - minPar
-
-                        return diffPar < diffSeq
+                        return
+                            sequencedAlwaysOrdered
+                            && parallelNotSequenced
                     }
                     |> Async.RunSynchronously
             ]
