@@ -852,8 +852,8 @@ module CancellableValueTaskTests =
                 }
 
             ]
-
-            testList "MergeSources" [
+            testSequencedGroup "MergeSources"
+            <| testList "MergeSources" [
 
                 testCaseAsync "and! cancellableTask x cancellableTask"
                 <| async {

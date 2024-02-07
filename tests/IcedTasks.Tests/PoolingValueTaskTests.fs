@@ -613,7 +613,8 @@ module PoolingValueTaskTests =
                     )
             ]
 
-            testList "MergeSources" [
+            testSequencedGroup "MergeSources"
+            <| testList "MergeSources" [
 
                 testCaseAsync "and! task x task"
                 <| asyncEx {

@@ -704,7 +704,8 @@ module ColdTaskTests =
                     )
             ]
 
-            testList "MergeSources" [
+            testSequencedGroup "MergeSources"
+            <| testList "MergeSources" [
                 testCaseAsync "and! 5"
                 <| async {
                     let! actual =

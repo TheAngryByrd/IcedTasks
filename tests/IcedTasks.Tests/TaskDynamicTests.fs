@@ -628,14 +628,14 @@ module TaskDynamicTests =
 
             ]
 
-            testList "MergeSources" [
-
+            testSequencedGroup "MergeSources"
+            <| testList "MergeSources" [
                 testCaseAsync "and! task x task"
                 <| asyncEx {
                     let! actual =
                         dTask {
-                            let! a = dTask { return 1 }
-                            and! b = dTask { return 2 }
+                            let! a = task { return 1 }
+                            and! b = task { return 2 }
                             return a + b
                         }
 

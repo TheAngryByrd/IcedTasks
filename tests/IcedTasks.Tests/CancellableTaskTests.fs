@@ -814,7 +814,8 @@ module CancellableTaskTests =
                 }
             ]
 
-            testList "MergeSources" [
+            testSequencedGroup "MergeSources"
+            <| testList "MergeSources" [
 
                 testCaseAsync "and! cancellableTask x cancellableTask"
                 <| async {
@@ -887,7 +888,6 @@ module CancellableTaskTests =
 
                     Expect.equal actual 2 ""
                 }
-
 
                 testCaseAsync "and! awaitableUnit x awaitableT "
                 <| async {
