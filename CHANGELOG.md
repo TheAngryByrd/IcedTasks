@@ -5,10 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.3] - 2024-02-07
+
+### Removed
+- [Accidental addition of AwaiterOfResult](https://github.com/TheAngryByrd/IcedTasks/commit/c060b79620398b21c742b0ea475c84f91d52c0ec) - Credits @TheAngryByrd
+
 ## [0.11.2] - 2024-02-07
 
 ### Fixed
-- [Fix paralleism in merge sources (`and!`)](https://github.com/TheAngryByrd/IcedTasks/pull/41) - Credits @TheAngryByrd
+- [Fix parallelism in merge sources (`and!`)](https://github.com/TheAngryByrd/IcedTasks/pull/41) - Credits @TheAngryByrd
 
 ## [0.11.0] - 2024-01-30
 
@@ -291,7 +296,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Increased soeed and lowered memory usage of ColdTask and CancellableTask
 - Build for netstandard2.0 and netstandard2.1
 
-[Unreleased]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.2...HEAD
+[Unreleased]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.3...HEAD
+[0.11.3]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.2...v0.11.3
 [0.11.2]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.0...v0.11.2
 [0.11.1]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.10.2...v0.11.0
