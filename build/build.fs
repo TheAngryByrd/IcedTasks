@@ -273,8 +273,10 @@ let maxCpuCount =
         (if isCI.Value then
              let cores =
                  max
-                     (Environment.ProcessorCount
-                      - 1)
+                     (float Environment.ProcessorCount
+                      / 2.0
+                      |> floor
+                      |> int)
                      1
 
              Some(Some cores)
