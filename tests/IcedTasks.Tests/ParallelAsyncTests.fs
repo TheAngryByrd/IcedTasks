@@ -206,8 +206,7 @@ module ParallelAsyncTests =
                 }
             ]
 
-            testSequencedGroup "MergeSources"
-            <| testList "MergeSources" [
+            testList "MergeSources" [
                 testCaseAsync "and!"
                 <| async {
                     let data = 42

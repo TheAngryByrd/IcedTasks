@@ -854,8 +854,7 @@ module CancellablePoolingValueTaskTests =
             ]
 
 
-            testSequencedGroup "MergeSources"
-            <| testList "MergeSources" [
+            testList "MergeSources" [
 
                 testCaseAsync "and! cancellableTask x cancellableTask"
                 <| async {
@@ -956,7 +955,11 @@ module CancellablePoolingValueTaskTests =
                     Expect.equal actual 6 ""
                 }
 
-                testProperty "parallelism"
+            ]
+
+            testSequencedGroup "MergeSourcesParallel"
+            <| testList "MergeSourcesParallel" [
+                testPropertyWithConfig Expecto.fsCheckConfig "parallelism"
                 <| fun () ->
                     async {
                         let doOtherStuff =

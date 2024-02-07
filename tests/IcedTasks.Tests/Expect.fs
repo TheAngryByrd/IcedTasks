@@ -22,6 +22,40 @@ module TestHelpers =
         SynchronizationContext.SetSynchronizationContext newContext
         makeDisposable (fun () -> SynchronizationContext.SetSynchronizationContext oldContext)
 
+
+module Expecto =
+    open Expecto
+
+    let environVarAsBoolOrDefault varName defaultValue =
+        let truthyConsts = [
+            "1"
+            "Y"
+            "YES"
+            "T"
+            "TRUE"
+        ]
+
+        try
+            let envvar = (Environment.GetEnvironmentVariable varName).ToUpper()
+
+            truthyConsts
+            |> List.exists ((=) envvar)
+        with _ ->
+            defaultValue
+
+    let isInCI () = environVarAsBoolOrDefault "CI" false
+
+    let fsCheckConfig =
+        if isInCI () then
+            // these tests can be slow on CI so reduce the number of tests
+            {
+                FsCheckConfig.defaultConfig with
+                    maxTest = 10
+            }
+        else
+            FsCheckConfig.defaultConfig
+
+
 module Expect =
     open Expecto
 

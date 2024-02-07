@@ -627,8 +627,7 @@ module ValueTaskDynamicTests =
 
             ]
 
-            testSequencedGroup "MergeSources"
-            <| testList "MergeSources" [
+            testList "MergeSources" [
 
                 testCaseAsync "and! task x task"
                 <| asyncEx {
@@ -693,7 +692,11 @@ module ValueTaskDynamicTests =
                     Expect.equal actual 6 ""
                 }
 
-                testProperty "parallelism"
+            ]
+
+            testSequencedGroup "MergeSourcesParallel"
+            <| testList "MergeSourcesParallel" [
+                testPropertyWithConfig Expecto.fsCheckConfig "parallelism"
                 <| fun () ->
                     asyncEx {
                         let doOtherStuff () =
