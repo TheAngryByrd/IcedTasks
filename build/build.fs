@@ -268,7 +268,18 @@ let isOnCI () =
 
 // github actions are terrible and will cancel runner operations if using too much CPU
 // https://github.com/actions/runner-images/discussions/7188#discussioncomment-6672934
-let maxCpuCount = lazy (if isCI.Value then Some(Some 1) else None)
+let maxCpuCount =
+    lazy
+        (if isCI.Value then
+             let cores =
+                 max
+                     (Environment.ProcessorCount
+                      - 1)
+                     1
+
+             Some(Some cores)
+         else
+             None)
 
 /// MaxCpu not used on unix https://github.com/fsprojects/FAKE/blob/82e38df01e4b31e5daa3623abff57e6462430395/src/app/Fake.DotNet.MSBuild/MSBuild.fs#L858-L861
 let maxCpuMsBuild =
