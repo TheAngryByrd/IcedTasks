@@ -19,15 +19,6 @@ type Awaiter<'Awaiter, 'TResult
     and 'Awaiter: (member get_IsCompleted: unit -> bool)
     and 'Awaiter: (member GetResult: unit -> 'TResult)> = 'Awaiter
 
-/// A structure that looks like an Awaiter that returns a Result type
-type AwaiterOfResult<'Awaiter, 'TResult, 'Error
-    when 'Awaiter :> ICriticalNotifyCompletion
-    and 'Awaiter: (member get_IsCompleted: unit -> bool)
-    and 'Awaiter: (member GetResult: unit -> Result<'TResult, 'Error>)> = 'Awaiter
-
-type CancellableAwaiter<'Awaiter, 'TResult when Awaiter<'Awaiter, 'TResult>> =
-    CancellationToken -> Awaiter<'Awaiter, 'TResult>
-
 /// Functions for Awaiters
 type Awaiter =
     /// Gets a value that indicates whether the asynchronous task has completed
