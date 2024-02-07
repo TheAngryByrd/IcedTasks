@@ -15,6 +15,7 @@ group Test
   source https://www.nuget.org/api/v2
   source https://api.nuget.org/v3/index.json
   nuget Expecto >= 10.1.0
+  nuget Expecto.FsCheck
   nuget Microsoft.Bcl.TimeProvider
   nuget Microsoft.Bcl.AsyncInterfaces >= 8
   nuget TimeProviderExtensions

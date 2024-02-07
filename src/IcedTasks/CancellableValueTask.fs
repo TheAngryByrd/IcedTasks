@@ -143,7 +143,7 @@ module CancellableValueTasks =
 
         /// Specify a Source of CancellationToken -> ValueTask<_> on the real type to allow type inference to work
         member inline _.Source
-            (x: CancellationToken -> ValueTask<_>)
+            ([<InlineIfLambda>] x: CancellationToken -> ValueTask<_>)
             : CancellationToken -> Awaiter<ValueTaskAwaiter<_>, _> =
             fun ct ->
                 (x ct)

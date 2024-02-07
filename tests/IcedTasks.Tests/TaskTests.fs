@@ -615,9 +615,59 @@ module TaskTests =
                     )
 
             ]
+
             testList "MergeSources" [
-                testCaseAsync "and! 5"
-                <| async {
+
+                testCaseAsync "and! task x task"
+                <| asyncEx {
+                    let! actual =
+                        task {
+                            let! a = task { return 1 }
+                            and! b = task { return 2 }
+                            return a + b
+                        }
+
+                    Expect.equal actual 3 ""
+                }
+
+                testCaseAsync "and! awaitableT x awaitableT"
+                <| asyncEx {
+                    let! actual =
+                        task {
+                            let! a = valueTask { return 1 }
+                            and! b = valueTask { return 2 }
+                            return a + b
+                        }
+
+                    Expect.equal actual 3 ""
+                }
+
+                testCaseAsync "and! awaitableT x awaitableUnit"
+                <| asyncEx {
+                    let! actual =
+                        task {
+                            let! a = valueTask { return 2 }
+                            and! _ = Task.Yield()
+                            return a
+                        }
+
+                    Expect.equal actual 2 ""
+                }
+
+                testCaseAsync "and! awaitableUnit x awaitableT "
+                <| asyncEx {
+                    let! actual =
+                        task {
+                            let! _ = Task.Yield()
+                            and! a = valueTask { return 2 }
+                            return a
+                        }
+
+                    Expect.equal actual 2 ""
+                }
+
+                testCaseAsync "and! 5 random"
+                <| asyncEx {
                     let! actual =
                         task {
                             let! a = ValueTask.FromResult 1
@@ -627,11 +677,86 @@ module TaskTests =
                             and! _ = ValueTask.CompletedTask
                             return a + b + c
                         }
-                        |> Async.AwaitTask
 
                     Expect.equal actual 6 ""
-
                 }
+
+                testProperty "parallelism"
+                <| fun () ->
+                    asyncEx {
+                        let doOtherStuff () =
+                            task {
+                                do! Task.Yield()
+                                do! Task.Delay(15)
+                                let dt = DateTimeOffset.UtcNow
+                                return dt
+                            }
+
+                        let! sequenced =
+                            task {
+                                let! a = doOtherStuff ()
+                                let! b = doOtherStuff ()
+                                let! c = doOtherStuff ()
+                                let! d = doOtherStuff ()
+                                let! e = doOtherStuff ()
+                                let! f = doOtherStuff ()
+
+                                return [
+                                    a
+                                    b
+                                    c
+                                    d
+                                    e
+                                    f
+                                ]
+                            }
+
+                        let! paralleled =
+                            task {
+                                let! a = doOtherStuff ()
+                                and! b = doOtherStuff ()
+                                and! c = doOtherStuff ()
+                                and! d = doOtherStuff ()
+                                and! e = doOtherStuff ()
+                                and! f = doOtherStuff ()
+
+                                return [
+                                    a
+                                    b
+                                    c
+                                    d
+                                    e
+                                    f
+                                ]
+                            }
+
+                        let maxSeq =
+                            sequenced
+                            |> List.maxBy (fun x -> x.Ticks)
+
+                        let minSeq =
+                            sequenced
+                            |> List.minBy (fun x -> x.Ticks)
+
+                        let maxPar =
+                            paralleled
+                            |> List.maxBy (fun x -> x.Ticks)
+
+                        let minPar =
+                            paralleled
+                            |> List.minBy (fun x -> x.Ticks)
+
+                        let diffSeq =
+                            maxSeq
+                            - minSeq
+
+                        let diffPar =
+                            maxPar
+                            - minPar
+
+                        return diffPar < diffSeq
+                    }
+                    |> Async.RunSynchronously
             ]
         ]
 

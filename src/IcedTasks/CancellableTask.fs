@@ -143,7 +143,7 @@ module CancellableTasks =
 
         /// Specify a Source of CancellationToken -> Task<_> on the real type to allow type inference to work
         member inline _.Source
-            (x: CancellationToken -> Task<_>)
+            ([<InlineIfLambda>] x: CancellationToken -> Task<_>)
             : CancellationToken -> Awaiter<TaskAwaiter<_>, _> =
             fun ct -> Awaitable.GetTaskAwaiter(x ct)
 
