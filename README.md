@@ -277,7 +277,7 @@ IcedTasks | [![NuGet Badge](https://buildstats.info/nuget/IcedTasks)](https://ww
 
 Make sure the following **requirements** are installed on your system:
 
-- [dotnet SDK](https://www.microsoft.com/net/download/core) 7.0 or higher
+- [dotnet SDK](https://www.microsoft.com/net/download/core) 6.0 & 8.0 
 
 or
 
