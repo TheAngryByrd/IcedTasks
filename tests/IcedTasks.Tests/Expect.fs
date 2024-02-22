@@ -4,6 +4,16 @@ open System
 open System.Threading.Tasks
 open IcedTasks
 
+module Task =
+    /// Runs Task.Yield() `max` times. Useful for places where we want the scheduler to asynchronously yield but really fast.
+    /// We run it max times to ensure it really gets async yielded.
+    /// Alternative would be Task.Delay but can be slow.
+    let yieldMany max =
+        task {
+            for _ = 0 to max do
+                do! Task.Yield()
+        }
+
 module TestHelpers =
     open System.Threading
 
@@ -141,8 +151,7 @@ type ManualTimeProviderExtensions =
         task {
             this.Advance(time)
             //https://github.com/dotnet/runtime/issues/85326
-            do! Task.Yield()
-            do! Task.Delay(5)
+            do! Task.yieldMany 10
         }
 
 

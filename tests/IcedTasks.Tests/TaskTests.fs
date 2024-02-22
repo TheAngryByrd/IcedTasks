@@ -694,7 +694,7 @@ module TaskTests =
                         let doOtherStuff (l: ResizeArray<_>) x =
                             task {
                                 l.Add(x)
-                                do! Task.Delay(15)
+                                do! Task.yieldMany 1000
                                 let dt = DateTimeOffset.UtcNow
                                 l.Add(x)
                                 return dt
@@ -777,3 +777,200 @@ module TaskTests =
 
     [<Tests>]
     let tests = testList "IcedTasks.Polyfill.Task" [ builderTests ]
+
+    type ImplicitEnumerator(length: int) =
+        let mutable index = -1
+        member _.Current = index
+
+        member _.MoveNext() =
+            index <- index + 1
+            index < length
+
+    type ImplicitEnumerable(length) =
+        member _.GetEnumerator() = ImplicitEnumerator(length)
+
+    type ImplicitEnumeratorDisposable(length: int, onDispose) =
+        let mutable index = -1
+        member _.Current = index
+
+        member _.MoveNext() =
+            index <- index + 1
+            index < length
+
+        member _.Dispose() = onDispose ()
+
+    type ImplicitEnumerableDisposable(length, onDispose) =
+        member _.GetEnumerator() =
+            ImplicitEnumeratorDisposable(length, onDispose)
+
+
+    open Microsoft.FSharp.Core.CompilerServices
+
+    type Disposable<'Disposable when 'Disposable: (member Dispose: unit -> unit)> = 'Disposable
+
+    type Disposable =
+
+        /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+        [<NoEagerConstraintApplication>]
+        static member inline Dispose<'Disposable when Disposable<'Disposable>>(d: 'Disposable) =
+            d.Dispose()
+
+    [<AutoOpen>]
+    module LowerPriorityDisposable =
+        type Disposable with
+
+            /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+            static member inline Dispose(d: #IDisposable) = d.Dispose()
+
+    type Enumerator<'Enumerator, 'Element
+        when 'Enumerator: (member Current: 'Element)
+        and 'Enumerator: (member MoveNext: unit -> bool)> = 'Enumerator
+
+    type EnumeratorDisposable<'Enumerator, 'Element
+        when Enumerator<'Enumerator, 'Element> and Disposable<'Enumerator>> = 'Enumerator
+
+    type Enumerator =
+
+        /// <summary>Gets the element in the collection at the current position of the enumerator.</summary>
+        static member inline Current(e: #IEnumerator<'Element>) = e.Current
+
+        /// <summary>Advances the enumerator to the next element of the collection.</summary>
+        static member inline MoveNext(e: #IEnumerator<'Element>) =
+            let mutable e = e
+            e.MoveNext()
+
+    [<AutoOpen>]
+    module LowerPriorityEnumerator =
+
+        type Enumerator with
+
+
+            /// <summary>Gets the element in the collection at the current position of the enumerator.</summary>
+            [<NoEagerConstraintApplication>]
+            static member inline Current<'Enumerator, 'Element
+                when Enumerator<'Enumerator, 'Element>>
+                (e: 'Enumerator)
+                =
+                e.Current
+
+            /// <summary>Advances the enumerator to the next element of the collection.</summary>
+            [<NoEagerConstraintApplication>]
+            static member inline MoveNext<'Enumerator, 'Element
+                when Enumerator<'Enumerator, 'Element>>
+                (e: 'Enumerator)
+                =
+                e.MoveNext()
+
+
+    type Enumerable<'Enumerable, 'Enumerator, 'Element
+        when 'Enumerable: (member GetEnumerator: unit -> Enumerator<'Enumerator, 'Element>)> =
+        'Enumerable
+
+    type EnumerableDisposable<'Enumerable, 'Enumerator, 'Element
+        when 'Enumerable: (member GetEnumerator: unit -> EnumeratorDisposable<'Enumerator, 'Element>)>
+        = 'Enumerable
+
+    type Enumerable =
+
+        /// <summary>Returns an enumerator that iterates through a collection.</summary>
+        static member inline GetEnumerator(e: #IEnumerable<'Element>) = e.GetEnumerator()
+
+
+    [<AutoOpen>]
+    module LowerPriorityEnumerable =
+        open System.Collections.Generic
+
+        type Enumerable with
+
+            /// <summary>Returns an enumerator that iterates through a collection.</summary>
+            [<NoEagerConstraintApplication>]
+            static member inline GetEnumerator<'Enumerable, 'Enumerator, 'Element
+                when Enumerable<'Enumerable, 'Enumerator, 'Element>>
+                (e: 'Enumerable)
+                =
+                e.GetEnumerator()
+
+
+    type TestEnumBuilder() =
+        member inline _.Zero() = ()
+
+        member inline _.For(items: 'a seq, [<InlineIfLambda>] (body: 'a -> unit)) =
+            for i in items do
+                body i
+
+    [<AutoOpen>]
+    module TestEnumBuilderExtensions =
+        type TestEnumBuilder with
+
+            member inline _.For<'Enumerable, 'Enumerator, 'Element
+                when Enumerable<'Enumerable, 'Enumerator, 'Element>>
+                (
+                    items: 'Enumerable,
+                    [<InlineIfLambda>] (body: 'Element -> unit)
+                ) =
+                let e = Enumerable.GetEnumerator items
+
+                while Enumerator.MoveNext e do
+                    body (Enumerator.Current e)
+
+
+    [<AutoOpen>]
+    module TestEnumBuilderExtensions2 =
+        type TestEnumBuilder with
+
+            member inline _.For<'Enumerable, 'Enumerator, 'Element
+                when EnumerableDisposable<'Enumerable, 'Enumerator, 'Element>>
+                (
+                    items: 'Enumerable,
+                    [<InlineIfLambda>] (body: 'Element -> unit)
+                ) =
+
+                let e = Enumerable.GetEnumerator items
+
+                try
+                    while Enumerator.MoveNext e do
+                        body (Enumerator.Current e)
+                finally
+                    Disposable.Dispose e
+
+    let b = TestEnumBuilder()
+
+    [<Tests>]
+    let implicitEnumerableTests =
+        testList "Enumerable Test Builder" [
+            testCase "generic enumerable 1"
+            <| fun () ->
+                let mutable result = 0
+
+                b {
+                    for i in [ 1..10 ] do
+                        result <- i
+                }
+
+                Expect.equal result 10 "Should be 10"
+            testCase "generic enumerable 2"
+            <| fun () ->
+                let mutable result = 0
+
+                b {
+                    for i in ImplicitEnumerable(10) do
+                        result <- i
+                }
+
+                Expect.equal result 9 "Should be 9"
+
+            testCase "generic enumerable 3"
+            <| fun () ->
+                let mutable result = 0
+                let mutable disposed = false
+
+                b {
+                    for i in ImplicitEnumerableDisposable(10, (fun _ -> disposed <- true)) do
+
+                        Expect.isFalse disposed "Should not be disposed"
+                        result <- i
+                }
+
+                Expect.equal result 9 "Should be 9"
+                Expect.isTrue disposed "Should be disposed"
+        ]

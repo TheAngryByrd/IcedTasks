@@ -927,7 +927,7 @@ module CancellableTaskTests =
                         let doOtherStuff (l: ResizeArray<_>) x =
                             cancellableTask {
                                 l.Add(x)
-                                do! Task.Delay(15)
+                                do! Task.yieldMany 1000
                                 let dt = DateTimeOffset.UtcNow
                                 l.Add(x)
                                 return dt
