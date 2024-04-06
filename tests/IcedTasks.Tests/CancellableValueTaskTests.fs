@@ -963,10 +963,10 @@ module CancellableValueTaskTests =
 
                         let doOtherStuff (l: ResizeArray<_>) x =
                             cancellableValueTask {
-                                l.Add(x)
+                                lock l (fun () -> l.Add(x))
                                 do! Task.yieldMany 1000
                                 let dt = DateTimeOffset.UtcNow
-                                l.Add(x)
+                                lock l (fun () -> l.Add(x))
                                 return dt
                             }
 

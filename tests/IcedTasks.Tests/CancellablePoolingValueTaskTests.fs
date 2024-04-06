@@ -805,7 +805,7 @@ module CancellablePoolingValueTaskTests =
 
                             let! actual =
                                 cancellablePoolingValueTask {
-                                    for (i: int) in asyncSeq do
+                                    for i in asyncSeq do
                                         do! Task.Yield()
                                         index <- i + i
 
@@ -967,10 +967,10 @@ module CancellablePoolingValueTaskTests =
 
                         let doOtherStuff (l: ResizeArray<_>) x =
                             cancellablePoolingValueTask {
-                                l.Add(x)
+                                lock l (fun () -> l.Add(x))
                                 do! Task.yieldMany 1000
                                 let dt = DateTimeOffset.UtcNow
-                                l.Add(x)
+                                lock l (fun () -> l.Add(x))
                                 return dt
                             }
 
