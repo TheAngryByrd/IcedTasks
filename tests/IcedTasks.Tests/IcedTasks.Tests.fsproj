@@ -3,7 +3,6 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFrameworks>net8.0;net6.0</TargetFrameworks>
-    <TargetFrameworks>net8.0;net7.0;net6.0</TargetFrameworks>
     <GenerateProgramFile>false</GenerateProgramFile>
     <DefineConstants>$(DefineConstants);TEST_NET6_0_OR_GREATER</DefineConstants>
   </PropertyGroup>
