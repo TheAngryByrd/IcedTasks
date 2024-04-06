@@ -323,9 +323,9 @@ module CancellableTaskBase =
             [<NoEagerConstraintApplication>]
             member inline _.Source<'Awaitable, 'TResult1, 'Awaiter, 'TOverall
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
-                ([<InlineIfLambda>] task: CancellationToken -> 'Awaitable)
+                ([<InlineIfLambda>] cancellableAwaitable: CancellationToken -> 'Awaitable)
                 : CancellationToken -> 'Awaiter =
-                (fun ct -> Awaitable.GetAwaiter(task ct))
+                (fun ct -> Awaitable.GetAwaiter(cancellableAwaitable ct))
 
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
@@ -336,9 +336,9 @@ module CancellableTaskBase =
             [<NoEagerConstraintApplication>]
             member inline _.Source<'Awaitable, 'TResult1, 'Awaiter, 'TOverall
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
-                ([<InlineIfLambda>] task: unit -> 'Awaitable)
+                ([<InlineIfLambda>] coldAwaitable: unit -> 'Awaitable)
                 : CancellationToken -> 'Awaiter =
-                (fun ct -> Awaitable.GetAwaiter(task ()))
+                (fun ct -> Awaitable.GetAwaiter(coldAwaitable ()))
 
             /// <summary>
             /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
@@ -469,9 +469,9 @@ module CancellableTaskBase =
             [<NoEagerConstraintApplication>]
             member inline _.Source<'Awaitable, 'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
-                (task: 'Awaitable)
+                (awaitable: 'Awaitable)
                 : 'Awaiter =
-                Awaitable.GetAwaiter task
+                Awaitable.GetAwaiter awaitable
 
 
             /// <summary>Creates A CancellableTask that runs binder(resource).
@@ -502,7 +502,7 @@ module CancellableTaskBase =
             /// <remarks>This is the identify function for For binds.</remarks>
             ///
             /// <returns>IEnumerable</returns>
-            member inline _.Source(s: #seq<_>) : #seq<_> = s
+            member inline _.Source(items: #seq<_>) : #seq<_> = items
 
 
     /// <exclude/>
@@ -582,22 +582,23 @@ module CancellableTaskBase =
             /// <remarks>This is the identify function for For binds.</remarks>
             ///
             /// <returns>IEnumerable</returns>
-            member inline _.Source(s: #IAsyncEnumerable<_>) = s
+            member inline _.Source(asyncItems: #IAsyncEnumerable<_>) = asyncItems
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This turns a Task&lt;'T&gt; into a CancellationToken -> 'Awaiter.</remarks>
             ///
             /// <returns>'Awaiter</returns>
-            member inline _.Source(task: TaskAwaiter<'T>) : Awaiter<TaskAwaiter<'T>, 'T> = task
+            member inline _.Source(taskAwaiter: TaskAwaiter<'T>) : Awaiter<TaskAwaiter<'T>, 'T> =
+                taskAwaiter
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
             /// <remarks>This turns a Task&lt;'T&gt; into a CancellationToken -> 'Awaiter.</remarks>
             ///
             /// <returns>'Awaiter</returns>
-            member inline _.Source(task: Task<'T>) : Awaiter<TaskAwaiter<'T>, 'T> =
-                Awaitable.GetTaskAwaiter task
+            member inline _.Source(taskT: Task<'T>) : Awaiter<TaskAwaiter<'T>, 'T> =
+                Awaitable.GetTaskAwaiter taskT
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
@@ -605,9 +606,9 @@ module CancellableTaskBase =
             ///
             /// <returns>CancellationToken -> 'Awaiter</returns>
             member inline _.Source
-                ([<InlineIfLambda>] task: unit -> TaskAwaiter<'T>)
+                ([<InlineIfLambda>] coldTaskAwaiter: unit -> TaskAwaiter<'T>)
                 : CancellationToken -> Awaiter<TaskAwaiter<'T>, 'T> =
-                (fun (ct: CancellationToken) -> (task ()))
+                (fun (ct: CancellationToken) -> (coldTaskAwaiter ()))
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
@@ -615,9 +616,9 @@ module CancellableTaskBase =
             ///
             /// <returns>CancellationToken -> 'Awaiter</returns>
             member inline _.Source
-                ([<InlineIfLambda>] task: unit -> Task<'T>)
+                ([<InlineIfLambda>] coldTask: unit -> Task<'T>)
                 : CancellationToken -> Awaiter<TaskAwaiter<'T>, 'T> =
-                (fun (ct: CancellationToken) -> Awaitable.GetTaskAwaiter(task ()))
+                (fun (ct: CancellationToken) -> Awaitable.GetTaskAwaiter(coldTask ()))
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
@@ -625,9 +626,9 @@ module CancellableTaskBase =
             ///
             /// <returns>CancellationToken -> 'Awaiter</returns>
             member inline _.Source
-                ([<InlineIfLambda>] task: CancellationToken -> TaskAwaiter<'T>)
+                ([<InlineIfLambda>] cancellableTaskAwaiter: CancellationToken -> TaskAwaiter<'T>)
                 : CancellationToken -> Awaiter<TaskAwaiter<'T>, 'T> =
-                (fun ct -> (task ct))
+                (fun ct -> (cancellableTaskAwaiter ct))
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
@@ -635,9 +636,9 @@ module CancellableTaskBase =
             ///
             /// <returns>CancellationToken -> 'Awaiter</returns>
             member inline _.Source
-                ([<InlineIfLambda>] task: CancellationToken -> Task<'T>)
+                ([<InlineIfLambda>] cancellableTask: CancellationToken -> Task<'T>)
                 : CancellationToken -> Awaiter<TaskAwaiter<'T>, 'T> =
-                (fun ct -> Awaitable.GetTaskAwaiter(task ct))
+                (fun ct -> Awaitable.GetTaskAwaiter(cancellableTask ct))
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
@@ -645,9 +646,9 @@ module CancellableTaskBase =
             ///
             /// <returns>CancellationToken -> 'Awaiter</returns>
             member inline this.Source
-                (computation: Async<'T>)
+                (asyncComputation: Async<'T>)
                 : CancellationToken -> Awaiter<TaskAwaiter<'T>, 'T> =
-                this.Source(Async.AsCancellableTask(computation))
+                this.Source(Async.AsCancellableTask(asyncComputation))
 
 
             /// <summary>Creates A CancellableTask that runs computation. The action compensation is executed
