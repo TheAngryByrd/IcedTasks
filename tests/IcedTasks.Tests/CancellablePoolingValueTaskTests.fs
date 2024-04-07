@@ -977,6 +977,7 @@ module CancellablePoolingValueTaskTests =
                         // so we can see if they are sequenced or not
                         let fakeWork1 l =
                             cancellablePoolingValueTask {
+                                do! Task.Delay 15
                                 let! x = fakeWork 1 10000 l
                                 do! Task.Delay 15
                                 return x
