@@ -972,7 +972,13 @@ module CancellableValueTaskTests =
 
                         // Have earlier tasks take longer to complete
                         // so we can see if they are sequenced or not
-                        let fakeWork1 = fakeWork 1 10000
+                        let fakeWork1 l =
+                            cancellableValueTask {
+                                let! x = fakeWork 1 10000 l
+                                do! Task.Delay 15
+                                return x
+                            }
+
                         let fakeWork2 = fakeWork 2 750
                         let fakeWork3 = fakeWork 3 500
                         let fakeWork4 = fakeWork 4 250
