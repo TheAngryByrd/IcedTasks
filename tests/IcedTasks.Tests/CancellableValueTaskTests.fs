@@ -953,8 +953,8 @@ module CancellableValueTaskTests =
                     Expect.equal actual 6 ""
                 }
             ]
-
-            testList "MergeSourcesParallel" [
+            testSequencedGroup "MergeSourcesParallel - cancellableValueTask"
+            <| testList "MergeSourcesParallel" [
                 testPropertyWithConfig Expecto.fsCheckConfig "parallelism"
                 <| fun () ->
                     asyncEx {

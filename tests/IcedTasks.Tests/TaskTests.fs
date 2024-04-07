@@ -683,7 +683,8 @@ module TaskTests =
 
             ]
 
-            testList "MergeSourcesParallel" [
+            testSequencedGroup "MergeSourcesParallel - task"
+            <| testList "MergeSourcesParallel" [
                 testPropertyWithConfig Expecto.fsCheckConfig "parallelism"
                 <| fun () ->
                     asyncEx {

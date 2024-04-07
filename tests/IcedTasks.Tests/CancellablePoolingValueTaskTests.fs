@@ -956,8 +956,8 @@ module CancellablePoolingValueTaskTests =
                 }
 
             ]
-
-            testList "MergeSourcesParallel" [
+            testSequencedGroup "MergeSourcesParallel - cancellablePoolingValueTask"
+            <| testList "MergeSourcesParallel" [
                 testPropertyWithConfig Expecto.fsCheckConfig "parallelism"
                 <| fun () ->
                     asyncEx {

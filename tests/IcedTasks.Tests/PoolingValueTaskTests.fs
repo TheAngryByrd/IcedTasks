@@ -679,8 +679,8 @@ module PoolingValueTaskTests =
                 }
 
             ]
-
-            testList "MergeSourcesParallel" [
+            testSequencedGroup "MergeSourcesParallel - poolingValueTask"
+            <| testList "MergeSourcesParallel" [
                 testPropertyWithConfig Expecto.fsCheckConfig "parallelism"
                 <| fun () ->
                     asyncEx {
