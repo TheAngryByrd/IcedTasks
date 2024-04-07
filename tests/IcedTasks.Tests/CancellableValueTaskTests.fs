@@ -961,23 +961,32 @@ module CancellableValueTaskTests =
                         let sequencedList = ResizeArray<_>()
                         let parallelList = ResizeArray<_>()
 
-                        let doOtherStuff (l: ResizeArray<_>) x =
+                        let fakeWork id yieldTimes (l: ResizeArray<_>) =
                             cancellableValueTask {
-                                lock l (fun () -> l.Add(x))
-                                do! Task.yieldMany 1000
+                                lock l (fun () -> l.Add(id))
+                                do! Task.yieldMany yieldTimes
                                 let dt = DateTimeOffset.UtcNow
-                                lock l (fun () -> l.Add(x))
+                                lock l (fun () -> l.Add(id))
                                 return dt
                             }
 
+                        // Have earlier tasks take longer to complete
+                        // so we can see if they are sequenced or not
+                        let fakeWork1 = fakeWork 1 10000
+                        let fakeWork2 = fakeWork 2 750
+                        let fakeWork3 = fakeWork 3 500
+                        let fakeWork4 = fakeWork 4 250
+                        let fakeWork5 = fakeWork 5 100
+                        let fakeWork6 = fakeWork 6 1
+
                         let! sequenced =
                             cancellableValueTask {
-                                let! a = doOtherStuff sequencedList 1
-                                let! b = doOtherStuff sequencedList 2
-                                let! c = doOtherStuff sequencedList 3
-                                let! d = doOtherStuff sequencedList 4
-                                let! e = doOtherStuff sequencedList 5
-                                let! f = doOtherStuff sequencedList 6
+                                let! a = fakeWork1 sequencedList
+                                let! b = fakeWork2 sequencedList
+                                let! c = fakeWork3 sequencedList
+                                let! d = fakeWork4 sequencedList
+                                let! e = fakeWork5 sequencedList
+                                let! f = fakeWork6 sequencedList
 
                                 return [
                                     a
@@ -991,12 +1000,12 @@ module CancellableValueTaskTests =
 
                         let! paralleled =
                             cancellableValueTask {
-                                let! a = doOtherStuff parallelList 1
-                                and! b = doOtherStuff parallelList 2
-                                and! c = doOtherStuff parallelList 3
-                                and! d = doOtherStuff parallelList 4
-                                and! e = doOtherStuff parallelList 5
-                                and! f = doOtherStuff parallelList 6
+                                let! a = fakeWork1 parallelList
+                                and! b = fakeWork2 parallelList
+                                and! c = fakeWork3 parallelList
+                                and! d = fakeWork4 parallelList
+                                and! e = fakeWork5 parallelList
+                                and! f = fakeWork6 parallelList
 
                                 return [
                                     a
