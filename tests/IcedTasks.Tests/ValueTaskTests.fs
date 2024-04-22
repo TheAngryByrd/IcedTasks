@@ -701,14 +701,7 @@ module ValueTaskTests =
 
                         // Have earlier tasks take longer to complete
                         // so we can see if they are sequenced or not
-                        let fakeWork1 l =
-                            valueTask {
-                                do! Task.Delay 15
-                                let! x = fakeWork 1 10000 l
-                                do! Task.Delay 15
-                                return x
-                            }
-
+                        let fakeWork1 = fakeWork 1 10000
                         let fakeWork2 = fakeWork 2 750
                         let fakeWork3 = fakeWork 3 500
                         let fakeWork4 = fakeWork 4 250
@@ -734,8 +727,9 @@ module ValueTaskTests =
                                 ]
                             }
 
-                        let! paralleled =
+                        let executeParallel () =
                             valueTask {
+                                parallelList.Clear()
                                 let! a = fakeWork1 parallelList
                                 and! b = fakeWork2 parallelList
                                 and! c = fakeWork3 parallelList
@@ -757,7 +751,7 @@ module ValueTaskTests =
                             sequencedList
                             |> Seq.toList
 
-                        let parallelEntrances =
+                        let parallelEntrances () =
                             parallelList
                             |> Seq.toList
 
@@ -777,9 +771,19 @@ module ValueTaskTests =
                                 6
                             ]
 
-                        let parallelNotSequenced =
-                            parallelEntrances
-                            <> sequencedEntrances
+                        let! parallelNotSequenced =
+                            valueTask {
+                                let mutable result = false
+
+                                while not result do
+                                    let! _ = executeParallel ()
+
+                                    result <-
+                                        parallelEntrances ()
+                                        <> sequencedEntrances
+
+                                return result
+                            }
 
                         return
                             sequencedAlwaysOrdered
