@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.5] - 2024-04-22
+
+### Fixed
+- [Fix AsyncEx.AwaitTask cancellation](https://github.com/TheAngryByrd/IcedTasks/pull/46) - Credits @TheAngryByrd
+
 ## [0.11.4] - 2024-04-06
 
 ### Changed
@@ -301,7 +306,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Increased soeed and lowered memory usage of ColdTask and CancellableTask
 - Build for netstandard2.0 and netstandard2.1
 
-[Unreleased]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.4...HEAD
+[Unreleased]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.5...HEAD
+[0.11.5]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.4...v0.11.5
 [0.11.4]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.3...v0.11.4
 [0.11.3]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.2...v0.11.3
 [0.11.2]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.0...v0.11.2
