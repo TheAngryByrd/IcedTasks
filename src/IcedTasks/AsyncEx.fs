@@ -25,35 +25,27 @@ type AsyncEx =
     /// This is based on <see href="https://stackoverflow.com/a/66815960">How to use awaitable inside async?</see> and <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
     /// </remarks>
     static member inline AwaitAwaiter(awaiter: 'Awaiter) =
+        let inline handleFinished (onNext: 'a -> unit, onError: exn -> unit, awaiter) =
+            try
+                onNext (Awaiter.GetResult awaiter)
+            with
+            | :? AggregateException as ae when ae.InnerExceptions.Count = 1 ->
+                onError ae.InnerExceptions.[0]
+            | e ->
+                // Why not handle TaskCanceledException/OperationCanceledException?
+                // From https://github.com/dotnet/fsharp/blob/89e641108e8773e8d5731437a2b944510de52567/src/FSharp.Core/async.fs#L1228-L1231:
+                // A cancelled task calls the exception continuation with TaskCanceledException, since it may not represent cancellation of
+                // the overall async (they may be governed by different cancellation tokens, or
+                // the task may not have a cancellation token at all).
+                onError e
+
         Async.FromContinuations(fun (onNext, onError, onCancel) ->
             if Awaiter.IsCompleted awaiter then
-                try
-                    onNext (Awaiter.GetResult awaiter)
-                with
-                | :? TaskCanceledException as ce -> onCancel ce
-                | :? OperationCanceledException as ce -> onCancel ce
-                | :? AggregateException as ae ->
-                    if ae.InnerExceptions.Count = 1 then
-                        onError ae.InnerExceptions.[0]
-                    else
-                        onError ae
-                | e -> onError e
+                handleFinished (onNext, onError, awaiter)
             else
-                Awaiter.OnCompleted(
+                Awaiter.UnsafeOnCompleted(
                     awaiter,
-                    (fun () ->
-                        try
-                            onNext (Awaiter.GetResult awaiter)
-                        with
-                        | :? TaskCanceledException as ce -> onCancel ce
-                        | :? OperationCanceledException as ce -> onCancel ce
-                        | :? AggregateException as ae ->
-                            if ae.InnerExceptions.Count = 1 then
-                                onError ae.InnerExceptions.[0]
-                            else
-                                onError ae
-                        | e -> onError e
-                    )
+                    (fun () -> handleFinished (onNext, onError, awaiter))
                 )
         )
 
@@ -78,39 +70,7 @@ type AsyncEx =
     /// <remarks>
     /// This is based on <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
     /// </remarks>
-    static member AwaitTask(task: Task) : Async<unit> =
-        Async.FromContinuations(fun (onNext, onError, onCancel) ->
-            if task.IsCompleted then
-                if task.IsFaulted then
-                    let e = task.Exception
-
-                    if e.InnerExceptions.Count = 1 then
-                        onError e.InnerExceptions.[0]
-                    else
-                        onError e
-                elif task.IsCanceled then
-                    onCancel (TaskCanceledException(task))
-                else
-                    onNext ()
-            else
-                task.ContinueWith(
-                    (fun (task: Task) ->
-                        if task.IsFaulted then
-                            let e = task.Exception
-
-                            if e.InnerExceptions.Count = 1 then
-                                onError e.InnerExceptions.[0]
-                            else
-                                onError e
-                        elif task.IsCanceled then
-                            onCancel (TaskCanceledException(task))
-                        else
-                            onNext ()
-                    ),
-                    TaskContinuationOptions.ExecuteSynchronously
-                )
-                |> ignore
-        )
+    static member AwaitTask(task: Task) : Async<unit> = AsyncEx.AwaitAwaitable(task)
 
     /// <summary>
     /// Return an asynchronous computation that will wait for the given Task to complete and return
@@ -122,39 +82,7 @@ type AsyncEx =
     /// This is based on <see href="https://github.com/fsharp/fslang-suggestions/issues/840">Async.Await overload (esp. AwaitTask without throwing AggregateException)</see>
     /// </remarks>
     static member AwaitTask(task: Task<'T>) : Async<'T> =
-        Async.FromContinuations(fun (onNext, onError, onCancel) ->
-
-            if task.IsCompleted then
-                if task.IsFaulted then
-                    let e = task.Exception
-
-                    if e.InnerExceptions.Count = 1 then
-                        onError e.InnerExceptions.[0]
-                    else
-                        onError e
-                elif task.IsCanceled then
-                    onCancel (TaskCanceledException(task))
-                else
-                    onNext task.Result
-            else
-                task.ContinueWith(
-                    (fun (task: Task<'T>) ->
-                        if task.IsFaulted then
-                            let e = task.Exception
-
-                            if e.InnerExceptions.Count = 1 then
-                                onError e.InnerExceptions.[0]
-                            else
-                                onError e
-                        elif task.IsCanceled then
-                            onCancel (TaskCanceledException(task))
-                        else
-                            onNext task.Result
-                    ),
-                    TaskContinuationOptions.ExecuteSynchronously
-                )
-                |> ignore
-        )
+        AsyncEx.AwaitAwaiter(Awaitable.GetTaskAwaiter task)
 
 
     /// <summary>

@@ -811,7 +811,68 @@ module PolyfillTest =
                 let! result = outer
                 Expect.equal result () "Should return the data"
             }
+
+            let withCancellation (ct: CancellationToken) (a: Async<'a>) : Async<'a> =
+                async {
+                    let! ct2 = Async.CancellationToken
+                    use cts = CancellationTokenSource.CreateLinkedTokenSource(ct, ct2)
+                    let tcs = new TaskCompletionSource<'a>()
+
+                    use _reg =
+                        cts.Token.Register(fun () ->
+                            tcs.TrySetCanceled(cts.Token)
+                            |> ignore
+                        )
+
+                    let a =
+                        async {
+                            try
+                                let! a = a
+
+                                tcs.TrySetResult a
+                                |> ignore
+                            with ex ->
+                                tcs.TrySetException ex
+                                |> ignore
+                        }
+
+                    Async.Start(a, cts.Token)
+
+                    return!
+                        tcs.Task
+                        |> AsyncEx.AwaitTask
+                }
+
+            testCase "Don't cancel everything if one task cancels"
+            <| fun () ->
+                use cts = new CancellationTokenSource()
+                cts.CancelAfter(100)
+
+                let doWork i =
+                    asyncEx {
+                        try
+                            let! _ =
+                                Async.Sleep(100)
+                                |> withCancellation cts.Token
+
+                            ()
+                        with :? OperationCanceledException as e ->
+                            ()
+                    }
+
+                Seq.init
+                    (Environment.ProcessorCount
+                     * 2)
+                    doWork
+                |> Async.Parallel
+                |> Async.RunSynchronously
+                |> ignore
         ]
 
+
     [<Tests>]
-    let asyncExTests = testList "IcedTasks.Polyfill.Async" [ builderTests ]
+    let asyncExTests =
+        testList "IcedTasks.Polyfill.Async" [
+            builderTests
+
+        ]
