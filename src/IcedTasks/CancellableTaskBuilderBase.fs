@@ -741,13 +741,17 @@ module CancellableTaskBase =
                     source: #IAsyncEnumerable<'T>,
                     body: 'T -> CancellableTaskBaseCode<_, unit, 'Builder>
                 ) : CancellableTaskBaseCode<_, _, 'Builder> =
-
-                this.Using(
-                    source.GetAsyncEnumerator CancellationToken.None,
-                    (fun (e: IAsyncEnumerator<'T>) ->
-                        this.WhileAsync(
-                            (fun () -> Awaitable.GetAwaiter(e.MoveNextAsync())),
-                            (fun sm -> (body e.Current).Invoke(&sm))
+                this.Bind(
+                    this.Source((fun (ct: CancellationToken) -> ValueTask<_> ct)),
+                    (fun ct ->
+                        this.Using(
+                            source.GetAsyncEnumerator ct,
+                            (fun (e: IAsyncEnumerator<'T>) ->
+                                this.WhileAsync(
+                                    (fun () -> Awaitable.GetAwaiter(e.MoveNextAsync())),
+                                    (fun sm -> (body e.Current).Invoke(&sm))
+                                )
+                            )
                         )
                     )
                 )

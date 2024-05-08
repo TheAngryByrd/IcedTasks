@@ -812,6 +812,41 @@ module CancellableTaskTests =
                             }
                         )
                 }
+
+
+                testCaseAsync "IAsyncEnumerator receives CancellationToken"
+                <| async {
+
+                    do!
+                        cancellableTask {
+
+                            let mutable index = 0
+                            let loops = 10
+
+                            let asyncSeq =
+                                AsyncEnumerable.forXtoY
+                                    0
+                                    loops
+                                    (fun _ -> valueTaskUnit { do! Task.Yield() })
+
+                            use cts = new CancellationTokenSource()
+
+                            let actual =
+                                cancellableTask {
+                                    for (i: int) in asyncSeq do
+                                        do! Task.Yield()
+                                        index <- index + 1
+                                }
+
+                            do! actual cts.Token
+
+                            Expect.equal
+                                asyncSeq.LastEnumerator.Value.CancellationToken
+                                cts.Token
+                                ""
+                        }
+
+                }
             ]
             testList "MergeSources" [
 

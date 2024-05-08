@@ -171,23 +171,40 @@ module AsyncEnumerable =
     open System.Collections.Generic
     open System.Threading
 
+    type AsyncEnumerator<'T>(current, moveNext, dispose, cancellationToken: CancellationToken) =
+        member this.CancellationToken = cancellationToken
+
+        interface IAsyncEnumerator<'T> with
+            member this.Current = current ()
+            member this.MoveNextAsync() = moveNext ()
+            member this.DisposeAsync() = dispose ()
+
     type AsyncEnumerable<'T>(e: IEnumerable<'T>, beforeMoveNext: Func<_, ValueTask>) =
+
+        let mutable lastEnumerator = None
+        member this.LastEnumerator = lastEnumerator
 
         member this.GetAsyncEnumerator(ct) =
             let enumerator = e.GetEnumerator()
 
-            { new IAsyncEnumerator<'T> with
-                member this.Current = enumerator.Current
+            lastEnumerator <-
+                Some
+                <| AsyncEnumerator(
+                    (fun () -> enumerator.Current),
+                    (fun () ->
+                        valueTask {
+                            do! beforeMoveNext.Invoke(ct)
+                            return enumerator.MoveNext()
+                        }
+                    ),
+                    (fun () ->
+                        enumerator.Dispose()
+                        |> ValueTask
+                    ),
+                    ct
+                )
 
-                member this.MoveNextAsync() =
-                    valueTask {
-                        do! beforeMoveNext.Invoke(ct)
-                        return enumerator.MoveNext()
-                    }
-
-                member this.DisposeAsync() = valueTaskUnit { enumerator.Dispose() }
-
-            }
+            lastEnumerator.Value
 
         interface IAsyncEnumerable<'T> with
             member this.GetAsyncEnumerator(ct: CancellationToken) = this.GetAsyncEnumerator(ct)
