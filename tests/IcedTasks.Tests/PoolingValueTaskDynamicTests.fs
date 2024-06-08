@@ -9,6 +9,7 @@ open System.Threading.Tasks
 open IcedTasks
 open System.Collections.Generic
 
+
 module PoolingValueTaskDynamicTests =
     open System.Runtime.CompilerServices
     open System.Collections.Generic
@@ -611,7 +612,7 @@ module PoolingValueTaskDynamicTests =
                                 AsyncEnumerable.forXtoY
                                     0
                                     loops
-                                    (fun _ -> valueTaskUnit { do! Task.Yield() })
+                                    (cancellableValueTask { do! Task.Yield() })
 
                             let! actual =
                                 dPoolingValueTask {

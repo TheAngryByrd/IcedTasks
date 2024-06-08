@@ -609,7 +609,7 @@ module ValueTaskDynamicTests =
                                 AsyncEnumerable.forXtoY
                                     0
                                     loops
-                                    (fun _ -> valueTaskUnit { do! Task.Yield() })
+                                    (cancellableValueTask { do! Task.Yield() })
 
                             let! actual =
                                 dValueTask {

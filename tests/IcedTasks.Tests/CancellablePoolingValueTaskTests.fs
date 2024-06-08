@@ -2,6 +2,7 @@ namespace IcedTasks.Tests
 
 open System
 open Expecto
+open FSharp.Control
 open System.Threading
 open System.Threading.Tasks
 open IcedTasks
@@ -801,7 +802,7 @@ module CancellablePoolingValueTaskTests =
                                 AsyncEnumerable.forXtoY
                                     0
                                     loops
-                                    (fun _ -> valueTaskUnit { do! Task.Yield() })
+                                    (fun _ -> valueTask { do! Task.Yield() })
 
                             let! actual =
                                 cancellablePoolingValueTask {
@@ -832,7 +833,7 @@ module CancellablePoolingValueTaskTests =
                                     AsyncEnumerable.forXtoY
                                         0
                                         loops
-                                        (fun _ -> valueTaskUnit { do! Task.Yield() })
+                                        (fun _ -> valueTask { do! Task.Yield() })
 
                                 use cts = new CancellationTokenSource()
 
@@ -865,7 +866,7 @@ module CancellablePoolingValueTaskTests =
                                 AsyncEnumerable.forXtoY
                                     0
                                     loops
-                                    (fun _ -> valueTaskUnit { do! Task.Yield() })
+                                    (fun _ -> valueTask { do! Task.Yield() })
 
                             use cts = new CancellationTokenSource()
 
@@ -882,6 +883,41 @@ module CancellablePoolingValueTaskTests =
                                 asyncSeq.LastEnumerator.Value.CancellationToken
                                 cts.Token
                                 ""
+                        }
+                }
+                testCaseAsync "TaskSeq receives CancellationToken"
+                <| async {
+
+                    do!
+                        cancellablePoolingValueTask {
+
+                            let loops = 1
+
+                            let mutable CancellationToken = CancellationToken.None
+
+                            let asyncSeq =
+                                taskSeq {
+                                    for i in 0..loops do
+                                        do!
+                                            cancellablePoolingValueTask {
+                                                let! ct = CancellableTask.getCancellationToken ()
+                                                CancellationToken <- ct
+                                            }
+
+                                        yield ()
+                                }
+
+                            use cts = new CancellationTokenSource()
+
+                            let actual =
+                                cancellablePoolingValueTask {
+                                    for i in asyncSeq do
+                                        do! Task.Yield()
+                                }
+
+                            do! actual cts.Token
+
+                            Expect.equal CancellationToken cts.Token ""
                         }
                 }
             ]

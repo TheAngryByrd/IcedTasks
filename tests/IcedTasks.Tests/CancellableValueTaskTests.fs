@@ -6,6 +6,7 @@ open System.Threading
 open System.Threading.Tasks
 open IcedTasks
 open System.Collections.Generic
+open FSharp.Control
 
 module CancellableValueTaskTests =
     open TimeProviderExtensions
@@ -801,7 +802,7 @@ module CancellableValueTaskTests =
                                 AsyncEnumerable.forXtoY
                                     0
                                     loops
-                                    (fun _ -> valueTaskUnit { do! Task.Yield() })
+                                    (cancellableValueTask { do! Task.Yield() })
 
                             let! actual =
                                 cancellableValueTask {
@@ -831,7 +832,7 @@ module CancellableValueTaskTests =
                                     AsyncEnumerable.forXtoY
                                         0
                                         loops
-                                        (fun _ -> valueTaskUnit { do! Task.Yield() })
+                                        (cancellableValueTask { do! Task.Yield() })
 
                                 use cts = new CancellationTokenSource()
 
@@ -864,7 +865,7 @@ module CancellableValueTaskTests =
                                 AsyncEnumerable.forXtoY
                                     0
                                     loops
-                                    (fun _ -> valueTaskUnit { do! Task.Yield() })
+                                    (cancellableValueTask { do! Task.Yield() })
 
                             use cts = new CancellationTokenSource()
 
@@ -883,6 +884,46 @@ module CancellableValueTaskTests =
                                 ""
                         }
                 }
+
+#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
+                testCaseAsync "TaskSeq receives CancellationToken"
+                <| async {
+
+                    do!
+                        cancellableValueTask {
+
+                            let loops = 1
+
+                            let mutable CancellationToken = CancellationToken.None
+
+                            let asyncSeq =
+                                taskSeq {
+                                    for i in 0..loops do
+                                        do!
+                                            cancellableValueTask {
+                                                let! ct =
+                                                    CancellableValueTask.getCancellationToken ()
+
+                                                CancellationToken <- ct
+                                            }
+
+                                        yield ()
+                                }
+
+                            use cts = new CancellationTokenSource()
+
+                            let actual =
+                                cancellableValueTask {
+                                    for i in asyncSeq do
+                                        do! Task.Yield()
+                                }
+
+                            do! actual cts.Token
+
+                            Expect.equal CancellationToken cts.Token ""
+                        }
+                }
+#endif
 
             ]
 
