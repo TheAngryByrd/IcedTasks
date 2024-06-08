@@ -802,7 +802,7 @@ module CancellablePoolingValueTaskTests =
                                 AsyncEnumerable.forXtoY
                                     0
                                     loops
-                                    (cancellablePoolingValueTask { do! Task.Yield() })
+                                    (fun _ -> valueTask { do! Task.Yield() })
 
                             let! actual =
                                 cancellablePoolingValueTask {
@@ -833,7 +833,7 @@ module CancellablePoolingValueTaskTests =
                                     AsyncEnumerable.forXtoY
                                         0
                                         loops
-                                        (cancellablePoolingValueTask { do! Task.Yield() })
+                                        (fun _ -> valueTask { do! Task.Yield() })
 
                                 use cts = new CancellationTokenSource()
 
@@ -866,7 +866,7 @@ module CancellablePoolingValueTaskTests =
                                 AsyncEnumerable.forXtoY
                                     0
                                     loops
-                                    (cancellablePoolingValueTask { do! Task.Yield() })
+                                    (fun _ -> valueTask { do! Task.Yield() })
 
                             use cts = new CancellationTokenSource()
 
