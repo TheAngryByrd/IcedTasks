@@ -596,7 +596,7 @@ module PoolingValueTaskTests =
                                 AsyncEnumerable.forXtoY
                                     0
                                     loops
-                                    (fun _ -> valueTaskUnit { do! Task.Yield() })
+                                    (cancellableValueTask { do! Task.Yield() })
 
                             let! actual =
                                 poolingValueTask {

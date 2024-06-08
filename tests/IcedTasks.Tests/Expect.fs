@@ -179,7 +179,7 @@ module AsyncEnumerable =
             member this.MoveNextAsync() = moveNext ()
             member this.DisposeAsync() = dispose ()
 
-    type AsyncEnumerable<'T>(e: IEnumerable<'T>, beforeMoveNext: Func<_, ValueTask>) =
+    type AsyncEnumerable<'T>(e: IEnumerable<'T>, beforeMoveNext: Func<_, ValueTask<unit>>) =
 
         let mutable lastEnumerator = None
         member this.LastEnumerator = lastEnumerator
@@ -211,3 +211,64 @@ module AsyncEnumerable =
 
     let forXtoY<'T> x y beforeMoveNext =
         AsyncEnumerable([ x..y ], Func<_, _>(beforeMoveNext))
+
+#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER
+
+[<AutoOpen>]
+module AsyncEnumerableExtensions =
+    open FSharp.Control
+    open Microsoft.FSharp.Core.CompilerServices
+
+    type TaskSeqBuilder with
+
+        member inline _.Bind
+            (
+                [<InlineIfLambda>] task: CancellableTask<'T>,
+                continuation: ('T -> ResumableTSC<'U>)
+            ) =
+            ResumableTSC<'U>(fun sm ->
+                let mutable awaiter =
+                    task sm.Data.cancellationToken
+                    |> Awaitable.GetTaskAwaiter
+
+                let mutable __stack_fin = true
+
+                if not (Awaiter.IsCompleted awaiter) then
+                    let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
+                    __stack_fin <- __stack_yield_fin
+
+                if __stack_fin then
+                    let result = Awaiter.GetResult awaiter
+                    (continuation result).Invoke(&sm)
+                else
+                    sm.Data.awaiter <- awaiter
+                    sm.Data.current <- ValueNone
+                    false
+            )
+
+        member inline _.Bind
+            (
+                [<InlineIfLambda>] task: CancellableValueTask<'T>,
+                continuation: ('T -> ResumableTSC<'U>)
+            ) =
+            ResumableTSC<'U>(fun sm ->
+                let mutable awaiter =
+                    task sm.Data.cancellationToken
+                    |> Awaitable.GetAwaiter
+
+                let mutable __stack_fin = true
+
+                if not (Awaiter.IsCompleted awaiter) then
+                    let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
+                    __stack_fin <- __stack_yield_fin
+
+                if __stack_fin then
+                    let result = Awaiter.GetResult awaiter
+                    (continuation result).Invoke(&sm)
+                else
+                    sm.Data.awaiter <- awaiter
+                    sm.Data.current <- ValueNone
+                    false
+            )
+
+#endif

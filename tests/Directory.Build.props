@@ -3,5 +3,6 @@
     <PropertyGroup>
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
+        <NoWarn>$(NoWarn);FS0044</NoWarn> <!-- Suppress warning FS0044: TaskSeq deprecated something that's in the BCL and gives a dumb error -->
     </PropertyGroup>
 </Project>
