@@ -371,6 +371,95 @@ module CancellableTaskBase =
                     sm.ResumptionDynamicInfo.ResumptionFunc <- cont
                     false
 
+
+            /// <summary>
+            /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
+            /// </summary>
+            [<NoEagerConstraintApplication>]
+            static member inline internal BindDynamicNoCancellation
+                (
+                    sm:
+                        byref<ResumableStateMachine<CancellableTaskBaseStateMachineData<'TOverall, 'Builder>>>,
+                    awaiter: 'Awaiter,
+                    continuation:
+                        ('TResult1 -> CancellableTaskBaseCode<'TOverall, 'TResult2, 'Builder>)
+                ) : bool =
+                let mutable awaiter = awaiter
+
+                let cont =
+                    (CancellableTaskBaseResumptionFunc<'TOverall, 'Builder>(fun sm ->
+                        let result = Awaiter.GetResult awaiter
+                        (continuation result).Invoke(&sm)
+                    ))
+
+                // shortcut to continue immediately
+                if Awaiter.IsCompleted awaiter then
+                    cont.Invoke(&sm)
+                else
+                    sm.ResumptionDynamicInfo.ResumptionData <-
+                        (awaiter :> ICriticalNotifyCompletion)
+
+                    sm.ResumptionDynamicInfo.ResumptionFunc <- cont
+                    false
+
+
+            /// <summary>Creates A CancellableTask that runs computation, and when
+            /// computation generates a result T, runs binder res.</summary>
+            ///
+            /// <remarks>A cancellation check is performed when the computation is executed.
+            ///
+            /// The existence of this method permits the use of let! in the
+            /// cancellableTask { ... } computation expression syntax.</remarks>
+            ///
+            /// <param name="getAwaiter">The computation to provide an unbound result.</param>
+            /// <param name="continuation">The function to bind the result of computation.</param>
+            ///
+            /// <returns>A CancellableTask that performs a monadic bind on the result
+            /// of computation.</returns>
+            [<NoEagerConstraintApplication>]
+            member inline internal _.BindNoCancellation
+                (
+                    awaiter: 'Awaiter,
+                    continuation:
+                        ('TResult1 -> CancellableTaskBaseCode<'TOverall, 'TResult2, 'Builder>)
+                ) : CancellableTaskBaseCode<'TOverall, 'TResult2, 'Builder> =
+
+                CancellableTaskBaseCode<'TOverall, 'TResult2, 'Builder>(fun sm ->
+                    if __useResumableCode then
+                        //-- RESUMABLE CODE START
+                        // Get an awaiter from the Awaiter
+                        let mutable awaiter = awaiter
+
+                        let mutable __stack_fin = true
+
+                        if not (Awaiter.IsCompleted awaiter) then
+                            // This will yield with __stack_yield_fin = false
+                            // This will resume with __stack_yield_fin = true
+                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
+                            __stack_fin <- __stack_yield_fin
+
+                        if __stack_fin then
+                            let result = Awaiter.GetResult awaiter
+                            (continuation result).Invoke(&sm)
+                        else
+                            let mutable awaiter = awaiter :> ICriticalNotifyCompletion
+
+                            MethodBuilder.AwaitUnsafeOnCompleted(
+                                &sm.Data.MethodBuilder,
+                                &awaiter,
+                                &sm
+                            )
+
+                            false
+                    else
+                        CancellableTaskBuilderBase.BindDynamicNoCancellation(
+                            &sm,
+                            awaiter,
+                            continuation
+                        )
+                //-- RESUMABLE CODE END
+                )
+
             /// <summary>Creates A CancellableTask that runs computation, and when
             /// computation generates a result T, runs binder res.</summary>
             ///
@@ -673,7 +762,9 @@ module CancellableTaskBase =
                 ) : CancellableTaskBaseCode<'TOverall, 'T, 'Builder> =
                 ResumableCode.TryFinallyAsync(
                     computation,
-                    ResumableCode<_, _>(fun sm -> x.Bind((compensation ()), (x.Zero)).Invoke(&sm))
+                    ResumableCode<_, _>(fun sm ->
+                        x.BindNoCancellation((compensation ()), (x.Zero)).Invoke(&sm)
+                    )
                 )
 
 

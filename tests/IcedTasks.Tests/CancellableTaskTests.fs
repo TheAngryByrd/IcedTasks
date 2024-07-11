@@ -470,7 +470,7 @@ module CancellableTaskTests =
                 <| async {
                     let doDispose () =
                         task {
-                            do! Task.Yield()
+                            do! Task.Delay(15)
                             failwith "boom"
                         }
                         |> ValueTask
@@ -492,16 +492,18 @@ module CancellableTaskTests =
                 testCaseAsync "use IAsyncDisposable cancelled"
                 <| async {
                     let data = 42
-                    let mutable wasDisposed = TaskCompletionSource<bool>()
+                    let mutable wasDisposed = false
+
+                    let timeProvider = ManualTimeProvider()
 
                     let doDispose () =
                         task {
-                            do! Task.Yield()
-                            wasDisposed.SetResult true
+                            do! Task.Delay(15)
+
+                            wasDisposed <- true
                         }
                         |> ValueTask
 
-                    let timeProvider = ManualTimeProvider()
 
                     let actor data =
                         cancellableTask {
@@ -519,16 +521,19 @@ module CancellableTaskTests =
                         timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(100))
                         |> Async.AwaitTask
 
+                    Expect.isFalse wasDisposed ""
 
-                    let! _ =
+                    do!
+                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(100))
+                        |> Async.AwaitTask
+
+                    do!
                         Expect.CancellationRequested inProgress
                         |> Async.AwaitTask
 
-                    let! wasDisposed =
-                        wasDisposed.Task
-                        |> Async.AwaitTask
 
                     Expect.isTrue wasDisposed ""
+
                 }
 
 
@@ -540,7 +545,7 @@ module CancellableTaskTests =
                     let doDispose () =
                         task {
                             Expect.isFalse wasDisposed ""
-                            do! Task.Yield()
+                            do! Task.Delay(15)
                             wasDisposed <- true
                         }
                         |> ValueTask
@@ -565,7 +570,7 @@ module CancellableTaskTests =
                     let doDispose () =
                         task {
                             Expect.isFalse wasDisposed ""
-                            do! Task.Yield()
+                            do! Task.Delay(15)
                             wasDisposed <- true
                         }
                         |> ValueTask
