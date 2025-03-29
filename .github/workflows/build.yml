@@ -30,7 +30,7 @@ jobs:
           global-json-file: global.json
           dotnet-version: |
             8.x
-            6.x
+            9.x
       # Build on mac/linux
       - name: Build via Bash
         if: runner.os != 'Windows'
