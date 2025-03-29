@@ -1,8 +1,0 @@
-group Test
-FSharp.Core
-Expecto
-Expecto.FsCheck
-Microsoft.NET.Test.Sdk
-YoloDev.Expecto.TestSdk
-TimeProviderExtensions
-FSharp.Control.TaskSeq

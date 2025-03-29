@@ -10,11 +10,14 @@
         <!-- owners is not supported in MSBuild -->
         <OtherFlags>$(OtherFlags) --test:GraphBasedChecking --test:ParallelIlxGen --test:ParallelOptimization </OtherFlags>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-        <NoWarn>$(NoWarn);FS2003; NU1903; NU1904</NoWarn>
+        <NoWarn>$(NoWarn);FS2003; NU1903; NU1904; NU1504</NoWarn>
+        <NoWarn>$(NoWarn);FS0057</NoWarn> <!-- Suppress warning FS0057, Resumable code -->
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
        <!--
         * FS3517 InlineIfLambda didn't get inlined
         -->
         <!-- <WarnOn>$(WarnOn);3517</WarnOn> -->
+        
+        <DisableImplicitFSharpCoreReference>True</DisableImplicitFSharpCoreReference>
     </PropertyGroup>
 </Project>

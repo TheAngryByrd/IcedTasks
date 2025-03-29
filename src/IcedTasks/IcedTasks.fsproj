@@ -2,17 +2,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net6.0;netstandard2.1;netstandard2.0;</TargetFrameworks>
-    <LangVersion>preview</LangVersion>
-    <NoWarn>FS3513</NoWarn>
+    <!-- <LangVersion>preview</LangVersion> -->
+    <NoWarn>$(NoWarn);FS3513</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <Title>IcedTasks</Title>
     <Description>Adds ColdTask and CancellableTask computation expressions to F#</Description>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)'=='Release'">
-    <Optimize>true</Optimize>
-    <Tailcalls>true</Tailcalls>
-  </PropertyGroup>
+
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="TaskLike.fs" />
@@ -30,5 +27,9 @@
     <Compile Include="CancellablePoolingValueTask.fs" />
     <Compile Include="CancellableTask.fs" />
   </ItemGroup>
-  <Import Project="..\..\.paket\Paket.Restore.targets" />
+
+  <ItemGroup>
+    <PackageReference Include="FSharp.Core" />
+    <PackageReference Condition="'$(TargetFramework)' == 'netstandard2.0'" Include="Microsoft.Bcl.AsyncInterfaces" />
+  </ItemGroup>
 </Project>
