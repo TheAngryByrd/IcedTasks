@@ -134,10 +134,8 @@ module AsyncExtensions =
         /// <remarks> <see href="http://www.fssnip.net/ru/title/Async-workflow-with-asynchronous-finally-clause">See this F# gist</see></remarks>
         /// <returns>An async with the result of the computation.</returns>
         static member inline TryFinallyAsync
-            (
-                computation: Async<'T>,
-                compensation: Async<unit>
-            ) : Async<'T> =
+            (computation: Async<'T>, compensation: Async<unit>)
+            : Async<'T> =
 
             let finish (compResult, deferredResult) (onNext, (onError: exn -> unit), onCancel) =
                 match (compResult, deferredResult) with
@@ -201,20 +199,16 @@ type AsyncExBuilder() =
         async.Bind(computation, binder)
 
     member inline this.TryFinallyAsync
-        (
-            computation: Async<'ok>,
-            [<InlineIfLambda>] compensation: unit -> ValueTask
-        ) : Async<'ok> =
+        (computation: Async<'ok>, [<InlineIfLambda>] compensation: unit -> ValueTask)
+        : Async<'ok> =
 
         let compensation = this.Delay(fun () -> AsyncEx.AwaitValueTask(compensation ()))
 
         Async.TryFinallyAsync(computation, compensation)
 
     member inline this.Using
-        (
-            resource: #IAsyncDisposable,
-            [<InlineIfLambda>] (binder: 'c -> Async<'ok>)
-        ) =
+        (resource: #IAsyncDisposableNull, [<InlineIfLambda>] (binder: 'c -> Async<'ok>))
+        =
         this.TryFinallyAsync(
             binder resource,
             (fun () ->
@@ -236,10 +230,8 @@ type AsyncExBuilder() =
         }
 
     member inline this.For
-        (
-            sequence: IAsyncEnumerable<'e>,
-            [<InlineIfLambda>] body: 'e -> Async<unit>
-        ) =
+        (sequence: IAsyncEnumerable<'e>, [<InlineIfLambda>] body: 'e -> Async<unit>)
+        =
         this.Bind(
             Async.CancellationToken,
             fun (ct: CancellationToken) ->
@@ -269,17 +261,13 @@ type AsyncExBuilder() =
         async.Combine(computation1, computation2)
 
     member inline _.TryFinally
-        (
-            computation: Async<'a>,
-            [<InlineIfLambda>] (compensation: unit -> unit)
-        ) =
+        (computation: Async<'a>, [<InlineIfLambda>] (compensation: unit -> unit))
+        =
         async.TryFinally(computation, compensation)
 
     member inline _.TryWith
-        (
-            computation: Async<'a>,
-            [<InlineIfLambda>] (catchHandler: exn -> Async<'a>)
-        ) =
+        (computation: Async<'a>, [<InlineIfLambda>] (catchHandler: exn -> Async<'a>))
+        =
         async.TryWith(computation, catchHandler)
 
     member inline _.Source(async: Async<'a>) = async
@@ -293,7 +281,7 @@ module AsyncExExtensionsLowPriority =
 
         member inline _.Source(seq: #seq<_>) = seq
 
-        member inline _.Using(resource: #IDisposable, [<InlineIfLambda>] binder) =
+        member inline _.Using(resource: #IDisposableNull, [<InlineIfLambda>] binder) =
             async.Using(resource, binder)
 
         [<NoEagerConstraintApplication>]

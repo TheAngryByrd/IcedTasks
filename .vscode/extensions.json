@@ -3,7 +3,6 @@
         "ms-dotnettools.csharp",
         "Ionide.Ionide-fsharp",
         "tintoy.msbuild-project-tools",
-        "ionide.ionide-paket",
         "usernamehw.errorlens",
         "alefragnani.Bookmarks",
         "oderwat.indent-rainbow",

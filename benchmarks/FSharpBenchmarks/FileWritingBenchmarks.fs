@@ -34,10 +34,7 @@ type FileWriteBenchmarks() =
     [<BenchmarkCategory("ManyWriteFile", csharp, taskBuilder);
       Benchmark(Baseline = true, OperationsPerInvoke = manyIterationsConst)>]
     member x.CSharp_ManyWriteFile_TaskBuilder() =
-        TaskPerfCSharp
-            .ManyWriteFileAsync(x.manyIterations, x.bufferSize)
-            .GetAwaiter()
-            .GetResult()
+        TaskPerfCSharp.ManyWriteFileAsync(x.manyIterations, x.bufferSize).GetAwaiter().GetResult()
 
     [<BenchmarkCategory("ManyWriteFile", csharp, valueTaskBuilder);
       Benchmark(OperationsPerInvoke = manyIterationsConst)>]

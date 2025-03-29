@@ -10,8 +10,6 @@ open IcedTasks.Benchmarks
 let main argv =
 
     let summary =
-        BenchmarkSwitcher
-            .FromAssembly(typeof<SyncCompletionBenchmarks>.Assembly)
-            .Run(argv)
+        BenchmarkSwitcher.FromAssembly(typeof<SyncCompletionBenchmarks>.Assembly).Run(argv)
 
     0

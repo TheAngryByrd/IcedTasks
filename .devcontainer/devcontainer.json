@@ -23,8 +23,8 @@
         "ghcr.io/devcontainers-contrib/features/starship:1": {},
         // https://github.com/devcontainers/features/blob/main/src/dotnet/README.md
         "ghcr.io/devcontainers/features/dotnet:2": {
-            "version": "8.0",
-            "additionalVersions": "6.0"
+            "version": "9.0",
+            "additionalVersions": "8.0"
         }
     },
     "overrideFeatureInstallOrder": [
@@ -40,7 +40,6 @@
                 "ms-dotnettools.csharp",
                 "Ionide.Ionide-fsharp",
                 "tintoy.msbuild-project-tools",
-                "ionide.ionide-paket",
                 "usernamehw.errorlens",
                 "alefragnani.Bookmarks",
                 "oderwat.indent-rainbow",

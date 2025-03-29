@@ -1521,7 +1521,7 @@ module CancellableTaskTests =
             testList "whenAllThrottled" [
                 testCaseAsync "Simple"
                 <| async {
-                    let pauseTime = 15
+                    let pauseTime = 15.
                     let pauseTimeTS = TimeSpan.FromSeconds pauseTime
                     let maxDegreeOfParallelism = 3
                     let items = [ 1..100 ]
@@ -1584,7 +1584,7 @@ module CancellableTaskTests =
             testList "sequential" [
                 testCaseAsync "Simple"
                 <| async {
-                    let pauseTime = 15
+                    let pauseTime = 15.
                     let pauseTimeTS = TimeSpan.FromSeconds pauseTime
                     let maxDegreeOfParallelism = 1
                     let items = [ 1..100 ]

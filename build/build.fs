@@ -321,8 +321,6 @@ let clean _ =
     )
     |> Shell.cleanDirs
 
-    [ "paket-files/paket.restore.cached" ]
-    |> Seq.iter Shell.rm
 
 let dotnetRestore _ =
     [ sln ]
@@ -540,7 +538,7 @@ let gitRelease _ =
     Git.Staging.stageFile "" "CHANGELOG.md"
     |> ignore
 
-    !! "src/**/AssemblyInfo.fs"
+    !!"src/**/AssemblyInfo.fs"
     |> Seq.iter (
         Git.Staging.stageFile ""
         >> ignore

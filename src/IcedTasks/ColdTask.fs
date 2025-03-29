@@ -100,10 +100,8 @@ module ColdTasks =
         ///
         /// <returns>An ColdTask that runs both of the computations sequentially.</returns>
         member inline _.Combine
-            (
-                task1: ColdTaskCode<'TOverall, unit>,
-                task2: ColdTaskCode<'TOverall, 'T>
-            ) : ColdTaskCode<'TOverall, 'T> =
+            (task1: ColdTaskCode<'TOverall, unit>, task2: ColdTaskCode<'TOverall, 'T>)
+            : ColdTaskCode<'TOverall, 'T> =
             ResumableCode.Combine(task1, task2)
 
         /// <summary>Creates an ColdTask that runs computation repeatedly
@@ -120,10 +118,8 @@ module ColdTasks =
         ///
         /// <returns>An ColdTask that behaves similarly to a while loop when run.</returns>
         member inline _.While
-            (
-                guard: unit -> bool,
-                body: ColdTaskCode<'TOverall, unit>
-            ) : ColdTaskCode<'TOverall, unit> =
+            (guard: unit -> bool, body: ColdTaskCode<'TOverall, unit>)
+            : ColdTaskCode<'TOverall, unit> =
             ResumableCode.While(guard, body)
 
 
@@ -141,10 +137,8 @@ module ColdTasks =
         /// <returns>An ColdTask that executes computation and calls catchHandler if an
         /// exception is thrown.</returns>
         member inline _.TryWith
-            (
-                body: ColdTaskCode<'TOverall, 'T>,
-                catch: exn -> ColdTaskCode<'TOverall, 'T>
-            ) : ColdTaskCode<'TOverall, 'T> =
+            (body: ColdTaskCode<'TOverall, 'T>, catch: exn -> ColdTaskCode<'TOverall, 'T>)
+            : ColdTaskCode<'TOverall, 'T> =
             ResumableCode.TryWith(body, catch)
 
         /// <summary>Creates an ColdTask that runs computation. The action compensation is executed
@@ -163,10 +157,8 @@ module ColdTasks =
         /// <returns>An ColdTask that executes computation and compensation afterwards or
         /// when an exception is raised.</returns>
         member inline _.TryFinally
-            (
-                body: ColdTaskCode<'TOverall, 'T>,
-                compensation: unit -> unit
-            ) : ColdTaskCode<'TOverall, 'T> =
+            (body: ColdTaskCode<'TOverall, 'T>, compensation: unit -> unit)
+            : ColdTaskCode<'TOverall, 'T> =
             ResumableCode.TryFinally(
                 body,
                 ResumableCode<_, _>(fun _sm ->
@@ -190,10 +182,8 @@ module ColdTasks =
         /// <returns>An ColdTask that will enumerate the sequence and run body
         /// for each element.</returns>
         member inline _.For
-            (
-                sequence: seq<'T>,
-                body: 'T -> ColdTaskCode<'TOverall, unit>
-            ) : ColdTaskCode<'TOverall, unit> =
+            (sequence: seq<'T>, body: 'T -> ColdTaskCode<'TOverall, unit>)
+            : ColdTaskCode<'TOverall, unit> =
             ResumableCode.For(sequence, body)
 
         /// <summary>Creates an ColdTask that runs computation. The action compensation is executed
@@ -212,10 +202,8 @@ module ColdTasks =
         /// <returns>An ColdTask that executes computation and compensation afterwards or
         /// when an exception is raised.</returns>
         member inline internal this.TryFinallyAsync
-            (
-                body: ColdTaskCode<'TOverall, 'T>,
-                compensation: unit -> ValueTask
-            ) : ColdTaskCode<'TOverall, 'T> =
+            (body: ColdTaskCode<'TOverall, 'T>, compensation: unit -> ValueTask)
+            : ColdTaskCode<'TOverall, 'T> =
             ResumableCode.TryFinallyAsync(
                 body,
                 ResumableCode<_, _>(fun sm ->
@@ -271,10 +259,10 @@ module ColdTasks =
         ///
         /// <returns>An ColdTask that binds and eventually disposes resource.</returns>
         ///
-        member inline this.Using<'Resource, 'TOverall, 'T when 'Resource :> IAsyncDisposable>
+        member inline this.Using
             (
-                resource: 'Resource,
-                binder: 'Resource -> ColdTaskCode<'TOverall, 'T>
+                resource: #IAsyncDisposableNull,
+                binder: #IAsyncDisposableNull -> ColdTaskCode<'TOverall, 'T>
             ) : ColdTaskCode<'TOverall, 'T> =
             this.TryFinallyAsync(
                 (fun sm -> (binder resource).Invoke(&sm)),
@@ -317,13 +305,16 @@ module ColdTasks =
                             if step then
                                 sm.Data.MethodBuilder.SetResult(sm.Data.Result)
                             else
-                                let mutable awaiter =
-                                    sm.ResumptionDynamicInfo.ResumptionData
-                                    :?> ICriticalNotifyCompletion
-
-                                assert not (isNull awaiter)
-                                sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
-
+                                match sm.ResumptionDynamicInfo.ResumptionData with
+                                | :? ICriticalNotifyCompletion as awaiter ->
+                                    let mutable awaiter = awaiter
+                                    // assert not (isNull awaiter)
+                                    MethodBuilder.AwaitOnCompleted(
+                                        &sm.Data.MethodBuilder,
+                                        &awaiter,
+                                        &sm
+                                    )
+                                | awaiter -> assert not (isNull awaiter)
                         with exn ->
                             savedExn <- exn
                         // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
@@ -348,7 +339,7 @@ module ColdTasks =
                     (MoveNextMethodImpl<_>(fun sm ->
                         //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
-                        let mutable __stack_exn: Exception = null
+                        let mutable __stack_exn = null
 
                         try
                             let __stack_code_fin = code.Invoke(&sm)
@@ -565,10 +556,8 @@ module ColdTasks =
             [<NoEagerConstraintApplication>]
             member inline this.BindReturn<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
-                (
-                    getAwaiter: unit -> 'Awaiter,
-                    f
-                ) : ColdTaskCode<'TResult2, 'TResult2> =
+                (getAwaiter: unit -> 'Awaiter, f)
+                : ColdTaskCode<'TResult2, 'TResult2> =
                 this.Bind((fun () -> getAwaiter ()), (fun v -> this.Return(f v)))
 
 
@@ -636,11 +625,9 @@ module ColdTasks =
             ///
             /// <returns>An ColdTask that binds and eventually disposes resource.</returns>
             ///
-            member inline _.Using<'Resource, 'TOverall, 'T when 'Resource :> IDisposable>
-                (
-                    resource: 'Resource,
-                    body: 'Resource -> ColdTaskCode<'TOverall, 'T>
-                ) =
+            member inline _.Using
+                (resource: #IDisposableNull, body: #IDisposableNull -> ColdTaskCode<'TOverall, 'T>)
+                =
                 ResumableCode.Using(resource, body)
 
     /// <exclude />

@@ -5,4 +5,14 @@
         <IsTestProject>true</IsTestProject>
         <NoWarn>$(NoWarn);FS0044</NoWarn> <!-- Suppress warning FS0044: TaskSeq deprecated something that's in the BCL and gives a dumb error -->
     </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Expecto"/>
+        <PackageReference Include="Expecto.FsCheck" />
+        <PackageReference Include="Microsoft.Bcl.TimeProvider" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="YoloDev.Expecto.TestSdk" />
+        <PackageReference Include="TimeProviderExtensions"/>
+        <PackageReference Include="FSharp.Control.TaskSeq"/>
+    </ItemGroup>
 </Project>

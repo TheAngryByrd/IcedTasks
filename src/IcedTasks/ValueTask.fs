@@ -123,17 +123,16 @@ module ValueTasks =
                             if step then
                                 MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
                             else
-                                let mutable awaiter =
-                                    sm.ResumptionDynamicInfo.ResumptionData
-                                    :?> ICriticalNotifyCompletion
-
-                                assert not (isNull awaiter)
-
-                                MethodBuilder.AwaitUnsafeOnCompleted(
-                                    &sm.Data.MethodBuilder,
-                                    &awaiter,
-                                    &sm
-                                )
+                                match sm.ResumptionDynamicInfo.ResumptionData with
+                                | :? ICriticalNotifyCompletion as awaiter ->
+                                    let mutable awaiter = awaiter
+                                    // assert not (isNull awaiter)
+                                    MethodBuilder.AwaitOnCompleted(
+                                        &sm.Data.MethodBuilder,
+                                        &awaiter,
+                                        &sm
+                                    )
+                                | awaiter -> assert not (isNull awaiter)
 
                         with exn ->
                             savedExn <- exn
@@ -158,7 +157,7 @@ module ValueTasks =
                     (MoveNextMethodImpl<_>(fun sm ->
                         //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
-                        let mutable __stack_exn: Exception = null
+                        let mutable __stack_exn = null
 
                         try
                             let __stack_code_fin = code.Invoke(&sm)

@@ -1,0 +1,41 @@
+<Project>
+  <PropertyGroup>
+    <!-- Enable central package management, https://learn.microsoft.com/en-us/nuget/consume-packages/Central-Package-Management -->
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Main Package -->
+    <PackageVersion Include="FSharp.Core" Version="6.0.1"  NoWarn="NU1504"/>
+    <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="6.0.0"/>
+
+    <!-- Benchmarks -->
+    <PackageVersion Include="BenchmarkDotNet" Version="0.13.9"/>
+    <PackageVersion Include="Ply" Version="0.3.1"/>
+
+    <!-- Test -->
+    <PackageVersion Include="Expecto" Version="10.1.0" />
+    <PackageVersion Include="Expecto.FsCheck" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="8.0.0" />
+    <PackageVersion Include="TimeProviderExtensions" Version="1.0.0" />
+    <PackageVersion Include="YoloDev.Expecto.TestSdk" Version="0.14.2" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.7.2" />
+    <PackageVersion Include="FSharp.Control.TaskSeq" Version="0.4.0" />
+
+
+  <!-- Build -->
+  <PackageVersion Include="Fake.IO.FileSystem" Version="6.0.0" />
+  <PackageVersion Include="Fake.Core.Target" Version="6.0.0" />
+  <PackageVersion Include="Fake.Core.ReleaseNotes" Version="6.0.0" />
+  <PackageVersion Include="Fake.Core.Environment" Version="6.0.0" />
+  <PackageVersion Include="Fake.DotNet.Cli" Version="6.0.0" />
+  <PackageVersion Include="Fake.Core.Process" Version="6.0.0" />
+  <PackageVersion Include="Fake.DotNet.AssemblyInfoFile" Version="6.0.0" />
+  <PackageVersion Include="Fake.Tools.Git" Version="6.0.0" />
+  <PackageVersion Include="Fake.Api.GitHub" Version="6.0.0" />
+  <PackageVersion Include="Fake.BuildServer.GitHubActions" Version="6.0.0" />
+  <PackageVersion Include="Argu" Version="6.2.5" />
+  <PackageVersion Include="Octokit" Version="0.50.0" />
+  <PackageVersion Include="MSBuild.StructuredLogger" Version="2.2.243" />
+
+  </ItemGroup>
+</Project>

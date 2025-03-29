@@ -1208,8 +1208,8 @@ module CancellablePoolingValueTaskTests =
                                                 do!
                                                     cancellablePoolingValueTask {
                                                         let! ct =
-                                                            CancellableValueTask.getCancellationToken
-                                                                ()
+                                                            CancellableValueTask
+                                                                .getCancellationToken ()
 
                                                         do!
                                                             timeProvider.Delay(

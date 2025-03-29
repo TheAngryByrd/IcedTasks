@@ -2,7 +2,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>net8.0;net6.0;</TargetFrameworks>
+    <TargetFrameworks>net9.0;net8.0;</TargetFrameworks>
     <GenerateProgramFile>false</GenerateProgramFile>
     <DefineConstants>$(DefineConstants);NETSTANDARD2_1;TEST_NETSTANDARD2_1</DefineConstants>
   </PropertyGroup>
@@ -23,5 +23,5 @@
     <Compile Include="../IcedTasks.Tests/ParallelAsyncTests.fs" />
     <Compile Include="../IcedTasks.Tests/Main.fs" />
   </ItemGroup>
-  <Import Project="..\..\.paket\Paket.Restore.targets" />
+  
 </Project>
