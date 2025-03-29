@@ -1210,8 +1210,8 @@ module CancellableValueTaskTests =
                                                 do!
                                                     cancellableValueTask {
                                                         let! ct =
-                                                            CancellableValueTask.getCancellationToken
-                                                                ()
+                                                            CancellableValueTask
+                                                                .getCancellationToken ()
 
                                                         do!
                                                             timeProvider.Delay(

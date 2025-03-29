@@ -46,7 +46,11 @@ module Expecto =
         ]
 
         try
-            let envvar = (Environment.GetEnvironmentVariable varName).ToUpper()
+            let envvar =
+                Environment.GetEnvironmentVariable varName
+                |> ValueOption.ofObj
+                |> ValueOption.defaultValue ""
+                |> _.ToUpper()
 
             truthyConsts
             |> List.exists ((=) envvar)
@@ -222,10 +226,8 @@ module AsyncEnumerableExtensions =
     type TaskSeqBuilder with
 
         member inline _.Bind
-            (
-                [<InlineIfLambda>] task: CancellableTask<'T>,
-                continuation: ('T -> ResumableTSC<'U>)
-            ) =
+            ([<InlineIfLambda>] task: CancellableTask<'T>, continuation: ('T -> ResumableTSC<'U>))
+            =
             ResumableTSC<'U>(fun sm ->
                 let mutable awaiter =
                     task sm.Data.cancellationToken

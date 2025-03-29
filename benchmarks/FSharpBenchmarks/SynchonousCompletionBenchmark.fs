@@ -614,11 +614,7 @@ type SyncCompletionBenchmarks() =
         let mutable z = 0
 
         for i in 1 .. x.manyIterations do
-            z <-
-                TaskPerfCSharp
-                    .CSharp_TenBindsSync_TaskBuilder_BindTask()
-                    .GetAwaiter()
-                    .GetResult()
+            z <- TaskPerfCSharp.CSharp_TenBindsSync_TaskBuilder_BindTask().GetAwaiter().GetResult()
 
         z
 

@@ -150,10 +150,8 @@ module TaskBase =
         /// <returns>a Task that executes computation and compensation afterwards or
         /// when an exception is raised.</returns>
         member inline _.TryFinally
-            (
-                computation: TaskBaseCode<'TOverall, 'T, 'Builder>,
-                compensation: unit -> unit
-            ) : TaskBaseCode<'TOverall, 'T, 'Builder> =
+            (computation: TaskBaseCode<'TOverall, 'T, 'Builder>, compensation: unit -> unit)
+            : TaskBaseCode<'TOverall, 'T, 'Builder> =
             ResumableCode.TryFinally(
                 computation,
                 ResumableCode<_, _>(fun _ ->
@@ -252,10 +250,8 @@ module TaskBase =
 
         [<NoEagerConstraintApplication>]
         member inline this.BindReturn
-            (
-                awaiter: 'Awaiter,
-                [<InlineIfLambda>] mapper: 'a -> 'TResult
-            ) =
+            (awaiter: 'Awaiter, [<InlineIfLambda>] mapper: 'a -> 'TResult)
+            =
             this.Bind(awaiter, (fun v -> this.Return(mapper v)))
 
 
@@ -301,8 +297,8 @@ module TaskBase =
         ///
         member inline this.Using
             (
-                resource: #IAsyncDisposable,
-                binder: #IAsyncDisposable -> TaskBaseCode<'TOverall, 'T, 'Builder>
+                resource: #IAsyncDisposableNull,
+                binder: #IAsyncDisposableNull -> TaskBaseCode<'TOverall, 'T, 'Builder>
             ) : TaskBaseCode<'TOverall, 'T, 'Builder> =
             this.TryFinallyAsync(
                 (fun sm -> (binder resource).Invoke(&sm)),
@@ -315,10 +311,12 @@ module TaskBase =
             )
 
         member inline internal x.WhileAsync
-            (
-                [<InlineIfLambda>] condition: unit -> 'Awaitable,
-                body: TaskBaseCode<_, unit, 'Builder>
-            ) : TaskBaseCode<_, _, 'Builder> =
+            ([<InlineIfLambda>] condition: unit -> 'Awaitable, body: TaskBaseCode<_, unit, 'Builder>) : TaskBaseCode<
+                                                                                                            _,
+                                                                                                            _,
+                                                                                                            'Builder
+                                                                                                         >
+            =
             let mutable condition_res = true
 
             x.While(
@@ -341,10 +339,8 @@ module TaskBase =
             )
 
         member inline this.For
-            (
-                source: #IAsyncEnumerable<'T>,
-                body: 'T -> TaskBaseCode<_, unit, 'Builder>
-            ) : TaskBaseCode<_, _, 'Builder> =
+            (source: #IAsyncEnumerable<'T>, body: 'T -> TaskBaseCode<_, unit, 'Builder>)
+            : TaskBaseCode<_, _, 'Builder> =
 
             this.Using(
                 source.GetAsyncEnumerator CancellationToken.None,
@@ -371,10 +367,8 @@ module TaskBase =
         /// <returns>a Task that will enumerate the sequence and run body
         /// for each element.</returns>
         member inline _.For
-            (
-                sequence: seq<'T>,
-                body: 'T -> TaskBaseCode<'TOverall, unit, 'Builder>
-            ) : TaskBaseCode<'TOverall, unit, 'Builder> =
+            (sequence: seq<'T>, body: 'T -> TaskBaseCode<'TOverall, unit, 'Builder>)
+            : TaskBaseCode<'TOverall, unit, 'Builder> =
             ResumableCode.For(sequence, body)
 
 
@@ -428,8 +422,8 @@ module TaskBase =
             ///
             member inline _.Using
                 (
-                    resource: #IDisposable,
-                    binder: #IDisposable -> TaskBaseCode<'TOverall, 'T, 'Builder>
+                    resource: #IDisposableNull,
+                    binder: #IDisposableNull -> TaskBaseCode<'TOverall, 'T, 'Builder>
                 ) =
                 ResumableCode.Using(resource, binder)
 

@@ -119,10 +119,8 @@ module CancellableTaskBase =
         ///
         /// <returns>A CancellableTasks that behaves similarly to a while loop when run.</returns>
         member inline _.While
-            (
-                guard: unit -> bool,
-                computation: CancellableTaskBaseCode<'TOverall, unit, 'Builder>
-            ) : CancellableTaskBaseCode<'TOverall, unit, 'Builder> =
+            (guard: unit -> bool, computation: CancellableTaskBaseCode<'TOverall, unit, 'Builder>)
+            : CancellableTaskBaseCode<'TOverall, unit, 'Builder> =
             ResumableCode.While(guard, computation)
 
         /// <summary>Creates A CancellableTasks that runs computation and returns its result.
@@ -188,10 +186,8 @@ module CancellableTaskBase =
         /// <returns>A CancellableTask that will enumerate the sequence and run body
         /// for each element.</returns>
         member inline _.For
-            (
-                sequence: seq<'T>,
-                body: 'T -> CancellableTaskBaseCode<'TOverall, unit, 'Builder>
-            ) : CancellableTaskBaseCode<'TOverall, unit, 'Builder> =
+            (sequence: seq<'T>, body: 'T -> CancellableTaskBaseCode<'TOverall, unit, 'Builder>)
+            : CancellableTaskBaseCode<'TOverall, unit, 'Builder> =
             ResumableCode.For(sequence, body)
 
 
@@ -208,7 +204,11 @@ module CancellableTaskBase =
             static member inline BindDynamic
                 (
                     sm:
-                        byref<ResumableStateMachine<CancellableTaskBaseStateMachineData<'TOverall, 'Builder>>>,
+                        byref<
+                            ResumableStateMachine<
+                                CancellableTaskBaseStateMachineData<'TOverall, 'Builder>
+                             >
+                         >,
                     [<InlineIfLambda>] getAwaiter: CancellationToken -> 'Awaiter,
                     continuation:
                         ('TResult1 -> CancellableTaskBaseCode<'TOverall, 'TResult2, 'Builder>)
@@ -347,7 +347,11 @@ module CancellableTaskBase =
             static member inline BindDynamic
                 (
                     sm:
-                        byref<ResumableStateMachine<CancellableTaskBaseStateMachineData<'TOverall, 'Builder>>>,
+                        byref<
+                            ResumableStateMachine<
+                                CancellableTaskBaseStateMachineData<'TOverall, 'Builder>
+                             >
+                         >,
                     awaiter: 'Awaiter,
                     continuation:
                         ('TResult1 -> CancellableTaskBaseCode<'TOverall, 'TResult2, 'Builder>)
@@ -379,7 +383,11 @@ module CancellableTaskBase =
             static member inline internal BindDynamicNoCancellation
                 (
                     sm:
-                        byref<ResumableStateMachine<CancellableTaskBaseStateMachineData<'TOverall, 'Builder>>>,
+                        byref<
+                            ResumableStateMachine<
+                                CancellableTaskBaseStateMachineData<'TOverall, 'Builder>
+                             >
+                         >,
                     awaiter: 'Awaiter,
                     continuation:
                         ('TResult1 -> CancellableTaskBaseCode<'TOverall, 'TResult2, 'Builder>)
@@ -530,10 +538,8 @@ module CancellableTaskBase =
 
             [<NoEagerConstraintApplication>]
             member inline this.BindReturn
-                (
-                    awaiter: 'Awaiter,
-                    [<InlineIfLambda>] mapper: 'a -> 'TResult2
-                ) : CancellableTaskBaseCode<'TResult2, 'TResult2, 'Builder> =
+                (awaiter: 'Awaiter, [<InlineIfLambda>] mapper: 'a -> 'TResult2)
+                : CancellableTaskBaseCode<'TResult2, 'TResult2, 'Builder> =
                 this.Bind(awaiter = awaiter, continuation = (fun v -> this.Return(mapper v)))
 
 
@@ -580,8 +586,8 @@ module CancellableTaskBase =
             ///
             member inline _.Using
                 (
-                    resource: #IDisposable,
-                    binder: #IDisposable -> CancellableTaskBaseCode<'TOverall, 'T, 'Builder>
+                    resource: #IDisposableNull,
+                    binder: #IDisposableNull -> CancellableTaskBaseCode<'TOverall, 'T, 'Builder>
                 ) =
                 ResumableCode.Using(resource, binder)
 
@@ -785,8 +791,9 @@ module CancellableTaskBase =
             ///
             member inline this.Using
                 (
-                    resource: #IAsyncDisposable,
-                    binder: #IAsyncDisposable -> CancellableTaskBaseCode<'TOverall, 'T, 'Builder>
+                    resource: #IAsyncDisposableNull,
+                    binder:
+                        #IAsyncDisposableNull -> CancellableTaskBaseCode<'TOverall, 'T, 'Builder>
                 ) : CancellableTaskBaseCode<'TOverall, 'T, 'Builder> =
                 this.TryFinallyAsync(
                     (fun sm -> (binder resource).Invoke(&sm)),

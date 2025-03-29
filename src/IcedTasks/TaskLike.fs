@@ -36,19 +36,15 @@ type Awaiter =
     /// Schedules the continuation action that's invoked when the instance completes
     static member inline OnCompleted<'Awaiter, 'TResult, 'Continuation
         when Awaiter<'Awaiter, 'TResult>>
-        (
-            awaiter: 'Awaiter,
-            continuation: System.Action
-        ) =
+        (awaiter: 'Awaiter, continuation: System.Action)
+        =
         awaiter.OnCompleted(continuation)
 
     /// Schedules the continuation action that's invoked when the instance completes.
     static member inline UnsafeOnCompleted<'Awaiter, 'TResult, 'Continuation
         when Awaiter<'Awaiter, 'TResult>>
-        (
-            awaiter: 'Awaiter,
-            continuation: System.Action
-        ) =
+        (awaiter: 'Awaiter, continuation: System.Action)
+        =
         awaiter.UnsafeOnCompleted(continuation)
 
 /// A structure looks like an Awaitable
@@ -83,19 +79,15 @@ type MethodBuilder =
     /// <param name="result">The result to use to complete the task.</param>
     static member inline SetResult<'Builder, 'TResult
         when 'Builder: (member SetResult: 'TResult -> unit)>
-        (
-            builder: byref<'Builder>,
-            result: 'TResult
-        ) =
+        (builder: byref<'Builder>, result: 'TResult)
+        =
         builder.SetResult(result)
 
     /// <summary>Marks the task as failed and binds the specified exception to the task.</summary>
     /// <param name="ex">The exception to bind to the task.</param>
     static member inline SetException<'Builder when 'Builder: (member SetException: exn -> unit)>
-        (
-            builder: byref<'Builder>,
-            ex: exn
-        ) =
+        (builder: byref<'Builder>, ex: exn)
+        =
         builder.SetException(ex)
 
     /// <summary>Associates the builder with the specified state machine.</summary>
@@ -103,10 +95,8 @@ type MethodBuilder =
     ///
     static member inline SetStateMachine<'Builder, 'TStateMachine
         when 'Builder: (member SetStateMachine: 'TStateMachine -> unit)>
-        (
-            builder: byref<'Builder>,
-            stateMachine: 'TStateMachine
-        ) =
+        (builder: byref<'Builder>, stateMachine: 'TStateMachine)
+        =
         builder.SetStateMachine(stateMachine)
 
     /// <summary>Begins running the builder with the associated state machine.</summary>
@@ -114,10 +104,8 @@ type MethodBuilder =
     /// <typeparam name="TStateMachine">The type of the state machine.</typeparam>
     static member inline Start<'Builder, 'TStateMachine
         when 'Builder: (member Start: byref<'TStateMachine> -> unit)>
-        (
-            builder: byref<'Builder>,
-            stateMachine: byref<'TStateMachine>
-        ) =
+        (builder: byref<'Builder>, stateMachine: byref<'TStateMachine>)
+        =
         builder.Start(&stateMachine)
 
     /// <summary>Gets the task for this builder.</summary>
@@ -138,11 +126,8 @@ type MethodBuilder =
             byref<'TAwaiter> * byref<'TStateMachine> -> unit)
         and 'TAwaiter :> ICriticalNotifyCompletion
         and 'TStateMachine :> IAsyncStateMachine>
-        (
-            builder: byref<'Builder>,
-            awaiter: byref<'TAwaiter>,
-            stateMachine: byref<'TStateMachine>
-        ) =
+        (builder: byref<'Builder>, awaiter: byref<'TAwaiter>, stateMachine: byref<'TStateMachine>)
+        =
         builder.AwaitUnsafeOnCompleted(&awaiter, &stateMachine)
 
 
@@ -155,9 +140,6 @@ type MethodBuilder =
         when 'Builder: (member AwaitOnCompleted: byref<'TAwaiter> * byref<'TStateMachine> -> unit)
         and 'TAwaiter :> INotifyCompletion
         and 'TStateMachine :> IAsyncStateMachine>
-        (
-            builder: byref<'Builder>,
-            awaiter: byref<'TAwaiter>,
-            stateMachine: byref<'TStateMachine>
-        ) =
+        (builder: byref<'Builder>, awaiter: byref<'TAwaiter>, stateMachine: byref<'TStateMachine>)
+        =
         builder.AwaitOnCompleted(&awaiter, &stateMachine)
