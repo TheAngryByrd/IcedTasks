@@ -58,12 +58,8 @@ module TasksUnit =
                             let step = info.ResumptionFunc.Invoke(&sm)
 
                             if step then
-#if DEBUG
-                                sm.Data.MethodBuilder.SetResult()
-#else
-                                // SRTP fails here for some reason in debug mode
                                 MethodBuilder.SetResult(&sm.Data.MethodBuilder)
-#endif
+
                             else
                                 match sm.ResumptionDynamicInfo.ResumptionData with
                                 | :? ICriticalNotifyCompletion as awaiter ->
@@ -105,12 +101,8 @@ module TasksUnit =
                             let __stack_code_fin = code.Invoke(&sm)
 
                             if __stack_code_fin then
-#if DEBUG
-                                sm.Data.MethodBuilder.SetResult()
-#else
-                                // SRTP fails here for some reason in debug mode
                                 MethodBuilder.SetResult(&sm.Data.MethodBuilder)
-#endif
+
                         with exn ->
                             __stack_exn <- exn
                         // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
@@ -179,12 +171,8 @@ module TasksUnit =
                             let __stack_code_fin = code.Invoke(&sm)
 
                             if __stack_code_fin then
-#if DEBUG
-                                sm.Data.MethodBuilder.SetResult()
-#else
-                                // SRTP fails here for some reason in debug mode
                                 MethodBuilder.SetResult(&sm.Data.MethodBuilder)
-#endif
+
                         with exn ->
                             __stack_exn <- exn
                         // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
