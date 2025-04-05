@@ -114,7 +114,7 @@ type ParallelAsyncBuilderUsingStartImmediateAsTask() =
         ParallelAsync.zipUsingStartImmediateAsTask t1 t2
 
 /// Contains the different parallelAsync type builders.
-[<AutoOpen>]
+
 module ParallelAsyncs =
     /// <summary>
     /// Async computation expression which allows for parallel execution of asyncs with the applicative (and!) syntax.  This uses <see cref='M:Microsoft.FSharp.Control.FSharpAsync.StartChild``1'/> to start async computations in parallel.

@@ -15,7 +15,6 @@ namespace IcedTasks
 namespace IcedTasks
 
 /// Contains methods to build ValueTasks using the F# computation expression syntax
-[<AutoOpen>]
 module ValueTasksUnit =
     open System
     open System.Runtime.CompilerServices
@@ -24,6 +23,7 @@ module ValueTasksUnit =
     open Microsoft.FSharp.Core.CompilerServices
     open Microsoft.FSharp.Core.CompilerServices.StateMachineHelpers
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
+    open IcedTasks.TaskBase
 
     ///<summary>
     /// Contains methods to build ValueTasks using the F# computation expression syntax
@@ -149,7 +149,6 @@ module ValueTasksUnit =
             )
 
     /// Contains the valueTask computation expression builder.
-    [<AutoOpen>]
     module ValueTaskBuilder =
 
         /// <summary>

@@ -14,7 +14,6 @@ namespace IcedTasks
 namespace IcedTasks
 
 /// Contains methods to build Tasks using the F# computation expression syntax
-[<AutoOpen>]
 module TasksUnit =
     open System
     open System.Runtime.CompilerServices
@@ -24,6 +23,7 @@ module TasksUnit =
     open Microsoft.FSharp.Core.CompilerServices
     open Microsoft.FSharp.Core.CompilerServices.StateMachineHelpers
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
+    open IcedTasks.TaskBase
 
     ///<summary>
     /// Contains methods to build Tasks using the F# computation expression syntax
@@ -238,7 +238,6 @@ module TasksUnit =
             )
 
     /// Contains the taskUnit computation expression builder.
-    [<AutoOpen>]
     module TaskUnitBuilder =
 
         /// <summary>

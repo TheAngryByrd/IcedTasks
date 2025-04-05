@@ -8,13 +8,16 @@
         <Authors>TheAngryByrd</Authors>
         <RepositoryUrl>https://github.com/TheAngryByrd/IcedTasks</RepositoryUrl>
         <!-- owners is not supported in MSBuild -->
-        <OtherFlags>$(OtherFlags) --test:GraphBasedChecking --test:ParallelIlxGen --test:ParallelOptimization </OtherFlags>
+        <OtherFlags>$(OtherFlags) --test:GraphBasedChecking --test:ParallelIlxGen --test:ParallelOptimization --test:DumpCheckingGraph</OtherFlags>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
         <NoWarn>$(NoWarn);FS2003; NU1903; NU1904</NoWarn>
+        <NoWarn>$(NoWarn);FS0075</NoWarn> <!-- The command-line option 'times' is for test purposes only  -->
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
        <!--
         * FS3517 InlineIfLambda didn't get inlined
         -->
         <!-- <WarnOn>$(WarnOn);3517</WarnOn> -->
+
+        <PaketPropsVersion>6.0.0</PaketPropsVersion>
     </PropertyGroup>
 </Project>

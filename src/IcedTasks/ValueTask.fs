@@ -7,7 +7,6 @@ open System.Threading.Tasks
 /// <summary>
 /// Module with extension methods for <see cref="T:System.Threading.Tasks.ValueTask`1"/>.
 /// </summary>
-[<AutoOpen>]
 module ValueTaskExtensions =
 
     type ValueTask with
@@ -78,7 +77,6 @@ module ValueTaskExtensions =
 namespace IcedTasks
 
 /// Contains methods to build ValueTasks using the F# computation expression syntax
-[<AutoOpen>]
 module ValueTasks =
     open System
     open System.Runtime.CompilerServices
@@ -87,6 +85,7 @@ module ValueTasks =
     open Microsoft.FSharp.Core.CompilerServices
     open Microsoft.FSharp.Core.CompilerServices.StateMachineHelpers
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
+    open IcedTasks.TaskBase
 
     ///<summary>
     /// Contains methods to build ValueTasks using the F# computation expression syntax
@@ -198,7 +197,6 @@ module ValueTasks =
             )
 
     /// Contains the valueTask computation expression builder.
-    [<AutoOpen>]
     module ValueTaskBuilder =
 
         /// <summary>
@@ -215,6 +213,8 @@ module ValueTasks =
     /// Contains a set of standard functional helper function
     [<RequireQualifiedAccess>]
     module ValueTask =
+        open ValueTaskBuilder
+        open LowPriority
 
         /// <summary>Lifts an item to a ValueTask.</summary>
         /// <param name="item">The item to be the result of the ValueTask.</param>

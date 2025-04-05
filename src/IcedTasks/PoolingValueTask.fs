@@ -16,7 +16,6 @@ namespace IcedTasks
 namespace IcedTasks
 
 /// Contains methods to build PoolingValueTasks using the F# computation expression syntax
-[<AutoOpen>]
 module PoolingValueTasks =
     open System
     open System.Runtime.CompilerServices
@@ -25,6 +24,7 @@ module PoolingValueTasks =
     open Microsoft.FSharp.Core.CompilerServices
     open Microsoft.FSharp.Core.CompilerServices.StateMachineHelpers
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
+    open IcedTasks.TaskBase
 
     ///<summary>
     /// Contains methods to build PoolingValueTasks using the F# computation expression syntax
@@ -138,8 +138,8 @@ module PoolingValueTasks =
 
 
     /// Contains the poolingValueTask computation expression builder.
-    [<AutoOpen>]
     module ValueTaskBuilder =
+        open LowPriority
 
         /// <summary>
         /// Builds a poolingValueTask using computation expression syntax.

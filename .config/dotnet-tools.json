@@ -6,25 +6,36 @@
       "version": "8.0.3",
       "commands": [
         "paket"
-      ]
+      ],
+      "rollForward": false
     },
     "fsharp-analyzers": {
       "version": "0.11.0",
       "commands": [
         "fsharp-analyzers"
-      ]
+      ],
+      "rollForward": false
     },
     "fantomas": {
       "version": "6.2.0",
       "commands": [
         "fantomas"
-      ]
+      ],
+      "rollForward": false
     },
     "fsdocs-tool": {
       "version": "20.0.0-alpha-018",
       "commands": [
         "fsdocs"
-      ]
+      ],
+      "rollForward": false
+    },
+    "telplin": {
+      "version": "0.10.0",
+      "commands": [
+        "telplin"
+      ],
+      "rollForward": false
     }
   }
 }

@@ -120,7 +120,6 @@ type AsyncEx =
 
 
 /// <exclude/>
-[<AutoOpen>]
 module AsyncExtensions =
 
     type Microsoft.FSharp.Control.Async with
@@ -175,6 +174,7 @@ module AsyncExtensions =
                 return! Async.FromContinuations(startComp ct)
             }
 
+open AsyncExtensions
 
 /// <summary>Builds an asynchronous workflow using computation expression syntax.</summary>
 /// <remarks>
@@ -285,7 +285,6 @@ type AsyncExBuilder() =
     member inline _.Source(async: Async<'a>) = async
 
 /// <exclude/>
-[<AutoOpen>]
 module AsyncExExtensionsLowPriority =
     open FSharp.Core.CompilerServices
 
@@ -326,7 +325,6 @@ module AsyncExExtensionsLowPriority =
     let asyncEx = new AsyncExBuilder()
 
 /// <exclude/>
-[<AutoOpen>]
 module AsyncExExtensionsHighPriority =
 
     type AsyncExBuilder with
@@ -344,7 +342,6 @@ module AsyncExExtensionsHighPriority =
         member inline _.Source(vtask: ValueTask<_>) = AsyncEx.AwaitValueTask vtask
 
         member inline _.Source(vtask: ValueTask) = AsyncEx.AwaitValueTask vtask
-
 namespace IcedTasks.Polyfill.Async
 
 /// <namespacedoc>
@@ -352,9 +349,10 @@ namespace IcedTasks.Polyfill.Async
 ///     Namespace contains polyfills for <see cref='T:IcedTasks.AsyncExBuilder'/>. This will  <a href="https://en.wikipedia.org/wiki/Variable_shadowing">shadow</a> the <c>async {...}</c> builder with the version in IcedTasks.
 ///     </summary>
 /// </namespacedoc>
-[<AutoOpen>]
+[<AutoOpen>] // We can't use AutoOpen in Opens.fs because it will _always_ open this namespace rather than only AutoOpen this module when someone opens the PolyFill namespace
 module PolyfillBuilders =
     open IcedTasks
+    open IcedTasks.AsyncExExtensionsLowPriority
 
     /// <summary>
     /// Builds an asynchronous workflow using computation expression syntax.

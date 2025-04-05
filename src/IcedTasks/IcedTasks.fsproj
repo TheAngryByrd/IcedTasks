@@ -29,6 +29,8 @@
     <Compile Include="CancellableValueTask.fs" />
     <Compile Include="CancellablePoolingValueTask.fs" />
     <Compile Include="CancellableTask.fs" />
+    <Compile Include="Opens.fs" />
+   
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

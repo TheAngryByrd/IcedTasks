@@ -12,7 +12,6 @@
 namespace IcedTasks
 
 /// Contains methods to build ColdTasks using the F# computation expression syntax
-[<AutoOpen>]
 module ColdTasks =
     open System
     open System.Runtime.CompilerServices
@@ -448,7 +447,6 @@ module ColdTasks =
                 BackgroundColdTaskBuilder.RunDynamic(code)
 
     /// Contains the coldTasks computation expression builder.
-    [<AutoOpen>]
     module ColdTaskBuilder =
 
         /// <summary>
@@ -461,8 +459,8 @@ module ColdTasks =
         /// </summary>
         let backgroundColdTask = BackgroundColdTaskBuilder()
 
+
     /// <exclude />
-    [<AutoOpen>]
     module LowPriority =
         // Low priority extensions
         type ColdTaskBuilderBase with
@@ -644,7 +642,6 @@ module ColdTasks =
                 ResumableCode.Using(resource, body)
 
     /// <exclude />
-    [<AutoOpen>]
     module HighPriority =
         // High priority extensions
 
@@ -730,9 +727,8 @@ module ColdTasks =
     /// <summary>
     /// A set of extension methods making it possible to bind against <see cref='T:IcedTasks.ColdTasks.ColdTask`1'/> in async computations.
     /// </summary>
-    [<AutoOpen>]
     module AsyncExtensions =
-
+        open HighPriority
 
         type AsyncExBuilder with
 
@@ -775,6 +771,9 @@ module ColdTasks =
     /// Contains a set of standard functional helper function
     [<RequireQualifiedAccess>]
     module ColdTask =
+        open ColdTaskBuilder
+        open LowPriority
+        open HighPriority
 
         /// <summary>Lifts an item to a ColdTask.</summary>
         /// <param name="item">The item to be the result of the ColdTask.</param>
@@ -867,8 +866,10 @@ module ColdTasks =
             fun () -> (ctask ()).GetAwaiter()
 
     /// <exclude />
-    [<AutoOpen>]
     module MergeSourcesExtensions =
+        open ColdTaskBuilder
+        open LowPriority
+        open HighPriority
 
         type ColdTaskBuilderBase with
 

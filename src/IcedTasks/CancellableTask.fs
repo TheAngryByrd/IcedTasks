@@ -13,7 +13,6 @@ namespace IcedTasks
 
 
 /// Contains methods to build CancellableTasks using the F# computation expression syntax
-[<AutoOpen>]
 module CancellableTasks =
 
     open System
@@ -25,6 +24,9 @@ module CancellableTasks =
     open Microsoft.FSharp.Core.CompilerServices.StateMachineHelpers
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
     open Microsoft.FSharp.Collections
+    open CancellableTaskBase
+    open CancellableTaskBase.LowPriority
+    open CancellableTaskBase.HighPriority
 
     /// CancellationToken -> Task<'T>
     type CancellableTask<'T> = CancellationToken -> Task<'T>
@@ -319,7 +321,6 @@ module CancellableTasks =
                 BackgroundCancellableTaskBuilder.RunDynamic(code)
 
     /// Contains the cancellableTask computation expression builder.
-    [<AutoOpen>]
     module CancellableTaskBuilder =
 
         /// <summary>
@@ -336,7 +337,6 @@ module CancellableTasks =
     /// <summary>
     /// A set of extension methods making it possible to bind against <see cref='T:IcedTasks.CancellableTasks.CancellableTask`1'/> in async computations.
     /// </summary>
-    [<AutoOpen>]
     module AsyncExtensions =
 
         type AsyncExBuilder with
@@ -378,6 +378,7 @@ module CancellableTasks =
 
     [<RequireQualifiedAccess>]
     module CancellableTask =
+        open CancellableTaskBuilder
 
         /// <summary>Gets the default cancellation token for executing computations.</summary>
         ///
