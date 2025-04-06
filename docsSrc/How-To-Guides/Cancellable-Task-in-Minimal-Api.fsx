@@ -2,7 +2,7 @@
 ---
 title: Use CancellableTask in ASP.NET Minimal API
 category: How To Guides
-categoryindex: 2
+categoryindex: 3
 index: 1
 ---
 
