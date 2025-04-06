@@ -19,7 +19,7 @@ We'll start off with a slightly longer version but then make a helper for this.
 *)
 // This just the dance to get Giraffe to compile for this example.
 // Really you'd set up these references in an fsproj
-#load "../../runtime-scripts/Microsoft.AspNetCore.App-latest-7.fsx"
+#load "../../runtime-scripts/Microsoft.AspNetCore.App-latest-8.fsx"
 #r "nuget: Giraffe"
 #r "nuget: IcedTasks"
 
