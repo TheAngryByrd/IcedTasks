@@ -35,9 +35,8 @@ jobs:
         with:
           global-json-file: global.json
           dotnet-version: |
+            9.x
             8.x
-            7.x
-            6.x
       - name: Build Docs
         run: |
           ./build.sh builddocs
@@ -46,7 +45,7 @@ jobs:
           CI: true
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v3
         with:
           path: docs/
 
