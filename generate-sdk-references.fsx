@@ -8,7 +8,9 @@ open System.Text.RegularExpressions
 // It will also generate a .fsx file for the latest major version of the .NET SDK to make referencing less brittle.
 
 #r "nuget: semver"
+
 open Semver
+open System.Linq
 
 type Runtime = {
     Name: string
@@ -18,11 +20,11 @@ type Runtime = {
 
 let getRuntimeList () =
     // You can see which versions of the .NET runtime are currently installed with the following command.
+
     let psi =
         ProcessStartInfo("dotnet", "--list-runtimes", RedirectStandardOutput = true)
 
-    let proc = Process.Start(psi)
-    proc.WaitForExit()
+    use proc = Process.Start(psi)
 
     let output =
         seq {
@@ -45,9 +47,13 @@ let getRuntimeList () =
                 Path = DirectoryInfo(Path.Join(matches.Groups[3].Value, version))
             }
         )
+        |> Seq.toArray
+
+    proc.WaitForExit(3000)
+    |> ignore
 
     runtimes
-    |> Seq.toArray
+
 
 module Seq =
     let filterOut predicate =
@@ -63,6 +69,30 @@ module Seq =
             |> Seq.exists (fun f -> f x)
         )
 
+module Array =
+    open System.Collections.Generic
+
+    [<CompiledName("MaxBy")>]
+    let inline maxByC (comparer: IComparer<'U>) (projection: 'T -> 'U) (source: seq<'T>) : 'T =
+        // checkNonNull "source" source
+        use e = source.GetEnumerator()
+
+        if not (e.MoveNext()) then
+            invalidArg "source" ""
+
+        let first = e.Current
+        let mutable acc = projection first
+        let mutable accv = first
+
+        while e.MoveNext() do
+            let currv = e.Current
+            let curr = projection currv
+
+            if comparer.Compare(acc, curr) > 0 then
+                acc <- curr
+                accv <- currv
+
+        accv
 
 let createRuntimeLoadScript blockedDlls (r: Runtime) =
     let dir = r.Path
@@ -92,9 +122,12 @@ let writeReferencesToFile outputPath outputFileName referenceContents =
     Directory.CreateDirectory(outputPath)
     |> ignore
 
-    File.WriteAllLines(Path.Join(outputPath, outputFileName), referenceContents)
+    let outputPath = Path.Join(outputPath, outputFileName)
+    printfn "Writing to %s" outputPath
 
-let runtimeOuputNameByVersion r = $"{r.Name}-{r.Version.ToString()}.fsx"
+    File.WriteAllLines(outputPath, referenceContents)
+
+let runtimeOutputNameByVersion r = $"{r.Name}-{r.Version.ToString()}.fsx"
 
 let runtimeOuputNameByMajorVersion r =
     $"{r.Name}-latest-{r.Version.Major}.fsx"
@@ -119,6 +152,7 @@ let blockedDlls = [
     contains "System.IO.Compression.Native"
 ]
 
+
 let runTimeLoadScripts =
     getRuntimeList ()
     |> Array.map (fun runtime -> runtime, createRuntimeLoadScript blockedDlls runtime)
@@ -128,15 +162,16 @@ let outputFolder = "runtime-scripts"
 // print all by version
 runTimeLoadScripts
 |> Seq.iter (fun (r, referenceContents) ->
-    writeReferencesToFile outputFolder (runtimeOuputNameByVersion r) referenceContents
+    writeReferencesToFile outputFolder (runtimeOutputNameByVersion r) referenceContents
 )
+
 
 // print all by major version
 runTimeLoadScripts
 |> Array.groupBy (fun (r, _) -> r.Name, r.Version.Major)
 |> Array.map (fun (_, values) ->
     values
-    |> Array.maxBy (fun (r, _) -> r.Version)
+    |> Array.maxByC SemVersion.SortOrderComparer (fun (r, _) -> r.Version)
 )
 |> Array.iter (fun (r, referenceContents) ->
     writeReferencesToFile outputFolder (runtimeOuputNameByMajorVersion r) referenceContents
