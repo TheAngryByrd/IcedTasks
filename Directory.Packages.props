@@ -13,11 +13,11 @@
     <PackageVersion Include="Ply" Version="0.3.1"/>
 
     <!-- Test -->
-    <PackageVersion Include="Expecto" Version="10.1.0" />
-    <PackageVersion Include="Expecto.FsCheck" Version="10.1.0" />
+    <PackageVersion Include="Expecto" Version="10.2.3" />
+    <PackageVersion Include="Expecto.FsCheck" Version="10.2.3" />
     <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="8.0.0" />
     <PackageVersion Include="TimeProviderExtensions" Version="1.0.0" />
-    <PackageVersion Include="YoloDev.Expecto.TestSdk" Version="0.14.2" />
+    <PackageVersion Include="YoloDev.Expecto.TestSdk" Version="0.15.3" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.7.2" />
     <PackageVersion Include="FSharp.Control.TaskSeq" Version="0.4.0" />
 
