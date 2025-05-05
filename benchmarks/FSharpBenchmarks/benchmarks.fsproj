@@ -23,6 +23,6 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" />
-    <PackageReference Include="Ply"/>
+    <PackageReference Include="Ply" />
   </ItemGroup>
 </Project>

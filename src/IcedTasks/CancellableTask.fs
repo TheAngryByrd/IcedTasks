@@ -160,11 +160,11 @@ module CancellableTasks =
                             let left = left ct
                             let right = right ct
 
-                            (this.Bind(
+                            this.Bind(
                                 left,
                                 fun leftR ->
                                     this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
-                            ))
+                            )
                     )
                 )
             )
@@ -180,11 +180,11 @@ module CancellableTasks =
                         fun ct ->
                             let right = right ct
 
-                            (this.Bind(
+                            this.Bind(
                                 left,
                                 fun leftR ->
                                     this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
-                            ))
+                            )
                     )
                 )
             )
@@ -201,11 +201,11 @@ module CancellableTasks =
                         fun ct ->
                             let left = left ct
 
-                            (this.Bind(
+                            this.Bind(
                                 left,
                                 fun leftR ->
                                     this.BindReturn(right, (fun rightR -> struct (leftR, rightR)))
-                            ))
+                            )
                     )
                 )
             )

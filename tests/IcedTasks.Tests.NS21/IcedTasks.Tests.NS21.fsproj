@@ -1,4 +1,3 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,9 +5,9 @@
     <GenerateProgramFile>false</GenerateProgramFile>
     <DefineConstants>$(DefineConstants);NETSTANDARD2_1;TEST_NETSTANDARD2_1</DefineConstants>
   </PropertyGroup>
-    <ItemGroup>
-        <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" AdditionalProperties="TargetFramework=netstandard2.1" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" AdditionalProperties="TargetFramework=netstandard2.1" />
+  </ItemGroup>
   <ItemGroup>
     <Compile Include="../IcedTasks.Tests/Expect.fs" />
     <Compile Include="../IcedTasks.Tests/AsyncExTests.fs" />
@@ -23,5 +22,4 @@
     <Compile Include="../IcedTasks.Tests/ParallelAsyncTests.fs" />
     <Compile Include="../IcedTasks.Tests/Main.fs" />
   </ItemGroup>
-  
 </Project>
