@@ -33,13 +33,13 @@ let getRuntimeList () =
         }
 
     /// Regex for output like: Microsoft.AspNetCore.App 5.0.13 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]
-    let listRuntimesRegex = Regex("([^\s]+) ([^\s]+) \[(.*?)\\]")
+    let listRuntimesRegex = Regex "([^\s]+) ([^\s]+) \[(.*?)\\]"
 
     let runtimes =
         output
         |> Seq.map (fun x ->
             let matches = listRuntimesRegex.Match(x)
-            let (version: string) = matches.Groups.[2].Value
+            let version = matches.Groups.[2].Value
 
             {
                 Name = matches.Groups.[1].Value
@@ -72,9 +72,11 @@ module Seq =
 module Array =
     open System.Collections.Generic
 
-    [<CompiledName("MaxBy")>]
-    let inline maxByC (comparer: IComparer<'U>) (projection: 'T -> 'U) (source: seq<'T>) : 'T =
-        // checkNonNull "source" source
+    let inline maxByC
+        (comparer: IComparer<'U>)
+        ([<InlineIfLambda>] projection: 'T -> 'U)
+        (source: seq<'T>)
+        : 'T =
         use e = source.GetEnumerator()
 
         if not (e.MoveNext()) then
@@ -82,7 +84,7 @@ module Array =
 
         let first = e.Current
         let mutable acc = projection first
-        let mutable accv = first
+        let mutable result = first
 
         while e.MoveNext() do
             let currv = e.Current
@@ -90,9 +92,9 @@ module Array =
 
             if comparer.Compare(acc, curr) > 0 then
                 acc <- curr
-                accv <- currv
+                result <- currv
 
-        accv
+        result
 
 let createRuntimeLoadScript blockedDlls (r: Runtime) =
     let dir = r.Path
@@ -129,7 +131,7 @@ let writeReferencesToFile outputPath outputFileName referenceContents =
 
 let runtimeOutputNameByVersion r = $"{r.Name}-{r.Version.ToString()}.fsx"
 
-let runtimeOuputNameByMajorVersion r =
+let runtimeOutputNameByMajorVersion r =
     $"{r.Name}-latest-{r.Version.Major}.fsx"
 
 let contains (x: string) (y: FileInfo) = y.Name.Contains x
@@ -155,24 +157,29 @@ let blockedDlls = [
 
 let runTimeLoadScripts =
     getRuntimeList ()
-    |> Array.map (fun runtime -> runtime, createRuntimeLoadScript blockedDlls runtime)
+    |> Array.map (fun runtime -> {|
+        RuntimeInfo = runtime
+        FileContents = createRuntimeLoadScript blockedDlls runtime
+    |})
 
 let outputFolder = "runtime-scripts"
 
 // print all by version
 runTimeLoadScripts
-|> Seq.iter (fun (r, referenceContents) ->
-    writeReferencesToFile outputFolder (runtimeOutputNameByVersion r) referenceContents
+|> Seq.iter (fun x ->
+    writeReferencesToFile outputFolder (runtimeOutputNameByVersion x.RuntimeInfo) x.FileContents
 )
-
 
 // print all by major version
 runTimeLoadScripts
-|> Array.groupBy (fun (r, _) -> r.Name, r.Version.Major)
+|> Array.groupBy (fun x -> x.RuntimeInfo.Name, x.RuntimeInfo.Version.Major)
 |> Array.map (fun (_, values) ->
     values
-    |> Array.maxByC SemVersion.SortOrderComparer (fun (r, _) -> r.Version)
+    |> Array.maxByC SemVersion.SortOrderComparer (fun x -> x.RuntimeInfo.Version)
 )
-|> Array.iter (fun (r, referenceContents) ->
-    writeReferencesToFile outputFolder (runtimeOuputNameByMajorVersion r) referenceContents
+|> Array.iter (fun x ->
+    writeReferencesToFile
+        outputFolder
+        (runtimeOutputNameByMajorVersion x.RuntimeInfo)
+        x.FileContents
 )
