@@ -7,6 +7,9 @@
         "editor.formatOnSave": true
     },
     "cSpell.words": [
-        "backported"
-    ]
+        "Argu",
+        "backported",
+        "Fantomas"
+    ],
+    "FSharp.msbuildAutoshow": true
 }
