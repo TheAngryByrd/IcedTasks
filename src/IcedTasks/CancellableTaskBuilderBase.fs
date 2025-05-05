@@ -119,8 +119,10 @@ module CancellableTaskBase =
         ///
         /// <returns>A CancellableTasks that behaves similarly to a while loop when run.</returns>
         member inline _.While
-            (guard: unit -> bool, computation: CancellableTaskBaseCode<'TOverall, unit, 'Builder>)
-            : CancellableTaskBaseCode<'TOverall, unit, 'Builder> =
+            (
+                [<InlineIfLambda>] guard: unit -> bool,
+                computation: CancellableTaskBaseCode<'TOverall, unit, 'Builder>
+            ) : CancellableTaskBaseCode<'TOverall, unit, 'Builder> =
             ResumableCode.While(guard, computation)
 
         /// <summary>Creates A CancellableTasks that runs computation and returns its result.
@@ -161,7 +163,7 @@ module CancellableTaskBase =
         member inline _.TryFinally
             (
                 computation: CancellableTaskBaseCode<'TOverall, 'T, 'Builder>,
-                compensation: unit -> unit
+                [<InlineIfLambda>] compensation: unit -> unit
             ) : CancellableTaskBaseCode<'TOverall, 'T, 'Builder> =
             ResumableCode.TryFinally(
                 computation,
@@ -820,17 +822,15 @@ module CancellableTaskBase =
                     ResumableCode<_, _>(fun sm ->
                         x
                             .Bind(
-                                (condition ()),
+                                condition (),
                                 (fun result ->
-                                    condition_res <- result
-
                                     ResumableCode<_, _>(fun sm ->
+                                        condition_res <- result
                                         if condition_res then body.Invoke(&sm) else true
                                     )
                                 )
                             )
                             .Invoke(&sm)
-
                     )
                 )
 
@@ -839,17 +839,19 @@ module CancellableTaskBase =
                     source: #IAsyncEnumerable<'T>,
                     body: 'T -> CancellableTaskBaseCode<_, unit, 'Builder>
                 ) : CancellableTaskBaseCode<_, _, 'Builder> =
-                this.Bind(
-                    this.Source((fun (ct: CancellationToken) -> ValueTask<_> ct)),
-                    (fun ct ->
-                        this.Using(
-                            source.GetAsyncEnumerator ct,
+                CancellableTaskBaseCode<_, _, _>(fun sm ->
+                    this
+                        .Using(
+                            source.GetAsyncEnumerator sm.Data.CancellationToken,
                             (fun (e: IAsyncEnumerator<'T>) ->
                                 this.WhileAsync(
-                                    (fun () -> Awaitable.GetAwaiter(e.MoveNextAsync())),
+                                    (fun () ->
+                                        __debugPoint "ForLoop.InOrToKeyword"
+                                        Awaitable.GetAwaiter(e.MoveNextAsync())
+                                    ),
                                     (fun sm -> (body e.Current).Invoke(&sm))
                                 )
                             )
                         )
-                    )
+                        .Invoke(&sm)
                 )
