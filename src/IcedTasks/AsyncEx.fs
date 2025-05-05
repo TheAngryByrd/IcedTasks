@@ -39,7 +39,7 @@ type AsyncEx =
                 // the task may not have a cancellation token at all).
                 onError e
 
-        Async.FromContinuations(fun (onNext, onError, onCancel) ->
+        Async.FromContinuations(fun (onNext, onError, _onCancel) ->
             if Awaiter.IsCompleted awaiter then
                 handleFinished (onNext, onError, awaiter)
             else

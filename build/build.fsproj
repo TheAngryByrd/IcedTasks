@@ -1,4 +1,3 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -11,7 +10,6 @@
     <Compile Include="Changelog.fs" />
     <Compile Include="build.fs" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Argu" />
     <PackageReference Include="Fake.IO.FileSystem" />
@@ -25,7 +23,6 @@
     <PackageReference Include="Fake.Api.GitHub" />
     <PackageReference Include="Fake.BuildServer.GitHubActions" />
     <PackageReference Include="Octokit" />
-    <PackageReference Include="MSBuild.StructuredLogger"/>
-
+    <PackageReference Include="MSBuild.StructuredLogger" />
   </ItemGroup>
 </Project>

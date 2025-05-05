@@ -1,14 +1,13 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFrameworks>net9.0;net8.0</TargetFrameworks>
     <GenerateProgramFile>false</GenerateProgramFile>
-<DefineConstants>$(DefineConstants);NETSTANDARD2_0;TEST_NETSTANDARD2_0</DefineConstants>
+    <DefineConstants>$(DefineConstants);NETSTANDARD2_0;TEST_NETSTANDARD2_0</DefineConstants>
   </PropertyGroup>
-    <ItemGroup>
-        <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" AdditionalProperties="TargetFramework=netstandard2.0" />
-           </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" AdditionalProperties="TargetFramework=netstandard2.0" />
+  </ItemGroup>
   <ItemGroup>
     <Compile Include="../IcedTasks.Tests/Expect.fs" />
     <Compile Include="../IcedTasks.Tests/AsyncExTests.fs" />
@@ -23,10 +22,7 @@
     <Compile Include="../IcedTasks.Tests/ParallelAsyncTests.fs" />
     <Compile Include="../IcedTasks.Tests/Main.fs" />
   </ItemGroup>
-
   <ItemGroup>
-
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces"/>
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
   </ItemGroup>
-  
 </Project>

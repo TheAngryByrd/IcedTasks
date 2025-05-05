@@ -150,8 +150,10 @@ module TaskBase =
         /// <returns>a Task that executes computation and compensation afterwards or
         /// when an exception is raised.</returns>
         member inline _.TryFinally
-            (computation: TaskBaseCode<'TOverall, 'T, 'Builder>, compensation: unit -> unit)
-            : TaskBaseCode<'TOverall, 'T, 'Builder> =
+            (
+                computation: TaskBaseCode<'TOverall, 'T, 'Builder>,
+                [<InlineIfLambda>] compensation: unit -> unit
+            ) : TaskBaseCode<'TOverall, 'T, 'Builder> =
             ResumableCode.TryFinally(
                 computation,
                 ResumableCode<_, _>(fun _ ->
@@ -173,10 +175,10 @@ module TaskBase =
             ) : bool =
 
             let cont =
-                (TaskBaseResumptionFunc<'TOverall, 'Builder>(fun sm ->
+                TaskBaseResumptionFunc<'TOverall, 'Builder>(fun sm ->
                     let result = Awaiter.GetResult awaiter
                     (continuation result).Invoke(&sm)
-                ))
+                )
 
             // shortcut to continue immediately
             if Awaiter.IsCompleted awaiter then
@@ -277,7 +279,7 @@ module TaskBase =
             ) : TaskBaseCode<'TOverall, 'T, 'Builder> =
             ResumableCode.TryFinallyAsync(
                 computation,
-                ResumableCode<_, _>(fun sm -> x.Bind((compensation ()), (x.Zero)).Invoke(&sm))
+                ResumableCode<_, _>(fun sm -> x.Bind(compensation (), x.Zero).Invoke(&sm))
             )
 
         /// <summary>Creates a Task that runs binder(resource).
@@ -311,12 +313,10 @@ module TaskBase =
             )
 
         member inline internal x.WhileAsync
-            ([<InlineIfLambda>] condition: unit -> 'Awaitable, body: TaskBaseCode<_, unit, 'Builder>) : TaskBaseCode<
-                                                                                                            _,
-                                                                                                            _,
-                                                                                                            'Builder
-                                                                                                         >
-            =
+            ( // Fantomas ignore
+                [<InlineIfLambda>] condition: unit -> 'Awaitable,
+                body: TaskBaseCode<_, unit, 'Builder>
+            ) : TaskBaseCode<_, _, 'Builder> =
             let mutable condition_res = true
 
             x.While(
@@ -324,17 +324,15 @@ module TaskBase =
                 ResumableCode<_, _>(fun sm ->
                     x
                         .Bind(
-                            (condition ()),
+                            condition (),
                             (fun result ->
-                                condition_res <- result
-
                                 ResumableCode<_, _>(fun sm ->
+                                    condition_res <- result
                                     if condition_res then body.Invoke(&sm) else true
                                 )
                             )
                         )
                         .Invoke(&sm)
-
                 )
             )
 
@@ -346,7 +344,10 @@ module TaskBase =
                 source.GetAsyncEnumerator CancellationToken.None,
                 (fun (e: IAsyncEnumerator<'T>) ->
                     this.WhileAsync(
-                        (fun () -> Awaitable.GetAwaiter(e.MoveNextAsync())),
+                        (fun () ->
+                            __debugPoint "ForLoop.InOrToKeyword"
+                            Awaitable.GetAwaiter(e.MoveNextAsync())
+                        ),
                         (fun sm -> (body e.Current).Invoke(&sm))
                     )
                 )
