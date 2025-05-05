@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.8] - 2025-05-05
+
+### Changed
+
+- [F# 9 Nullness support](https://github.com/TheAngryByrd/IcedTasks/pull/51) - Credits @TheAngryByrd
+- [Better For loop IAsyncEnumerable generation](https://github.com/TheAngryByrd/IcedTasks/pull/53) - Credits @TheAngryByrd
+
 ## [0.11.7] - 2024-07-10
 
 ### Fixed
@@ -316,7 +323,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Increased soeed and lowered memory usage of ColdTask and CancellableTask
 - Build for netstandard2.0 and netstandard2.1
 
-[Unreleased]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.7...HEAD
+[Unreleased]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.8...HEAD
+[0.11.8]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.7...v0.11.8
 [0.11.7]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.6...v0.11.7
 [0.11.6]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.5...v0.11.6
 [0.11.5]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.4...v0.11.5
