@@ -1068,6 +1068,51 @@ module ColdTaskTests =
 
         ]
 
+    let recursionTests =
+        testList "Recursion" [
+            testCaseAsync "Non-tail recursion"
+            <| async {
+                let rec loop n =
+                    coldTask {
+                        try
+                            try
+                                // if n % 1000 = 0 then printfn $"in loop at {n}"
+
+                                if n = 42 then
+                                    failwith "boom"
+
+                                if n <= 0 then return 0 else return! loop (n - 1)
+                            finally
+                                () // if n % 1000 = 0 then printfn $"finally at {n}"
+                        with exn when n = 10_000 ->
+                            //printfn $"caught {exn.Message} at {n}"
+                            return 55
+                    }
+
+                let! result = loop 100_000
+                Expect.equal result 55 ""
+            }
+            // Regression test for starting nested cold tasks immediately (not via return!/let!).
+            // Previously this pattern could hang due to each ColdTask scheduling initial MoveNext on trampoline without linking.
+            testCase "Immediate start nested recursion"
+            <| fun () ->
+                let rec foo (n: int) : ColdTask<int> =
+                    coldTask {
+                        if n = 0 then
+                            return 42
+                        else
+                            // Start next cold task immediately and synchronously wait on its result.
+                            // Explicitly invoke the cold task to obtain the underlying Task.
+                            let t: Task<int> = (foo (n - 1)) ()
+                            let res = t.GetAwaiter().GetResult()
+                            return res
+                    }
+
+                let root: Task<int> = (foo 100) ()
+                let result = root.GetAwaiter().GetResult()
+                Expect.equal result 42 "Immediate start recursion should complete without hanging"
+        ]
+
 
     [<Tests>]
     let coldTaskTests =
@@ -1077,4 +1122,5 @@ module ColdTaskTests =
             asyncExBuilderTests
             taskBuilderTests
             functionTests
+            recursionTests
         ]
