@@ -1101,8 +1101,6 @@ module ColdTaskTests =
                         if n = 0 then
                             return 42
                         else
-                            // Start next cold task immediately and synchronously wait on its result.
-                            // Explicitly invoke the cold task to obtain the underlying Task.
                             let t: Task<int> = (foo (n - 1)) ()
                             let res = t.GetAwaiter().GetResult()
                             return res
@@ -1111,8 +1109,71 @@ module ColdTaskTests =
                 let root: Task<int> = (foo 100) ()
                 let result = root.GetAwaiter().GetResult()
                 Expect.equal result 42 "Immediate start recursion should complete without hanging"
-        ]
+            testCaseAsync "Mutual recursion ColdTask <-> CancellableTask (start cold)"
+            <| async {
+                let rec coldSide n : ColdTask<int> =
+                    coldTask {
+                        if n = 0 then
+                            return 0
+                        else
+                            return! cancellableSide (n - 1) CancellationToken.None
+                    }
 
+                and cancellableSide n : CancellableTask<int> =
+                    cancellableTask { if n = 0 then return 0 else return! coldSide (n - 1) }
+
+                let depth = 40_000
+
+                let! v =
+                    coldSide depth
+                    |> Async.AwaitColdTask
+
+                Expect.equal v 0 "Value should propagate"
+                use cts = new CancellationTokenSource()
+
+                let! v2 =
+                    cancellableSide depth cts.Token
+                    |> Async.AwaitTask
+
+                Expect.equal v2 0 "Value should propagate from cancellable start"
+            }
+            testCaseAsync "Mutual recursion ColdTask <-> CancellableTask with accumulation"
+            <| async {
+                let rec coldAcc n acc : ColdTask<int> =
+                    coldTask {
+                        if n = 0 then
+                            return acc
+                        else
+                            return! cancellableAcc (n - 1) (acc + 1) CancellationToken.None
+                    }
+
+                and cancellableAcc n acc : CancellableTask<int> =
+                    cancellableTask {
+                        if n = 0 then
+                            return acc
+                        else
+                            return! coldAcc (n - 1) (acc + 1)
+                    }
+
+                let depth = 25_000
+
+                let! resCold =
+                    coldAcc depth 0
+                    |> Async.AwaitColdTask
+
+                Expect.equal resCold (depth) "Accumulation should equal depth when starting cold"
+                use cts = new CancellationTokenSource()
+
+                let! resCanc =
+                    cancellableAcc depth 0 cts.Token
+                    |> Async.AwaitTask
+
+                Expect.equal
+                    resCanc
+                    depth
+                    "Accumulation should equal depth when starting cancellable"
+            }
+        ]
 
     [<Tests>]
     let coldTaskTests =
