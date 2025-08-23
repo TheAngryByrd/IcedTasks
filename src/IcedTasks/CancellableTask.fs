@@ -182,9 +182,7 @@ module CancellableTasks =
         member inline _.Source
             ([<InlineIfLambda>] x: CancellationToken -> Task<_>)
             : CancellationToken -> Awaiter<TaskAwaiter<_>, _> =
-            fun ct ->
-                BindContext.SetIsBind()
-                Awaitable.GetTaskAwaiter(x ct)
+            fun ct -> Awaitable.GetTaskAwaiter(BindContext.SetIsBind x ct)
 
         [<NoEagerConstraintApplication>]
         member inline this.MergeSources

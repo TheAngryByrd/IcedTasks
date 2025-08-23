@@ -186,9 +186,7 @@ module CancellablePoolingValueTasks =
             ([<InlineIfLambda>] x: CancellationToken -> ValueTask<_>)
             : CancellationToken -> Awaiter<ValueTaskAwaiter<_>, _> =
             fun ct ->
-                BindContext.SetIsBind()
-
-                (x ct)
+                BindContext.SetIsBind x ct
                 |> Awaitable.GetAwaiter
 
         [<NoEagerConstraintApplication>]

@@ -77,11 +77,11 @@ module BindContext =
 
         bindCount.Value % bindLimit = 0
 
-    let inline SetIsBind () = isBind.Value <- true
-
-    let inline InstallNewTrampolineIfNeeded () =
-        if not isBind.Value then
-            Trampoline.PushNewTrampoline()
+    /// Signal to the task that it is evaluated as a bound value in a computation expression.
+    /// It will use current trampoline to avoid stack overflows in recursive binds.
+    let inline SetIsBind f x =
+        isBind.Value <- true
+        f x
 
     let inline CheckWhenIsBind () =
         try

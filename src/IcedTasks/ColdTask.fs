@@ -726,9 +726,7 @@ module ColdTasks =
             /// </remarks>
             static member inline AwaitColdTask(t: ColdTask<'T>) =
                 async.Delay(fun () ->
-                    BindContext.SetIsBind()
-
-                    t ()
+                    BindContext.SetIsBind t ()
                     |> AsyncEx.AwaitTask
                 )
 
@@ -739,9 +737,7 @@ module ColdTasks =
             /// </remarks>
             static member inline AwaitColdTask(t: ColdTask) =
                 async.Delay(fun () ->
-                    BindContext.SetIsBind()
-
-                    t ()
+                    BindContext.SetIsBind t ()
                     |> AsyncEx.AwaitTask
                 )
 
@@ -751,9 +747,7 @@ module ColdTasks =
             /// its result.</summary>
             static member inline AwaitColdTask(t: ColdTask<'T>) =
                 async.Delay(fun () ->
-                    BindContext.SetIsBind()
-
-                    t ()
+                    BindContext.SetIsBind t ()
                     |> Async.AwaitTask
                 )
 
@@ -761,9 +755,7 @@ module ColdTasks =
             /// its result.</summary>
             static member inline AwaitColdTask(t: ColdTask) =
                 async.Delay(fun () ->
-                    BindContext.SetIsBind()
-
-                    t ()
+                    BindContext.SetIsBind t ()
                     |> Async.AwaitTask
                 )
 
@@ -794,10 +786,7 @@ module ColdTasks =
             ///
             /// <returns>unit -> 'Awaiter</returns>
             member inline _.Source([<InlineIfLambda>] task: ColdTask<'TResult1>) =
-                (fun () ->
-                    BindContext.SetIsBind()
-                    (task ()).GetAwaiter()
-                )
+                (fun () -> (BindContext.SetIsBind task ()).GetAwaiter())
 
             /// <summary>Allows the computation expression to turn other types into unit -> 'Awaiter</summary>
             ///
@@ -837,30 +826,20 @@ module ColdTasks =
         type Microsoft.FSharp.Control.TaskBuilderBase with
 
             member inline this.Bind(coldTask: ColdTask<'T>, binder: ('T -> _)) =
-                BindContext.SetIsBind()
                 this.Bind(coldTask (), binder)
 
-            member inline this.ReturnFrom(coldTask: ColdTask<'T>) =
-                BindContext.SetIsBind()
-                this.ReturnFrom(coldTask ())
+            member inline this.ReturnFrom(coldTask: ColdTask<'T>) = this.ReturnFrom(coldTask ())
 
             member inline this.Bind(coldTask: ColdTask, binder: (_ -> _)) =
-                BindContext.SetIsBind()
                 this.Bind(coldTask (), binder)
 
-            member inline this.ReturnFrom(coldTask: ColdTask) =
-                BindContext.SetIsBind()
-                this.ReturnFrom(coldTask ())
+            member inline this.ReturnFrom(coldTask: ColdTask) = this.ReturnFrom(coldTask ())
 
         type TaskBuilderBase with
 
-            member inline this.Source(coldTask: ColdTask<'T>) =
-                BindContext.SetIsBind()
-                (coldTask ()).GetAwaiter()
+            member inline this.Source(coldTask: ColdTask<'T>) = (coldTask ()).GetAwaiter()
 
-            member inline this.Source(coldTask: ColdTask) =
-                BindContext.SetIsBind()
-                (coldTask ()).GetAwaiter()
+            member inline this.Source(coldTask: ColdTask) = (coldTask ()).GetAwaiter()
 
     /// Contains a set of standard functional helper function
     [<RequireQualifiedAccess>]
