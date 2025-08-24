@@ -16,7 +16,7 @@ type Trampoline private () =
 
     let ownerThreadId = Thread.CurrentThread.ManagedThreadId
 
-    static let holder = new ThreadLocal<_>(fun () -> Stack(seq { Trampoline() }))
+    static let holder = new ThreadLocal<_>(fun () -> Trampoline())
 
     let mutable pending: Action voption = ValueNone
     let mutable running = false
@@ -31,11 +31,6 @@ type Trampoline private () =
                 pending <- ValueNone
                 next.Invoke()
         finally
-            // If this was extra trampoline for an immediate task execution, pop it off the stack.
-            if holder.Value.Count > 1 then
-                holder.Value.Pop()
-                |> ignore
-
             running <- false
 
     let set action =
@@ -49,8 +44,7 @@ type Trampoline private () =
 
     member this.Set(action: Action) = set action
 
-    static member Current = holder.Value.Peek()
-    static member PushNew() = holder.Value.Push(Trampoline())
+    static member Current = holder.Value
 
 module Trampoline =
     let Awaiter =
@@ -60,8 +54,6 @@ module Trampoline =
         }
 
     let AwaiterRef = ref Awaiter
-
-    let PushNewTrampoline () = Trampoline.PushNew()
 
 module BindContext =
     [<Literal>]
