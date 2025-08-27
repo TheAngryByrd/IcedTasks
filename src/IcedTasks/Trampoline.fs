@@ -75,6 +75,12 @@ module BindContext =
         isBind.Value <- true
         f x
 
+    let inline CheckIsBind () =
+        try
+            isBind.Value
+        finally
+            isBind.Value <- false
+
     let inline CheckWhenIsBind () =
         try
             isBind.Value

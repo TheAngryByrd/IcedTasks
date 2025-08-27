@@ -388,7 +388,7 @@ module ColdTasks =
                         __resumeAt sm.ResumptionPoint
                         let mutable error = ValueNone
 
-                        let __stack_go1 = yieldOnBindLimit().Invoke(&sm)
+                        let __stack_go1 = yieldOnBindLimitWhenIsBind().Invoke(&sm)
 
                         if __stack_go1 then
                             try
@@ -461,7 +461,7 @@ module ColdTasks =
                         __resumeAt sm.ResumptionPoint
                         let mutable error = ValueNone
 
-                        let __stack_go1 = yieldOnBindLimit().Invoke(&sm)
+                        let __stack_go1 = yieldOnBindLimitWhenIsBind().Invoke(&sm)
 
                         if __stack_go1 then
                             try
