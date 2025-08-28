@@ -58,7 +58,7 @@ module ColdTasks =
                 if not __stack_yield_fin then
                     MethodBuilder.AwaitUnsafeOnCompleted(
                         &sm.Data.MethodBuilder,
-                        Trampoline.AwaiterRef,
+                        Trampoline.Current.Ref,
                         &sm
                     )
 
@@ -350,7 +350,7 @@ module ColdTasks =
                         | Bounce ->
                             MethodBuilder.AwaitOnCompleted(
                                 &sm.Data.MethodBuilder,
-                                Trampoline.AwaiterRef,
+                                Trampoline.Current.Ref,
                                 &sm
                             )
                         | Await awaiter ->

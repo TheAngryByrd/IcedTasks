@@ -95,7 +95,7 @@ module CancellableValueTasks =
                         | Bounce ->
                             MethodBuilder.AwaitOnCompleted(
                                 &sm.Data.MethodBuilder,
-                                Trampoline.AwaiterRef,
+                                Trampoline.Current.Ref,
                                 &sm
                             )
                         | Await awaiter ->

@@ -42,18 +42,13 @@ type Trampoline private () =
         else
             start action
 
-    member this.Set(action: Action) = set action
+    interface ICriticalNotifyCompletion with
+        member _.OnCompleted(continuation) = set continuation
+        member _.UnsafeOnCompleted(continuation) = set continuation
+
+    member this.Ref: ICriticalNotifyCompletion ref = ref this
 
     static member Current = holder.Value
-
-module Trampoline =
-    let Awaiter =
-        { new ICriticalNotifyCompletion with
-            member _.OnCompleted(continuation) = Trampoline.Current.Set(continuation)
-            member _.UnsafeOnCompleted(continuation) = Trampoline.Current.Set(continuation)
-        }
-
-    let AwaiterRef = ref Awaiter
 
 module BindContext =
     [<Literal>]
