@@ -49,9 +49,9 @@ module CancellableTaskBase =
     and CancellableTaskBaseCode<'TOverall, 'T, 'Builder> =
         ResumableCode<CancellableTaskBaseStateMachineData<'TOverall, 'Builder>, 'T>
 
-    let inline yieldOnBindLimitAux check =
+    let inline yieldOnBindLimit bounce =
         CancellableTaskBaseCode(fun sm ->
-            if check () then
+            if bounce then
                 let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
 
                 if not __stack_yield_fin then
@@ -65,11 +65,6 @@ module CancellableTaskBase =
             else
                 true
         )
-
-    let inline yieldOnBindLimit () = yieldOnBindLimitAux BindContext.Check
-
-    let inline yieldOnBindLimitWhenIsBind () =
-        yieldOnBindLimitAux BindContext.CheckWhenIsBind
 
     /// <summary>
     /// Contains methods to build TaskLikes using the F# computation expression syntax

@@ -50,9 +50,9 @@ module ColdTasks =
     /// A special compiler-recognised delegate type for specifying blocks of ColdTask code with access to the state machine
     and ColdTaskCode<'TOverall, 'T> = ResumableCode<ColdTaskStateMachineData<'TOverall>, 'T>
 
-    let inline yieldOnBindLimitAux check =
+    let inline yieldOnBindLimit bounce =
         ColdTaskCode(fun sm ->
-            if check () then
+            if bounce then
                 let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
 
                 if not __stack_yield_fin then
@@ -66,11 +66,6 @@ module ColdTasks =
             else
                 true
         )
-
-    let inline yieldOnBindLimit () = yieldOnBindLimitAux BindContext.Check
-
-    let inline yieldOnBindLimitWhenIsBind () =
-        yieldOnBindLimitAux BindContext.CheckWhenIsBind
 
     /// Contains the coldTask computation expression builder.
     type ColdTaskBuilderBase() =
@@ -316,6 +311,7 @@ module ColdTasks =
 
             let resumptionInfo () =
                 let mutable state = InitialYield
+                let bounceOrImmediate = if BindContext.CheckWhenIsBind() then Bounce else Immediate
 
                 { new ColdTaskResumptionDynamicInfo<'T>(initialResumptionFunc) with
                     member info.MoveNext(sm) =
@@ -326,8 +322,7 @@ module ColdTasks =
                         | InitialYield ->
                             state <- Running
 
-                            continuation <-
-                                if BindContext.CheckWhenIsBind() then Bounce else Immediate
+                            continuation <- bounceOrImmediate
                         | Running ->
                             try
                                 let step = info.ResumptionFunc.Invoke(&sm)
@@ -335,14 +330,13 @@ module ColdTasks =
                                 if step then
                                     state <- SetResult
 
-                                    continuation <-
-                                        if BindContext.Check() then Bounce else Immediate
+                                    continuation <- bounceOrImmediate
                                 else
                                     continuation <-
                                         Await(downcast sm.ResumptionDynamicInfo.ResumptionData)
                             with exn ->
                                 state <- SetException(ExceptionCache.CaptureOrRetrieve exn)
-                                continuation <- if BindContext.Check() then Bounce else Immediate
+                                continuation <- bounceOrImmediate
                         | SetResult ->
                             MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
                         | SetException edi ->
@@ -387,15 +381,16 @@ module ColdTasks =
                     (MoveNextMethodImpl<_>(fun sm ->
                         __resumeAt sm.ResumptionPoint
                         let mutable error = ValueNone
+                        let bounce = BindContext.CheckWhenIsBind()
 
-                        let __stack_go1 = yieldOnBindLimitWhenIsBind().Invoke(&sm)
+                        let __stack_go1 = yieldOnBindLimit(bounce).Invoke(&sm)
 
                         if __stack_go1 then
                             try
                                 let __stack_code_fin = code.Invoke(&sm)
 
                                 if __stack_code_fin then
-                                    let __stack_go2 = yieldOnBindLimit().Invoke(&sm)
+                                    let __stack_go2 = yieldOnBindLimit(bounce).Invoke(&sm)
 
                                     if __stack_go2 then
                                         MethodBuilder.SetResult(
@@ -408,7 +403,7 @@ module ColdTasks =
                                     <| ExceptionCache.CaptureOrRetrieve exn
 
                             if error.IsSome then
-                                let __stack_go2 = yieldOnBindLimit().Invoke(&sm)
+                                let __stack_go2 = yieldOnBindLimit(bounce).Invoke(&sm)
 
                                 if __stack_go2 then
                                     MethodBuilder.SetException(
@@ -460,15 +455,16 @@ module ColdTasks =
                     (MoveNextMethodImpl<_>(fun sm ->
                         __resumeAt sm.ResumptionPoint
                         let mutable error = ValueNone
+                        let bounce = BindContext.CheckWhenIsBind()
 
-                        let __stack_go1 = yieldOnBindLimitWhenIsBind().Invoke(&sm)
+                        let __stack_go1 = yieldOnBindLimit(bounce).Invoke(&sm)
 
                         if __stack_go1 then
                             try
                                 let __stack_code_fin = code.Invoke(&sm)
 
                                 if __stack_code_fin then
-                                    let __stack_go2 = yieldOnBindLimit().Invoke(&sm)
+                                    let __stack_go2 = yieldOnBindLimit(bounce).Invoke(&sm)
 
                                     if __stack_go2 then
                                         MethodBuilder.SetResult(
@@ -481,7 +477,7 @@ module ColdTasks =
                                     <| ExceptionCache.CaptureOrRetrieve exn
 
                             if error.IsSome then
-                                let __stack_go2 = yieldOnBindLimit().Invoke(&sm)
+                                let __stack_go2 = yieldOnBindLimit(bounce).Invoke(&sm)
 
                                 if __stack_go2 then
                                     MethodBuilder.SetException(

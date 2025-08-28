@@ -57,7 +57,7 @@ module Trampoline =
 
 module BindContext =
     [<Literal>]
-    let bindLimit = 100
+    let bindLimit = 50
 
     let bindCount = new ThreadLocal<int>()
     let isBind = new ThreadLocal<bool>()
@@ -74,12 +74,6 @@ module BindContext =
     let inline SetIsBind f x =
         isBind.Value <- true
         f x
-
-    let inline CheckIsBind () =
-        try
-            isBind.Value
-        finally
-            isBind.Value <- false
 
     let inline CheckWhenIsBind () =
         try
