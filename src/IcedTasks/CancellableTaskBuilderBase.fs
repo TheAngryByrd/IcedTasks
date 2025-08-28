@@ -738,7 +738,9 @@ module CancellableTaskBase =
             member inline _.Source
                 ([<InlineIfLambda>] coldTask: unit -> Task<'T>)
                 : CancellationToken -> Awaiter<TaskAwaiter<'T>, 'T> =
-                (fun (ct: CancellationToken) -> Awaitable.GetTaskAwaiter(coldTask ()))
+                (fun (ct: CancellationToken) ->
+                    Awaitable.GetTaskAwaiter(BindContext.SetIsBind coldTask ())
+                )
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
