@@ -54,7 +54,6 @@ module CancellableTasks =
 
             let resumptionInfo () =
                 let mutable state = InitialYield
-                let bounceOrImmediate = if BindContext.CheckWhenIsBind() then Bounce else Immediate
 
                 { new CancellableTaskBaseResumptionDynamicInfo<'T, _>(initialResumptionFunc) with
                     member info.MoveNext(sm) =
@@ -65,7 +64,7 @@ module CancellableTasks =
                         | InitialYield ->
                             state <- Running
 
-                            continuation <- bounceOrImmediate
+                            continuation <- if BindContext.Check() then Bounce else Immediate
                         | Running ->
                             try
                                 let step = info.ResumptionFunc.Invoke(&sm)
@@ -73,13 +72,14 @@ module CancellableTasks =
                                 if step then
                                     state <- SetResult
 
-                                    continuation <- bounceOrImmediate
+                                    continuation <-
+                                        if BindContext.Check() then Bounce else Immediate
                                 else
                                     continuation <-
                                         Await(downcast sm.ResumptionDynamicInfo.ResumptionData)
                             with exn ->
                                 state <- SetException(ExceptionCache.CaptureOrRetrieve exn)
-                                continuation <- bounceOrImmediate
+                                continuation <- if BindContext.Check() then Bounce else Immediate
                         | SetResult ->
                             MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
                         | SetException edi ->
@@ -129,16 +129,15 @@ module CancellableTasks =
                     (MoveNextMethodImpl<_>(fun sm ->
                         __resumeAt sm.ResumptionPoint
                         let mutable error = ValueNone
-                        let bounce = BindContext.CheckWhenIsBind()
 
-                        let __stack_go1 = yieldOnBindLimit(bounce).Invoke(&sm)
+                        let __stack_go1 = yieldOnBindLimitWhenIsBind().Invoke(&sm)
 
                         if __stack_go1 then
                             try
                                 let __stack_code_fin = code.Invoke(&sm)
 
                                 if __stack_code_fin then
-                                    let __stack_go2 = yieldOnBindLimit(bounce).Invoke(&sm)
+                                    let __stack_go2 = yieldOnBindLimit().Invoke(&sm)
 
                                     if __stack_go2 then
                                         MethodBuilder.SetResult(
@@ -151,7 +150,7 @@ module CancellableTasks =
                                     <| ExceptionCache.CaptureOrRetrieve exn
 
                             if error.IsSome then
-                                let __stack_go2 = yieldOnBindLimit(bounce).Invoke(&sm)
+                                let __stack_go2 = yieldOnBindLimit().Invoke(&sm)
 
                                 if __stack_go2 then
                                     MethodBuilder.SetException(
@@ -291,16 +290,15 @@ module CancellableTasks =
                     (MoveNextMethodImpl<_>(fun sm ->
                         __resumeAt sm.ResumptionPoint
                         let mutable error = ValueNone
-                        let bounce = BindContext.CheckWhenIsBind()
 
-                        let __stack_go1 = yieldOnBindLimit(bounce).Invoke(&sm)
+                        let __stack_go1 = yieldOnBindLimitWhenIsBind().Invoke(&sm)
 
                         if __stack_go1 then
                             try
                                 let __stack_code_fin = code.Invoke(&sm)
 
                                 if __stack_code_fin then
-                                    let __stack_go2 = yieldOnBindLimit(bounce).Invoke(&sm)
+                                    let __stack_go2 = yieldOnBindLimit().Invoke(&sm)
 
                                     if __stack_go2 then
                                         MethodBuilder.SetResult(
@@ -313,7 +311,7 @@ module CancellableTasks =
                                     <| ExceptionCache.CaptureOrRetrieve exn
 
                             if error.IsSome then
-                                let __stack_go2 = yieldOnBindLimit(bounce).Invoke(&sm)
+                                let __stack_go2 = yieldOnBindLimit().Invoke(&sm)
 
                                 if __stack_go2 then
                                     MethodBuilder.SetException(
