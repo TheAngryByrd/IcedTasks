@@ -52,7 +52,7 @@ type Trampoline private () =
 
 module BindContext =
     [<Literal>]
-    let bindLimit = 300
+    let bindLimit = 100
 
     let bindCount = new ThreadLocal<int>()
     let isBind = new ThreadLocal<bool>()
