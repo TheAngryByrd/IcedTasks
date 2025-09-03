@@ -64,7 +64,7 @@ module CancellableTasks =
                         | InitialYield ->
                             state <- Running
 
-                            continuation <- if BindContext.Check() then Bounce else Immediate
+                            continuation <- if BindContext.CheckWhenIsBind() then Bounce else Immediate
                         | Running ->
                             try
                                 let step = info.ResumptionFunc.Invoke(&sm)
