@@ -5,6 +5,7 @@ namespace IcedTasks
 module CancellableTaskBase =
     open System
     open System.Runtime.CompilerServices
+    open System.Runtime.ExceptionServices
     open System.Threading
     open System.Threading.Tasks
     open Microsoft.FSharp.Core
@@ -47,6 +48,28 @@ module CancellableTaskBase =
     /// A special compiler-recognised delegate type for specifying blocks of cancellableTasks code with access to the state machine
     and CancellableTaskBaseCode<'TOverall, 'T, 'Builder> =
         ResumableCode<CancellableTaskBaseStateMachineData<'TOverall, 'Builder>, 'T>
+
+    let inline yieldOnBindLimitAux check =
+        CancellableTaskBaseCode(fun sm ->
+            if check () then
+                let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
+
+                if not __stack_yield_fin then
+                    MethodBuilder.AwaitUnsafeOnCompleted(
+                        &sm.Data.MethodBuilder,
+                        Trampoline.Current.Ref,
+                        &sm
+                    )
+
+                __stack_yield_fin
+            else
+                true
+        )
+
+    let inline yieldOnBindLimit () = yieldOnBindLimitAux BindContext.Check
+
+    let inline yieldOnBindLimitWhenIsBind () =
+        yieldOnBindLimitAux BindContext.CheckWhenIsBind
 
     /// <summary>
     /// Contains methods to build TaskLikes using the F# computation expression syntax
@@ -272,7 +295,7 @@ module CancellableTaskBase =
                             __stack_fin <- __stack_yield_fin
 
                         if __stack_fin then
-                            let result = Awaiter.GetResult awaiter
+                            let result = ExceptionCache.GetResultOrThrow awaiter
                             (continuation result).Invoke(&sm)
                         else
                             let mutable awaiter = awaiter :> ICriticalNotifyCompletion
@@ -312,7 +335,7 @@ module CancellableTaskBase =
             member inline this.BindReturn
                 (
                     [<InlineIfLambda>] getAwaiter: CancellationToken -> 'Awaiter,
-                    mapper: 'TResult1 -> 'TResult2
+                    [<InlineIfLambda>] mapper: 'TResult1 -> 'TResult2
                 ) : CancellableTaskBaseCode<_, _, _> =
                 this.Bind((fun ct -> getAwaiter ct), (fun v -> this.Return(mapper v)))
 
@@ -507,7 +530,7 @@ module CancellableTaskBase =
                             __stack_fin <- __stack_yield_fin
 
                         if __stack_fin then
-                            let result = Awaiter.GetResult awaiter
+                            let result = ExceptionCache.GetResultOrThrow awaiter
                             (continuation result).Invoke(&sm)
                         else
                             let mutable awaiter = awaiter :> ICriticalNotifyCompletion
@@ -715,7 +738,9 @@ module CancellableTaskBase =
             member inline _.Source
                 ([<InlineIfLambda>] coldTask: unit -> Task<'T>)
                 : CancellationToken -> Awaiter<TaskAwaiter<'T>, 'T> =
-                (fun (ct: CancellationToken) -> Awaitable.GetTaskAwaiter(coldTask ()))
+                (fun (ct: CancellationToken) ->
+                    Awaitable.GetTaskAwaiter(BindContext.SetIsBind coldTask ())
+                )
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
@@ -766,7 +791,7 @@ module CancellableTaskBase =
             member inline internal x.TryFinallyAsync
                 (
                     computation: CancellableTaskBaseCode<'TOverall, 'T, 'Builder>,
-                    compensation: unit -> 'Awaitable
+                    [<InlineIfLambda>] compensation: unit -> 'Awaitable
                 ) : CancellableTaskBaseCode<'TOverall, 'T, 'Builder> =
                 ResumableCode.TryFinallyAsync(
                     computation,
