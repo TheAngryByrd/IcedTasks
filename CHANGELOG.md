@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.9-beta001] - 2025-09-05
+
+### Changed
+
+- [Update FSharp.Core package reference to stable version 9.0.300](https://github.com/TheAngryByrd/IcedTasks/commit/131da45b5a82e259d1b8a041d21e837db3bd0631) - Credits @TheAngryByrd
+
 ## [0.11.8] - 2025-05-05
 
 ### Changed
@@ -323,7 +329,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Increased soeed and lowered memory usage of ColdTask and CancellableTask
 - Build for netstandard2.0 and netstandard2.1
 
-[Unreleased]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.8...HEAD
+[Unreleased]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.9-beta001...HEAD
+[0.11.9-beta001]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.8...v0.11.9-beta001
 [0.11.8]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.7...v0.11.8
 [0.11.7]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.6...v0.11.7
 [0.11.6]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.5...v0.11.6
