@@ -1,0 +1,137 @@
+name: Benchmarks
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+concurrency:
+  group: "benchmarks"
+  cancel-in-progress: false
+
+jobs:
+  build-and-benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+      - name: Setup necessary dotnet SDKs
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: |
+            8.x
+            9.x
+      - name: Run benchmarks
+        run: |
+          chmod +x ./build.sh
+          ./build.sh Benchmarks
+        env:
+          CI: true
+          CONFIGURATION: Release
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: IcedTasks Benchmark
+          tool: 'benchmarkdotnet'
+          output-file-path: 'BenchmarkDotNet.Artifacts/results/*.json'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: false  # Changed from true to false
+          # Show alert with commit comment on detecting possible performance regression
+          alert-threshold: '200%'
+          comment-on-alert: true
+          fail-on-alert: false
+          alert-comment-cc-users: '@TheAngryByrd'
+      
+      - name: Download latest GitHub Pages artifact
+        run: |
+          # Get the latest successful run ID from the docs workflow
+          RUN_ID=$(gh run list --workflow="Deploy Docs" --status=success --limit=1 --json databaseId --jq '.[0].databaseId')
+          
+          if [ ! -z "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
+            echo "Found docs workflow run: $RUN_ID"
+            # Download the github-pages artifact from that run
+            gh run download $RUN_ID --name github-pages --dir existing-pages
+            echo "artifact_downloaded=true" >> $GITHUB_ENV
+          else
+            echo "No successful docs workflow run found"
+            echo "artifact_downloaded=false" >> $GITHUB_ENV
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+      
+      - name: Extract existing pages and add benchmarks
+        run: |
+          # Create a combined directory for deployment
+          mkdir -p combined-site
+          
+          # If we successfully downloaded existing pages, extract them
+          if [ "$artifact_downloaded" = "true" ] && [ -d "existing-pages" ]; then
+            echo "Extracting existing pages artifact..."
+            # GitHub Pages artifacts are typically tar.gz files
+            if [ -f "existing-pages/artifact.tar.gz" ]; then
+              cd existing-pages
+              tar -xzf artifact.tar.gz
+              cd ..
+              # Copy existing pages to combined site (skip the tar file itself)
+              find existing-pages -type f ! -name "*.tar.gz" -exec cp {} combined-site/ \;
+              find existing-pages -type d ! -name "existing-pages" -exec mkdir -p combined-site/{} \; 2>/dev/null || true
+            elif [ -f "existing-pages/artifact.tar" ]; then
+              cd existing-pages
+              tar -xf artifact.tar
+              cd ..
+              find existing-pages -type f ! -name "*.tar" -exec cp {} combined-site/ \;
+            else
+              # Just copy all files if no tar found
+              cp -r existing-pages/* combined-site/ 2>/dev/null || true
+            fi
+            echo "Existing pages extracted successfully"
+          else
+            echo "No existing pages found, creating basic site structure..."
+            # Create a basic index if no existing pages
+            echo '<html><head><title>IcedTasks</title></head><body><h1>IcedTasks</h1><p><a href="benchmarks/">View Benchmarks</a></p></body></html>' > combined-site/index.html
+          fi
+          
+          # Copy benchmark results to benchmarks subdirectory
+          mkdir -p combined-site/benchmarks
+          if [ -d "benchmark-data-repository/dpcs/benchmark-data" ]; then
+            cp -r benchmark-data-repository/dpcs/benchmark-data/* combined-site/benchmarks/
+            echo "Benchmark data copied to combined-site/benchmarks/"
+          fi
+          
+          # List what we have in combined-site for debugging
+          echo "Contents of combined-site:"
+          ls -la combined-site/ || true
+          echo "Contents of combined-site/benchmarks:"
+          ls -la combined-site/benchmarks/ || true
+      
+      - name: Upload combined pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: combined-site
+
+  # Deployment job
+  deploy:
+    # Only deploy on pushes to master branch, not on pull requests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build-and-benchmark
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

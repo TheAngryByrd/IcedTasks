@@ -276,3 +276,5 @@ temp/
 .fsdocs
 runtime-scripts/
 docs/
+
+BenchmarkDotNet.Artifacts/

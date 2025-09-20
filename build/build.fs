@@ -92,6 +92,12 @@ let releaseBranch = "master"
 let readme = "README.md"
 let changelogFile = "CHANGELOG.md"
 
+let fsharpBenchmarksProj =
+    rootDirectory
+    </> "benchmarks"
+    </> "FSharpBenchmarks"
+    </> "benchmarks.fsproj"
+
 let tagFromVersionNumber versionNumber = sprintf "v%s" versionNumber
 
 let READMElink = Uri(Uri(gitHubRepoUrl), $"blob/{releaseBranch}/{readme}")
@@ -620,6 +626,28 @@ let watchDocs ctx =
     DocsTool.watch (string configuration)
 
 
+let benchmarks _ =
+    let args = [
+        "--project"
+        fsharpBenchmarksProj
+        "-c"
+        "Release"
+        "-f"
+        "net8.0"
+        "--"
+        "--exporters"
+        "json"
+        "--filter"
+        "*"
+        "--runtimes"
+        "net9.0"
+        "net8.0"
+        "--job=short"
+    ]
+
+    dotnet.run id (String.concat " " args)
+    |> failOnBadExitAndPrint
+
 let initTargets () =
     BuildServer.install [ GitHubActions.Installer ]
 
@@ -662,6 +690,8 @@ let initTargets () =
     Target.create "CleanDocsCache" cleanDocsCache
     Target.create "BuildDocs" buildDocs
     Target.create "WatchDocs" watchDocs
+    Target.create "Benchmarks" benchmarks
+
 
     //-----------------------------------------------------------------------------
     // Target Dependencies
