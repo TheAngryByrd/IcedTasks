@@ -60,12 +60,22 @@ jobs:
           tool: 'benchmarkdotnet'
           output-file-path: 'BenchmarkDotNet.Artifacts/results/IcedTasks-Combined-Benchmarks.json'
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: false  # Changed from true to false
+          auto-push: false
+          # Don't try to fetch gh-pages since we're not using it
+          skip-fetch-gh-pages: true
+          # Store data in a different location that we'll use for Pages deployment
+          benchmark-data-dir-path: 'benchmark-data'
           # Show alert with commit comment on detecting possible performance regression
           alert-threshold: '200%'
           comment-on-alert: true
           fail-on-alert: false
           alert-comment-cc-users: '@TheAngryByrd'
+      
+      - name: Debug - Show benchmark action output
+        run: |
+          echo "=== Benchmark action output ==="
+          ls -la benchmark-data/ || echo "benchmark-data directory not found"
+          find . -name "*.html" -o -name "*.js" -o -name "*.json" | grep -E "(benchmark|chart)" || echo "No benchmark web files found"
       
       - name: Download latest GitHub Pages artifact
         run: |
@@ -119,9 +129,14 @@ jobs:
           
           # Copy benchmark results to benchmarks subdirectory
           mkdir -p combined-site/benchmarks
-          if [ -d "benchmark-data-repository/dpcs/benchmark-data" ]; then
-            cp -r benchmark-data-repository/dpcs/benchmark-data/* combined-site/benchmarks/
+          if [ -d "benchmark-data" ]; then
+            cp -r benchmark-data/* combined-site/benchmarks/
             echo "Benchmark data copied to combined-site/benchmarks/"
+          else
+            echo "No benchmark data found in benchmark-data directory"
+            # List what directories we do have for debugging
+            echo "Available directories:"
+            ls -la . | grep "^d" || true
           fi
           
           # List what we have in combined-site for debugging
