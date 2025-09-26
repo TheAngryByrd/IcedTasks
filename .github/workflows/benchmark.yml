@@ -40,12 +40,25 @@ jobs:
         env:
           CI: true
           CONFIGURATION: Release
+      - name: Combine benchmark results
+        run: |
+          # Run the F# script to combine multiple JSON files into one
+          if [ -d "BenchmarkDotNet.Artifacts/results" ]; then
+            echo "Combining benchmark results..."
+            dotnet fsi combine-benchmarks.fsx -d "BenchmarkDotNet.Artifacts/results" -o "IcedTasks-Combined-Benchmarks" -p "*-report-full-compressed.json"
+            
+            echo "=== Combined benchmark file ==="
+            ls -la BenchmarkDotNet.Artifacts/results/IcedTasks-Combined-Benchmarks.json || echo "Combined file not found"
+          else
+            echo "No benchmark results directory found"
+          fi
+      
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: IcedTasks Benchmark
           tool: 'benchmarkdotnet'
-          output-file-path: 'BenchmarkDotNet.Artifacts/results/*.json'
+          output-file-path: 'BenchmarkDotNet.Artifacts/results/IcedTasks-Combined-Benchmarks.json'
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: false  # Changed from true to false
           # Show alert with commit comment on detecting possible performance regression
