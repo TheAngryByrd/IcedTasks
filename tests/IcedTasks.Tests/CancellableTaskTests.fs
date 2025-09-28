@@ -495,10 +495,11 @@ module CancellableTaskTests =
                     let mutable wasDisposed = false
 
                     let timeProvider = ManualTimeProvider()
+                    let timeProvider2 = ManualTimeProvider()
 
                     let doDispose () =
                         task {
-                            do! Task.Delay(15)
+                            do! timeProvider2.Delay(TimeSpan.FromMilliseconds(15.))
 
                             wasDisposed <- true
                         }
@@ -517,14 +518,22 @@ module CancellableTaskTests =
 
                     let inProgress = actor data cts.Token
 
+                    Expect.isFalse wasDisposed "Dispose before cancellation"
+
                     do!
                         timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(100))
                         |> Async.AwaitTask
 
-                    Expect.isFalse wasDisposed ""
+
+                    Expect.isFalse wasDisposed "Dispose after cancellation"
+
 
                     do!
-                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(100))
+                        timeProvider2.ForwardTimeAsync(TimeSpan.FromMilliseconds(15.))
+                        |> Async.AwaitTask
+
+                    do!
+                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(200.))
                         |> Async.AwaitTask
 
                     do!
@@ -532,7 +541,7 @@ module CancellableTaskTests =
                         |> Async.AwaitTask
 
 
-                    Expect.isTrue wasDisposed ""
+                    Expect.isTrue wasDisposed "Dispose after completion"
 
                 }
 
