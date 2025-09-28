@@ -156,9 +156,13 @@ type ManualTimeProviderExtensions =
             do! Task.Yield()
             this.Advance(time)
             //https://github.com/dotnet/runtime/issues/85326
-            do! Task.yieldMany 100
-            do! Task.Delay(15)
-            do! Task.yieldMany 100
+            // I'm not sure why we have to do this many yields, but sometimes the timer doesn't fire and the test run forever.
+            // I've spent way too much time on this already.
+            do!
+                Task.yieldMany (
+                    Int32.MaxValue
+                    / 100000
+                )
         }
 
 
