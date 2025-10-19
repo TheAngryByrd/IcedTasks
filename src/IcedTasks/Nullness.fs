@@ -5,6 +5,13 @@ namespace IcedTasks.Nullness
 
 open System
 
+type ExceptionNull =
+#if NULLABLE
+    Exception | null
+#else
+    Exception
+#endif
+
 type IDisposableNull =
 #if NULLABLE
     IDisposable | null

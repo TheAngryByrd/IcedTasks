@@ -10,6 +10,7 @@
 // to this software to the public domain worldwide. This software is distributed without any warranty.
 
 namespace IcedTasks.CancellableValueTasks
+
 open IcedTasks
 open IcedTasks.ValueTasks
 open IcedTasks.TaskLike
@@ -318,6 +319,7 @@ module CancellableValueTasks =
     [<AutoOpen>]
     module AsyncExtensions =
         open IcedTasks.AsyncEx
+
         type AsyncExBuilder with
 
             member inline this.Source([<InlineIfLambda>] t: CancellableValueTask<'T>) : Async<'T> =

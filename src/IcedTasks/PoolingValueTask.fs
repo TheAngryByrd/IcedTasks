@@ -19,7 +19,6 @@ open IcedTasks.TaskBase
 // to this software to the public domain worldwide. This software is distributed without any warranty.
 
 
-
 /// Contains methods to build PoolingValueTasks using the F# computation expression syntax
 [<AutoOpen>]
 module PoolingValueTasks =

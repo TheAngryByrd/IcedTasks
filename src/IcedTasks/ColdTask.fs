@@ -10,6 +10,7 @@
 // to this software to the public domain worldwide. This software is distributed without any warranty.
 
 namespace IcedTasks.ColdTasks
+
 open IcedTasks
 open IcedTasks.Nullness
 open IcedTasks.TaskLike

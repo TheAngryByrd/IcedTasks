@@ -7,6 +7,7 @@ open System.Runtime.ExceptionServices
 open System.Collections.Generic
 open IcedTasks.Nullness
 open IcedTasks.TaskLike
+
 type internal Async =
     static member inline map f x =
         async.Bind(x, (fun v -> async.Return(f v)))

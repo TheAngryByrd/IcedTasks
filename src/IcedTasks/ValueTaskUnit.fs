@@ -13,9 +13,11 @@ namespace IcedTasks
 // to this software to the public domain worldwide. This software is distributed without any warranty.
 
 namespace IcedTasks.ValueTasksUnit
+
 open IcedTasks
 open IcedTasks.TaskLike
 open IcedTasks.TaskBase
+
 /// Contains methods to build ValueTasks using the F# computation expression syntax
 [<AutoOpen>]
 module ValueTasksUnit =

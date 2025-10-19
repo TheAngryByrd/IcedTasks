@@ -266,7 +266,7 @@ module CancellablePoolingValueTasks =
     /// <exclude />
     [<AutoOpen>]
     module HighPriority =
-    
+
         open IcedTasks.AsyncEx
 
         type AsyncEx with
@@ -339,6 +339,7 @@ module CancellablePoolingValueTasks =
     [<AutoOpen>]
     module AsyncExtensions =
         open IcedTasks.AsyncEx
+
         type AsyncExBuilder with
 
             member inline this.Source([<InlineIfLambda>] t: CancellableValueTask<'T>) : Async<'T> =
