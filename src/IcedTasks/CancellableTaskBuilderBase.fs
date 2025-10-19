@@ -1,4 +1,8 @@
-namespace IcedTasks
+namespace IcedTasks.CancellableTaskBase
+
+open IcedTasks
+open IcedTasks.Nullness
+open IcedTasks.TaskLike
 
 /// Contains methods to build Tasks using the F# computation expression syntax
 [<AutoOpen>]
@@ -13,6 +17,7 @@ module CancellableTaskBase =
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
     open Microsoft.FSharp.Collections
     open System.Collections.Generic
+
 
     /// The extra data stored in ResumableStateMachine for tasks
     [<Struct; NoComparison; NoEquality>]
@@ -605,6 +610,7 @@ module CancellableTaskBase =
     /// <exclude/>
     [<AutoOpen>]
     module HighPriority =
+        open IcedTasks.AsyncEx
 
 
         type AsyncEx with

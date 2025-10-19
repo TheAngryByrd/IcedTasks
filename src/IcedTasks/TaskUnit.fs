@@ -11,7 +11,11 @@ namespace IcedTasks
 // To the extent possible under law, the author(s) have dedicated all copyright and related and neighboring rights
 // to this software to the public domain worldwide. This software is distributed without any warranty.
 
-namespace IcedTasks
+namespace IcedTasks.TasksUnit
+
+open IcedTasks
+open IcedTasks.TaskLike
+open IcedTasks.TaskBase
 
 /// Contains methods to build Tasks using the F# computation expression syntax
 [<AutoOpen>]

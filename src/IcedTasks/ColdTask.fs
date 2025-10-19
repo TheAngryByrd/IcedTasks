@@ -9,7 +9,12 @@
 // To the extent possible under law, the author(s) have dedicated all copyright and related and neighboring rights
 // to this software to the public domain worldwide. This software is distributed without any warranty.
 
-namespace IcedTasks
+namespace IcedTasks.ColdTasks
+
+open IcedTasks
+open IcedTasks.Nullness
+open IcedTasks.TaskLike
+
 
 /// Contains methods to build ColdTasks using the F# computation expression syntax
 [<AutoOpen>]
@@ -633,6 +638,7 @@ module ColdTasks =
     /// <exclude />
     [<AutoOpen>]
     module HighPriority =
+        open IcedTasks.AsyncEx
         // High priority extensions
 
         type AsyncEx with
@@ -719,7 +725,7 @@ module ColdTasks =
     /// </summary>
     [<AutoOpen>]
     module AsyncExtensions =
-
+        open IcedTasks.AsyncEx
 
         type AsyncExBuilder with
 
@@ -753,7 +759,7 @@ module ColdTasks =
 
             member inline this.ReturnFrom(coldTask: ColdTask) = this.ReturnFrom(coldTask ())
 
-        type TaskBuilderBase with
+        type IcedTasks.TaskBase.TaskBase.TaskBuilderBase with
 
             member inline this.Source(coldTask: ColdTask<'T>) = (coldTask ()).GetAwaiter()
 

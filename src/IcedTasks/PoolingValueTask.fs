@@ -1,7 +1,12 @@
 namespace IcedTasks
 
+namespace IcedTasks.PoolingValueTasks
+
 #if NET6_0_OR_GREATER
 
+open IcedTasks
+open IcedTasks.TaskLike
+open IcedTasks.TaskBase
 // Task builder for F# that compiles to allocation-free paths for synchronous code.
 //
 // Originally written in 2016 by Robert Peele (humbobst@gmail.com)
@@ -13,7 +18,6 @@ namespace IcedTasks
 // To the extent possible under law, the author(s) have dedicated all copyright and related and neighboring rights
 // to this software to the public domain worldwide. This software is distributed without any warranty.
 
-namespace IcedTasks
 
 /// Contains methods to build PoolingValueTasks using the F# computation expression syntax
 [<AutoOpen>]
