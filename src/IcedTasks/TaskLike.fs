@@ -1,4 +1,4 @@
-namespace IcedTasks
+namespace IcedTasks.TaskLike
 
 open System.Runtime.CompilerServices
 open Microsoft.FSharp.Core.CompilerServices

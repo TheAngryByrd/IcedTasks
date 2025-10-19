@@ -1,12 +1,13 @@
-namespace IcedTasks
+namespace IcedTasks.AsyncEx
 
 open System
 open System.Threading
 open System.Threading.Tasks
 open System.Runtime.ExceptionServices
 open System.Collections.Generic
-
-type private Async =
+open IcedTasks.Nullness
+open IcedTasks.TaskLike
+type internal Async =
     static member inline map f x =
         async.Bind(x, (fun v -> async.Return(f v)))
 
@@ -343,6 +344,7 @@ namespace IcedTasks.Polyfill.Async
 [<AutoOpen>]
 module PolyfillBuilders =
     open IcedTasks
+    open IcedTasks.AsyncEx
 
     /// <summary>
     /// Builds an asynchronous workflow using computation expression syntax.
