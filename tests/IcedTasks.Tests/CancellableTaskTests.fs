@@ -1655,6 +1655,120 @@ module CancellableTaskTests =
 
         ]
 
+    let recursionTests =
+        testList "Recursion" [
+            testCaseAsync "Non-tail recursion"
+            <| async {
+                let rec loop n =
+                    cancellableTask {
+                        try
+                            try
+                                // if n % 1000 = 0 then printfn $"in loop at {n}"
+
+                                if n = 42 then
+                                    failwith "boom"
+
+                                if n <= 0 then return 0 else return! loop (n - 1)
+                            finally
+                                () // if n % 1000 = 0 then printfn $"finally at {n}"
+                        with exn when n = 10_000 ->
+                            //printfn $"caught {exn.Message} at {n}"
+                            return 55
+                    }
+
+                let! result = loop 100_000
+                Expect.equal result 55 ""
+            }
+            testCaseAsync "Mutual recursion CancellableTask <-> ColdTask (start cancellable)"
+            <| async {
+
+                // Track cancellation tokens flowing through the cancellable side
+                let calls = System.Collections.Concurrent.ConcurrentBag<int * CancellationToken>()
+
+                let rec evenC n : CancellableTask<bool> =
+                    cancellableTask {
+                        let! ct = CancellableTask.getCancellationToken ()
+                        calls.Add(n, ct)
+
+                        if n = 0 then return true else return! oddCold (n - 1)
+                    }
+
+                and oddCold n : ColdTask<bool> =
+                    coldTask {
+                        if n = 0 then
+                            return false
+                        else
+                            return! evenC (n - 1) CancellationToken.None
+                    }
+
+                use cts = new CancellationTokenSource()
+                let depth = 10_000 // ensure enough iterations to assert trampoline stack safety
+
+                let! result =
+                    evenC depth cts.Token
+                    |> Async.AwaitTask
+
+                Expect.isTrue result "Should compute parity correctly (even)"
+
+                let captured =
+                    calls
+                    |> Seq.map snd
+                    |> Seq.toList
+
+                Expect.isTrue
+                    (captured
+                     |> List.contains cts.Token)
+                    "Root token should be captured at least once"
+
+                Expect.isTrue
+                    (captured
+                     |> List.forall (fun ct ->
+                         ct = cts.Token
+                         || ct = CancellationToken.None
+                     ))
+                    "Tokens should be either the root token or CancellationToken.None after ColdTask boundary"
+            }
+            testCaseAsync "Mutual recursion ColdTask <-> CancellableTask (start cold)"
+            <| async {
+
+                let rec coldStart n : ColdTask<int> =
+                    coldTask {
+                        if n = 0 then
+                            return 1
+                        else
+                            let! v = cancellablePart (n - 1) CancellationToken.None
+                            return v + 1
+                    }
+
+                and cancellablePart n : CancellableTask<int> =
+                    cancellableTask {
+                        if n = 0 then
+                            return 1
+                        else
+                            let! v = coldStart (n - 1)
+                            return v + 1
+                    }
+
+                use cts = new CancellationTokenSource()
+                let depth = 10_000 // increase to 10k to verify no stack overflow
+
+                let! result =
+                    coldStart depth
+                    |> Async.AwaitColdTask
+
+                Expect.equal result (depth + 1) "Should accumulate correctly across builders"
+
+                let! result2 =
+                    cancellablePart depth cts.Token
+                    |> Async.AwaitTask
+
+                Expect.equal
+                    result2
+                    (depth + 1)
+                    "Should accumulate correctly when starting from cancellable side"
+            }
+        ]
+
     [<Tests>]
     let cancellationTaskTests =
         testList "IcedTasks.CancellableTask" [
@@ -1662,4 +1776,5 @@ module CancellableTaskTests =
             asyncBuilderTests
             asyncExBuilderTests
             functionTests
+            recursionTests
         ]

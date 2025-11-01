@@ -1068,6 +1068,112 @@ module ColdTaskTests =
 
         ]
 
+    let recursionTests =
+        testList "Recursion" [
+            testCaseAsync "Non-tail recursion"
+            <| async {
+                let rec loop n =
+                    coldTask {
+                        try
+                            try
+                                // if n % 1000 = 0 then printfn $"in loop at {n}"
+
+                                if n = 42 then
+                                    failwith "boom"
+
+                                if n <= 0 then return 0 else return! loop (n - 1)
+                            finally
+                                () // if n % 1000 = 0 then printfn $"finally at {n}"
+                        with exn when n = 10_000 ->
+                            //printfn $"caught {exn.Message} at {n}"
+                            return 55
+                    }
+
+                let! result = loop 100_000
+                Expect.equal result 55 ""
+            }
+            // Regression test for starting nested cold tasks immediately (not via return!/let!).
+            // Previously this pattern could hang due to each ColdTask scheduling initial MoveNext on trampoline without linking.
+            testCase "Immediate start nested recursion"
+            <| fun () ->
+                let rec foo (n: int) : ColdTask<int> =
+                    coldTask {
+                        if n = 0 then
+                            return 42
+                        else
+                            let t: Task<int> = (foo (n - 1)) ()
+                            let res = t.GetAwaiter().GetResult()
+                            return res
+                    }
+
+                let root: Task<int> = (foo 100) ()
+                let result = root.GetAwaiter().GetResult()
+                Expect.equal result 42 "Immediate start recursion should complete without hanging"
+            testCaseAsync "Mutual recursion ColdTask <-> CancellableTask (start cold)"
+            <| async {
+                let rec coldSide n : ColdTask<int> =
+                    coldTask {
+                        if n = 0 then
+                            return 0
+                        else
+                            return! cancellableSide (n - 1) CancellationToken.None
+                    }
+
+                and cancellableSide n : CancellableTask<int> =
+                    cancellableTask { if n = 0 then return 0 else return! coldSide (n - 1) }
+
+                let depth = 40_000
+
+                let! v =
+                    coldSide depth
+                    |> Async.AwaitColdTask
+
+                Expect.equal v 0 "Value should propagate"
+                use cts = new CancellationTokenSource()
+
+                let! v2 =
+                    cancellableSide depth cts.Token
+                    |> Async.AwaitTask
+
+                Expect.equal v2 0 "Value should propagate from cancellable start"
+            }
+            testCaseAsync "Mutual recursion ColdTask <-> CancellableTask with accumulation"
+            <| async {
+                let rec coldAcc n acc : ColdTask<int> =
+                    coldTask {
+                        if n = 0 then
+                            return acc
+                        else
+                            return! cancellableAcc (n - 1) (acc + 1) CancellationToken.None
+                    }
+
+                and cancellableAcc n acc : CancellableTask<int> =
+                    cancellableTask {
+                        if n = 0 then
+                            return acc
+                        else
+                            return! coldAcc (n - 1) (acc + 1)
+                    }
+
+                let depth = 25_000
+
+                let! resCold =
+                    coldAcc depth 0
+                    |> Async.AwaitColdTask
+
+                Expect.equal resCold (depth) "Accumulation should equal depth when starting cold"
+                use cts = new CancellationTokenSource()
+
+                let! resCanc =
+                    cancellableAcc depth 0 cts.Token
+                    |> Async.AwaitTask
+
+                Expect.equal
+                    resCanc
+                    depth
+                    "Accumulation should equal depth when starting cancellable"
+            }
+        ]
 
     [<Tests>]
     let coldTaskTests =
@@ -1077,4 +1183,5 @@ module ColdTaskTests =
             asyncExBuilderTests
             taskBuilderTests
             functionTests
+            recursionTests
         ]
