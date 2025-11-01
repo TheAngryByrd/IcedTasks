@@ -395,6 +395,7 @@ let dotnetTest ctx =
                         |> DotNet.Options.withAdditionalArgs args
                     Configuration = configuration (ctx.Context.AllExecutingTargets)
                     NoBuild = true
+                    Logger = Some "trx;LogFilePrefix=testResults"
             })
         sln
 
