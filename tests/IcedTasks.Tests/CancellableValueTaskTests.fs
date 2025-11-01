@@ -532,14 +532,14 @@ module CancellableValueTaskTests =
                         }
 
                     use cts =
-                        timeProvider.CreateCancellationTokenSource(TimeSpan.FromMilliseconds(100))
+                        timeProvider.CreateCancellationTokenSource(TimeSpan.FromMilliseconds(100.))
 
                     let inProgress = actor data cts.Token
 
                     Expect.isFalse wasDisposed "Dispose before cancellation"
 
                     do!
-                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(100))
+                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(100.))
                         |> Async.AwaitTask
 
 
@@ -1230,7 +1230,7 @@ module CancellableValueTaskTests =
 
                                                         do!
                                                             timeProvider.Delay(
-                                                                TimeSpan.FromMilliseconds(1000),
+                                                                TimeSpan.FromMilliseconds(1000.),
                                                                 ct
                                                             )
                                                     }
@@ -1239,13 +1239,13 @@ module CancellableValueTaskTests =
 
                                 use cts =
                                     timeProvider.CreateCancellationTokenSource(
-                                        TimeSpan.FromMilliseconds(100)
+                                        TimeSpan.FromMilliseconds(100.)
                                     )
 
                                 let runningTask = fooTask cts.Token
-                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50))
+                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50.))
                                 Expect.isFalse runningTask.IsCanceled ""
-                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50))
+                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50.))
                                 do! runningTask
                             }
                         )
