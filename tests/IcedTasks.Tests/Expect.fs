@@ -87,7 +87,7 @@ module Expect =
                 }
 
             match thrown with
-            | ValueSome e when e.GetType().IsAssignableFrom typeof<'texn> ->
+            | ValueSome e when not (e.GetType().IsAssignableFrom typeof<'texn>) ->
                 failtestf
                     "%s. Expected f to throw an exn of type %s, but one of type %s was thrown."
                     message

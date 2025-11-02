@@ -18,4 +18,7 @@ module AutoOpens =
     [<assembly: AutoOpen("IcedTasks.CancellableValueTasks")>]
     [<assembly: AutoOpen("IcedTasks.CancellablePoolingValueTasks")>]
     [<assembly: AutoOpen("IcedTasks.CancellableTasks")>]
+#if NET10_0_OR_GREATER
+    [<assembly: AutoOpen("IcedTasks.TaskBase_Net10")>]
+#endif
     do ()

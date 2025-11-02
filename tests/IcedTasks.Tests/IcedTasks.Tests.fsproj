@@ -12,6 +12,7 @@
     <Compile Include="Expect.fs" />
     <Compile Include="AsyncExTests.fs" />
     <Compile Include="TaskTests.fs" />
+    <Compile Include="TaskTests_Net10.fs" Condition="$(NET10_0_OR_GREATER) == 'true'" />
     <Compile Include="TaskBackgroundTests.fs" />
     <Compile Include="TaskDynamicTests.fs" />
     <Compile Include="ValueTaskTests.fs" />
