@@ -468,6 +468,7 @@ module CancellableTaskTests =
 
                 testCaseAsync "use IAsyncDisposable propagate exception"
                 <| async {
+
                     let doDispose () =
                         task {
                             do! Task.Delay(15)
@@ -509,19 +510,19 @@ module CancellableTaskTests =
                     let actor data =
                         cancellableTask {
                             use d = TestHelpers.makeAsyncDisposable (doDispose)
-                            do! fun ct -> timeProvider.Delay(TimeSpan.FromMilliseconds(200), ct)
+                            do! fun ct -> timeProvider.Delay(TimeSpan.FromMilliseconds(200.), ct)
                             return ()
                         }
 
                     use cts =
-                        timeProvider.CreateCancellationTokenSource(TimeSpan.FromMilliseconds(100))
+                        timeProvider.CreateCancellationTokenSource(TimeSpan.FromMilliseconds(100.))
 
                     let inProgress = actor data cts.Token
 
                     Expect.isFalse wasDisposed "Dispose before cancellation"
 
                     do!
-                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(100))
+                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(100.))
                         |> Async.AwaitTask
 
 
@@ -1192,7 +1193,7 @@ module CancellableTaskTests =
 
                                                         do!
                                                             timeProvider.Delay(
-                                                                TimeSpan.FromMilliseconds(1000),
+                                                                TimeSpan.FromMilliseconds(1000.),
                                                                 ct
                                                             )
                                                     }
@@ -1201,13 +1202,13 @@ module CancellableTaskTests =
 
                                 use cts =
                                     timeProvider.CreateCancellationTokenSource(
-                                        TimeSpan.FromMilliseconds(100)
+                                        TimeSpan.FromMilliseconds(100.)
                                     )
 
                                 let runningTask = fooTask cts.Token
-                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50))
+                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50.))
                                 Expect.isFalse runningTask.IsCanceled ""
-                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50))
+                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50.))
                                 do! runningTask
                             }
                         )
