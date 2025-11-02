@@ -1012,7 +1012,7 @@ module CancellableTaskTests =
                         let parallelList = ResizeArray<_>()
 
                         let fakeWork id yieldTimes (l: ResizeArray<_>) =
-                            cancellableTask {
+                            backgroundTask {
                                 lock l (fun () -> l.Add(id))
                                 do! Task.yieldMany yieldTimes
                                 let dt = DateTimeOffset.UtcNow
