@@ -4,14 +4,12 @@ open System
 open Expecto
 open System.Threading.Tasks
 open IcedTasks
-// open IcedTasks.Polyfill.Task
 
-open IcedTasks.TaskBase_Net10
+open IcedTasks.Polyfill.TasksRuntime
 
 module TaskTests_Net10 =
     open System.Collections.Generic
 
-    let task = Testing.taskRuntime
 
     let builderTests =
         testList "TaskBuilder" [
@@ -701,6 +699,7 @@ module TaskTests_Net10 =
                             // TODO: Figure out why we need to wrap this in Task.Run to avoid deadlocks
                             // Task.Run<DateTimeOffset>(fun () ->
                             backgroundTask {
+                                // task {
                                 lock l (fun () -> l.Add(id))
                                 do! Task.yieldMany yieldTimes
                                 // do! Task.Delay(250)
@@ -806,4 +805,4 @@ module TaskTests_Net10 =
 
 
     [<Tests>]
-    let tests = ftestList "IcedTasks.Polyfill.Task_Net10" [ builderTests ]
+    let tests = testList "IcedTasks.Polyfill.Task_Net10" [ builderTests ]

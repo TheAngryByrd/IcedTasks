@@ -21,18 +21,23 @@ module internal AsyncHelpers =
 type TaskBuilderBaseRuntime() =
 
 
-    member inline _.Return(value: 'T) = ValueTask.FromResult value
+    member inline _.Return(value: 'T) =
+        ValueTask.FromResult value
+        |> Awaitable.GetAwaiter
 
     // [<NoEagerConstraintApplication>]
     member inline _.Bind(awaiter, [<InlineIfLambda>] continuation) =
         AsyncHelpers.awaitAwaiter awaiter
         |> continuation
+    // |> Awaitable.GetAwaiter
 
 
     // [<NoEagerConstraintApplication>]
     member inline this.ReturnFrom(awaiter) = this.Bind(awaiter, this.Return)
 
-    member inline _.Zero() = ValueTask<_>()
+    member inline _.Zero() =
+        ValueTask<_>()
+        |> Awaitable.GetAwaiter
 
     member inline _.Delay([<InlineIfLambda>] f: unit -> 'a) = f
 
@@ -42,24 +47,24 @@ type TaskBuilderBaseRuntime() =
     // [<NoEagerConstraintApplication>]
     member inline this.MergeSources(awaiter1, awaiter2) =
         this.Bind(awaiter1, fun v1 -> this.Bind(awaiter2, fun v2 -> this.Return(struct (v1, v2))))
-        |> Awaitable.GetAwaiter
+    // |> Awaitable.GetAwaiter
 
     member inline this.Combine(awaiter1, [<InlineIfLambda>] continuation) =
-        this.Bind(Awaitable.GetAwaiter awaiter1, fun _ -> continuation ())
+        this.Bind(awaiter1, fun _ -> continuation ())
 
     member inline this.While
         ([<InlineIfLambda>] guard: unit -> bool, [<InlineIfLambda>] body: unit -> 'a)
         =
         while guard () do
             body ()
-            |> AsyncHelpers.awaitAwaitable
+            |> AsyncHelpers.awaitAwaiter
 
         this.Zero()
 
     member inline this.For(sequence: seq<'T>, [<InlineIfLambda>] body: 'T -> 'a) =
         for x in sequence do
             body x
-            |> AsyncHelpers.awaitAwaitable
+            |> AsyncHelpers.awaitAwaiter
 
         this.Zero()
 
@@ -68,7 +73,7 @@ type TaskBuilderBaseRuntime() =
         ([<InlineIfLambda>] awaiter, [<InlineIfLambda>] compensation: unit -> ValueTask)
         =
         try
-            this.Bind(Awaitable.GetAwaiter(awaiter ()), this.Return)
+            this.Bind((awaiter ()), this.Return)
         finally
             compensation ()
             |> AsyncHelpers.awaitAwaitable
@@ -77,15 +82,15 @@ type TaskBuilderBaseRuntime() =
         ([<InlineIfLambda>] awaiter, [<InlineIfLambda>] compensation: unit -> unit)
         =
         try
-            this.Bind(Awaitable.GetAwaiter(awaiter ()), this.Return)
+            this.Bind((awaiter ()), this.Return)
         finally
             compensation ()
 
-    member inline this.TryWith
-        ([<InlineIfLambda>] awaiter, [<InlineIfLambda>] catchHandler: exn -> ValueTask<'a>)
-        =
+    member inline this.TryWith<'Awaiter>
+        ([<InlineIfLambda>] awaiter, [<InlineIfLambda>] catchHandler: exn -> 'Awaiter)
+        : 'Awaiter =
         try
-            this.Bind(Awaitable.GetAwaiter(awaiter ()), this.Return)
+            awaiter ()
         with ex ->
             catchHandler ex
 
@@ -110,7 +115,7 @@ type TaskBuilderBaseRuntime() =
                 while enumerator.MoveNextAsync()
                       |> AsyncHelpers.awaitAwaitable do
                     body enumerator.Current
-                    |> AsyncHelpers.awaitAwaitable
+                    |> AsyncHelpers.awaitAwaiter
 
                 this.Zero()
         )
@@ -190,14 +195,13 @@ module HighPriority =
 type TaskBuilderRuntime() =
     inherit TaskBuilderBaseRuntime()
 
-    member inline this.Run([<InlineIfLambda>] f: unit -> ValueTask<'T>) : Task<'T> = f().AsTask()
+    member inline this.Run([<InlineIfLambda>] f: unit -> 'a) : Task<'T> =
+        AsyncHelpers.awaitAwaiter (f ())
+        |> Task.FromResult
+    // f().AsTask()
 
 
-    /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>
-    ///
-    /// <remarks>This turns a Task&lt;'T&gt; into a 'Awaiter.</remarks>
-    ///
-    /// <returns>'Awaiter</returns>
+    /// Used to force type inference to prefer Task<_> for parameters of functions using the build
     member inline _.Source(task: Task<'T>) = Awaitable.GetTaskAwaiter task
 
 
@@ -207,40 +211,13 @@ type ValueTaskBuilderRuntime() =
     member inline this.Run([<InlineIfLambda>] f: unit -> ValueTask<'T>) : ValueTask<'T> = f ()
 
 
-    /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>
-    ///
-    /// <remarks>This turns a Task&lt;'T&gt; into a 'Awaiter.</remarks>
-    ///
-    /// <returns>'Awaiter</returns>
+    /// Used to force type inference to prefer ValueTask<_> for parameters of functions using the build
     member inline _.Source(task: ValueTask<'T>) = Awaitable.GetAwaiter task
 
 
-module Testing =
-    let taskRuntime = TaskBuilderRuntime()
+namespace IcedTasks.Polyfill.TasksRuntime
 
-    let foo () =
-        taskRuntime {
-            let! x = Task.FromResult 42
-            and! y = ValueTask.FromResult 42
-            and! a = ValueTask.FromResult 42
-            and! b = Task.FromResult 42
-            and! c = ValueTask.FromResult 42
-            and! z = Task.Run(fun () -> 42)
-
-            do! Task.Yield()
-
-            if true then
-                do! ValueTask.CompletedTask
-
-            let mutable i = 0
-
-            while i < 10 do
-                do! ValueTask.CompletedTask
-                i <- i + 1
-
-            for j in 1..5 do
-                do! ValueTask.CompletedTask
-
-
-            return! ValueTask.FromResult(x + y + z)
-        }
+[<AutoOpen>]
+module TaskBuilder =
+    open IcedTasks.TaskBase_Net10
+    let task = TaskBuilderRuntime()
