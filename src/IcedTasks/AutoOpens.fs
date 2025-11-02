@@ -11,10 +11,15 @@ module AutoOpens =
     [<assembly: AutoOpen("IcedTasks.ParallelAsync")>]
     [<assembly: AutoOpen("IcedTasks.TaskBase")>]
     [<assembly: AutoOpen("IcedTasks.ValueTasks")>]
+#if NET6_0_OR_GREATER
     [<assembly: AutoOpen("IcedTasks.PoolingValueTasks")>]
+#endif
     [<assembly: AutoOpen("IcedTasks.ValueTasksUnit")>]
     [<assembly: AutoOpen("IcedTasks.ColdTasks")>]
     [<assembly: AutoOpen("IcedTasks.CancellableTaskBase")>]
+#if NET6_0_OR_GREATER
+    [<assembly: AutoOpen("IcedTasks.CancellablePoolingValueTasks")>]
+#endif
     [<assembly: AutoOpen("IcedTasks.CancellableValueTasks")>]
     [<assembly: AutoOpen("IcedTasks.CancellablePoolingValueTasks")>]
     [<assembly: AutoOpen("IcedTasks.CancellableTasks")>]

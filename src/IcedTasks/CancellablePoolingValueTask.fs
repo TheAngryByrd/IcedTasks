@@ -11,8 +11,6 @@
 
 namespace IcedTasks.CancellablePoolingValueTasks
 
-#if NET6_0_OR_GREATER
-
 open IcedTasks
 open IcedTasks.TaskLike
 open IcedTasks.CancellableTaskBase
@@ -505,4 +503,3 @@ module CancellablePoolingValueTasks =
             fun ct ->
                 cancellableTask ct
                 |> ValueTask.toUnit
-#endif
