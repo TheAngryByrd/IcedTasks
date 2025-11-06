@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>IcedTasks.Benchmarks.SyncCompletionBenchmarks-20230707-193809</title>
+<title>IcedTasks.Benchmarks.SyncCompletionBenchmarks-20251103-222134</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -13,42 +13,45 @@
 </head>
 <body>
 <pre><code>
-BenchmarkDotNet=v0.13.2, OS=Windows 11 (10.0.22621.1848)
+BenchmarkDotNet v0.13.9+228a464e8be6c580ad9408e98f18813f6407fb5a, Windows 11 (10.0.26100.6899)
 12th Gen Intel Core i9-12900F, 1 CPU, 24 logical and 16 physical cores
-.NET SDK=7.0.203
-  [Host]     : .NET 7.0.8 (7.0.823.31807), X64 RyuJIT AVX2 DEBUG
-  DefaultJob : .NET 7.0.8 (7.0.823.31807), X64 RyuJIT AVX2
+.NET SDK 10.0.100-rc.2.25502.107
+  [Host]     : .NET 10.0.0 (10.0.25.50307), X64 RyuJIT AVX2 DEBUG
+  DefaultJob : .NET 10.0.0 (10.0.25.50307), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
-<thead><tr><th>                                                           Method</th><th>                                                         Categories</th><th>manyIterations</th><th> Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+<thead><tr><th>Method                                                           </th><th>Categories                                                         </th><th>Mean  </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CSharp_TenBindsSync_TaskBuilder_BindTask</td><td>NonAsyncBinds,CSharp,TaskBuilder,BindTask</td><td>1000</td><td>50.52 &mu;s</td><td>0.465 &mu;s</td><td>0.412 &mu;s</td><td>1.00</td><td>0.00</td><td>50.4761</td><td>-</td><td>792000 B</td><td>1.00</td>
-</tr><tr><td>CSharp_TenBindsSync_TaskBuilder_BindValueTask</td><td>NonAsyncBinds,CSharp,TaskBuilder,BindValueTask</td><td>1000</td><td>65.17 &mu;s</td><td>0.493 &mu;s</td><td>0.461 &mu;s</td><td>1.29</td><td>0.01</td><td>4.5166</td><td>-</td><td>72000 B</td><td>0.09</td>
-</tr><tr><td>CSharp_TenBindsSync_ValueTaskBuilder_BindTask</td><td>NonAsyncBinds,CSharp,ValueTaskBuilder,BindTask</td><td>1000</td><td>48.53 &mu;s</td><td>0.837 &mu;s</td><td>1.089 &mu;s</td><td>0.96</td><td>0.02</td><td>45.8984</td><td>-</td><td>720000 B</td><td>0.91</td>
-</tr><tr><td>CSharp_TenBindsSync_ValueTaskBuilder_BindValueTask</td><td>NonAsyncBinds,CSharp,ValueTaskBuilder,BindValueTask</td><td>1000</td><td>67.96 &mu;s</td><td>0.647 &mu;s</td><td>0.605 &mu;s</td><td>1.35</td><td>0.02</td><td>-</td><td>-</td><td>-</td><td>0.00</td>
-</tr><tr><td>FSharp_TenBindsSync_AsyncBuilder_BindAsync</td><td>NonAsyncBinds,FSharp,AsyncBuilder,BindAsync</td><td>1000</td><td>6,698.07 &mu;s</td><td>100.485 &mu;s</td><td>93.994 &mu;s</td><td>132.45</td><td>1.79</td><td>156.2500</td><td>-</td><td>2511997 B</td><td>3.17</td>
-</tr><tr><td>Fsharp_TenBindSync_cancellableTaskBuilder_BindAsync</td><td>NonAsyncBinds,FSharp,CancellableTaskBuilder,BindAsync</td><td>1000</td><td>906.74 &mu;s</td><td>6.296 &mu;s</td><td>5.581 &mu;s</td><td>17.95</td><td>0.18</td><td>391.6016</td><td>-</td><td>6152000 B</td><td>7.77</td>
-</tr><tr><td>Fsharp_TenBindSync_cancellableTaskBuilder_BindCancellableTask</td><td>NonAsyncBinds,FSharp,CancellableTaskBuilder,BindCancellableTask</td><td>1000</td><td>99.97 &mu;s</td><td>1.972 &mu;s</td><td>2.025 &mu;s</td><td>1.98</td><td>0.04</td><td>60.6689</td><td>-</td><td>952000 B</td><td>1.20</td>
-</tr><tr><td>Fsharp_TenBindSync_cancellableTaskBuilder_BindCancellableValueTask</td><td>NonAsyncBinds,FSharp,CancellableTaskBuilder,BindCancellableValueTask</td><td>1000</td><td>144.29 &mu;s</td><td>2.853 &mu;s</td><td>2.802 &mu;s</td><td>2.86</td><td>0.05</td><td>19.7754</td><td>-</td><td>312000 B</td><td>0.39</td>
-</tr><tr><td>Fsharp_TenBindSync_cancellableTaskBuilder_BindTask</td><td>NonAsyncBinds,FSharp,CancellableTaskBuilder,BindTask</td><td>1000</td><td>102.40 &mu;s</td><td>1.739 &mu;s</td><td>1.627 &mu;s</td><td>2.03</td><td>0.03</td><td>60.6689</td><td>-</td><td>952000 B</td><td>1.20</td>
-</tr><tr><td>Fsharp_TenBindSync_cancellableTaskBuilder_BindValueTask</td><td>NonAsyncBinds,FSharp,CancellableTaskBuilder,BindValueTask</td><td>1000</td><td>148.61 &mu;s</td><td>2.844 &mu;s</td><td>3.162 &mu;s</td><td>2.93</td><td>0.07</td><td>19.7754</td><td>-</td><td>312000 B</td><td>0.39</td>
-</tr><tr><td>Fsharp_TenBindSync_cancellableValueTaskBuilder_BindAsync</td><td>NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindAsync</td><td>1000</td><td>5,672.21 &mu;s</td><td>76.391 &mu;s</td><td>71.457 &mu;s</td><td>112.08</td><td>1.38</td><td>414.0625</td><td>-</td><td>6488201 B</td><td>8.19</td>
-</tr><tr><td>Fsharp_TenBindSync_cancellableValueTaskBuilder_BindCancellableTask</td><td>NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindCancellableTask</td><td>1000</td><td>100.89 &mu;s</td><td>1.418 &mu;s</td><td>1.257 &mu;s</td><td>2.00</td><td>0.03</td><td>56.5186</td><td>-</td><td>888000 B</td><td>1.12</td>
-</tr><tr><td>Fsharp_TenBindSync_cancellableValueTaskBuilder_BindCancellableValueTask</td><td>NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindCancellableValueTask</td><td>1000</td><td>150.76 &mu;s</td><td>2.915 &mu;s</td><td>3.119 &mu;s</td><td>2.98</td><td>0.06</td><td>15.6250</td><td>-</td><td>248000 B</td><td>0.31</td>
-</tr><tr><td>Fsharp_TenBindSync_cancellableValueTaskBuilder_BindTask</td><td>NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindTask</td><td>1000</td><td>100.80 &mu;s</td><td>1.923 &mu;s</td><td>2.758 &mu;s</td><td>2.02</td><td>0.06</td><td>56.5186</td><td>-</td><td>888000 B</td><td>1.12</td>
-</tr><tr><td>Fsharp_TenBindSync_cancellableValueTaskBuilder_BindValueTask</td><td>NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindValueTask</td><td>1000</td><td>149.93 &mu;s</td><td>1.406 &mu;s</td><td>1.174 &mu;s</td><td>2.97</td><td>0.04</td><td>15.6250</td><td>-</td><td>248000 B</td><td>0.31</td>
-</tr><tr><td>Fsharp_TenBindSync_plyTaskBuilder_BindTask</td><td>NonAsyncBinds,FSharp,PlyTaskBuilder,BindTask</td><td>1000</td><td>65.34 &mu;s</td><td>1.286 &mu;s</td><td>1.320 &mu;s</td><td>1.29</td><td>0.03</td><td>50.4150</td><td>-</td><td>792000 B</td><td>1.00</td>
-</tr><tr><td>Fsharp_TenBindSync_plyTaskBuilder_BindValueTask</td><td>NonAsyncBinds,FSharp,PlyTaskBuilder,BindValueTask</td><td>1000</td><td>76.00 &mu;s</td><td>0.521 &mu;s</td><td>0.462 &mu;s</td><td>1.50</td><td>0.01</td><td>4.5166</td><td>-</td><td>72000 B</td><td>0.09</td>
-</tr><tr><td>Fsharp_TenBindSync_plyValueTaskBuilder_BindTask</td><td>NonAsyncBinds,FSharp,PlyValueTaskBuilder,BindTask</td><td>1000</td><td>65.58 &mu;s</td><td>0.791 &mu;s</td><td>0.739 &mu;s</td><td>1.30</td><td>0.02</td><td>45.8984</td><td>-</td><td>720000 B</td><td>0.91</td>
-</tr><tr><td>Fsharp_TenBindSync_plyValueTaskBuilder_BindValueTask</td><td>NonAsyncBinds,FSharp,PlyValueTaskBuilder,BindValueTask</td><td>1000</td><td>75.13 &mu;s</td><td>0.777 &mu;s</td><td>0.726 &mu;s</td><td>1.49</td><td>0.02</td><td>-</td><td>-</td><td>-</td><td>0.00</td>
-</tr><tr><td>Fsharp_TenBindSync_TaskBuilder_BindAsync</td><td>NonAsyncBinds,FSharp,TaskBuilder,BindAsync</td><td>1000</td><td>5,379.34 &mu;s</td><td>38.806 &mu;s</td><td>30.297 &mu;s</td><td>106.42</td><td>1.10</td><td>359.3750</td><td>-</td><td>5665301 B</td><td>7.15</td>
-</tr><tr><td>Fsharp_TenBindSync_TaskBuilder_BindTask</td><td>NonAsyncBinds,FSharp,TaskBuilder,BindTask</td><td>1000</td><td>57.09 &mu;s</td><td>0.741 &mu;s</td><td>0.657 &mu;s</td><td>1.13</td><td>0.02</td><td>50.4761</td><td>0.0610</td><td>792000 B</td><td>1.00</td>
-</tr><tr><td>Fsharp_TenBindSync_TaskBuilder_BindValueTask</td><td>NonAsyncBinds,FSharp,TaskBuilder,BindValueTask</td><td>1000</td><td>68.12 &mu;s</td><td>1.147 &mu;s</td><td>1.073 &mu;s</td><td>1.35</td><td>0.02</td><td>4.5166</td><td>-</td><td>72000 B</td><td>0.09</td>
-</tr><tr><td>Fsharp_TenBindSync_ValueTaskBuilder_BindAsync</td><td>NonAsyncBinds,FSharp,ValueTaskBuilder,BindAsync</td><td>1000</td><td>5,407.33 &mu;s</td><td>64.063 &mu;s</td><td>59.924 &mu;s</td><td>107.00</td><td>1.44</td><td>359.3750</td><td>-</td><td>5664162 B</td><td>7.15</td>
-</tr><tr><td>Fsharp_TenBindSync_ValueTaskBuilder_BindTask</td><td>NonAsyncBinds,FSharp,ValueTaskBuilder,BindTask</td><td>1000</td><td>55.31 &mu;s</td><td>0.606 &mu;s</td><td>0.537 &mu;s</td><td>1.09</td><td>0.01</td><td>45.8984</td><td>-</td><td>720000 B</td><td>0.91</td>
-</tr><tr><td>Fsharp_TenBindSync_ValueTaskBuilder_BindValueTask</td><td>NonAsyncBinds,FSharp,ValueTaskBuilder,BindValueTask</td><td>1000</td><td>71.28 &mu;s</td><td>0.797 &mu;s</td><td>0.746 &mu;s</td><td>1.41</td><td>0.02</td><td>-</td><td>-</td><td>-</td><td>0.00</td>
+</thead><tbody><tr><td>CSharp_TenBindsSync_TaskBuilder_BindTask</td><td>NonAsyncBinds,CSharp,TaskBuilder,BindTask</td><td>53.152 ns</td><td>1.0463 ns</td><td>1.9132 ns</td><td>1.00</td><td>0.00</td><td>0.0505</td><td>792 B</td><td>1.00</td>
+</tr><tr><td>CSharp_TenBindsSync_TaskBuilder_BindValueTask</td><td>NonAsyncBinds,CSharp,TaskBuilder,BindValueTask</td><td>16.228 ns</td><td>0.2477 ns</td><td>0.2317 ns</td><td>0.31</td><td>0.01</td><td>0.0046</td><td>72 B</td><td>0.09</td>
+</tr><tr><td>CSharp_TenBindsSync_ValueTaskBuilder_BindTask</td><td>NonAsyncBinds,CSharp,ValueTaskBuilder,BindTask</td><td>51.333 ns</td><td>1.2348 ns</td><td>3.5428 ns</td><td>1.00</td><td>0.07</td><td>0.0459</td><td>720 B</td><td>0.91</td>
+</tr><tr><td>CSharp_TenBindsSync_ValueTaskBuilder_BindValueTask</td><td>NonAsyncBinds,CSharp,ValueTaskBuilder,BindValueTask</td><td>9.468 ns</td><td>0.1127 ns</td><td>0.1055 ns</td><td>0.18</td><td>0.01</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>FSharp_TenBindsSync_AsyncBuilder_BindAsync</td><td>NonAsyncBinds,FSharp,AsyncBuilder,BindAsync</td><td>6,699.957 ns</td><td>133.5842 ns</td><td>226.8360 ns</td><td>125.86</td><td>5.52</td><td>0.1563</td><td>2512 B</td><td>3.17</td>
+</tr><tr><td>Fsharp_TenBindSync_cancellableTaskBuilder_BindAsync</td><td>NonAsyncBinds,FSharp,CancellableTaskBuilder,BindAsync</td><td>893.313 ns</td><td>12.8257 ns</td><td>18.7997 ns</td><td>16.71</td><td>0.78</td><td>0.3535</td><td>5552 B</td><td>7.01</td>
+</tr><tr><td>Fsharp_TenBindSync_cancellableTaskBuilder_BindCancellableTask</td><td>NonAsyncBinds,FSharp,CancellableTaskBuilder,BindCancellableTask</td><td>168.826 ns</td><td>3.2921 ns</td><td>5.1253 ns</td><td>3.17</td><td>0.18</td><td>0.0605</td><td>952 B</td><td>1.20</td>
+</tr><tr><td>Fsharp_TenBindSync_cancellableTaskBuilder_BindCancellableValueTask</td><td>NonAsyncBinds,FSharp,CancellableTaskBuilder,BindCancellableValueTask</td><td>151.251 ns</td><td>2.9229 ns</td><td>3.3660 ns</td><td>2.82</td><td>0.16</td><td>0.0198</td><td>312 B</td><td>0.39</td>
+</tr><tr><td>Fsharp_TenBindSync_cancellableTaskBuilder_BindTask</td><td>NonAsyncBinds,FSharp,CancellableTaskBuilder,BindTask</td><td>167.895 ns</td><td>3.3430 ns</td><td>3.9796 ns</td><td>3.14</td><td>0.11</td><td>0.0605</td><td>952 B</td><td>1.20</td>
+</tr><tr><td>Fsharp_TenBindSync_cancellableTaskBuilder_BindValueTask</td><td>NonAsyncBinds,FSharp,CancellableTaskBuilder,BindValueTask</td><td>150.334 ns</td><td>2.0106 ns</td><td>1.8807 ns</td><td>2.85</td><td>0.11</td><td>0.0198</td><td>312 B</td><td>0.39</td>
+</tr><tr><td>Fsharp_TenBindSync_cancellableValueTaskBuilder_BindAsync</td><td>NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindAsync</td><td>942.606 ns</td><td>16.7212 ns</td><td>29.7219 ns</td><td>17.75</td><td>0.93</td><td>0.3496</td><td>5488 B</td><td>6.93</td>
+</tr><tr><td>Fsharp_TenBindSync_cancellableValueTaskBuilder_BindCancellableTask</td><td>NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindCancellableTask</td><td>184.312 ns</td><td>3.1427 ns</td><td>3.7411 ns</td><td>3.45</td><td>0.15</td><td>0.0564</td><td>888 B</td><td>1.12</td>
+</tr><tr><td>Fsharp_TenBindSync_cancellableValueTaskBuilder_BindCancellableValueTask</td><td>NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindCancellableValueTask</td><td>138.886 ns</td><td>2.7517 ns</td><td>3.1688 ns</td><td>2.59</td><td>0.13</td><td>0.0156</td><td>248 B</td><td>0.31</td>
+</tr><tr><td>Fsharp_TenBindSync_cancellableValueTaskBuilder_BindTask</td><td>NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindTask</td><td>184.975 ns</td><td>3.5605 ns</td><td>4.3727 ns</td><td>3.46</td><td>0.17</td><td>0.0564</td><td>888 B</td><td>1.12</td>
+</tr><tr><td>Fsharp_TenBindSync_cancellableValueTaskBuilder_BindValueTask</td><td>NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindValueTask</td><td>139.134 ns</td><td>2.0115 ns</td><td>1.8816 ns</td><td>2.63</td><td>0.09</td><td>0.0156</td><td>248 B</td><td>0.31</td>
+</tr><tr><td>Fsharp_TenBindSync_plyTaskBuilder_BindTask</td><td>NonAsyncBinds,FSharp,PlyTaskBuilder,BindTask</td><td>50.831 ns</td><td>0.8921 ns</td><td>1.5388 ns</td><td>0.96</td><td>0.03</td><td>0.0505</td><td>792 B</td><td>1.00</td>
+</tr><tr><td>Fsharp_TenBindSync_plyTaskBuilder_BindValueTask</td><td>NonAsyncBinds,FSharp,PlyTaskBuilder,BindValueTask</td><td>9.317 ns</td><td>0.1807 ns</td><td>0.2285 ns</td><td>0.17</td><td>0.01</td><td>0.0046</td><td>72 B</td><td>0.09</td>
+</tr><tr><td>Fsharp_TenBindSync_plyValueTaskBuilder_BindTask</td><td>NonAsyncBinds,FSharp,PlyValueTaskBuilder,BindTask</td><td>50.255 ns</td><td>0.9952 ns</td><td>2.1422 ns</td><td>0.95</td><td>0.04</td><td>0.0459</td><td>720 B</td><td>0.91</td>
+</tr><tr><td>Fsharp_TenBindSync_plyValueTaskBuilder_BindValueTask</td><td>NonAsyncBinds,FSharp,PlyValueTaskBuilder,BindValueTask</td><td>7.163 ns</td><td>0.0560 ns</td><td>0.0524 ns</td><td>0.14</td><td>0.00</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>Fsharp_TenBindSync_TaskBuilder_BindAsync</td><td>NonAsyncBinds,FSharp,TaskBuilder,BindAsync</td><td>804.408 ns</td><td>14.2860 ns</td><td>12.6641 ns</td><td>15.31</td><td>0.48</td><td>0.3359</td><td>5272 B</td><td>6.66</td>
+</tr><tr><td>Fsharp_TenBindSync_TaskBuilderRuntime_BindAsync</td><td>NonAsyncBinds,FSharp,TaskBuilder,BindAsync</td><td>805.176 ns</td><td>12.7655 ns</td><td>11.9408 ns</td><td>15.23</td><td>0.46</td><td>0.3359</td><td>5272 B</td><td>6.66</td>
+</tr><tr><td>Fsharp_TenBindSync_TaskBuilder_BindTask</td><td>NonAsyncBinds,FSharp,TaskBuilder,BindTask</td><td>69.114 ns</td><td>1.0094 ns</td><td>0.9442 ns</td><td>1.31</td><td>0.05</td><td>0.0504</td><td>792 B</td><td>1.00</td>
+</tr><tr><td>Fsharp_TenBindSync_TaskBuilderRuntime_BindTask</td><td>NonAsyncBinds,FSharp,TaskBuilder,BindTask</td><td>42.045 ns</td><td>0.8268 ns</td><td>0.9521 ns</td><td>0.78</td><td>0.04</td><td>0.0505</td><td>792 B</td><td>1.00</td>
+</tr><tr><td>Fsharp_TenBindSync_TaskBuilder_BindValueTask</td><td>NonAsyncBinds,FSharp,TaskBuilder,BindValueTask</td><td>21.980 ns</td><td>0.4002 ns</td><td>0.3744 ns</td><td>0.42</td><td>0.02</td><td>0.0046</td><td>72 B</td><td>0.09</td>
+</tr><tr><td>Fsharp_TenBindSync_TaskBuilderRuntime_BindValueTask</td><td>NonAsyncBinds,FSharp,TaskBuilder,BindValueTask</td><td>4.352 ns</td><td>0.0798 ns</td><td>0.1092 ns</td><td>0.08</td><td>0.00</td><td>0.0046</td><td>72 B</td><td>0.09</td>
+</tr><tr><td>Fsharp_TenBindSync_ValueTaskBuilder_BindAsync</td><td>NonAsyncBinds,FSharp,ValueTaskBuilder,BindAsync</td><td>809.772 ns</td><td>7.3723 ns</td><td>9.0538 ns</td><td>15.14</td><td>0.65</td><td>0.3359</td><td>5272 B</td><td>6.66</td>
+</tr><tr><td>Fsharp_TenBindSync_ValueTaskBuilder_BindTask</td><td>NonAsyncBinds,FSharp,ValueTaskBuilder,BindTask</td><td>63.019 ns</td><td>1.2193 ns</td><td>1.5420 ns</td><td>1.18</td><td>0.05</td><td>0.0459</td><td>720 B</td><td>0.91</td>
+</tr><tr><td>Fsharp_TenBindSync_ValueTaskBuilder_BindValueTask</td><td>NonAsyncBinds,FSharp,ValueTaskBuilder,BindValueTask</td><td>18.389 ns</td><td>0.1492 ns</td><td>0.1396 ns</td><td>0.35</td><td>0.01</td><td>-</td><td>-</td><td>0.00</td>
 </tr></tbody></table>
 </body>
 </html>

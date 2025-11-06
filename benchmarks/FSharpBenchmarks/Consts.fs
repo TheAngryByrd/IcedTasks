@@ -33,6 +33,10 @@ module Categories =
     [<Literal>]
     let taskBuilder = "TaskBuilder"
 
+    // builders
+    [<Literal>]
+    let taskBuilderRuntime = "TaskBuilderRuntime"
+
     [<Literal>]
     let valueTaskBuilder = "ValueTaskBuilder"
 

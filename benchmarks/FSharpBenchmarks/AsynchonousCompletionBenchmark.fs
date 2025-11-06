@@ -83,6 +83,21 @@ module AsyncHelpers =
             return 100
         }
 
+    let fsharp_tenBindAsync_TaskBuilderRuntime () =
+        IcedTasks.Polyfill.TasksRuntime.TaskBuilder.task {
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            return 100
+        }
+
 
     let fsharp_tenBindAsync_ValueTaskBuilder () =
         valueTask {
@@ -232,6 +247,19 @@ type AsyncCompletionBenchmarks() =
             z <- fsharp_tenBindAsync_TaskBuilder().GetAwaiter().GetResult()
 
         z
+
+
+    [<BenchmarkCategory(AsyncBinds, fsharp, taskBuilderRuntime);
+      Benchmark(OperationsPerInvoke = manyIterationsConst)>]
+    member x.FSharp_TenBindsAsync_TaskBuilderRuntime() =
+        let mutable z = 0
+
+        for i in 1 .. x.manyIterations do
+            z <- fsharp_tenBindAsync_TaskBuilderRuntime().GetAwaiter().GetResult()
+
+
+        z
+
 
     [<BenchmarkCategory(AsyncBinds, fsharp, valueTaskBuilder);
       Benchmark(OperationsPerInvoke = manyIterationsConst)>]
