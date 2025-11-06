@@ -16,6 +16,8 @@ module Task =
             }
         )
 
+    let runInThreadPool (f: unit -> Task<'T>) : Task<'T> = Task.Run<'T>(fun _ -> f ())
+
 module TestHelpers =
     open System.Threading
 
@@ -80,6 +82,10 @@ module Expect =
         let t2 = typeof<'t>
 
         t2.IsAssignableFrom t1
+
+    let stringContainsNot (actual: string) (expectedSubstring: string) message =
+        if actual.Contains(expectedSubstring) then
+            failtestf "%s. Expected %s to NOT contain substring %s" message actual expectedSubstring
 
     /// Expects the passed function to throw `'texn`.
     [<RequiresExplicitTypeArguments>]
