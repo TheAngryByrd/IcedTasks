@@ -21,7 +21,6 @@ module internal AsyncHelpers =
 
 type TaskBuilderBaseRuntime() =
 
-
     member inline _.Return(value: 'T) =
         ValueTask.FromResult value
         |> Awaitable.GetAwaiter
@@ -30,9 +29,10 @@ type TaskBuilderBaseRuntime() =
         AsyncHelpers.awaitAwaiter awaiter
         |> continuation
 
-
-    // [<NoEagerConstraintApplication>]
-    member inline this.ReturnFrom(awaiter) = this.Bind(awaiter, this.Return)
+    member inline this.ReturnFrom<'TResult1, 'Awaiter when Awaiter<'Awaiter, 'TResult1>>
+        (awaiter: 'Awaiter)
+        : 'Awaiter =
+        awaiter
 
     member inline _.Zero() =
         ValueTask<_>()
@@ -43,7 +43,6 @@ type TaskBuilderBaseRuntime() =
     member inline this.BindReturn(awaiter, [<InlineIfLambda>] mapper) =
         this.Bind(awaiter, (fun v -> this.Return(mapper v)))
 
-    // [<NoEagerConstraintApplication>]
     member inline this.MergeSources(awaiter1, awaiter2) =
         this.Bind(awaiter1, fun v1 -> this.Bind(awaiter2, fun v2 -> this.Return(struct (v1, v2))))
 
@@ -60,19 +59,12 @@ type TaskBuilderBaseRuntime() =
 
         this.Zero()
 
-    member inline this.For(sequence: seq<'T>, [<InlineIfLambda>] body: 'T -> 'a) =
-        for x in sequence do
-            body x
-            |> AsyncHelpers.awaitAwaiter
-
-        this.Zero()
-
 
     member inline this.TryFinallyAsync
         ([<InlineIfLambda>] awaiter, [<InlineIfLambda>] compensation: unit -> ValueTask)
         =
         try
-            this.Bind((awaiter ()), this.Return)
+            awaiter ()
         finally
             compensation ()
             |> AsyncHelpers.awaitAwaitable
@@ -81,7 +73,7 @@ type TaskBuilderBaseRuntime() =
         ([<InlineIfLambda>] awaiter, [<InlineIfLambda>] compensation: unit -> unit)
         =
         try
-            this.Bind((awaiter ()), this.Return)
+            awaiter ()
         finally
             compensation ()
 
@@ -106,7 +98,7 @@ type TaskBuilderBaseRuntime() =
         this.TryFinallyAsync((fun () -> binder resource), (fun () -> disposeAsync resource))
 
 
-    member inline this.For(sequence: IAsyncEnumerable<'T>, [<InlineIfLambda>] body: 'T -> 'a) =
+    member inline this.For(sequence: #IAsyncEnumerable<'T>, [<InlineIfLambda>] body: 'T -> 'a) =
 
         this.Using(
             sequence.GetAsyncEnumerator(),
@@ -165,6 +157,12 @@ module HighPriority =
 
             this.TryFinally((fun () -> binder resource), (fun () -> dispose resource))
 
+        member inline this.For(sequence: #seq<'T>, [<InlineIfLambda>] body: 'T -> 'a) =
+            for x in sequence do
+                body x
+                |> AsyncHelpers.awaitAwaiter
+
+            this.Zero()
 
         /// <summary>Allows the computation expression to turn other types into 'Awaiter</summary>
         ///
