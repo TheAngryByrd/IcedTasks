@@ -6,6 +6,7 @@ open System.Threading.Tasks
 open System.Runtime.CompilerServices
 open Microsoft.FSharp.Core.CompilerServices
 open System.Collections.Generic
+open System.Threading
 
 module internal AsyncHelpers =
 
@@ -25,11 +26,9 @@ type TaskBuilderBaseRuntime() =
         ValueTask.FromResult value
         |> Awaitable.GetAwaiter
 
-    // [<NoEagerConstraintApplication>]
     member inline _.Bind(awaiter, [<InlineIfLambda>] continuation) =
         AsyncHelpers.awaitAwaiter awaiter
         |> continuation
-    // |> Awaitable.GetAwaiter
 
 
     // [<NoEagerConstraintApplication>]
@@ -47,7 +46,7 @@ type TaskBuilderBaseRuntime() =
     // [<NoEagerConstraintApplication>]
     member inline this.MergeSources(awaiter1, awaiter2) =
         this.Bind(awaiter1, fun v1 -> this.Bind(awaiter2, fun v2 -> this.Return(struct (v1, v2))))
-    // |> Awaitable.GetAwaiter
+
 
     member inline this.Combine(awaiter1, [<InlineIfLambda>] continuation) =
         this.Bind(awaiter1, fun _ -> continuation ())
@@ -123,7 +122,6 @@ type TaskBuilderBaseRuntime() =
 
 [<AutoOpen>]
 module LowPriority =
-    // let task2 = TaskBuilderBaseRuntime()
 
     type TaskBuilderBaseRuntime with
 
@@ -145,7 +143,7 @@ module LowPriority =
         ///
         /// <returns>'Awaiter</returns>
         // [<NoEagerConstraintApplication>]
-        member inline _.Source<'Awaitable, 'TResult1, 'TResult2, 'Awaiter, 'TOverall
+        member inline _.Source<'Awaitable, 'TResult1, 'Awaiter
             when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
             (awaitable: 'Awaitable)
             : 'Awaiter =
@@ -198,7 +196,25 @@ type TaskBuilderRuntime() =
     member inline this.Run([<InlineIfLambda>] f: unit -> 'a) : Task<'T> =
         AsyncHelpers.awaitAwaiter (f ())
         |> Task.FromResult
-    // f().AsTask()
+
+    /// Used to force type inference to prefer Task<_> for parameters of functions using the build
+    member inline _.Source(task: Task<'T>) = Awaitable.GetTaskAwaiter task
+
+
+type BackgroundTaskBuilderRuntime() =
+    inherit TaskBuilderBaseRuntime()
+
+    member inline this.Run([<InlineIfLambda>] f: unit -> 'a) : Task<'T> =
+        // backgroundTask { .. } escapes to a background thread where necessary
+        // See spec of ConfigureAwait(false) at https://devblogs.microsoft.com/dotnet/configureawait-faq/
+        if
+            isNull SynchronizationContext.Current
+            && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
+        then
+            AsyncHelpers.awaitAwaiter (f ())
+            |> Task.FromResult
+        else
+            Task.Run<'T>(fun () -> AsyncHelpers.awaitAwaiter (f ()))
 
 
     /// Used to force type inference to prefer Task<_> for parameters of functions using the build
@@ -208,7 +224,9 @@ type TaskBuilderRuntime() =
 type ValueTaskBuilderRuntime() =
     inherit TaskBuilderBaseRuntime()
 
-    member inline this.Run([<InlineIfLambda>] f: unit -> ValueTask<'T>) : ValueTask<'T> = f ()
+    member inline this.Run([<InlineIfLambda>] f) : ValueTask<'T> =
+        AsyncHelpers.awaitAwaiter (f ())
+        |> ValueTask.FromResult
 
 
     /// Used to force type inference to prefer ValueTask<_> for parameters of functions using the build
@@ -221,3 +239,7 @@ namespace IcedTasks.Polyfill.TasksRuntime
 module TaskBuilder =
     open IcedTasks.TaskBase_Net10
     let task = TaskBuilderRuntime()
+
+    let backgroundTask = BackgroundTaskBuilderRuntime()
+
+    let valueTask = ValueTaskBuilderRuntime()
