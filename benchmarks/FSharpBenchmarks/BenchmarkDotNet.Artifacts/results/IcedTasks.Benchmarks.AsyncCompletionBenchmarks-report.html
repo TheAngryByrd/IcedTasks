@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>IcedTasks.Benchmarks.AsyncCompletionBenchmarks-20251104-095957</title>
+<title>IcedTasks.Benchmarks.AsyncCompletionBenchmarks-20251119-002710</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -13,29 +13,55 @@
 </head>
 <body>
 <pre><code>
-BenchmarkDotNet v0.13.9+228a464e8be6c580ad9408e98f18813f6407fb5a, Windows 11 (10.0.26100.6899)
-12th Gen Intel Core i9-12900F, 1 CPU, 24 logical and 16 physical cores
-.NET SDK 10.0.100-rc.2.25502.107
-  [Host]     : .NET 10.0.0 (10.0.25.50307), X64 RyuJIT AVX2 DEBUG
-  DefaultJob : .NET 10.0.0 (10.0.25.50307), X64 RyuJIT AVX2
+BenchmarkDotNet v0.15.7, Windows 11 (10.0.26100.7171/24H2/2024Update/HudsonValley)
+12th Gen Intel Core i9-12900F 2.40GHz, 1 CPU, 24 logical and 16 physical cores
+.NET SDK 10.0.100
+  [Host]    : .NET 10.0.0 (10.0.0, 10.0.25.52411), X64 RyuJIT x86-64-v3 DEBUG
+  .NET 10.0 : .NET 10.0.0 (10.0.0, 10.0.25.52411), X64 RyuJIT x86-64-v3
+  .NET 8.0  : .NET 8.0.21 (8.0.21, 8.0.2125.47513), X64 RyuJIT x86-64-v3
+  .NET 9.0  : .NET 9.0.10 (9.0.10, 9.0.1025.47515), X64 RyuJIT x86-64-v3
 </code></pre>
 <pre><code></code></pre>
 
 <table>
-<thead><tr><th>Method                                                        </th><th>Categories                                                      </th><th>Mean  </th><th>Error </th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+<thead><tr><th>Method                                                        </th><th>Job</th><th>Runtime</th><th>Categories                                                      </th><th>Mean  </th><th>Error </th><th>StdDev</th><th>Median</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CSharp_TenBindsAsync_TaskBuilder</td><td>AsyncBinds,CSharp,TaskBuilder</td><td>2,780.95 ns</td><td>64.686 ns</td><td>188.691 ns</td><td>1.00</td><td>0.00</td><td>0.1250</td><td>1976 B</td><td>1.00</td>
-</tr><tr><td>CSharp_TenBindsAsync_ValueTaskBuilder</td><td>AsyncBinds,CSharp,ValueTaskBuilder</td><td>2,961.75 ns</td><td>65.470 ns</td><td>190.979 ns</td><td>1.07</td><td>0.09</td><td>0.1250</td><td>1976 B</td><td>1.00</td>
-</tr><tr><td>FSharp_TenBindsAsync_AsyncBuilder</td><td>AsyncBinds,FSharp,AsyncBuilder</td><td>66,611.01 ns</td><td>1,330.629 ns</td><td>2,563.671 ns</td><td>23.38</td><td>1.50</td><td>0.4444</td><td>8224 B</td><td>4.16</td>
-</tr><tr><td>FSharp_TenBindsAsync_CancellableTaskBuilder</td><td>AsyncBinds,FSharp,CancellableTaskBuilder</td><td>2,191.38 ns</td><td>43.374 ns</td><td>56.398 ns</td><td>0.78</td><td>0.04</td><td>0.0508</td><td>808 B</td><td>0.41</td>
-</tr><tr><td>FSharp_TenBindsAsync_CancellableTaskBuilder_BindCancellableTask</td><td>AsyncBinds,FSharp,CancellableTaskBuilder,BindCancellableValueTask</td><td>2,382.94 ns</td><td>46.612 ns</td><td>38.923 ns</td><td>0.83</td><td>0.03</td><td>0.0508</td><td>808 B</td><td>0.41</td>
-</tr><tr><td>FSharp_TenBindsAsync_CancellableValueTaskBuilder</td><td>AsyncBinds,FSharp,CancellableValueTaskBuilder</td><td>2,257.29 ns</td><td>44.978 ns</td><td>123.881 ns</td><td>0.81</td><td>0.07</td><td>0.0508</td><td>824 B</td><td>0.42</td>
-</tr><tr><td>FSharp_TenBindsAsync_CancellableValueTaskBuilder_BindCancellableTask</td><td>AsyncBinds,FSharp,CancellableValueTaskBuilder,BindCancellableValueTask</td><td>2,176.36 ns</td><td>40.825 ns</td><td>92.980 ns</td><td>0.76</td><td>0.05</td><td>0.0508</td><td>824 B</td><td>0.42</td>
-</tr><tr><td>FSharp_TenBindsAsync_PlyTaskBuilder</td><td>AsyncBinds,FSharp,PlyTaskBuilder</td><td>2,178.15 ns</td><td>43.520 ns</td><td>121.315 ns</td><td>0.78</td><td>0.06</td><td>0.0391</td><td>656 B</td><td>0.33</td>
-</tr><tr><td>FSharp_TenBindsAsync_PlyValueTaskBuilder</td><td>AsyncBinds,FSharp,PlyValueTaskBuilder</td><td>2,259.70 ns</td><td>41.684 ns</td><td>64.898 ns</td><td>0.80</td><td>0.04</td><td>0.0391</td><td>656 B</td><td>0.33</td>
-</tr><tr><td>FSharp_TenBindsAsync_TaskBuilder</td><td>AsyncBinds,FSharp,TaskBuilder</td><td>2,035.52 ns</td><td>40.605 ns</td><td>100.366 ns</td><td>0.72</td><td>0.06</td><td>0.0039</td><td>112 B</td><td>0.06</td>
-</tr><tr><td>FSharp_TenBindsAsync_TaskBuilderRuntime</td><td>AsyncBinds,FSharp,TaskBuilder</td><td>55.92 ns</td><td>1.094 ns</td><td>1.703 ns</td><td>0.02</td><td>0.00</td><td>0.0198</td><td>312 B</td><td>0.16</td>
-</tr><tr><td>FSharp_TenBindsAsync_ValueTaskBuilder</td><td>AsyncBinds,FSharp,ValueTaskBuilder</td><td>2,153.19 ns</td><td>15.575 ns</td><td>12.160 ns</td><td>0.75</td><td>0.03</td><td>0.0469</td><td>744 B</td><td>0.38</td>
+</thead><tbody><tr><td>CSharp_TenBindsAsync_TaskBuilder</td><td>.NET 10.0</td><td>.NET 10.0</td><td>AsyncBinds,CSharp,TaskBuilder</td><td>1,751.75 ns</td><td>29.396 ns</td><td>26.059 ns</td><td>1,753.48 ns</td><td>1.00</td><td>0.02</td><td>0.0059</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>CSharp_TenBindsAsync_TaskBuilder</td><td>.NET 8.0</td><td>.NET 8.0</td><td>AsyncBinds,CSharp,TaskBuilder</td><td>3,092.20 ns</td><td>27.744 ns</td><td>25.952 ns</td><td>3,091.11 ns</td><td>1.77</td><td>0.03</td><td>0.0039</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>CSharp_TenBindsAsync_TaskBuilder</td><td>.NET 9.0</td><td>.NET 9.0</td><td>AsyncBinds,CSharp,TaskBuilder</td><td>1,834.57 ns</td><td>25.990 ns</td><td>21.703 ns</td><td>1,830.35 ns</td><td>1.05</td><td>0.02</td><td>0.0059</td><td>96 B</td><td>1.00</td>
+</tr><tr><td>CSharp_TenBindsAsync_ValueTaskBuilder</td><td>.NET 10.0</td><td>.NET 10.0</td><td>AsyncBinds,CSharp,ValueTaskBuilder</td><td>1,712.46 ns</td><td>30.305 ns</td><td>28.347 ns</td><td>1,711.13 ns</td><td>0.98</td><td>0.02</td><td>0.0059</td><td>104 B</td><td>1.08</td>
+</tr><tr><td>CSharp_TenBindsAsync_ValueTaskBuilder</td><td>.NET 8.0</td><td>.NET 8.0</td><td>AsyncBinds,CSharp,ValueTaskBuilder</td><td>3,240.03 ns</td><td>40.618 ns</td><td>37.994 ns</td><td>3,253.56 ns</td><td>1.85</td><td>0.03</td><td>0.0039</td><td>104 B</td><td>1.08</td>
+</tr><tr><td>CSharp_TenBindsAsync_ValueTaskBuilder</td><td>.NET 9.0</td><td>.NET 9.0</td><td>AsyncBinds,CSharp,ValueTaskBuilder</td><td>1,833.63 ns</td><td>35.187 ns</td><td>36.134 ns</td><td>1,832.96 ns</td><td>1.05</td><td>0.03</td><td>-</td><td>104 B</td><td>1.08</td>
+</tr><tr><td>FSharp_TenBindsAsync_AsyncBuilder</td><td>.NET 10.0</td><td>.NET 10.0</td><td>AsyncBinds,FSharp,AsyncBuilder</td><td>66,442.37 ns</td><td>1,307.659 ns</td><td>2,255.647 ns</td><td>66,185.64 ns</td><td>37.94</td><td>1.39</td><td>0.5000</td><td>8224 B</td><td>85.67</td>
+</tr><tr><td>FSharp_TenBindsAsync_AsyncBuilder</td><td>.NET 8.0</td><td>.NET 8.0</td><td>AsyncBinds,FSharp,AsyncBuilder</td><td>66,537.54 ns</td><td>1,329.078 ns</td><td>1,728.177 ns</td><td>66,392.16 ns</td><td>37.99</td><td>1.11</td><td>0.5000</td><td>8224 B</td><td>85.67</td>
+</tr><tr><td>FSharp_TenBindsAsync_AsyncBuilder</td><td>.NET 9.0</td><td>.NET 9.0</td><td>AsyncBinds,FSharp,AsyncBuilder</td><td>66,016.06 ns</td><td>1,299.261 ns</td><td>1,734.476 ns</td><td>66,112.80 ns</td><td>37.69</td><td>1.11</td><td>0.5000</td><td>8224 B</td><td>85.67</td>
+</tr><tr><td>FSharp_TenBindsAsync_CancellableTaskBuilder</td><td>.NET 10.0</td><td>.NET 10.0</td><td>AsyncBinds,FSharp,CancellableTaskBuilder</td><td>2,271.16 ns</td><td>36.283 ns</td><td>33.939 ns</td><td>2,263.82 ns</td><td>1.30</td><td>0.03</td><td>0.0508</td><td>808 B</td><td>8.42</td>
+</tr><tr><td>FSharp_TenBindsAsync_CancellableTaskBuilder</td><td>.NET 8.0</td><td>.NET 8.0</td><td>AsyncBinds,FSharp,CancellableTaskBuilder</td><td>3,801.54 ns</td><td>40.073 ns</td><td>35.523 ns</td><td>3,805.37 ns</td><td>2.17</td><td>0.04</td><td>0.0508</td><td>808 B</td><td>8.42</td>
+</tr><tr><td>FSharp_TenBindsAsync_CancellableTaskBuilder</td><td>.NET 9.0</td><td>.NET 9.0</td><td>AsyncBinds,FSharp,CancellableTaskBuilder</td><td>2,319.93 ns</td><td>46.002 ns</td><td>59.816 ns</td><td>2,306.85 ns</td><td>1.32</td><td>0.04</td><td>0.0508</td><td>808 B</td><td>8.42</td>
+</tr><tr><td>FSharp_TenBindsAsync_CancellableTaskBuilder_BindCancellableTask</td><td>.NET 10.0</td><td>.NET 10.0</td><td>AsyncBinds,FSharp,CancellableTaskBuilder,BindCancellableValueTask</td><td>2,277.13 ns</td><td>31.623 ns</td><td>29.581 ns</td><td>2,285.44 ns</td><td>1.30</td><td>0.02</td><td>0.0508</td><td>808 B</td><td>8.42</td>
+</tr><tr><td>FSharp_TenBindsAsync_CancellableTaskBuilder_BindCancellableTask</td><td>.NET 8.0</td><td>.NET 8.0</td><td>AsyncBinds,FSharp,CancellableTaskBuilder,BindCancellableValueTask</td><td>4,055.86 ns</td><td>78.832 ns</td><td>122.732 ns</td><td>4,061.96 ns</td><td>2.32</td><td>0.08</td><td>0.0469</td><td>808 B</td><td>8.42</td>
+</tr><tr><td>FSharp_TenBindsAsync_CancellableTaskBuilder_BindCancellableTask</td><td>.NET 9.0</td><td>.NET 9.0</td><td>AsyncBinds,FSharp,CancellableTaskBuilder,BindCancellableValueTask</td><td>2,294.96 ns</td><td>38.003 ns</td><td>37.324 ns</td><td>2,289.55 ns</td><td>1.31</td><td>0.03</td><td>0.0508</td><td>808 B</td><td>8.42</td>
+</tr><tr><td>FSharp_TenBindsAsync_CancellableValueTaskBuilder</td><td>.NET 10.0</td><td>.NET 10.0</td><td>AsyncBinds,FSharp,CancellableValueTaskBuilder</td><td>2,185.30 ns</td><td>42.414 ns</td><td>84.706 ns</td><td>2,166.34 ns</td><td>1.25</td><td>0.05</td><td>0.0508</td><td>824 B</td><td>8.58</td>
+</tr><tr><td>FSharp_TenBindsAsync_CancellableValueTaskBuilder</td><td>.NET 8.0</td><td>.NET 8.0</td><td>AsyncBinds,FSharp,CancellableValueTaskBuilder</td><td>3,892.08 ns</td><td>76.254 ns</td><td>109.361 ns</td><td>3,938.84 ns</td><td>2.22</td><td>0.07</td><td>0.0469</td><td>824 B</td><td>8.58</td>
+</tr><tr><td>FSharp_TenBindsAsync_CancellableValueTaskBuilder</td><td>.NET 9.0</td><td>.NET 9.0</td><td>AsyncBinds,FSharp,CancellableValueTaskBuilder</td><td>2,162.41 ns</td><td>42.923 ns</td><td>58.754 ns</td><td>2,146.76 ns</td><td>1.23</td><td>0.04</td><td>0.0508</td><td>824 B</td><td>8.58</td>
+</tr><tr><td>FSharp_TenBindsAsync_CancellableValueTaskBuilder_BindCancellableTask</td><td>.NET 10.0</td><td>.NET 10.0</td><td>AsyncBinds,FSharp,CancellableValueTaskBuilder,BindCancellableValueTask</td><td>2,140.32 ns</td><td>37.943 ns</td><td>37.265 ns</td><td>2,147.44 ns</td><td>1.22</td><td>0.03</td><td>0.0508</td><td>824 B</td><td>8.58</td>
+</tr><tr><td>FSharp_TenBindsAsync_CancellableValueTaskBuilder_BindCancellableTask</td><td>.NET 8.0</td><td>.NET 8.0</td><td>AsyncBinds,FSharp,CancellableValueTaskBuilder,BindCancellableValueTask</td><td>3,769.80 ns</td><td>48.606 ns</td><td>43.088 ns</td><td>3,769.12 ns</td><td>2.15</td><td>0.04</td><td>0.0469</td><td>824 B</td><td>8.58</td>
+</tr><tr><td>FSharp_TenBindsAsync_CancellableValueTaskBuilder_BindCancellableTask</td><td>.NET 9.0</td><td>.NET 9.0</td><td>AsyncBinds,FSharp,CancellableValueTaskBuilder,BindCancellableValueTask</td><td>2,187.57 ns</td><td>43.675 ns</td><td>92.126 ns</td><td>2,166.04 ns</td><td>1.25</td><td>0.06</td><td>0.0508</td><td>824 B</td><td>8.58</td>
+</tr><tr><td>FSharp_TenBindsAsync_PlyTaskBuilder</td><td>.NET 10.0</td><td>.NET 10.0</td><td>AsyncBinds,FSharp,PlyTaskBuilder</td><td>2,092.93 ns</td><td>41.405 ns</td><td>46.021 ns</td><td>2,078.76 ns</td><td>1.20</td><td>0.03</td><td>0.0391</td><td>656 B</td><td>6.83</td>
+</tr><tr><td>FSharp_TenBindsAsync_PlyTaskBuilder</td><td>.NET 8.0</td><td>.NET 8.0</td><td>AsyncBinds,FSharp,PlyTaskBuilder</td><td>3,872.86 ns</td><td>76.358 ns</td><td>101.936 ns</td><td>3,852.86 ns</td><td>2.21</td><td>0.07</td><td>0.0391</td><td>656 B</td><td>6.83</td>
+</tr><tr><td>FSharp_TenBindsAsync_PlyTaskBuilder</td><td>.NET 9.0</td><td>.NET 9.0</td><td>AsyncBinds,FSharp,PlyTaskBuilder</td><td>2,212.33 ns</td><td>42.266 ns</td><td>39.535 ns</td><td>2,200.96 ns</td><td>1.26</td><td>0.03</td><td>0.0391</td><td>656 B</td><td>6.83</td>
+</tr><tr><td>FSharp_TenBindsAsync_PlyValueTaskBuilder</td><td>.NET 10.0</td><td>.NET 10.0</td><td>AsyncBinds,FSharp,PlyValueTaskBuilder</td><td>2,103.78 ns</td><td>31.121 ns</td><td>29.111 ns</td><td>2,108.12 ns</td><td>1.20</td><td>0.02</td><td>0.0391</td><td>656 B</td><td>6.83</td>
+</tr><tr><td>FSharp_TenBindsAsync_PlyValueTaskBuilder</td><td>.NET 8.0</td><td>.NET 8.0</td><td>AsyncBinds,FSharp,PlyValueTaskBuilder</td><td>3,812.21 ns</td><td>71.774 ns</td><td>67.138 ns</td><td>3,799.48 ns</td><td>2.18</td><td>0.05</td><td>0.0391</td><td>656 B</td><td>6.83</td>
+</tr><tr><td>FSharp_TenBindsAsync_PlyValueTaskBuilder</td><td>.NET 9.0</td><td>.NET 9.0</td><td>AsyncBinds,FSharp,PlyValueTaskBuilder</td><td>2,259.37 ns</td><td>49.481 ns</td><td>145.119 ns</td><td>2,208.15 ns</td><td>1.29</td><td>0.08</td><td>0.0391</td><td>656 B</td><td>6.83</td>
+</tr><tr><td>FSharp_TenBindsAsync_TaskBuilder</td><td>.NET 10.0</td><td>.NET 10.0</td><td>AsyncBinds,FSharp,TaskBuilder</td><td>1,797.68 ns</td><td>26.170 ns</td><td>21.853 ns</td><td>1,798.49 ns</td><td>1.03</td><td>0.02</td><td>0.0059</td><td>112 B</td><td>1.17</td>
+</tr><tr><td>FSharp_TenBindsAsync_TaskBuilder</td><td>.NET 8.0</td><td>.NET 8.0</td><td>AsyncBinds,FSharp,TaskBuilder</td><td>3,386.05 ns</td><td>66.148 ns</td><td>61.875 ns</td><td>3,383.73 ns</td><td>1.93</td><td>0.04</td><td>0.0039</td><td>112 B</td><td>1.17</td>
+</tr><tr><td>FSharp_TenBindsAsync_TaskBuilder</td><td>.NET 9.0</td><td>.NET 9.0</td><td>AsyncBinds,FSharp,TaskBuilder</td><td>1,768.78 ns</td><td>22.848 ns</td><td>21.372 ns</td><td>1,765.14 ns</td><td>1.01</td><td>0.02</td><td>0.0059</td><td>112 B</td><td>1.17</td>
+</tr><tr><td>FSharp_TenBindsAsync_TaskBuilderRuntime</td><td>.NET 10.0</td><td>.NET 10.0</td><td>AsyncBinds,FSharp,TaskBuilderRuntime</td><td>42.35 ns</td><td>0.378 ns</td><td>0.353 ns</td><td>42.31 ns</td><td>0.02</td><td>0.00</td><td>0.0198</td><td>312 B</td><td>3.25</td>
+</tr><tr><td>FSharp_TenBindsAsync_TaskBuilderRuntime</td><td>.NET 8.0</td><td>.NET 8.0</td><td>AsyncBinds,FSharp,TaskBuilderRuntime</td><td>NA</td><td>NA</td><td>NA</td><td>NA</td><td>?</td><td>?</td><td>NA</td><td>NA</td><td>?</td>
+</tr><tr><td>FSharp_TenBindsAsync_TaskBuilderRuntime</td><td>.NET 9.0</td><td>.NET 9.0</td><td>AsyncBinds,FSharp,TaskBuilderRuntime</td><td>NA</td><td>NA</td><td>NA</td><td>NA</td><td>?</td><td>?</td><td>NA</td><td>NA</td><td>?</td>
+</tr><tr><td>FSharp_TenBindsAsync_ValueTaskBuilder</td><td>.NET 10.0</td><td>.NET 10.0</td><td>AsyncBinds,FSharp,ValueTaskBuilder</td><td>2,254.48 ns</td><td>42.740 ns</td><td>99.056 ns</td><td>2,239.49 ns</td><td>1.29</td><td>0.06</td><td>0.0469</td><td>744 B</td><td>7.75</td>
+</tr><tr><td>FSharp_TenBindsAsync_ValueTaskBuilder</td><td>.NET 8.0</td><td>.NET 8.0</td><td>AsyncBinds,FSharp,ValueTaskBuilder</td><td>3,840.81 ns</td><td>40.324 ns</td><td>37.719 ns</td><td>3,838.74 ns</td><td>2.19</td><td>0.04</td><td>0.0469</td><td>744 B</td><td>7.75</td>
+</tr><tr><td>FSharp_TenBindsAsync_ValueTaskBuilder</td><td>.NET 9.0</td><td>.NET 9.0</td><td>AsyncBinds,FSharp,ValueTaskBuilder</td><td>2,179.59 ns</td><td>43.274 ns</td><td>44.439 ns</td><td>2,175.81 ns</td><td>1.24</td><td>0.03</td><td>0.0469</td><td>744 B</td><td>7.75</td>
 </tr></tbody></table>
 </body>
 </html>

@@ -82,7 +82,7 @@ module AsyncHelpers =
             do! taskYield ()
             return 100
         }
-
+#if NET10_0_OR_GREATER
     let fsharp_tenBindAsync_TaskBuilderRuntime () =
         IcedTasks.Polyfill.TasksRuntime.TaskBuilder.task {
             do! taskYield ()
@@ -97,7 +97,7 @@ module AsyncHelpers =
             do! taskYield ()
             return 100
         }
-
+#endif
 
     let fsharp_tenBindAsync_ValueTaskBuilder () =
         valueTask {
@@ -251,7 +251,8 @@ type AsyncCompletionBenchmarks() =
 
     [<BenchmarkCategory(AsyncBinds, fsharp, taskBuilderRuntime);
       Benchmark(OperationsPerInvoke = manyIterationsConst)>]
-    member x.FSharp_TenBindsAsync_TaskBuilderRuntime() =
+    member x.FSharp_TenBindsAsync_TaskBuilderRuntime() : int =
+#if NET10_0_OR_GREATER
         let mutable z = 0
 
         for i in 1 .. x.manyIterations do
@@ -259,7 +260,9 @@ type AsyncCompletionBenchmarks() =
 
 
         z
-
+#else
+        raise (NotSupportedException("Must be .NET 10 or greater"))
+#endif
 
     [<BenchmarkCategory(AsyncBinds, fsharp, valueTaskBuilder);
       Benchmark(OperationsPerInvoke = manyIterationsConst)>]

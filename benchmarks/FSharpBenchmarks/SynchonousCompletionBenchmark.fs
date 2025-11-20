@@ -246,7 +246,7 @@ module SyncHelpers =
 
 
     // ==== F# TaskBuilderRuntime =====
-
+#if NET10_0_OR_GREATER
     let fsharp_TenBindSync_TaskBuilderRuntime_BindTask () =
         IcedTasks.Polyfill.TasksRuntime.TaskBuilder.task {
             let! res1 = sync_Task ()
@@ -324,7 +324,7 @@ module SyncHelpers =
                 + res9
                 + res10
         }
-
+#endif
 
     // ==== F# ValueTaskBuilder =====
 
@@ -828,18 +828,24 @@ type SyncCompletionBenchmarks() =
 
     [<BenchmarkCategory(NonAsyncBinds, fsharp, taskBuilderRuntime, bindTask);
       Benchmark(OperationsPerInvoke = manyIterationsConst)>]
-    member x.Fsharp_TenBindSync_TaskBuilderRuntime_BindTask() =
+    member x.Fsharp_TenBindSync_TaskBuilderRuntime_BindTask() : int =
+#if NET10_0_OR_GREATER
         let mutable z = 0
 
         for i in 1 .. x.manyIterations do
             z <- fsharp_TenBindSync_TaskBuilderRuntime_BindTask().GetAwaiter().GetResult()
 
         z
+#else
+        raise (NotSupportedException("Must be .NET 10 or greater"))
+
+#endif
 
 
     [<BenchmarkCategory(NonAsyncBinds, fsharp, taskBuilderRuntime, bindValueTask);
       Benchmark(OperationsPerInvoke = manyIterationsConst)>]
-    member x.Fsharp_TenBindSync_TaskBuilderRuntime_BindValueTask() =
+    member x.Fsharp_TenBindSync_TaskBuilderRuntime_BindValueTask() : int =
+#if NET10_0_OR_GREATER
         let mutable z = 0
 
         for i in 1 .. x.manyIterations do
@@ -847,16 +853,25 @@ type SyncCompletionBenchmarks() =
 
         z
 
+#else
+        raise (NotSupportedException("Must be .NET 10 or greater"))
+
+#endif
+
     [<BenchmarkCategory(NonAsyncBinds, fsharp, taskBuilderRuntime, bindAsync);
       Benchmark(OperationsPerInvoke = manyIterationsConst)>]
-    member x.Fsharp_TenBindSync_TaskBuilderRuntime_BindAsync() =
+    member x.Fsharp_TenBindSync_TaskBuilderRuntime_BindAsync() : int =
+#if NET10_0_OR_GREATER
         let mutable z = 0
 
         for i in 1 .. x.manyIterations do
             z <- fsharp_TenBindSync_TaskBuilderRuntime_BindAsync().GetAwaiter().GetResult()
 
         z
+#else
+        raise (NotSupportedException("Must be .NET 10 or greater"))
 
+#endif
 
     [<BenchmarkCategory(NonAsyncBinds, fsharp, valueTaskBuilder, bindTask);
       Benchmark(OperationsPerInvoke = manyIterationsConst)>]
