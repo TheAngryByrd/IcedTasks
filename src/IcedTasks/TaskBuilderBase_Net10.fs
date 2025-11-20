@@ -89,19 +89,19 @@ type TaskBuilderBaseRuntime() =
     member inline this.Using
         (resource: #IAsyncDisposableNull, [<InlineIfLambda>] binder: #IAsyncDisposableNull -> 'a)
         =
-        let inline disposeAsync (resource: #IAsyncDisposableNull) =
-            if not (isNull resource) then
-                resource.DisposeAsync()
-            else
-                ValueTask.CompletedTask
-
-        this.TryFinallyAsync((fun () -> binder resource), (fun () -> disposeAsync resource))
-
+        this.TryFinallyAsync(
+            (fun () -> binder resource),
+            (fun () ->
+                if not (isNull (box resource)) then
+                    resource.DisposeAsync()
+                else
+                    ValueTask.CompletedTask
+            )
+        )
 
     member inline this.For(sequence: #IAsyncEnumerable<'T>, [<InlineIfLambda>] body: 'T -> 'a) =
-
         this.Using(
-            sequence.GetAsyncEnumerator(),
+            sequence.GetAsyncEnumerator CancellationToken.None,
             fun enumerator ->
                 while enumerator.MoveNextAsync()
                       |> AsyncHelpers.awaitAwaitable do
@@ -151,11 +151,13 @@ module HighPriority =
         member inline this.Using
             (resource: #IDisposableNull, [<InlineIfLambda>] binder: #IDisposableNull -> 'a)
             =
-            let inline dispose (resource: #IDisposableNull) =
-                if not (isNull resource) then
-                    resource.Dispose()
-
-            this.TryFinally((fun () -> binder resource), (fun () -> dispose resource))
+            this.TryFinally(
+                (fun () -> binder resource),
+                (fun () ->
+                    if not (isNull (box resource)) then
+                        resource.Dispose()
+                )
+            )
 
         member inline this.For(sequence: #seq<'T>, [<InlineIfLambda>] body: 'T -> 'a) =
             for x in sequence do

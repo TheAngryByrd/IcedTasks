@@ -297,7 +297,7 @@ module TaskTests_Net10 =
                             Expect.stringContains e.StackTrace "func3" ""
                             Expect.stringContains e.StackTrace "func2" ""
                             Expect.stringContains e.StackTrace "func1" ""
-                            Expect.stringContainsNot e.StackTrace "func0" ""
+                            Expect.stringContainsNot (unbox e.StackTrace) "func0" ""
                         )
                     }
 
@@ -362,7 +362,7 @@ module TaskTests_Net10 =
                             Expect.stringContains e.StackTrace "func3" ""
                             Expect.stringContains e.StackTrace "func2" ""
                             Expect.stringContains e.StackTrace "func1" ""
-                            Expect.stringContainsNot e.StackTrace "func0" ""
+                            Expect.stringContainsNot (unbox e.StackTrace) "func0" ""
                         )
                     }
 
@@ -422,7 +422,7 @@ module TaskTests_Net10 =
                             Expect.stringContains e.StackTrace "func3" ""
                             Expect.stringContains e.StackTrace "func2" ""
                             Expect.stringContains e.StackTrace "func1" ""
-                            Expect.stringContainsNot e.StackTrace "func0" ""
+                            Expect.stringContainsNot (unbox e.StackTrace) "func0" ""
                         )
                     }
 
