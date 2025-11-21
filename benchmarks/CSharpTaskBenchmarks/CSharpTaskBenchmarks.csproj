@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <EnablePreviewFeatures>true</EnablePreviewFeatures>
-    <!-- <Features>$(Features);runtime-async=on</Features> -->
+    <Features>$(Features);runtime-async=on</Features>
     <NoWarn>$(NoWarn);SYSLIB5007</NoWarn>
   </PropertyGroup>
 </Project>

@@ -11,6 +11,7 @@ open System.Threading.Tasks
 open IcedTasks
 
 open System.IO
+open System.Runtime.CompilerServices
 
 
 [<AutoOpen>]
@@ -83,6 +84,9 @@ module AsyncHelpers =
             return 100
         }
 #if NET10_0_OR_GREATER
+    [<MethodImpl(MethodImplOptions.Async)>]
+
+    // [<MethodImpl(8192s)>]
     let fsharp_tenBindAsync_TaskBuilderRuntime () =
         IcedTasks.Polyfill.TasksRuntime.TaskBuilder.task {
             do! taskYield ()

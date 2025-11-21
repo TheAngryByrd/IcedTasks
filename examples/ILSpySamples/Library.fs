@@ -3,7 +3,6 @@
 open System.Threading.Tasks
 open System.Collections.Generic
 
-
 module TaskRuntime =
     open IcedTasks.Polyfill.TasksRuntime
     open System.Runtime.CompilerServices
@@ -77,3 +76,6 @@ module Main =
 
     let main _argv =
         TaskRuntime.doThing().GetAwaiter().GetResult()
+        |> printfn "Result: %d"
+
+        0

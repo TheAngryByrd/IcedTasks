@@ -7,6 +7,9 @@ open System.Runtime.CompilerServices
 open Microsoft.FSharp.Core.CompilerServices
 open System.Collections.Generic
 open System.Threading
+open System
+
+#nowarn "42"
 
 module internal AsyncHelpers =
 
@@ -18,6 +21,43 @@ module internal AsyncHelpers =
 
     let inline awaitAwaitable awaiter =
         awaitAwaiter (Awaitable.GetAwaiter awaiter)
+
+    (*
+A big comment explaining the unsafe cast hack
+
+Typically, F# would want to generate IL like this for returning a Task<int> from a method:
+
+  .method public static class [System.Runtime]System.Threading.Tasks.Task`1<int32> 
+          fsharp_tenBindAsync_TaskBuilderRuntime() cil managed async
+  
+    ... stuff in between
+
+
+    IL_01e2:  call       class [System.Runtime]System.Threading.Tasks.Task`1<!!0> [System.Runtime]System.Threading.Tasks.Task::FromResult<int32>(!!0)
+    IL_01e7:  ret
+
+However as noted in https://github.com/dotnet/runtime/blob/main/docs/design/specs/runtime-async.md
+
+> Async methods also do not have matching return type conventions as sync methods. For sync methods, 
+> the stack should contain a value convertible to the stated return type before the ret instruction. 
+> For async methods, the stack should be empty in the case of Task or ValueTask, or the type argument in the case of Task<T> or ValueTask<T>.
+
+Which means we can't return a Task<int> in the IL, we need to return int directly from the async method.
+To achieve this, we use an unsafe cast hack to cast the int directly to Task<int> to make the compiler happy and emit the correct IL.
+
+With this as the return value, the IL generated is:
+
+    IL_0044:  call       instance !0 valuetype [System.Runtime]System.Runtime.CompilerServices.ValueTaskAwaiter`1<int32>::GetResult()
+    IL_0049:  ret
+
+We have the ValueTask because of either .Return or .Zero returning a ValueTask
+
+*)
+
+    module internal Unsafe =
+        let inline cast<'a, 'b> (a: 'a) : 'b =
+
+            (# "" a : 'b #)
 
 type TaskBuilderBaseRuntime() =
 
@@ -195,7 +235,7 @@ type TaskBuilderRuntime() =
 
     member inline this.Run([<InlineIfLambda>] f: unit -> 'a) : Task<'T> =
         AsyncHelpers.awaitAwaiter (f ())
-        |> Task.FromResult
+        |> AsyncHelpers.Unsafe.cast
 
     /// Used to force type inference to prefer Task<_> for parameters of functions using the build
     member inline _.Source(task: Task<'T>) = Awaitable.GetTaskAwaiter task
@@ -212,9 +252,11 @@ type BackgroundTaskBuilderRuntime() =
             && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
         then
             AsyncHelpers.awaitAwaiter (f ())
-            |> Task.FromResult
+            |> AsyncHelpers.Unsafe.cast
         else
-            Task.Run<'T>(fun () -> AsyncHelpers.awaitAwaiter (f ()))
+            Task.Run<'T>(Func<'T>(fun () -> AsyncHelpers.awaitAwaiter (f ()))).GetAwaiter()
+            |> AsyncHelpers.awaitAwaiter
+            |> AsyncHelpers.Unsafe.cast
 
 
     /// Used to force type inference to prefer Task<_> for parameters of functions using the build
@@ -226,7 +268,7 @@ type ValueTaskBuilderRuntime() =
 
     member inline this.Run([<InlineIfLambda>] f) : ValueTask<'T> =
         AsyncHelpers.awaitAwaiter (f ())
-        |> ValueTask.FromResult
+        |> AsyncHelpers.Unsafe.cast
 
 
     /// Used to force type inference to prefer ValueTask<_> for parameters of functions using the build
