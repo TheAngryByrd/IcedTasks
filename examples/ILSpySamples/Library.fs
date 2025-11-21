@@ -4,58 +4,76 @@ open System.Threading.Tasks
 open System.Collections.Generic
 
 
-module Task =
+module TaskRuntime =
+    open IcedTasks.Polyfill.TasksRuntime
+    open System.Runtime.CompilerServices
 
-    let forLoopEnumerable (x: IEnumerable<_>) =
+    [<MethodImpl(MethodImplOptions.Async)>]
+    let doThing () =
         task {
-            for i in x do
-                do! Task.Yield()
-                printfn "%A" i
+            do! Task.Yield()
+            return 42
         }
 
-module IcedTasks =
-    open IcedTasks
+// module Task =
 
-    module Task =
-        open IcedTasks.Polyfill.Task
+//     let forLoopEnumerable (x: IEnumerable<_>) =
+//         task {
+//             for i in x do
+//                 do! Task.Yield()
+//                 printfn "%A" i
+//         }
 
-        let forLoopEnumerable (x: IEnumerable<_>) =
-            task {
-                for i in x do
-                    do! Task.Yield()
-                    printfn "%A" i
-            }
+// module IcedTasks =
+//     open IcedTasks
 
+//     module Task =
+//         open IcedTasks.Polyfill.Task
 
-        let forLoopAsyncEnmerable (x: IAsyncEnumerable<_>) =
-            task {
-                for i in x do
-                    do! Task.Yield()
-                    printfn "%A" i
-            }
-
-        let tryFinally () =
-            task {
-                try
-                    do! Task.Yield()
-                finally
-                    printfn "finally2"
-            }
+//         let forLoopEnumerable (x: IEnumerable<_>) =
+//             task {
+//                 for i in x do
+//                     do! Task.Yield()
+//                     printfn "%A" i
+//             }
 
 
-    module CT =
-        open IcedTasks.Polyfill.Task
+//         let forLoopAsyncEnmerable (x: IAsyncEnumerable<_>) =
+//             task {
+//                 for i in x do
+//                     do! Task.Yield()
+//                     printfn "%A" i
+//             }
 
-        let forLoopEnumerable (x: IEnumerable<_>) =
-            cancellableTask {
-                for i in x do
-                    do! Task.Yield()
-                    printfn "%A" i
-            }
+//         let tryFinally () =
+//             task {
+//                 try
+//                     do! Task.Yield()
+//                 finally
+//                     printfn "finally2"
+//             }
 
-        let forLoopAsyncEnmerable (x: IAsyncEnumerable<_>) =
-            cancellableTask {
-                for i in x do
-                    do! Task.Yield()
-                    printfn "%A" i
-            }
+
+//     module CT =
+//         open IcedTasks.Polyfill.Task
+
+//         let forLoopEnumerable (x: IEnumerable<_>) =
+//             cancellableTask {
+//                 for i in x do
+//                     do! Task.Yield()
+//                     printfn "%A" i
+//             }
+
+//         let forLoopAsyncEnmerable (x: IAsyncEnumerable<_>) =
+//             cancellableTask {
+//                 for i in x do
+//                     do! Task.Yield()
+//                     printfn "%A" i
+//             }
+
+
+module Main =
+    [<EntryPoint>]
+
+    let main _argv =
+        TaskRuntime.doThing().GetAwaiter().GetResult()
