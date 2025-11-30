@@ -1,4 +1,7 @@
-namespace IcedTasks
+namespace IcedTasks.TaskBase
+
+open IcedTasks.Nullness
+open IcedTasks.TaskLike
 
 /// Contains methods to build Tasks using the F# computation expression syntax
 [<AutoOpen>]

@@ -468,6 +468,7 @@ module CancellableTaskTests =
 
                 testCaseAsync "use IAsyncDisposable propagate exception"
                 <| async {
+
                     let doDispose () =
                         task {
                             do! Task.Delay(15)
@@ -495,10 +496,11 @@ module CancellableTaskTests =
                     let mutable wasDisposed = false
 
                     let timeProvider = ManualTimeProvider()
+                    let timeProvider2 = ManualTimeProvider()
 
                     let doDispose () =
                         task {
-                            do! Task.Delay(15)
+                            do! timeProvider2.Delay(TimeSpan.FromMilliseconds(15.))
 
                             wasDisposed <- true
                         }
@@ -508,23 +510,31 @@ module CancellableTaskTests =
                     let actor data =
                         cancellableTask {
                             use d = TestHelpers.makeAsyncDisposable (doDispose)
-                            do! fun ct -> timeProvider.Delay(TimeSpan.FromMilliseconds(200), ct)
+                            do! fun ct -> timeProvider.Delay(TimeSpan.FromMilliseconds(200.), ct)
                             return ()
                         }
 
                     use cts =
-                        timeProvider.CreateCancellationTokenSource(TimeSpan.FromMilliseconds(100))
+                        timeProvider.CreateCancellationTokenSource(TimeSpan.FromMilliseconds(100.))
 
                     let inProgress = actor data cts.Token
 
+                    Expect.isFalse wasDisposed "Dispose before cancellation"
+
                     do!
-                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(100))
+                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(100.))
                         |> Async.AwaitTask
 
-                    Expect.isFalse wasDisposed ""
+
+                    Expect.isFalse wasDisposed "Dispose after cancellation"
+
 
                     do!
-                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(100))
+                        timeProvider2.ForwardTimeAsync(TimeSpan.FromMilliseconds(15.))
+                        |> Async.AwaitTask
+
+                    do!
+                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(200.))
                         |> Async.AwaitTask
 
                     do!
@@ -532,7 +542,7 @@ module CancellableTaskTests =
                         |> Async.AwaitTask
 
 
-                    Expect.isTrue wasDisposed ""
+                    Expect.isTrue wasDisposed "Dispose after completion"
 
                 }
 
@@ -1183,7 +1193,7 @@ module CancellableTaskTests =
 
                                                         do!
                                                             timeProvider.Delay(
-                                                                TimeSpan.FromMilliseconds(1000),
+                                                                TimeSpan.FromMilliseconds(1000.),
                                                                 ct
                                                             )
                                                     }
@@ -1192,13 +1202,13 @@ module CancellableTaskTests =
 
                                 use cts =
                                     timeProvider.CreateCancellationTokenSource(
-                                        TimeSpan.FromMilliseconds(100)
+                                        TimeSpan.FromMilliseconds(100.)
                                     )
 
                                 let runningTask = fooTask cts.Token
-                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50))
+                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50.))
                                 Expect.isFalse runningTask.IsCanceled ""
-                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50))
+                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50.))
                                 do! runningTask
                             }
                         )

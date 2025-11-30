@@ -152,10 +152,19 @@ type ManualTimeProviderExtensions =
 
     [<Extension>]
     static member ForwardTimeAsync(this: ManualTimeProvider, time) =
-        task {
+        backgroundTask {
+            do! Task.Yield()
             this.Advance(time)
             //https://github.com/dotnet/runtime/issues/85326
-            do! Task.yieldMany 10
+            // I'm not sure why we have to do this many yields or delays, but sometimes the timer doesn't fire and the test run forever.
+            // I've spent way too much time on this already.
+            do! Task.Delay(150)
+
+            do!
+                Task.yieldMany (
+                    Int32.MaxValue
+                    / 100000
+                )
         }
 
 

@@ -28,6 +28,8 @@ module Tasks =
     open Microsoft.FSharp.Core.CompilerServices.StateMachineHelpers
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
     open IcedTasks
+    open IcedTasks.TaskLike
+    open IcedTasks.TaskBase
 
     ///<summary>
     /// Contains methods to build Tasks using the F# computation expression syntax

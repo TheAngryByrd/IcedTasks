@@ -3,14 +3,14 @@
   "isRoot": true,
   "tools": {
     "fsharp-analyzers": {
-      "version": "0.11.0",
+      "version": "0.33.1",
       "commands": [
         "fsharp-analyzers"
       ],
       "rollForward": false
     },
     "fantomas": {
-      "version": "7.0.1",
+      "version": "7.0.3",
       "commands": [
         "fantomas"
       ],

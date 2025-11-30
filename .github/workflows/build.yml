@@ -22,15 +22,16 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
 
       - name: Setup necessary dotnet SDKs
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
           dotnet-version: |
             8.x
             9.x
+            10.x
       # Build on mac/linux
       - name: Build via Bash
         if: runner.os != 'Windows'
@@ -47,12 +48,19 @@ jobs:
         env:
           CONFIGURATION: ${{ matrix.configuration }}
           CI: true
+      - name: Test Report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Test Results (${{ matrix.os }}-${{ matrix.configuration }})
+          path: '**/TestResults/testResults*.trx'
+          reporter: dotnet-trx
   # Builds the project in a dev container
   build-devcontainer:
     runs-on: ubuntu-latest
     steps:
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
 
       - name: Build and run dev container task
         uses: devcontainers/ci@v0.3
