@@ -54,13 +54,13 @@ module CancellableTaskBase =
     and CancellableTaskBaseCode<'TOverall, 'T, 'Builder> =
         ResumableCode<CancellableTaskBaseStateMachineData<'TOverall, 'Builder>, 'T>
 
-    let inline yieldOnBindLimitAux check =
+    let inline yieldOnBindLimit () =
         CancellableTaskBaseCode(fun sm ->
-            if check () then
+            if Trampoline.Current.ShouldBounce then
                 let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
 
                 if not __stack_yield_fin then
-                    MethodBuilder.AwaitUnsafeOnCompleted(
+                    MethodBuilder.AwaitOnCompleted(
                         &sm.Data.MethodBuilder,
                         Trampoline.Current.Ref,
                         &sm
@@ -70,11 +70,6 @@ module CancellableTaskBase =
             else
                 true
         )
-
-    let inline yieldOnBindLimit () = yieldOnBindLimitAux BindContext.Check
-
-    let inline yieldOnBindLimitWhenIsBind () =
-        yieldOnBindLimitAux BindContext.CheckWhenIsBind
 
     /// <summary>
     /// Contains methods to build TaskLikes using the F# computation expression syntax
@@ -257,8 +252,7 @@ module CancellableTaskBase =
                 if Awaiter.IsCompleted awaiter then
                     cont.Invoke(&sm)
                 else
-                    sm.ResumptionDynamicInfo.ResumptionData <-
-                        (awaiter :> ICriticalNotifyCompletion)
+                    sm.ResumptionDynamicInfo.ResumptionData <- Awaiting awaiter
 
                     sm.ResumptionDynamicInfo.ResumptionFunc <- cont
                     false
@@ -355,7 +349,7 @@ module CancellableTaskBase =
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
                 ([<InlineIfLambda>] cancellableAwaitable: CancellationToken -> 'Awaitable)
                 : CancellationToken -> 'Awaiter =
-                (fun ct -> Awaitable.GetAwaiter(cancellableAwaitable ct))
+                (fun ct -> Awaitable.GetAwaiter(Trampoline.Allow cancellableAwaitable ct))
 
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
@@ -368,7 +362,7 @@ module CancellableTaskBase =
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
                 ([<InlineIfLambda>] coldAwaitable: unit -> 'Awaitable)
                 : CancellationToken -> 'Awaiter =
-                (fun ct -> Awaitable.GetAwaiter(coldAwaitable ()))
+                (fun ct -> Awaitable.GetAwaiter(Trampoline.Allow coldAwaitable ()))
 
             /// <summary>
             /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
@@ -389,20 +383,20 @@ module CancellableTaskBase =
                 sm.Data.ThrowIfCancellationRequested()
                 let mutable awaiter = awaiter
 
-                let cont =
-                    (CancellableTaskBaseResumptionFunc<'TOverall, 'Builder>(fun sm ->
-                        let result = Awaiter.GetResult awaiter
-                        (continuation result).Invoke(&sm)
-                    ))
-
                 // shortcut to continue immediately
                 if Awaiter.IsCompleted awaiter then
-                    cont.Invoke(&sm)
+                    (Awaiter.GetResult awaiter
+                     |> continuation)
+                        .Invoke(&sm)
                 else
-                    sm.ResumptionDynamicInfo.ResumptionData <-
-                        (awaiter :> ICriticalNotifyCompletion)
+                    let resumptionFunc =
+                        CancellableTaskBaseResumptionFunc(fun sm ->
+                            let result = ExceptionCache.GetResultOrThrow awaiter
+                            (continuation result).Invoke(&sm)
+                        )
 
-                    sm.ResumptionDynamicInfo.ResumptionFunc <- cont
+                    sm.ResumptionDynamicInfo.ResumptionFunc <- resumptionFunc
+                    sm.ResumptionDynamicInfo.ResumptionData <- Awaiting awaiter
                     false
 
 
@@ -434,8 +428,7 @@ module CancellableTaskBase =
                 if Awaiter.IsCompleted awaiter then
                     cont.Invoke(&sm)
                 else
-                    sm.ResumptionDynamicInfo.ResumptionData <-
-                        (awaiter :> ICriticalNotifyCompletion)
+                    sm.ResumptionDynamicInfo.ResumptionData <- Awaiting awaiter
 
                     sm.ResumptionDynamicInfo.ResumptionFunc <- cont
                     false
@@ -745,7 +738,7 @@ module CancellableTaskBase =
                 ([<InlineIfLambda>] coldTask: unit -> Task<'T>)
                 : CancellationToken -> Awaiter<TaskAwaiter<'T>, 'T> =
                 (fun (ct: CancellationToken) ->
-                    Awaitable.GetTaskAwaiter(BindContext.SetIsBind coldTask ())
+                    Awaitable.GetTaskAwaiter(Trampoline.Allow coldTask ())
                 )
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
@@ -766,7 +759,7 @@ module CancellableTaskBase =
             member inline _.Source
                 ([<InlineIfLambda>] cancellableTask: CancellationToken -> Task<'T>)
                 : CancellationToken -> Awaiter<TaskAwaiter<'T>, 'T> =
-                (fun ct -> Awaitable.GetTaskAwaiter(cancellableTask ct))
+                (fun ct -> Awaitable.GetTaskAwaiter(Trampoline.Allow cancellableTask ct))
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///

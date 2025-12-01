@@ -55,27 +55,18 @@ module ColdTasks =
     /// A special compiler-recognised delegate type for specifying blocks of ColdTask code with access to the state machine
     and ColdTaskCode<'TOverall, 'T> = ResumableCode<ColdTaskStateMachineData<'TOverall>, 'T>
 
-    let inline yieldOnBindLimitAux check =
+    let inline yieldOnBindLimit () =
         ColdTaskCode(fun sm ->
-            if check () then
+            if Trampoline.Current.ShouldBounce then
                 let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
 
                 if not __stack_yield_fin then
-                    MethodBuilder.AwaitUnsafeOnCompleted(
-                        &sm.Data.MethodBuilder,
-                        Trampoline.Current.Ref,
-                        &sm
-                    )
+                    sm.Data.MethodBuilder.AwaitOnCompleted(Trampoline.Current.Ref, &sm)
 
                 __stack_yield_fin
             else
                 true
         )
-
-    let inline yieldOnBindLimit () = yieldOnBindLimitAux BindContext.Check
-
-    let inline yieldOnBindLimitWhenIsBind () =
-        yieldOnBindLimitAux BindContext.CheckWhenIsBind
 
     /// Contains the coldTask computation expression builder.
     type ColdTaskBuilderBase() =
@@ -263,8 +254,7 @@ module ColdTasks =
                         if awaiter.IsCompleted then
                             cont.Invoke(&sm)
                         else
-                            sm.ResumptionDynamicInfo.ResumptionData <-
-                                (awaiter :> ICriticalNotifyCompletion)
+                            sm.ResumptionDynamicInfo.ResumptionData <- Awaiting awaiter
 
                             sm.ResumptionDynamicInfo.ResumptionFunc <- cont
                             false
@@ -317,61 +307,66 @@ module ColdTasks =
         /// </summary>
         static member inline RunDynamic(code: ColdTaskCode<'T, 'T>) : ColdTask<'T> =
 
-            let initialResumptionFunc = ColdTaskResumptionFunc<'T>(fun sm -> code.Invoke(&sm))
+            let initialResumptionFunc = ColdTaskResumptionFunc<'T>(fun sm -> code.Invoke &sm)
 
-            let resumptionInfo () =
-                let mutable state = InitialYield
+            let bounceAllowed = Trampoline.Current.IsAwaited()
 
-                { new ColdTaskResumptionDynamicInfo<'T>(initialResumptionFunc) with
+            let maybeBounce state =
+                if
+                    bounceAllowed
+                    && Trampoline.Current.ShouldBounce
+                then
+                    Bounce state
+                else
+                    Immediate state
+
+            let resumptionInfo =
+                let initialState = maybeBounce Running
+
+                { new ColdTaskResumptionDynamicInfo<'T>(initialResumptionFunc,
+                                                        ResumptionData = initialState) with
                     member info.MoveNext(sm) =
-                        let current = state
-                        let mutable continuation = Stop
 
-                        match current with
-                        | InitialYield ->
-                            state <- Running
+                        let getCurrent () =
+                            match info.ResumptionData with
+                            | :? DynamicState as state -> state
+                            | _ -> failwith "Invalid resumption data"
 
-                            continuation <-
-                                if BindContext.CheckWhenIsBind() then Bounce else Immediate
+                        let setState state = info.ResumptionData <- state
+
+                        match getCurrent () with
+                        | Immediate state ->
+                            setState state
+                            info.MoveNext &sm
                         | Running ->
+                            let mutable keepGoing = true
+
                             try
-                                let step = info.ResumptionFunc.Invoke(&sm)
-
-                                if step then
-                                    state <- SetResult
-
-                                    continuation <-
-                                        if BindContext.Check() then Bounce else Immediate
+                                if info.ResumptionFunc.Invoke(&sm) then
+                                    setState (maybeBounce SetResult)
                                 else
-                                    continuation <-
-                                        Await(downcast sm.ResumptionDynamicInfo.ResumptionData)
+                                    keepGoing <-
+                                        match getCurrent () with
+                                        | Awaiting _ -> true
+                                        | _ -> false
                             with exn ->
-                                state <- SetException(ExceptionCache.CaptureOrRetrieve exn)
-                                continuation <- if BindContext.Check() then Bounce else Immediate
-                        | SetResult ->
-                            MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
-                        | SetException edi ->
-                            MethodBuilder.SetException(&sm.Data.MethodBuilder, edi.SourceException)
+                                setState (
+                                    maybeBounce
+                                    <| SetException(ExceptionCache.CaptureOrRetrieve exn)
+                                )
 
-                        let continuation = continuation
-
-                        match continuation with
-                        | Stop -> ()
-                        | Immediate -> info.MoveNext(&sm)
-                        | Bounce ->
-                            MethodBuilder.AwaitOnCompleted(
-                                &sm.Data.MethodBuilder,
-                                Trampoline.Current.Ref,
-                                &sm
-                            )
-                        | Await awaiter ->
+                            if keepGoing then
+                                info.MoveNext &sm
+                        | Awaiting awaiter ->
+                            setState Running
                             let mutable awaiter = awaiter
-
-                            MethodBuilder.AwaitUnsafeOnCompleted(
-                                &sm.Data.MethodBuilder,
-                                &awaiter,
-                                &sm
-                            )
+                            sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
+                        | Bounce next ->
+                            setState next
+                            sm.Data.MethodBuilder.AwaitOnCompleted(Trampoline.Current.Ref, &sm)
+                        | SetResult -> sm.Data.MethodBuilder.SetResult sm.Data.Result
+                        | SetException edi ->
+                            sm.Data.MethodBuilder.SetException(edi.SourceException)
 
                     member _.SetStateMachine(sm, state) =
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
@@ -380,7 +375,7 @@ module ColdTasks =
             fun () ->
                 let mutable sm = ColdTaskStateMachine<'T>()
 
-                sm.ResumptionDynamicInfo <- resumptionInfo ()
+                sm.ResumptionDynamicInfo <- resumptionInfo
                 sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                 sm.Data.MethodBuilder.Start(&sm)
                 sm.Data.MethodBuilder.Task
@@ -391,35 +386,36 @@ module ColdTasks =
                 __stateMachine<ColdTaskStateMachineData<'T>, ColdTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         __resumeAt sm.ResumptionPoint
+
                         let mutable error = ValueNone
 
-                        let __stack_go1 = yieldOnBindLimitWhenIsBind().Invoke(&sm)
+                        let noBounce = not (Trampoline.Current.IsAwaited())
+
+                        let __stack_go1 =
+                            noBounce
+                            || yieldOnBindLimit().Invoke(&sm)
 
                         if __stack_go1 then
                             try
                                 let __stack_code_fin = code.Invoke(&sm)
 
                                 if __stack_code_fin then
-                                    let __stack_go2 = yieldOnBindLimit().Invoke(&sm)
+                                    let __stack_go2 =
+                                        noBounce
+                                        || yieldOnBindLimit().Invoke(&sm)
 
                                     if __stack_go2 then
-                                        MethodBuilder.SetResult(
-                                            &sm.Data.MethodBuilder,
-                                            sm.Data.Result
-                                        )
+                                        sm.Data.MethodBuilder.SetResult(sm.Data.Result)
                             with exn ->
-                                error <-
-                                    ValueSome
-                                    <| ExceptionCache.CaptureOrRetrieve exn
+                                error <- ValueSome(ExceptionCache.CaptureOrRetrieve exn)
 
                             if error.IsSome then
-                                let __stack_go2 = yieldOnBindLimit().Invoke(&sm)
+                                let __stack_go2 =
+                                    noBounce
+                                    || yieldOnBindLimit().Invoke(&sm)
 
                                 if __stack_go2 then
-                                    MethodBuilder.SetException(
-                                        &sm.Data.MethodBuilder,
-                                        error.Value.SourceException
-                                    )
+                                    sm.Data.MethodBuilder.SetException(error.Value.SourceException)
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         sm.Data.MethodBuilder.SetStateMachine(state)
@@ -464,34 +460,36 @@ module ColdTasks =
                 __stateMachine<ColdTaskStateMachineData<'T>, ColdTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         __resumeAt sm.ResumptionPoint
+
                         let mutable error = ValueNone
-                        let __stack_go1 = yieldOnBindLimitWhenIsBind().Invoke(&sm)
+
+                        let noBounce = not (Trampoline.Current.IsAwaited())
+
+                        let __stack_go1 =
+                            noBounce
+                            || yieldOnBindLimit().Invoke(&sm)
 
                         if __stack_go1 then
                             try
                                 let __stack_code_fin = code.Invoke(&sm)
 
                                 if __stack_code_fin then
-                                    let __stack_go2 = yieldOnBindLimit().Invoke(&sm)
+                                    let __stack_go2 =
+                                        noBounce
+                                        || yieldOnBindLimit().Invoke(&sm)
 
                                     if __stack_go2 then
-                                        MethodBuilder.SetResult(
-                                            &sm.Data.MethodBuilder,
-                                            sm.Data.Result
-                                        )
+                                        sm.Data.MethodBuilder.SetResult(sm.Data.Result)
                             with exn ->
-                                error <-
-                                    ValueSome
-                                    <| ExceptionCache.CaptureOrRetrieve exn
+                                error <- ValueSome(ExceptionCache.CaptureOrRetrieve exn)
 
                             if error.IsSome then
-                                let __stack_go2 = yieldOnBindLimit().Invoke(&sm)
+                                let __stack_go2 =
+                                    noBounce
+                                    || yieldOnBindLimit().Invoke(&sm)
 
                                 if __stack_go2 then
-                                    MethodBuilder.SetException(
-                                        &sm.Data.MethodBuilder,
-                                        error.Value.SourceException
-                                    )
+                                    sm.Data.MethodBuilder.SetException(error.Value.SourceException)
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         sm.Data.MethodBuilder.SetStateMachine(state)
@@ -552,26 +550,24 @@ module ColdTasks =
                 when Awaiter<'Awaiter, 'TResult1>>
                 (
                     sm: byref<_>,
-                    getAwaiter: unit -> 'Awaiter,
+                    [<InlineIfLambda>] getAwaiter: unit -> 'Awaiter,
                     continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
                 ) : bool =
-
                 let mutable awaiter = getAwaiter ()
 
-                let cont =
-                    (ColdTaskResumptionFunc<'TOverall>(fun sm ->
-                        let result = Awaiter.GetResult awaiter
-                        (continuation result).Invoke(&sm)
-                    ))
-
-                // shortcut to continue immediately
                 if Awaiter.IsCompleted awaiter then
-                    cont.Invoke(&sm)
+                    (Awaiter.GetResult awaiter
+                     |> continuation)
+                        .Invoke(&sm)
                 else
-                    sm.ResumptionDynamicInfo.ResumptionData <-
-                        (awaiter :> ICriticalNotifyCompletion)
+                    let resumptionFunc =
+                        ColdTaskResumptionFunc(fun sm ->
+                            let result = ExceptionCache.GetResultOrThrow awaiter
+                            (continuation result).Invoke(&sm)
+                        )
 
-                    sm.ResumptionDynamicInfo.ResumptionFunc <- cont
+                    sm.ResumptionDynamicInfo.ResumptionFunc <- resumptionFunc
+                    sm.ResumptionDynamicInfo.ResumptionData <- Awaiting awaiter
                     false
 
 
@@ -592,29 +588,24 @@ module ColdTasks =
             member inline _.Bind<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
                 (
-                    getAwaiter: unit -> 'Awaiter,
+                    [<InlineIfLambda>] getAwaiter: unit -> 'Awaiter,
                     continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
                 ) : ColdTaskCode<'TOverall, 'TResult2> =
 
                 ColdTaskCode<'TOverall, _>(fun sm ->
                     if __useResumableCode then
-                        //-- RESUMABLE CODE START
                         let mutable awaiter = getAwaiter ()
 
-                        let mutable __stack_fin = true
-
-                        if not (Awaiter.IsCompleted awaiter) then
-                            // This will yield with __stack_yield_fin = false
-                            // This will resume with __stack_yield_fin = true
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-                            __stack_fin <- __stack_yield_fin
-
-                        if __stack_fin then
-                            let result = ExceptionCache.GetResultOrThrow awaiter
-                            (continuation result).Invoke(&sm)
+                        if Awaiter.IsCompleted awaiter then
+                            continuation(ExceptionCache.GetResultOrThrow awaiter).Invoke(&sm)
                         else
-                            sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
-                            false
+                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
+
+                            if __stack_yield_fin then
+                                continuation(ExceptionCache.GetResultOrThrow awaiter).Invoke(&sm)
+                            else
+                                sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
+                                false
                     else
                         ColdTaskBuilderBase.BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall>(
                             &sm,
@@ -635,14 +626,14 @@ module ColdTasks =
             [<NoEagerConstraintApplication>]
             member inline this.ReturnFrom<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
-                (getAwaiter: unit -> 'Awaiter)
+                ([<InlineIfLambda>] getAwaiter: unit -> 'Awaiter)
                 : ColdTaskCode<_, _> =
                 this.Bind((fun () -> getAwaiter ()), (fun v -> this.Return v))
 
             [<NoEagerConstraintApplication>]
             member inline this.BindReturn<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
-                (getAwaiter: unit -> 'Awaiter, f)
+                ([<InlineIfLambda>] getAwaiter: unit -> 'Awaiter, f)
                 : ColdTaskCode<'TResult2, 'TResult2> =
                 this.Bind((fun () -> getAwaiter ()), (fun v -> this.Return(f v)))
 
@@ -667,7 +658,7 @@ module ColdTasks =
             [<NoEagerConstraintApplication>]
             member inline _.Source<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
-                (getAwaiter: unit -> 'Awaiter)
+                ([<InlineIfLambda>] getAwaiter: unit -> 'Awaiter)
                 : unit -> 'Awaiter =
                 getAwaiter
 
@@ -731,7 +722,7 @@ module ColdTasks =
             /// </remarks>
             static member inline AwaitColdTask(t: ColdTask<'T>) =
                 async.Delay(fun () ->
-                    BindContext.SetIsBind t ()
+                    t ()
                     |> AsyncEx.AwaitTask
                 )
 
@@ -742,7 +733,7 @@ module ColdTasks =
             /// </remarks>
             static member inline AwaitColdTask(t: ColdTask) =
                 async.Delay(fun () ->
-                    BindContext.SetIsBind t ()
+                    t ()
                     |> AsyncEx.AwaitTask
                 )
 
@@ -752,7 +743,7 @@ module ColdTasks =
             /// its result.</summary>
             static member inline AwaitColdTask(t: ColdTask<'T>) =
                 async.Delay(fun () ->
-                    BindContext.SetIsBind t ()
+                    t ()
                     |> Async.AwaitTask
                 )
 
@@ -760,7 +751,7 @@ module ColdTasks =
             /// its result.</summary>
             static member inline AwaitColdTask(t: ColdTask) =
                 async.Delay(fun () ->
-                    BindContext.SetIsBind t ()
+                    t ()
                     |> Async.AwaitTask
                 )
 
@@ -791,7 +782,7 @@ module ColdTasks =
             ///
             /// <returns>unit -> 'Awaiter</returns>
             member inline _.Source([<InlineIfLambda>] task: ColdTask<'TResult1>) =
-                (fun () -> (BindContext.SetIsBind task ()).GetAwaiter())
+                (fun () -> (Trampoline.Allow task ()).GetAwaiter())
 
             /// <summary>Allows the computation expression to turn other types into unit -> 'Awaiter</summary>
             ///
@@ -937,8 +928,7 @@ module ColdTasks =
         let inline toUnit ([<InlineIfLambda>] coldTask: ColdTask<_>) : ColdTask =
             fun () -> coldTask () :> Task
 
-        let inline internal getAwaiter ([<InlineIfLambda>] ctask: ColdTask<_>) =
-            fun () -> (ctask ()).GetAwaiter()
+        let inline internal getAwaiter (ctask: ColdTask<_>) = fun () -> (ctask ()).GetAwaiter()
 
     /// <exclude />
     [<AutoOpen>]

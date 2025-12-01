@@ -1,30 +1,36 @@
 namespace IcedTasks
 
 open System
-open System.Collections.Generic
 open System.Runtime.ExceptionServices
 open System.Threading
 open System.Runtime.CompilerServices
+open IcedTasks.TaskLike
 
-[<AutoOpen>]
-module Assert =
-    let failIfNot condition msg =
-        if not condition then
-            failwith $" assertion failed {msg}"
+type DynamicState =
+    | Running
+    | SetResult
+    | SetException of ExceptionDispatchInfo
+    | Awaiting of ICriticalNotifyCompletion
+    | Bounce of DynamicState
+    | Immediate of DynamicState
 
 type Trampoline private () =
 
-    let ownerThreadId = Thread.CurrentThread.ManagedThreadId
-
     static let holder = new ThreadLocal<_>(fun () -> Trampoline())
+
+    let mutable depth = 0
+
+    [<Literal>]
+    let MaxDepth = 50
 
     let mutable pending: Action voption = ValueNone
     let mutable running = false
 
-    let start (action: Action) =
+    let mutable primed = true
+
+    let start () =
         try
             running <- true
-            action.Invoke()
 
             while pending.IsSome do
                 let next = pending.Value
@@ -34,50 +40,51 @@ type Trampoline private () =
             running <- false
 
     let set action =
-        failIfNot (Thread.CurrentThread.ManagedThreadId = ownerThreadId) "thread"
-        failIfNot pending.IsNone "trampoline taken, pending is not None"
+        pending <- ValueSome action
 
-        if running then
-            pending <- ValueSome action
-        else
-            start action
+        if not running then
+            start ()
 
     interface ICriticalNotifyCompletion with
-        member _.OnCompleted(continuation) = set continuation
-        member _.UnsafeOnCompleted(continuation) = set continuation
+        member _.OnCompleted continuation = set continuation
+        member _.UnsafeOnCompleted continuation = set continuation
 
     member this.Ref: ICriticalNotifyCompletion ref = ref this
 
     static member Current = holder.Value
 
-module BindContext =
-    [<Literal>]
-    let bindLimit = 100
+    member _.ShouldBounce =
+        // We must check pending here because of MergeSources.
+        not running
+        || pending.IsNone
+           && (depth <- depth + 1
+               depth % MaxDepth = 0)
 
-    let bindCount = new ThreadLocal<int>()
-    let isBind = new ThreadLocal<bool>()
+    // To prevent sync over async deadlocks, for example when a GetResult() is called on inner task inside a coldTask CE
+    // We need to communicate to the starting cold task that it is in fact being awaited and can use the thread's trampoline
+    // Any starting cold task will call this method to check if it is being awaited.
+    //
+    // The mechanism of a potential deadlock is as follows:
+    // 1) A task continuation is executed on the trampoline
+    // 2) instead of awaiting an inner task, it synchronously calls GetResult() on it (a very bad pratice)
+    // 3) The inner task posts it's own continuation on the same trampoline, because we are on the same thread.
+    // 4) Because the initial continuation is still running (blocked by GetResult), the trampoline is busy and never executes the inner task's continuation.
+    member _.IsAwaited() =
+        let wasPrimed = primed
+        primed <- false
+        wasPrimed
 
-    let inline incrementBindCount () =
-        bindCount.Value <-
-            bindCount.Value
-            + 1
+    member _.Prime() = primed <- true
 
-        bindCount.Value % bindLimit = 0
-
-    /// Signal to the task that it is evaluated as a bound value in a computation expression.
-    /// It will use current trampoline to avoid stack overflows in recursive binds.
-    let inline SetIsBind f x =
-        isBind.Value <- true
+module Trampoline =
+    // Called inside Source builder methods to communicate to the starting task that it is let! bound (awaited),
+    // therefore it can use the current trampoline.
+    //
+    // Because the bound task has simply a unit -> Task or CancellableToken -> Task signature, we cannot pass any such additional info directly.
+    // TODO: similar mechanism can be used to communicate that the task is bound as a tail-call (ReturnFromFinal).
+    let inline Allow f x =
+        Trampoline.Current.Prime()
         f x
-
-    let inline CheckWhenIsBind () =
-        try
-            isBind.Value
-            && incrementBindCount ()
-        finally
-            isBind.Value <- false
-
-    let inline Check () = incrementBindCount ()
 
 module ExceptionCache =
     let store = ConditionalWeakTable<exn, ExceptionDispatchInfo>()
@@ -105,17 +112,3 @@ module ExceptionCache =
             Awaiter.GetResult awaiter
         with exn ->
             Throw exn
-
-[<Struct>]
-type DynamicState =
-    | InitialYield
-    | Running
-    | SetResult
-    | SetException of ExceptionDispatchInfo
-
-[<Struct>]
-type DynamicContinuation =
-    | Stop
-    | Immediate
-    | Bounce
-    | Await of ICriticalNotifyCompletion

@@ -58,52 +58,56 @@ module CancellableValueTasks =
             let initialResumptionFunc =
                 CancellableTaskBaseResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm))
 
-            let resumptionInfo () =
-                let mutable state = InitialYield
+            let bounceAllowed = Trampoline.Current.IsAwaited()
 
-                { new CancellableTaskBaseResumptionDynamicInfo<'T, _>(initialResumptionFunc) with
+            let maybeBounce state =
+                if
+                    bounceAllowed
+                    && Trampoline.Current.ShouldBounce
+                then
+                    Bounce state
+                else
+                    Immediate state
+
+            let resumptionInfo =
+                let initialState = maybeBounce Running
+
+                { new CancellableTaskBaseResumptionDynamicInfo<'T, _>(initialResumptionFunc,
+                                                                      ResumptionData = initialState) with
                     member info.MoveNext(sm) =
-                        let current = state
-                        let mutable continuation = Stop
 
-                        match current with
-                        | InitialYield ->
-                            state <- Running
+                        let getCurrent () =
+                            match info.ResumptionData with
+                            | :? DynamicState as state -> state
+                            | _ -> failwith "Invalid resumption data"
 
-                            continuation <-
-                                if BindContext.CheckWhenIsBind() then Bounce else Immediate
+                        let setState state = info.ResumptionData <- state
+
+                        match getCurrent () with
+                        | Immediate state ->
+                            setState state
+                            info.MoveNext &sm
                         | Running ->
+                            let mutable keepGoing = true
+
                             try
-                                let step = info.ResumptionFunc.Invoke(&sm)
-
-                                if step then
-                                    state <- SetResult
-
-                                    continuation <-
-                                        if BindContext.Check() then Bounce else Immediate
+                                if info.ResumptionFunc.Invoke(&sm) then
+                                    setState (maybeBounce SetResult)
                                 else
-                                    continuation <-
-                                        Await(downcast sm.ResumptionDynamicInfo.ResumptionData)
+                                    keepGoing <-
+                                        match getCurrent () with
+                                        | Awaiting _ -> true
+                                        | _ -> false
                             with exn ->
-                                state <- SetException(ExceptionCache.CaptureOrRetrieve exn)
-                                continuation <- if BindContext.Check() then Bounce else Immediate
-                        | SetResult ->
-                            MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
-                        | SetException edi ->
-                            MethodBuilder.SetException(&sm.Data.MethodBuilder, edi.SourceException)
+                                setState (
+                                    maybeBounce
+                                    <| SetException(ExceptionCache.CaptureOrRetrieve exn)
+                                )
 
-                        let continuation = continuation
-
-                        match continuation with
-                        | Stop -> ()
-                        | Immediate -> info.MoveNext(&sm)
-                        | Bounce ->
-                            MethodBuilder.AwaitOnCompleted(
-                                &sm.Data.MethodBuilder,
-                                Trampoline.Current.Ref,
-                                &sm
-                            )
-                        | Await awaiter ->
+                            if keepGoing then
+                                info.MoveNext &sm
+                        | Awaiting awaiter ->
+                            setState Running
                             let mutable awaiter = awaiter
 
                             MethodBuilder.AwaitUnsafeOnCompleted(
@@ -111,6 +115,18 @@ module CancellableValueTasks =
                                 &awaiter,
                                 &sm
                             )
+                        | Bounce next ->
+                            setState next
+
+                            MethodBuilder.AwaitOnCompleted(
+                                &sm.Data.MethodBuilder,
+                                Trampoline.Current.Ref,
+                                &sm
+                            )
+                        | SetResult ->
+                            MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
+                        | SetException edi ->
+                            MethodBuilder.SetException(&sm.Data.MethodBuilder, edi.SourceException)
 
                     member _.SetStateMachine(sm, state) =
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
@@ -121,7 +137,7 @@ module CancellableValueTasks =
                     ValueTask.FromCanceled<_>(ct)
                 else
                     sm.Data.CancellationToken <- ct
-                    sm.ResumptionDynamicInfo <- resumptionInfo ()
+                    sm.ResumptionDynamicInfo <- resumptionInfo
                     sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
                     sm.Data.MethodBuilder.Start(&sm)
                     sm.Data.MethodBuilder.Task
@@ -132,16 +148,23 @@ module CancellableValueTasks =
                 __stateMachine<CancellableTaskBaseStateMachineData<'T, _>, CancellableValueTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         __resumeAt sm.ResumptionPoint
+
                         let mutable error = ValueNone
 
-                        let __stack_go1 = yieldOnBindLimitWhenIsBind().Invoke(&sm)
+                        let noBounce = not (Trampoline.Current.IsAwaited())
+
+                        let __stack_go1 =
+                            noBounce
+                            || yieldOnBindLimit().Invoke(&sm)
 
                         if __stack_go1 then
                             try
                                 let __stack_code_fin = code.Invoke(&sm)
 
                                 if __stack_code_fin then
-                                    let __stack_go2 = yieldOnBindLimit().Invoke(&sm)
+                                    let __stack_go2 =
+                                        noBounce
+                                        || yieldOnBindLimit().Invoke(&sm)
 
                                     if __stack_go2 then
                                         MethodBuilder.SetResult(
@@ -149,12 +172,12 @@ module CancellableValueTasks =
                                             sm.Data.Result
                                         )
                             with exn ->
-                                error <-
-                                    ValueSome
-                                    <| ExceptionCache.CaptureOrRetrieve exn
+                                error <- ValueSome(ExceptionCache.CaptureOrRetrieve exn)
 
                             if error.IsSome then
-                                let __stack_go2 = yieldOnBindLimit().Invoke(&sm)
+                                let __stack_go2 =
+                                    noBounce
+                                    || yieldOnBindLimit().Invoke(&sm)
 
                                 if __stack_go2 then
                                     MethodBuilder.SetException(
@@ -187,7 +210,7 @@ module CancellableValueTasks =
             ([<InlineIfLambda>] x: CancellationToken -> ValueTask<_>)
             : CancellationToken -> Awaiter<ValueTaskAwaiter<_>, _> =
             fun ct ->
-                BindContext.SetIsBind x ct
+                Trampoline.Allow x ct
                 |> Awaitable.GetAwaiter
 
         [<NoEagerConstraintApplication>]
