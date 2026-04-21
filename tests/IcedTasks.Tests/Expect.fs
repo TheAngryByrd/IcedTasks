@@ -9,10 +9,14 @@ module Task =
     /// We run it max times to ensure it really gets async yielded.
     /// Alternative would be Task.Delay but can be slow.
     let yieldMany max =
-        task {
-            for _ = 0 to max do
-                do! Task.Yield()
-        }
+        Task.Run<unit>(fun _ ->
+            task {
+                for _ = 0 to max do
+                    do! Task.Yield()
+            }
+        )
+
+    let runInThreadPool (f: unit -> Task<'T>) : Task<'T> = Task.Run<'T>(fun _ -> f ())
 
 module TestHelpers =
     open System.Threading
@@ -73,6 +77,16 @@ module Expecto =
 module Expect =
     open Expecto
 
+    let inline isAssignableFrom<'t> (e: exn) =
+        let t1 = e.GetType()
+        let t2 = typeof<'t>
+
+        t2.IsAssignableFrom t1
+
+    let stringContainsNot (actual: string) (expectedSubstring: string) message =
+        if actual.Contains(expectedSubstring) then
+            failtestf "%s. Expected %s to NOT contain substring %s" message actual expectedSubstring
+
     /// Expects the passed function to throw `'texn`.
     [<RequiresExplicitTypeArguments>]
     let throwsTAsync<'texn when 'texn :> exn> f message =
@@ -86,14 +100,16 @@ module Expect =
                         return ValueSome e
                 }
 
+
             match thrown with
-            | ValueSome e when e.GetType().IsAssignableFrom typeof<'texn> ->
+            | ValueSome e when isAssignableFrom<'texn> e -> ()
+            | ValueSome e ->
                 failtestf
                     "%s. Expected f to throw an exn of type %s, but one of type %s was thrown."
                     message
                     (typeof<'texn>.FullName)
                     (e.GetType().FullName)
-            | ValueSome _ -> ()
+
             | _ -> failtestf "%s. Expected f to throw." message
         }
 

@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net9.0;net6.0;netstandard2.1;netstandard2.0;</TargetFrameworks>
+    <TargetFrameworks>net10.0;net9.0;net6.0;netstandard2.1;netstandard2.0;</TargetFrameworks>
     <NoWarn>$(NoWarn);FS3513</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
@@ -12,8 +12,9 @@
     <Compile Include="Nullness.fs" />
     <Compile Include="TaskLike.fs" />
     <Compile Include="TaskBuilderBase.fs" />
+    <Compile Include="TaskBuilderBase_Net10.fs" Condition="$(NET10_0_OR_GREATER) == 'true'"/>
     <Compile Include="ValueTask.fs" />
-    <Compile Include="PoolingValueTask.fs" />
+    <Compile Include="PoolingValueTask.fs" Condition="$(NET6_0_OR_GREATER) == 'true'" />
     <Compile Include="ValueTaskUnit.fs" />
     <Compile Include="TaskUnit.fs" />
     <Compile Include="Task.fs" />
@@ -22,7 +23,7 @@
     <Compile Include="ColdTask.fs" />
     <Compile Include="CancellableTaskBuilderBase.fs" />
     <Compile Include="CancellableValueTask.fs" />
-    <Compile Include="CancellablePoolingValueTask.fs" />
+    <Compile Include="CancellablePoolingValueTask.fs" Condition="$(NET6_0_OR_GREATER) == 'true'"  />
     <Compile Include="CancellableTask.fs" />
     <Compile Include="AutoOpens.fs" />
   </ItemGroup>
@@ -31,7 +32,7 @@
     <PackageReference Condition="'$(TargetFramework)' == 'netstandard2.0'" Include="Microsoft.Bcl.AsyncInterfaces" />
   </ItemGroup>
   <Choose>
-    <When Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)','net9.0'))">
+    <When Condition="$(NET9_0_OR_GREATER) == 'true'">
       <ItemGroup>
       <PackageReference Include="FSharp.Core" VersionOverride="9.0.300" />
       </ItemGroup>

@@ -136,6 +136,27 @@ type FileWriteBenchmarks() =
 
         File.Delete(path)
 
+    [<BenchmarkCategory("ManyWriteFile", fsharp, taskBuilderRuntime);
+      Benchmark(OperationsPerInvoke = manyIterationsConst)>]
+    member x.FSharp_ManyWriteFile_TaskBuilderRuntime() : unit =
+#if NET10_0_OR_GREATER
+        let path = getTempFileName ()
+
+        (IcedTasks.Polyfill.TasksRuntime.TaskBuilder.task {
+            let junk = Array.zeroCreate x.bufferSize
+            use file = File.Create(path)
+
+            for i = 1 to x.manyIterations do
+                do! file.WriteAsync(junk, 0, junk.Length)
+
+        })
+            .GetAwaiter()
+            .GetResult()
+
+        File.Delete(path)
+#else
+        raise (NotSupportedException("Must be .NET 10 or greater"))
+#endif
 
     [<BenchmarkCategory("ManyWriteFile", fsharp, valueTaskBuilder);
       Benchmark(OperationsPerInvoke = manyIterationsConst)>]

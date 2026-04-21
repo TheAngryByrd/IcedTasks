@@ -689,7 +689,7 @@ module PoolingValueTaskTests =
                         let parallelList = ResizeArray<_>()
 
                         let fakeWork id yieldTimes (l: ResizeArray<_>) =
-                            poolingValueTask {
+                            backgroundTask {
                                 lock l (fun () -> l.Add(id))
                                 do! Task.yieldMany yieldTimes
                                 let dt = DateTimeOffset.UtcNow
