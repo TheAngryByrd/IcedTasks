@@ -52,46 +52,86 @@ module CancellableTasks =
             (code: CancellableTaskBaseCode<'T, 'T, _>)
             : CancellableTask<'T> =
 
-            let mutable sm = CancellableTaskBaseStateMachine<'T, _>()
-
             let initialResumptionFunc =
                 CancellableTaskBaseResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm))
 
+            let bounceAllowed = Trampoline.Current.IsAwaited()
+
+            let maybeBounce state =
+                if
+                    bounceAllowed
+                    && Trampoline.Current.ShouldBounce
+                then
+                    Bounce state
+                else
+                    Immediate state
+
             let resumptionInfo =
-                { new CancellableTaskBaseResumptionDynamicInfo<'T, _>(initialResumptionFunc) with
+                let initialState = maybeBounce Running
+
+                { new CancellableTaskBaseResumptionDynamicInfo<'T, _>(initialResumptionFunc,
+                                                                      ResumptionData = initialState) with
                     member info.MoveNext(sm) =
-                        let mutable savedExn = null
 
-                        try
-                            sm.ResumptionDynamicInfo.ResumptionData <- null
-                            let step = info.ResumptionFunc.Invoke(&sm)
+                        let getCurrent () =
+                            match info.ResumptionData with
+                            | null -> failwith "Invalid state: ResumptionData is null"
+                            | state -> unbox state
 
-                            if step then
-                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
-                            else
-                                match sm.ResumptionDynamicInfo.ResumptionData with
-                                | :? ICriticalNotifyCompletion as awaiter ->
-                                    let mutable awaiter = awaiter
-                                    // assert not (isNull awaiter)
-                                    MethodBuilder.AwaitOnCompleted(
-                                        &sm.Data.MethodBuilder,
-                                        &awaiter,
-                                        &sm
-                                    )
-                                | awaiter -> assert not (isNull awaiter)
+                        let setState state = info.ResumptionData <- state
 
-                        with exn ->
-                            savedExn <- exn
-                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
-                        match savedExn with
-                        | null -> ()
-                        | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
+                        match getCurrent () with
+                        | Immediate state ->
+                            setState state
+                            info.MoveNext &sm
+                        | Running ->
+                            let mutable keepGoing = true
+
+                            try
+                                if info.ResumptionFunc.Invoke(&sm) then
+                                    setState (maybeBounce SetResult)
+                                else
+                                    keepGoing <-
+                                        match getCurrent () with
+                                        | Awaiting _ -> true
+                                        | _ -> false
+                            with exn ->
+                                setState (
+                                    maybeBounce
+                                    <| SetException(ExceptionCache.CaptureOrRetrieve exn)
+                                )
+
+                            if keepGoing then
+                                info.MoveNext &sm
+                        | Awaiting awaiter ->
+                            setState Running
+                            let mutable awaiter = awaiter
+
+                            MethodBuilder.AwaitUnsafeOnCompleted(
+                                &sm.Data.MethodBuilder,
+                                &awaiter,
+                                &sm
+                            )
+                        | Bounce next ->
+                            setState next
+
+                            MethodBuilder.AwaitOnCompleted(
+                                &sm.Data.MethodBuilder,
+                                Trampoline.Current.Ref,
+                                &sm
+                            )
+                        | SetResult ->
+                            MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
+                        | SetException edi ->
+                            MethodBuilder.SetException(&sm.Data.MethodBuilder, edi.SourceException)
 
                     member _.SetStateMachine(sm, state) =
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
                 }
 
             fun (ct) ->
+                let mutable sm = CancellableTaskBaseStateMachine<'T, _>()
+
                 if ct.IsCancellationRequested then
                     Task.FromCanceled<_>(ct)
                 else
@@ -107,22 +147,43 @@ module CancellableTasks =
             if __useResumableCode then
                 __stateMachine<CancellableTaskBaseStateMachineData<'T, _>, CancellableTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
-                        //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
-                        let mutable __stack_exn = null
 
-                        try
-                            let __stack_code_fin = code.Invoke(&sm)
+                        let mutable error = ValueNone
 
-                            if __stack_code_fin then
-                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
-                        with exn ->
-                            __stack_exn <- exn
-                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
-                        match __stack_exn with
-                        | null -> ()
-                        | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
-                    //-- RESUMABLE CODE END
+                        let noBounce = not (Trampoline.Current.IsAwaited())
+
+                        let __stack_go1 =
+                            noBounce
+                            || yieldOnBindLimit().Invoke(&sm)
+
+                        if __stack_go1 then
+                            try
+                                let __stack_code_fin = code.Invoke(&sm)
+
+                                if __stack_code_fin then
+                                    let __stack_go2 =
+                                        noBounce
+                                        || yieldOnBindLimit().Invoke(&sm)
+
+                                    if __stack_go2 then
+                                        MethodBuilder.SetResult(
+                                            &sm.Data.MethodBuilder,
+                                            sm.Data.Result
+                                        )
+                            with exn ->
+                                error <- ValueSome(ExceptionCache.CaptureOrRetrieve exn)
+
+                            if error.IsSome then
+                                let __stack_go2 =
+                                    noBounce
+                                    || yieldOnBindLimit().Invoke(&sm)
+
+                                if __stack_go2 then
+                                    MethodBuilder.SetException(
+                                        &sm.Data.MethodBuilder,
+                                        error.Value.SourceException
+                                    )
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
@@ -147,7 +208,7 @@ module CancellableTasks =
         member inline _.Source
             ([<InlineIfLambda>] x: CancellationToken -> Task<_>)
             : CancellationToken -> Awaiter<TaskAwaiter<_>, _> =
-            fun ct -> Awaitable.GetTaskAwaiter(x ct)
+            fun ct -> Awaitable.GetTaskAwaiter(Trampoline.Allow x ct)
 
         [<NoEagerConstraintApplication>]
         member inline this.MergeSources
@@ -254,45 +315,67 @@ module CancellableTasks =
             if __useResumableCode then
                 __stateMachine<CancellableTaskBaseStateMachineData<'T, _>, CancellableTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
-                        //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
-                        let mutable __stack_exn: Exception ValueOption = ValueNone
 
-                        try
-                            let __stack_code_fin = code.Invoke(&sm)
+                        let mutable error = ValueNone
 
-                            if __stack_code_fin then
-                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
-                        with exn ->
-                            __stack_exn <- ValueSome exn
-                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
-                        match __stack_exn with
-                        | ValueNone -> ()
-                        | ValueSome exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
-                    //-- RESUMABLE CODE END
+                        let noBounce = not (Trampoline.Current.IsAwaited())
+
+                        let __stack_go1 =
+                            noBounce
+                            || yieldOnBindLimit().Invoke(&sm)
+
+                        if __stack_go1 then
+                            try
+                                let __stack_code_fin = code.Invoke(&sm)
+
+                                if __stack_code_fin then
+                                    let __stack_go2 =
+                                        noBounce
+                                        || yieldOnBindLimit().Invoke(&sm)
+
+                                    if __stack_go2 then
+                                        MethodBuilder.SetResult(
+                                            &sm.Data.MethodBuilder,
+                                            sm.Data.Result
+                                        )
+                            with exn ->
+                                error <- ValueSome(ExceptionCache.CaptureOrRetrieve exn)
+
+                            if error.IsSome then
+                                let __stack_go2 =
+                                    noBounce
+                                    || yieldOnBindLimit().Invoke(&sm)
+
+                                if __stack_go2 then
+                                    MethodBuilder.SetException(
+                                        &sm.Data.MethodBuilder,
+                                        error.Value.SourceException
+                                    )
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
                     ))
                     (AfterCode<_, CancellableTask<'T>>(fun sm ->
+                        let sm = sm
+
                         // backgroundTask { .. } escapes to a background thread where necessary
                         // See spec of ConfigureAwait(false) at https://devblogs.microsoft.com/dotnet/configureawait-faq/
                         if
                             isNull SynchronizationContext.Current
                             && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
                         then
-                            let mutable sm = sm
 
                             fun (ct) ->
                                 if ct.IsCancellationRequested then
                                     Task.FromCanceled<_>(ct)
                                 else
+                                    let mutable sm = sm
                                     sm.Data.CancellationToken <- ct
                                     sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                                     sm.Data.MethodBuilder.Start(&sm)
                                     sm.Data.MethodBuilder.Task
                         else
-                            let sm = sm // copy contents of state machine so we can capture it
 
                             fun (ct) ->
                                 if ct.IsCancellationRequested then
@@ -300,7 +383,7 @@ module CancellableTasks =
                                 else
                                     Task.Run<'T>(
                                         (fun () ->
-                                            let mutable sm = sm // host local mutable copy of contents of state machine on this thread pool thread
+                                            let mutable sm = sm
                                             sm.Data.CancellationToken <- ct
 
                                             sm.Data.MethodBuilder <-

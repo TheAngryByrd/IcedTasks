@@ -60,35 +60,75 @@ module CancellablePoolingValueTasks =
             let initialResumptionFunc =
                 CancellableTaskBaseResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm))
 
+            let bounceAllowed = Trampoline.Current.IsAwaited()
+
+            let maybeBounce state =
+                if
+                    bounceAllowed
+                    && Trampoline.Current.ShouldBounce
+                then
+                    Bounce state
+                else
+                    Immediate state
+
             let resumptionInfo =
-                { new CancellableTaskBaseResumptionDynamicInfo<'T, _>(initialResumptionFunc) with
+                let initialState = maybeBounce Running
+
+                { new CancellableTaskBaseResumptionDynamicInfo<'T, _>(initialResumptionFunc,
+                                                                      ResumptionData = initialState) with
                     member info.MoveNext(sm) =
-                        let mutable savedExn = null
 
-                        try
-                            sm.ResumptionDynamicInfo.ResumptionData <- null
-                            let step = info.ResumptionFunc.Invoke(&sm)
+                        let getCurrent () =
+                            match info.ResumptionData with
+                            | :? DynamicState as state -> state
+                            | _ -> failwith "Invalid resumption data"
 
-                            if step then
-                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
-                            else
-                                match sm.ResumptionDynamicInfo.ResumptionData with
-                                | :? ICriticalNotifyCompletion as awaiter ->
-                                    let mutable awaiter = awaiter
-                                    // assert not (isNull awaiter)
-                                    MethodBuilder.AwaitOnCompleted(
-                                        &sm.Data.MethodBuilder,
-                                        &awaiter,
-                                        &sm
-                                    )
-                                | awaiter -> assert not (isNull awaiter)
+                        let setState state = info.ResumptionData <- state
 
-                        with exn ->
-                            savedExn <- exn
-                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
-                        match savedExn with
-                        | null -> ()
-                        | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
+                        match getCurrent () with
+                        | Immediate state ->
+                            setState state
+                            info.MoveNext &sm
+                        | Running ->
+                            let mutable keepGoing = true
+
+                            try
+                                if info.ResumptionFunc.Invoke(&sm) then
+                                    setState (maybeBounce SetResult)
+                                else
+                                    keepGoing <-
+                                        match getCurrent () with
+                                        | Awaiting _ -> true
+                                        | _ -> false
+                            with exn ->
+                                setState (
+                                    maybeBounce
+                                    <| SetException(ExceptionCache.CaptureOrRetrieve exn)
+                                )
+
+                            if keepGoing then
+                                info.MoveNext &sm
+                        | Awaiting awaiter ->
+                            setState Running
+                            let mutable awaiter = awaiter
+
+                            MethodBuilder.AwaitUnsafeOnCompleted(
+                                &sm.Data.MethodBuilder,
+                                &awaiter,
+                                &sm
+                            )
+                        | Bounce next ->
+                            setState next
+
+                            MethodBuilder.AwaitOnCompleted(
+                                &sm.Data.MethodBuilder,
+                                Trampoline.Current.Ref,
+                                &sm
+                            )
+                        | SetResult ->
+                            MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
+                        | SetException edi ->
+                            MethodBuilder.SetException(&sm.Data.MethodBuilder, edi.SourceException)
 
                     member _.SetStateMachine(sm, state) =
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
@@ -109,22 +149,43 @@ module CancellablePoolingValueTasks =
             if __useResumableCode then
                 __stateMachine<CancellableTaskBaseStateMachineData<'T, _>, CancellableValueTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
-                        //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
-                        let mutable __stack_exn = null
 
-                        try
-                            let __stack_code_fin = code.Invoke(&sm)
+                        let mutable error = ValueNone
 
-                            if __stack_code_fin then
-                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
-                        with exn ->
-                            __stack_exn <- exn
-                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
-                        match __stack_exn with
-                        | null -> ()
-                        | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
-                    //-- RESUMABLE CODE END
+                        let noBounce = not (Trampoline.Current.IsAwaited())
+
+                        let __stack_go1 =
+                            noBounce
+                            || yieldOnBindLimit().Invoke(&sm)
+
+                        if __stack_go1 then
+                            try
+                                let __stack_code_fin = code.Invoke(&sm)
+
+                                if __stack_code_fin then
+                                    let __stack_go2 =
+                                        noBounce
+                                        || yieldOnBindLimit().Invoke(&sm)
+
+                                    if __stack_go2 then
+                                        MethodBuilder.SetResult(
+                                            &sm.Data.MethodBuilder,
+                                            sm.Data.Result
+                                        )
+                            with exn ->
+                                error <- ValueSome(ExceptionCache.CaptureOrRetrieve exn)
+
+                            if error.IsSome then
+                                let __stack_go2 =
+                                    noBounce
+                                    || yieldOnBindLimit().Invoke(&sm)
+
+                                if __stack_go2 then
+                                    MethodBuilder.SetException(
+                                        &sm.Data.MethodBuilder,
+                                        error.Value.SourceException
+                                    )
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
@@ -154,7 +215,7 @@ module CancellablePoolingValueTasks =
             ([<InlineIfLambda>] x: CancellationToken -> ValueTask<_>)
             : CancellationToken -> Awaiter<ValueTaskAwaiter<_>, _> =
             fun ct ->
-                (x ct)
+                Trampoline.Allow x ct
                 |> Awaitable.GetAwaiter
 
         [<NoEagerConstraintApplication>]
