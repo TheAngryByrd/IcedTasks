@@ -17,7 +17,7 @@ open IcedTasks
 open IcedTasks.TaskLike
 open IcedTasks.TaskBase
 
-/// Contains methods to build Tasks using the F# computation expression syntax
+/// Contains methods to build non-generic Tasks using the F# computation expression syntax.
 [<AutoOpen>]
 module TasksUnit =
     open System
@@ -30,7 +30,7 @@ module TasksUnit =
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
 
     ///<summary>
-    /// Contains methods to build Tasks using the F# computation expression syntax
+    /// Contains methods to build non-generic Tasks using the F# computation expression syntax.
     /// </summary>
     type TaskUnitBuilder() =
 
@@ -140,7 +140,7 @@ module TasksUnit =
                 )
             )
 
-    /// Contains methods to build Tasks using the F# computation expression syntax
+    /// Contains methods to build non-generic Tasks using the F# computation expression syntax.
     type BackgroundTaskUnitBuilder() =
 
         inherit TaskBuilderBase()
