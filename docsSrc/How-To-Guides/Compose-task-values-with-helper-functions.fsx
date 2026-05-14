@@ -2,8 +2,8 @@
 ---
 title: Compose task values with helper functions
 category: How To Guides
-categoryindex: 4
-index: 6
+categoryindex: 2
+index: 2
 ---
 
 # How to compose task values with helper functions

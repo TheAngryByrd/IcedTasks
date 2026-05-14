@@ -2,7 +2,7 @@
 ---
 title: Use AsyncEx for .NET async interop
 category: How To Guides
-categoryindex: 4
+categoryindex: 2
 index: 5
 ---
 

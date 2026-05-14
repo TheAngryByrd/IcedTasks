@@ -2,8 +2,8 @@
 ---
 title: Convert between async shapes
 category: How To Guides
-categoryindex: 4
-index: 9
+categoryindex: 2
+index: 4
 ---
 
 # How to convert between async shapes

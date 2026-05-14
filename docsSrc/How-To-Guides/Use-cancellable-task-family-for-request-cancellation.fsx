@@ -2,8 +2,8 @@
 ---
 title: Use the cancellable task family for request cancellation
 category: How To Guides
-categoryindex: 4
-index: 7
+categoryindex: 2
+index: 1
 ---
 
 # How to use the cancellable task family for request cancellation

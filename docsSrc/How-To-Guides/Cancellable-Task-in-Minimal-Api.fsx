@@ -2,8 +2,8 @@
 ---
 title: Use CancellableTask in ASP.NET Minimal API
 category: How To Guides
-categoryindex: 3
-index: 1
+categoryindex: 2
+index: 9
 ---
 
 
@@ -18,7 +18,7 @@ We'll start off with a slightly longer version but then make a helper for this.
 
 *)
 #load "../../runtime-scripts/Microsoft.AspNetCore.App-latest-8.fsx"
-#r "nuget: IcedTasks"
+#r "../../src/IcedTasks/bin/Release/net9.0/IcedTasks.dll"
 
 
 open Microsoft.AspNetCore.Builder

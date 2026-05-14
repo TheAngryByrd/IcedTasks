@@ -2,8 +2,8 @@
 ---
 title: Use CancellableTask in a console app
 category: How To Guides
-categoryindex: 4
-index: 1
+categoryindex: 2
+index: 8
 ---
 
 
@@ -17,7 +17,7 @@ In this example, we'll tie the CancellationTokenSource to the console app's canc
 
 *)
 
-#r "nuget: IcedTasks"
+#r "../../src/IcedTasks/bin/Release/net9.0/IcedTasks.dll"
 
 open IcedTasks
 

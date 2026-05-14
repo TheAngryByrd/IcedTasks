@@ -2,8 +2,8 @@
 ---
 title: Use and! with independent operations
 category: How To Guides
-categoryindex: 4
-index: 8
+categoryindex: 2
+index: 3
 ---
 
 # How to use `and!` with independent operations
