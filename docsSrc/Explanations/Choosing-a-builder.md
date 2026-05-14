@@ -11,6 +11,17 @@ IcedTasks provides several computation expression builders because there is not 
 
 The first question is not "which one is fastest?" The first question is what kind of async operation you are trying to represent: work that starts now, work that may complete synchronously, work that should not start until the caller runs it, work that must carry cancellation, or F# `Async` work that should keep `Async` semantics.
 
+Related guides:
+
+- [Use the cancellable task family for request cancellation](../How-To-Guides/Use-cancellable-task-family-for-request-cancellation.html)
+- [Use `and!` with independent operations](../How-To-Guides/Use-and-bang-with-independent-operations.html)
+- [Understanding `and!`](Understanding-and-bang.html)
+- [Convert between async shapes](../How-To-Guides/Convert-between-async-shapes.html)
+- [Use background builders to avoid caller context](../How-To-Guides/Use-background-builders-to-avoid-caller-context.html)
+- [Use unit builders for non-generic task APIs](../How-To-Guides/Use-unit-builders-for-non-generic-task-apis.html)
+- [Pooling builders](Pooling-builders.html)
+- [Polyfill namespaces and shadowing](Polyfill-namespaces-and-shadowing.html)
+
 ## Builder comparison
 
 | Builder | Result shape | TFM | Hot/Cold<sup>1</sup> | Multiple awaits<sup>2</sup> | Multi-start<sup>3</sup> | CancellationToken propagation<sup>4</sup> | Cancellation checks<sup>5</sup> | `and!` support<sup>6</sup> | `IAsyncDisposable`<sup>7</sup> | `IAsyncEnumerable`<sup>8</sup> |
@@ -46,6 +57,8 @@ The first question is not "which one is fastest?" The first question is what kin
 - <sup>6</sup> `and!` support means the builder implements applicative composition. For `parallelAsync`, this is the main reason to use the builder.
 - <sup>7</sup> `IAsyncDisposable` support means `use` and `use!` can dispose async resources inside the computation expression.
 - <sup>8</sup> `IAsyncEnumerable` support means `for` can iterate an async enumerable inside the computation expression.
+
+`IAsyncDisposable` and `IAsyncEnumerable` support is not limited to `asyncEx`. The task, value-task, cancellable, and pooling builders support these features where the table says "Yes". `coldTask` supports `IAsyncDisposable`, but not `for` over `IAsyncEnumerable<'T>`.
 
 ## Use task when the work is actually async
 
@@ -124,13 +137,13 @@ let combined =
     }
 ```
 
-Use `parallelAsync` for parallel composition of `Async` values. If you are composing task-like or cancellable task-like values, use the builder for that task shape and check that its `and!` behavior matches the operation you want.
+Use `parallelAsync` for parallel composition of `Async` values. If you are composing task-like or cancellable task-like values, use the builder for that task shape and check that its `and!` behavior matches the operation you want. See [Understanding `and!`](Understanding-and-bang.html) for the builder-by-builder behavior.
 
 ## Use pooling variants only after the basic choice is clear
 
-`poolingValueTask` and `cancellablePoolingValueTask` are advanced variants for .NET 6 or later.
+`poolingValueTask` and `cancellablePoolingValueTask` are variants for allocation-sensitive .NET 6 or later code.
 
-Use them only after you have already decided that `valueTask` or `cancellableValueTask` is the right shape and you have measured that the pooling method builder helps your workload. Otherwise, start with `valueTask` or `cancellableValueTask`; they are easier defaults and communicate the same broad API shape.
+Consider them after you have already decided that `valueTask` or `cancellableValueTask` is the right shape. Otherwise, start with `valueTask` or `cancellableValueTask`; they are easier defaults and communicate the same broad API shape. See [Pooling builders](Pooling-builders.html) for details.
 
 ## Background builders are about where work runs
 
@@ -146,6 +159,8 @@ They do not change the core task shape decision. First choose the shape:
 - `cancellableTask`
 
 Then use the matching background builder only when you need that operation to escape the current synchronization context or scheduler behavior.
+
+See [Use background builders to avoid caller context](../How-To-Guides/Use-background-builders-to-avoid-caller-context.html) for a fuller explanation of UI threads, `SynchronizationContext`, and why this is less commonly needed in ASP.NET Core.
 
 ## A short decision path
 
