@@ -8,6 +8,7 @@ If you are deciding when to use applicative `and!`, see [Understanding `and!`](E
 If you need to move between `Async`, `Task`, `ValueTask`, `ColdTask`, and cancellable task shapes, see [Convert between async shapes](How-To-Guides/Convert-between-async-shapes.html).
 If library async work should avoid resuming on the caller's synchronization context, see [Use background builders to avoid caller context](How-To-Guides/Use-background-builders-to-avoid-caller-context.html).
 If an API requires non-generic `Task` or `ValueTask`, see [Use unit builders for non-generic task APIs](How-To-Guides/Use-unit-builders-for-non-generic-task-apis.html).
+For .NET 6+ pooling-backed ValueTask builders, see [Pooling builders](Explanations/Pooling-builders.html).
 
 - `ValueTask<'T>` - This utilizes .NET's [ValueTask](https://devblogs.microsoft.com/dotnet/understanding-the-whys-whats-and-whens-of-valuetask/) (which is essentially a [Discriminated Union](https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/discriminated-unions) of `'Value | Task<'Value>`) for possibly better performance in synchronous scenarios. Similar to [F#'s Task Expression](https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/task-expressions)
     - `valueTask`
