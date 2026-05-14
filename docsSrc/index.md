@@ -5,6 +5,7 @@ This library contains additional [computation expressions](https://docs.microsof
 
 If you are deciding which computation expression to use, start with [Choosing a builder](Explanations/Choosing-a-builder.html).
 If you are deciding when to use applicative `and!`, see [Understanding `and!`](Explanations/Understanding-and-bang.html) and [Use `and!` with independent operations](How-To-Guides/Use-and-bang-with-independent-operations.html).
+If you need to move between `Async`, `Task`, `ValueTask`, `ColdTask`, and cancellable task shapes, see [Convert between async shapes](How-To-Guides/Convert-between-async-shapes.html).
 
 - `ValueTask<'T>` - This utilizes .NET's [ValueTask](https://devblogs.microsoft.com/dotnet/understanding-the-whys-whats-and-whens-of-valuetask/) (which is essentially a [Discriminated Union](https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/discriminated-unions) of `'Value | Task<'Value>`) for possibly better performance in synchronous scenarios. Similar to [F#'s Task Expression](https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/task-expressions)
     - `valueTask`
