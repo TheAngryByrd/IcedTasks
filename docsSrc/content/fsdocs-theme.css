@@ -29,7 +29,11 @@
 
 table {
     background-color: var(--table-background);
+    display: block;
+    max-width: 100%;
     overflow-x: auto;
+    width: max-content;
+    -webkit-overflow-scrolling: touch;
 }
 
 table th {
@@ -40,4 +44,13 @@ table, th, td {
     border: 1px solid;
     border-collapse: collapse;
     padding: 0.5em;
+}
+
+th, td {
+    vertical-align: top;
+    white-space: nowrap;
+}
+
+th p, td p {
+    margin: 0;
 }
