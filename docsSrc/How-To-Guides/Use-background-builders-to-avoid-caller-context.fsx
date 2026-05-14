@@ -38,8 +38,7 @@ Use `backgroundTask` when the work does not need that context.
 
 *)
 
-let parseProfile (text: string) =
-    text.Trim()
+let parseProfile (text: string) = text.Trim()
 
 let loadProfileText () =
     backgroundTask {
@@ -63,7 +62,10 @@ type RecordingSynchronizationContext() =
     member _.PostCount = postCount
 
     override _.Post(callback, state) =
-        postCount <- postCount + 1
+        postCount <-
+            postCount
+            + 1
+
         callback.Invoke state
 
 let runWithSynchronizationContext (context: SynchronizationContext) (work: unit -> Task<'T>) =
@@ -78,12 +80,14 @@ let runWithSynchronizationContext (context: SynchronizationContext) (work: unit 
 let normalTaskPostCount =
     let context = RecordingSynchronizationContext()
 
-    runWithSynchronizationContext context (fun () ->
-        task {
-            do! Task.Yield()
-            return context.PostCount
-        }
-    )
+    runWithSynchronizationContext
+        context
+        (fun () ->
+            task {
+                do! Task.Yield()
+                return context.PostCount
+            }
+        )
 
 (**
 `backgroundTask` escapes to the thread pool when a synchronization context or non-default scheduler is present, so it does not post through that caller context.
@@ -94,12 +98,14 @@ If it is already running on the thread pool with the default scheduler, it avoid
 let backgroundTaskPostCount =
     let context = RecordingSynchronizationContext()
 
-    runWithSynchronizationContext context (fun () ->
-        backgroundTask {
-            do! Task.Yield()
-            return context.PostCount
-        }
-    )
+    runWithSynchronizationContext
+        context
+        (fun () ->
+            backgroundTask {
+                do! Task.Yield()
+                return context.PostCount
+            }
+        )
 
 (**
 ## Use the matching background shape
@@ -115,10 +121,7 @@ Pick the task shape first, then use the background variant only when you want to
 
 *)
 
-let saveProfileAudit () =
-    backgroundTaskUnit {
-        do! Task.Delay 1
-    }
+let saveProfileAudit () = backgroundTaskUnit { do! Task.Delay 1 }
 
 let loadProfileLater () =
     backgroundColdTask {
@@ -147,11 +150,11 @@ let profileText = loadProfileText().GetAwaiter().GetResult()
 let auditResult = saveProfileAudit().GetAwaiter().GetResult()
 
 let laterProfile =
-    let operation = loadProfileLater()
+    let operation = loadProfileLater ()
     operation().GetAwaiter().GetResult()
 
 let requestProfile =
-    (loadProfileForRequest()) CancellationToken.None
+    (loadProfileForRequest ()) CancellationToken.None
     |> Async.AwaitTask
     |> Async.RunSynchronously
 

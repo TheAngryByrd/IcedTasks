@@ -22,25 +22,20 @@ open IcedTasks
 
 type UserId = UserId of int
 
-type Profile =
-    { UserId: UserId
-      DisplayName: string }
+type Profile = { UserId: UserId; DisplayName: string }
 
-type Permissions =
-    { CanEdit: bool
-      CanExport: bool }
+type Permissions = { CanEdit: bool; CanExport: bool }
 
-type Preferences =
-    { Theme: string }
+type Preferences = { Theme: string }
 
-type NotificationSummary =
-    { UnreadCount: int }
+type NotificationSummary = { UnreadCount: int }
 
-type Dashboard =
-    { Profile: Profile
-      Permissions: Permissions
-      Preferences: Preferences
-      Notifications: NotificationSummary }
+type Dashboard = {
+    Profile: Profile
+    Permissions: Permissions
+    Preferences: Preferences
+    Notifications: NotificationSummary
+}
 
 let loadProfile userId : CancellableTask<Profile> =
     cancellableTask {
@@ -48,7 +43,11 @@ let loadProfile userId : CancellableTask<Profile> =
         do! Task.Delay(1, ct)
 
         let (UserId id) = userId
-        return { UserId = userId; DisplayName = $"User {id}" }
+
+        return {
+            UserId = userId
+            DisplayName = $"User {id}"
+        }
     }
 
 let loadPermissions (_userId: UserId) : CancellableTask<Permissions> =
@@ -87,11 +86,12 @@ let loadDashboard userId : CancellableTask<Dashboard> =
         and! preferences = loadPreferences userId
         and! notifications = loadNotifications userId
 
-        return
-            { Profile = profile
-              Permissions = permissions
-              Preferences = preferences
-              Notifications = notifications }
+        return {
+            Profile = profile
+            Permissions = permissions
+            Preferences = preferences
+            Notifications = notifications
+        }
     }
 
 (**

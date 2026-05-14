@@ -31,19 +31,19 @@ Each operation is cold and cancellable: it does not start until a caller supplie
 
 type CustomerId = CustomerId of int
 
-type Customer =
-    { Id: CustomerId
-      Name: string }
+type Customer = { Id: CustomerId; Name: string }
 
-type Order =
-    { Id: int
-      CustomerId: CustomerId
-      Total: decimal }
+type Order = {
+    Id: int
+    CustomerId: CustomerId
+    Total: decimal
+}
 
-type CustomerSummary =
-    { Customer: Customer
-      Orders: Order array
-      Total: decimal }
+type CustomerSummary = {
+    Customer: Customer
+    Orders: Order array
+    Total: decimal
+}
 
 let loadCustomer (customerId: CustomerId) : CancellableTask<Customer> =
     cancellableTask {
@@ -51,7 +51,11 @@ let loadCustomer (customerId: CustomerId) : CancellableTask<Customer> =
         do! Task.Delay(1, cancellationToken)
 
         let (CustomerId id) = customerId
-        return { Id = customerId; Name = $"Customer {id}" }
+
+        return {
+            Id = customerId
+            Name = $"Customer {id}"
+        }
     }
 
 let loadOrders (customerId: CustomerId) : CancellableTask<Order array> =
@@ -59,19 +63,27 @@ let loadOrders (customerId: CustomerId) : CancellableTask<Order array> =
         let! cancellationToken = CancellableTask.getCancellationToken ()
         do! Task.Delay(1, cancellationToken)
 
-        return
-            [| { Id = 1
-                 CustomerId = customerId
-                 Total = 12.50M }
-               { Id = 2
-                 CustomerId = customerId
-                 Total = 7.25M } |]
+        return [|
+            {
+                Id = 1
+                CustomerId = customerId
+                Total = 12.50M
+            }
+            {
+                Id = 2
+                CustomerId = customerId
+                Total = 7.25M
+            }
+        |]
     }
 
-let summarize customer orders =
-    { Customer = customer
-      Orders = orders
-      Total = orders |> Array.sumBy _.Total }
+let summarize customer orders = {
+    Customer = customer
+    Orders = orders
+    Total =
+        orders
+        |> Array.sumBy _.Total
+}
 
 (**
 ## Transform one result with `map`
@@ -164,8 +176,7 @@ let loadSummariesSequentially customerIds =
 
 *)
 
-let writeAuditEvent (summary: CustomerSummary) : CancellableTask =
-    fun _ -> Task.CompletedTask
+let writeAuditEvent (summary: CustomerSummary) : CancellableTask = fun _ -> Task.CompletedTask
 
 let saveSummary (summary: CustomerSummary) : CancellableTask<int> =
     cancellableTask {
@@ -190,7 +201,11 @@ Call the composed `CancellableTask` with a token at the boundary of your applica
 
 *)
 
-let sampleIds = [ CustomerId 1; CustomerId 2; CustomerId 3 ]
+let sampleIds = [
+    CustomerId 1
+    CustomerId 2
+    CustomerId 3
+]
 
 let sampleSummaries =
     loadSummaries sampleIds CancellationToken.None

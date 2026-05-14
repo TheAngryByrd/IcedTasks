@@ -45,20 +45,14 @@ type BufferedWriter() =
         }
 
     interface IAsyncDisposable with
-        member this.DisposeAsync() =
-            valueTaskUnit {
-                do! this.FlushAsync()
-            }
+        member this.DisposeAsync() = valueTaskUnit { do! this.FlushAsync() }
 
 (**
 `vTaskUnit` is an alias for `valueTaskUnit`.
 
 *)
 
-let flushWithAlias () : ValueTask =
-    vTaskUnit {
-        do! Task.Delay 1
-    }
+let flushWithAlias () : ValueTask = vTaskUnit { do! Task.Delay 1 }
 
 (**
 ## Return non-generic `Task`
@@ -70,9 +64,7 @@ Use `taskUnit` when an API explicitly wants `Task`.
 
 type Worker() =
     member _.StopAsync(cancellationToken: CancellationToken) : Task =
-        taskUnit {
-            do! Task.Delay(1, cancellationToken)
-        }
+        taskUnit { do! Task.Delay(1, cancellationToken) }
 
 (**
 Use `backgroundTaskUnit` when the API wants non-generic `Task` and the work should avoid the caller's synchronization context.
@@ -80,10 +72,7 @@ See [Use background builders to avoid caller context](Use-background-builders-to
 
 *)
 
-let writeAuditInBackground () : Task =
-    backgroundTaskUnit {
-        do! Task.Delay 1
-    }
+let writeAuditInBackground () : Task = backgroundTaskUnit { do! Task.Delay 1 }
 
 (**
 ## Convert when you already have a generic ValueTask
@@ -93,8 +82,7 @@ Prefer `valueTaskUnit` when you are authoring the computation and know the API n
 
 *)
 
-let loadCount () =
-    valueTask { return 42 }
+let loadCount () = valueTask { return 42 }
 
 let loadCountAsUnit () : ValueTask =
     loadCount ()
@@ -108,7 +96,10 @@ These calls make the samples complete and compiler-checked.
 *)
 
 let writer = new BufferedWriter()
-let disposed = (writer :> IAsyncDisposable).DisposeAsync().AsTask().GetAwaiter().GetResult()
+
+let disposed =
+    (writer :> IAsyncDisposable).DisposeAsync().AsTask().GetAwaiter().GetResult()
+
 let flushed = writer.Flushed
 let aliasResult = flushWithAlias().AsTask().GetAwaiter().GetResult()
 let stopped = Worker().StopAsync(CancellationToken.None).GetAwaiter().GetResult()

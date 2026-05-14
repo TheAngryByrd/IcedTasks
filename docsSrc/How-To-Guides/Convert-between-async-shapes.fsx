@@ -42,12 +42,14 @@ Use `Async.AsValueTask` when an `Async<'T>` must be exposed to a `ValueTask<'T>`
 
 *)
 
-let getCachedValue () =
-    ValueTask<int> 42
+let getCachedValue () = ValueTask<int> 42
 
 let valueTaskInsideAsync =
     async {
-        let! value = getCachedValue () |> Async.AwaitValueTask
+        let! value =
+            getCachedValue ()
+            |> Async.AwaitValueTask
+
         return value + 1
     }
 
@@ -63,12 +65,14 @@ Use `Async.AsColdTask` when an `Async<'T>` should be exposed as `unit -> Task<'T
 
 *)
 
-let loadCold : ColdTask<int> =
-    coldTask { return 10 }
+let loadCold: ColdTask<int> = coldTask { return 10 }
 
 let coldTaskInsideAsync =
     async {
-        let! value = loadCold |> Async.AwaitColdTask
+        let! value =
+            loadCold
+            |> Async.AwaitColdTask
+
         return value * 2
     }
 
@@ -84,14 +88,14 @@ The helper reads `Async.CancellationToken` and passes it into the cancellable op
 
 *)
 
-let loadCancellableTask : CancellableTask<int> =
+let loadCancellableTask: CancellableTask<int> =
     cancellableTask {
         let! ct = CancellableTask.getCancellationToken ()
         do! Task.Delay(1, ct)
         return 20
     }
 
-let loadCancellableValueTask : CancellableValueTask<int> =
+let loadCancellableValueTask: CancellableValueTask<int> =
     cancellableValueTask {
         let! ct = CancellableValueTask.getCancellationToken ()
         do! Task.Delay(1, ct)
@@ -100,13 +104,19 @@ let loadCancellableValueTask : CancellableValueTask<int> =
 
 let cancellableTaskInsideAsync =
     async {
-        let! value = loadCancellableTask |> Async.AwaitCancellableTask
+        let! value =
+            loadCancellableTask
+            |> Async.AwaitCancellableTask
+
         return value + 1
     }
 
 let cancellableValueTaskInsideAsync =
     async {
-        let! value = loadCancellableValueTask |> Async.AwaitCancellableValueTask
+        let! value =
+            loadCancellableValueTask
+            |> Async.AwaitCancellableValueTask
+
         return value + 1
     }
 
@@ -159,8 +169,10 @@ type ImmediateAwaiter<'T>(value: 'T) =
     member _.GetResult() = value
     member _.OnCompleted(_continuation: System.Action) = ()
     member _.UnsafeOnCompleted(_continuation: System.Action) = ()
+
     interface INotifyCompletion with
         member this.OnCompleted(continuation) = this.OnCompleted(continuation)
+
     interface ICriticalNotifyCompletion with
         member this.UnsafeOnCompleted(continuation) = this.UnsafeOnCompleted(continuation)
 
@@ -175,23 +187,51 @@ These calls are here so the examples are checked as complete executable code.
 
 *)
 
-let result1 = valueTaskInsideAsync |> Async.RunSynchronously
+let result1 =
+    valueTaskInsideAsync
+    |> Async.RunSynchronously
+
 let result2 = asyncExposedAsValueTask.AsTask().GetAwaiter().GetResult()
-let result3 = coldTaskInsideAsync |> Async.RunSynchronously
+
+let result3 =
+    coldTaskInsideAsync
+    |> Async.RunSynchronously
+
 let result4 = asyncExposedAsColdTask().GetAwaiter().GetResult()
-let result5 = cancellableTaskInsideAsync |> Async.RunSynchronously
-let result6 = cancellableValueTaskInsideAsync |> Async.RunSynchronously
-let result7 = asyncExposedAsCancellableTask CancellationToken.None |> Async.AwaitTask |> Async.RunSynchronously
+
+let result5 =
+    cancellableTaskInsideAsync
+    |> Async.RunSynchronously
+
+let result6 =
+    cancellableValueTaskInsideAsync
+    |> Async.RunSynchronously
+
+let result7 =
+    asyncExposedAsCancellableTask CancellationToken.None
+    |> Async.AwaitTask
+    |> Async.RunSynchronously
 
 let result8 =
     asyncExposedAsCancellableValueTask CancellationToken.None
     |> Async.AwaitValueTask
     |> Async.RunSynchronously
 
-let result9 = taskInsideAsyncEx |> Async.RunSynchronously
-let result10 = valueTaskInsideAsyncEx |> Async.RunSynchronously
-let result11 = yieldInsideAsyncEx |> Async.RunSynchronously
-let result12 = customAwaiterInsideAsyncEx |> Async.RunSynchronously
+let result9 =
+    taskInsideAsyncEx
+    |> Async.RunSynchronously
+
+let result10 =
+    valueTaskInsideAsyncEx
+    |> Async.RunSynchronously
+
+let result11 =
+    yieldInsideAsyncEx
+    |> Async.RunSynchronously
+
+let result12 =
+    customAwaiterInsideAsyncEx
+    |> Async.RunSynchronously
 
 (**
 ## Prefer builders inside one async shape

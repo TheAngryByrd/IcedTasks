@@ -35,25 +35,26 @@ This sample uses a minimal request context so the example stays focused on the t
 
 *)
 
-type RequestContext =
-    { RequestAborted: CancellationToken }
+type RequestContext = { RequestAborted: CancellationToken }
 
 type OrderId = OrderId of int
 
-type Order =
-    { Id: OrderId
-      Total: decimal
-      CanCompleteSynchronously: bool }
+type Order = {
+    Id: OrderId
+    Total: decimal
+    CanCompleteSynchronously: bool
+}
 
 module OrderStore =
     let loadAsTask (orderId: OrderId) (cancellationToken: CancellationToken) =
         task {
             do! Task.Delay(1, cancellationToken)
 
-            return
-                { Id = orderId
-                  Total = 42.00M
-                  CanCompleteSynchronously = false }
+            return {
+                Id = orderId
+                Total = 42.00M
+                CanCompleteSynchronously = false
+            }
         }
 
     let loadAsValueTask (orderId: OrderId) (cancellationToken: CancellationToken) =
@@ -62,18 +63,20 @@ module OrderStore =
         let (OrderId id) = orderId
 
         if id = 0 then
-            ValueTask<Order>
-                { Id = orderId
-                  Total = 0.00M
-                  CanCompleteSynchronously = true }
+            ValueTask<Order> {
+                Id = orderId
+                Total = 0.00M
+                CanCompleteSynchronously = true
+            }
         else
             task {
                 do! Task.Delay(1, cancellationToken)
 
-                return
-                    { Id = orderId
-                      Total = 42.00M
-                      CanCompleteSynchronously = false }
+                return {
+                    Id = orderId
+                    Total = 42.00M
+                    CanCompleteSynchronously = false
+                }
             }
             |> ValueTask<Order>
 
@@ -158,8 +161,9 @@ Every nested bind can then retrieve or receive the same token.
 
 *)
 
-let request =
-    { RequestAborted = CancellationToken.None }
+let request = {
+    RequestAborted = CancellationToken.None
+}
 
 let loadedWithTask =
     handleTaskRequest request (OrderId 42)
