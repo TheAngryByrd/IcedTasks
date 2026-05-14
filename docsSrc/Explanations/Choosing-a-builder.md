@@ -2,7 +2,7 @@
 title: Choosing a builder
 category: Explanations
 categoryindex: 3
-index: 3
+index: 1
 ---
 
 # Choosing a builder
