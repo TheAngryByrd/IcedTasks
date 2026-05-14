@@ -17,6 +17,8 @@ If you are deciding which computation expression to use, start with [Choosing a 
     - `cancellableTask`
     - `backgroundCancellableTask`
 
+    For pipeline-style composition, see [Compose task values with helper functions](How-To-Guides/Compose-task-values-with-helper-functions.html).
+
 - `CancellableValueTask<'T>` - Alias for `CancellationToken -> ValueTask<'T>`.  Allows for lazy evaluation (also known as Cold) of the tasks, similar to [F#'s Async being cold](https://docs.microsoft.com/en-us/dotnet/fsharp/tutorials/async#core-concepts-of-async). Additionally, allows for flowing a [CancellationToken](https://docs.microsoft.com/en-us/dotnet/api/system.threading.cancellationtoken?view=net-6.0) through the computation, similar to [F#'s Async cancellation support](http://tomasp.net/blog/async-csharp-differences.aspx/#:~:text=In%20F%23%20asynchronous%20workflows%2C%20the,and%20everything%20will%20work%20automatically).
     - `cancellableValueTask`
     - `cancellablePoolingValueTask`
@@ -26,6 +28,8 @@ If you are deciding which computation expression to use, start with [Choosing a 
 
 - `AsyncEx<'T>` - Variation of F# async semantics described further below with examples.
     - `asyncEx`
+
+    For practical recipes, see [Use AsyncEx for .NET async interop](How-To-Guides/Use-AsyncEx-for-Dotnet-Async-Interop.html).
 
 - `Task<'T>` - Polyfill for fixes to F# Task CE. Can be accessed under `IcedTasks.Polyfill`
     - `task`
