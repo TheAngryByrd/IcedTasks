@@ -23,6 +23,8 @@ If you are deciding which computation expression to use, start with [Choosing a 
     - `cancellableValueTask`
     - `cancellablePoolingValueTask`
 
+    For request-boundary cancellation patterns, see [Use the cancellable task family for request cancellation](How-To-Guides/Use-cancellable-task-family-for-request-cancellation.html).
+
 - `ParallelAsync<'T>` - Utilizes the [applicative syntax](https://docs.microsoft.com/en-us/dotnet/fsharp/whats-new/fsharp-50#applicative-computation-expressions) to allow parallel execution of [Async<'T> expressions](https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/async-expressions). See [this discussion](https://github.com/dotnet/fsharp/discussions/11043) as to why this is a separate computation expression.
     - `parallelAsync`
 
