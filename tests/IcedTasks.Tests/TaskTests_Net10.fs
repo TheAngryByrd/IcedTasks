@@ -1005,4 +1005,4 @@ module TaskTests_Net10 =
 
 
     [<Tests>]
-    let tests = testList "IcedTasks.Polyfill.Task_Net10" [ builderTests ]
+    let tests = ptestList "IcedTasks.Polyfill.Task_Net10" [ builderTests ]

@@ -11,4 +11,15 @@
     <NoWarn>$(NoWarn);SYSLIB5007</NoWarn>
   </PropertyGroup>
 
+
+  <PropertyGroup>
+    <ILDasmPath>C:\Users\jimmy\.nuget\packages\runtime.win-x64.microsoft.netcore.ildasm\10.0.0-rc.2.25502.107\runtime.win-x64.microsoft.netcore.ildasm.10.0.0-rc.2.25502.107\runtimes\win-x64\native\ildasm.exe</ILDasmPath>
+    
+  </PropertyGroup>
+
+  <Target Name="Decompile" AfterTargets="AfterBuild">
+    <Exec Command="&quot;$(ILDasmPath)&quot; &quot;$(TargetDir)$(TargetFileName)&quot; /out:&quot;$(TargetDir)$(TargetName).il&quot;" />
+    
+  </Target>
+
 </Project>

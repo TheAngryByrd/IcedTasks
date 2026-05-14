@@ -2,16 +2,125 @@
 
 open System.Threading.Tasks
 open System.Collections.Generic
+open System.Runtime.CompilerServices
+
+#nowarn "42"
+
+module internal Unsafe =
+    let inline cast<'a, 'b> (a: 'a) : 'b =
+
+        (# "" a : 'b #)
+
+type SimpleTaskRuntimeBuilder() =
+
+    member this.Return(x: 'T) : Task<'T> = Task.FromResult x
+
+    member this.Bind(awaiter: Task<'T1>, continuation: 'T1 -> Task<'T2>) : Task<'T2> =
+        AsyncHelpers.Await awaiter
+        |> continuation
+
+    member this.Bind(awaiter: Task, continuation: unit -> Task<'T2>) : Task<'T2> =
+        AsyncHelpers.Await awaiter
+        |> continuation
+
+    member this.Delay(f: unit -> Task<'T>) : unit -> Task<'T> = f
+
+    [<MethodImpl(MethodImplOptions.Async)>]
+    member this.Run(f: unit -> Task<'T>) : Task<'T> =
+        AsyncHelpers.Await(f ())
+        |> Unsafe.cast
+
+    [<MethodImpl(MethodImplOptions.Async)>]
+    member inline this.Run(f: Task<'T>) : Task<'T> =
+        AsyncHelpers.Await(f)
+        |> Unsafe.cast
+
+
+type SimpleTaskRuntimeBuilderInlined() =
+
+    [<MethodImpl(MethodImplOptions.Async)>]
+    member inline this.Return(x: 'T) : Task<'T> =
+        x
+        |> Task.FromResult
+    // |> Unsafe.cast
+
+    [<MethodImpl(MethodImplOptions.Async)>]
+    member inline this.Bind
+        (awaiter: Task<'T1>, [<InlineIfLambda>] continuation: 'T1 -> Task<'T2>)
+        : Task<'T2> =
+        AsyncHelpers.Await awaiter
+        |> continuation
+
+    [<MethodImpl(MethodImplOptions.Async)>]
+    member inline this.Bind
+        (awaiter: Task, [<InlineIfLambda>] continuation: unit -> Task<'T2>)
+        : Task<'T2> =
+        AsyncHelpers.Await awaiter
+        |> continuation
+
+    // [<MethodImpl(MethodImplOptions.Async)>]
+    member inline this.Delay([<InlineIfLambda>] f: unit -> Task<'T>) : unit -> Task<'T> = f
+
+    [<MethodImpl(MethodImplOptions.Async)>]
+    member inline this.Run([<InlineIfLambda>] f: unit -> Task<'T>) : Task<'T> =
+        AsyncHelpers.Await(f ())
+        |> Unsafe.cast
+
+    [<MethodImpl(MethodImplOptions.Async)>]
+    member inline this.Run(f: Task<'T>) : Task<'T> =
+        AsyncHelpers.Await(f)
+        |> Unsafe.cast
+
+
+type SimpleTaskRuntimeBuilderInlined2() =
+
+    [<MethodImpl(MethodImplOptions.Async)>]
+    member inline this.Return(x: 'T) : Task<'T> =
+        x
+        |> Task.FromResult
+    // |> Unsafe.cast
+
+    [<MethodImpl(MethodImplOptions.Async)>]
+    member inline this.Bind
+        (awaiter: Task<'T1>, [<InlineIfLambda>] continuation: 'T1 -> Task<'T2>)
+        : Task<'T2> =
+        AsyncHelpers.Await awaiter
+        |> continuation
+
+    [<MethodImpl(MethodImplOptions.Async)>]
+    member inline this.Bind
+        (awaiter: Task, [<InlineIfLambda>] continuation: unit -> Task<'T2>)
+        : Task<'T2> =
+        AsyncHelpers.Await awaiter
+        |> continuation
+
+    // [<MethodImpl(MethodImplOptions.Async)>]
+    member inline this.Delay([<InlineIfLambda>] f: unit -> Task<'T>) : unit -> Task<'T> = f
+
+    [<MethodImpl(MethodImplOptions.Async)>]
+    member inline this.Run([<InlineIfLambda>] f: unit -> Task<'T>) : Task<'T> =
+        AsyncHelpers.Await(f ())
+        |> Unsafe.cast
+
+// [<MethodImpl(MethodImplOptions.Async)>]
+// member inline this.Run(f: Task<'T>) : Task<'T> =
+//     AsyncHelpers.Await(f)
+//     |> Unsafe.cast
 
 module TaskRuntime =
     open IcedTasks.Polyfill.TasksRuntime
-    open System.Runtime.CompilerServices
+
+    let stask = SimpleTaskRuntimeBuilder()
+    let sitask = SimpleTaskRuntimeBuilderInlined2()
 
     [<MethodImpl(MethodImplOptions.Async)>]
     let doThing () =
-        task {
-            do! Task.Yield()
-            return 42
+        sitask {
+            do! Task.Delay(100)
+            let! x = Task.FromResult 42
+            let! y = Task.Run(fun () -> 50)
+            let x = x + y
+            return x
         }
 
 // module Task =
@@ -76,6 +185,6 @@ module Main =
 
     let main _argv =
         TaskRuntime.doThing().GetAwaiter().GetResult()
-        |> printfn "Result: %d"
+        |> printfn "Result: %A"
 
         0

@@ -233,9 +233,15 @@ module HighPriority =
 type TaskBuilderRuntime() =
     inherit TaskBuilderBaseRuntime()
 
-    member inline this.Run([<InlineIfLambda>] f: unit -> 'a) : Task<'T> =
+    // [<MethodImpl(MethodImplOptions.Async)>]
+    member inline this.Run(f: unit -> 'a) : Task<'T> =
         AsyncHelpers.awaitAwaiter (f ())
         |> AsyncHelpers.Unsafe.cast
+
+    // member inline this.AddAttributes() : seq<Attribute> = [
+    //     MethodImplAttribute(MethodImplOptions.Async)
+    // ]
+
 
     /// Used to force type inference to prefer Task<_> for parameters of functions using the build
     member inline _.Source(task: Task<'T>) = Awaitable.GetTaskAwaiter task
@@ -251,7 +257,8 @@ type BackgroundTaskBuilderRuntime() =
             isNull SynchronizationContext.Current
             && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
         then
-            AsyncHelpers.awaitAwaiter (f ())
+            f ()
+            |> AsyncHelpers.awaitAwaiter
             |> AsyncHelpers.Unsafe.cast
         else
             Task.Run<'T>(Func<'T>(fun () -> AsyncHelpers.awaitAwaiter (f ()))).GetAwaiter()
