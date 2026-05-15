@@ -29,7 +29,6 @@
 
 table {
     background-color: var(--table-background);
-    overflow-x: auto;
 }
 
 table th {
@@ -40,4 +39,79 @@ table, th, td {
     border: 1px solid;
     border-collapse: collapse;
     padding: 0.5em;
+}
+
+th, td {
+    vertical-align: top;
+}
+
+th p, td p {
+    margin: 0;
+}
+
+body.content table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    width: max-content;
+    -webkit-overflow-scrolling: touch;
+}
+
+body.content th,
+body.content td {
+    white-space: nowrap;
+}
+
+body.api-docs table {
+    display: table;
+    max-width: 100%;
+    overflow: visible;
+    width: 100%;
+}
+
+body.api-docs th,
+body.api-docs td {
+    white-space: normal;
+}
+
+body.api-docs .fsdocs-entity-name {
+    white-space: nowrap;
+    width: 14rem;
+}
+
+body.api-docs .fsdocs-entity-xmldoc > div {
+    column-gap: 0.25rem;
+    padding-right: 0.25rem;
+}
+
+body.api-docs .fsdocs-source-link {
+    flex: 0 0 auto;
+    height: 2rem;
+    margin: 0;
+    padding: 0 0.25rem;
+    width: 2rem;
+}
+
+body.api-docs .fsdocs-source-link iconify-icon {
+    display: block;
+}
+
+body.api-docs .fsdocs-member-list th,
+body.api-docs .fsdocs-member-list td,
+body.api-docs .fsdocs-entity-list th,
+body.api-docs .fsdocs-entity-list td {
+    padding: 0.75rem 1rem;
+}
+
+body.api-docs .fsdocs-member-list .fsdocs-member-usage,
+body.api-docs .fsdocs-member-list .fsdocs-member-xmldoc,
+body.api-docs .fsdocs-entity-list .fsdocs-entity-name,
+body.api-docs .fsdocs-entity-list .fsdocs-entity-xmldoc {
+    padding: 1rem;
+}
+
+body.api-docs .fsdocs-member-usage > div,
+body.api-docs .fsdocs-member-xmldoc > details,
+body.api-docs .fsdocs-member-xmldoc > p {
+    margin: 0;
 }

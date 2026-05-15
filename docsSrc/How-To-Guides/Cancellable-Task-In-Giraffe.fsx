@@ -3,7 +3,7 @@
 title: Use CancellableTask in Giraffe
 category: How To Guides
 categoryindex: 2
-index: 1
+index: 10
 ---
 
 
@@ -21,7 +21,7 @@ We'll start off with a slightly longer version but then make a helper for this.
 // Really you'd set up these references in an fsproj
 #load "../../runtime-scripts/Microsoft.AspNetCore.App-latest-8.fsx"
 #r "nuget: Giraffe"
-#r "nuget: IcedTasks"
+#r "../../src/IcedTasks/bin/Release/net9.0/IcedTasks.dll"
 
 open Microsoft.AspNetCore.Http
 open System.Threading

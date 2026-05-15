@@ -210,12 +210,12 @@ module ValueTasks =
         let valueTask = ValueTaskBuilder()
 
         /// <summary>
-        /// Builds a valueTask using computation expression syntax.
+        /// Alias for <see cref="F:IcedTasks.ValueTasks.ValueTasks.ValueTaskBuilder.valueTask" />.
         /// </summary>
         let vTask = valueTask
 
 
-    /// Contains a set of standard functional helper function
+    /// Contains functional helper functions for composing and converting <see cref="T:System.Threading.Tasks.ValueTask`1" /> values.
     [<RequireQualifiedAccess>]
     module ValueTask =
 
@@ -269,6 +269,9 @@ module ValueTasks =
                 return r1, r2
             }
 
+        /// <summary>Converts a non-generic <see cref="T:System.Threading.Tasks.ValueTask" /> to a <see cref="T:System.Threading.Tasks.ValueTask`1" /> of unit.</summary>
+        /// <param name="vtask">The non-generic ValueTask to convert.</param>
+        /// <returns>A ValueTask whose result is unit.</returns>
         let inline ofUnit (vtask: ValueTask) : ValueTask<unit> =
             // this implementation follows Stephen Toub's advice, see:
             // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
@@ -277,31 +280,33 @@ module ValueTasks =
             else
                 valueTask { return! vtask }
 
-        /// <summary>Initializes a new instance of the System.Threading.Tasks.ValueTask class using the supplied task that represents the operation.</summary>
-        /// <param name="task">The task.</param>
+        /// <summary>Wraps a <see cref="T:System.Threading.Tasks.Task`1" /> as a <see cref="T:System.Threading.Tasks.ValueTask`1" />.</summary>
+        /// <param name="task">The task to wrap.</param>
+        /// <returns>A ValueTask that represents the same operation as <paramref name="task" />.</returns>
         let inline ofTask (task: Task<'T>) = ValueTask<'T> task
 
-        /// <summary>Initializes a new instance of the System.Threading.Tasks.ValueTask class using the supplied task that represents the operation.</summary>
-        /// <param name="task"> The task that represents the operation</param>
-        /// <returns></returns>
+        /// <summary>Wraps a non-generic <see cref="T:System.Threading.Tasks.Task" /> as a non-generic <see cref="T:System.Threading.Tasks.ValueTask" />.</summary>
+        /// <param name="task">The task to wrap.</param>
+        /// <returns>A ValueTask that represents the same operation as <paramref name="task" />.</returns>
         let inline ofTaskUnit (task: Task) = ValueTask task
 
-        /// <summary>Retrieves a System.Threading.Tasks.Task object that represents this System.Threading.Tasks.ValueTask`1</summary>
-        /// <param name="vtask"></param>
-        /// <typeparam name="'T"></typeparam>
+        /// <summary>Retrieves a <see cref="T:System.Threading.Tasks.Task`1" /> that represents the supplied <see cref="T:System.Threading.Tasks.ValueTask`1" />.</summary>
+        /// <param name="vtask">The ValueTask to convert.</param>
+        /// <typeparam name="'T">The result type of the ValueTask.</typeparam>
         /// <returns>
-        /// The System.Threading.Tasks.Task object that is wrapped in this  System.Threading.Tasks.ValueTask if one exists,
-        /// or a new  System.Threading.Tasks.Task object that represents the result.
+        /// The wrapped Task if one exists, or a new Task that represents the ValueTask result.
         /// </returns>
         let inline toTask (vtask: ValueTask<'T>) = vtask.AsTask()
 
-        /// <summary>Retrieves a System.Threading.Tasks.Task object that represents this System.Threading.Tasks.ValueTask.</summary>
+        /// <summary>Retrieves a non-generic <see cref="T:System.Threading.Tasks.Task" /> that represents the supplied non-generic <see cref="T:System.Threading.Tasks.ValueTask" />.</summary>
+        /// <param name="vtask">The ValueTask to convert.</param>
+        /// <returns>The Task representation of <paramref name="vtask" />.</returns>
         let inline toTaskUnit (vtask: ValueTask) = vtask.AsTask()
 
-        /// <summary>Converts a ValueTask&lt;T&gt; to its non-generic counterpart.</summary>
-        /// <param name="vtask"></param>
-        /// <typeparam name="'T"></typeparam>
-        /// <returns></returns>
+        /// <summary>Converts a <see cref="T:System.Threading.Tasks.ValueTask`1" /> to its non-generic counterpart.</summary>
+        /// <param name="vtask">The ValueTask whose result should be discarded.</param>
+        /// <typeparam name="'T">The result type to discard.</typeparam>
+        /// <returns>A non-generic ValueTask that completes when <paramref name="vtask" /> completes.</returns>
         let inline toUnit (vtask: ValueTask<'T>) : ValueTask =
             // this implementation follows Stephen Toub's advice, see:
             // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
