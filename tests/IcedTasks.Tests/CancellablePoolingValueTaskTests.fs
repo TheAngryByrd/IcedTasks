@@ -1555,6 +1555,32 @@ module CancellablePoolingValueTaskTests =
             ]
         ]
 
+    let recursionTests =
+        testList "Recursion" [
+            testCaseAsync "Non-tail recursion"
+            <| async {
+                let rec loop n =
+                    cancellablePoolingValueTask {
+                        try
+                            try
+                                // if n % 1000 = 0 then printfn $"in loop at {n}"
+
+                                if n = 42 then
+                                    failwith "boom"
+
+                                if n <= 0 then return 0 else return! loop (n - 1)
+                            finally
+                                () // if n % 1000 = 0 then printfn $"finally at {n}"
+                        with exn when n = 10_000 ->
+                            //printfn $"caught {exn.Message} at {n}"
+                            return 55
+                    }
+
+                let! result = loop 100_000
+                Expect.equal result 55 ""
+            }
+        ]
+
     [<Tests>]
     let cancellationTaskTests =
         testList "IcedTasks.CancellablePoolingValueTask" [
@@ -1562,4 +1588,5 @@ module CancellablePoolingValueTaskTests =
             asyncBuilderTests
             asyncExBuilderTests
             functionTests
+            recursionTests
         ]
