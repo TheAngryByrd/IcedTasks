@@ -309,18 +309,18 @@ module ColdTasks =
 
             let initialResumptionFunc = ColdTaskResumptionFunc<'T>(fun sm -> code.Invoke &sm)
 
-            let bounceAllowed = Trampoline.Current.IsAwaited()
+            let makeResumptionInfo () =
+                let bounceAllowed = Trampoline.Current.IsAwaited()
 
-            let maybeBounce state =
-                if
-                    bounceAllowed
-                    && Trampoline.Current.ShouldBounce
-                then
-                    Bounce state
-                else
-                    Immediate state
+                let maybeBounce state =
+                    if
+                        bounceAllowed
+                        && Trampoline.Current.ShouldBounce
+                    then
+                        Bounce state
+                    else
+                        Immediate state
 
-            let resumptionInfo =
                 let initialState = maybeBounce Running
 
                 { new ColdTaskResumptionDynamicInfo<'T>(initialResumptionFunc,
@@ -375,7 +375,7 @@ module ColdTasks =
             fun () ->
                 let mutable sm = ColdTaskStateMachine<'T>()
 
-                sm.ResumptionDynamicInfo <- resumptionInfo
+                sm.ResumptionDynamicInfo <- makeResumptionInfo ()
                 sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                 sm.Data.MethodBuilder.Start(&sm)
                 sm.Data.MethodBuilder.Task
