@@ -174,7 +174,8 @@ module CancellableValueTasks =
                             with exn ->
                                 error <- ValueSome(ExceptionCache.CaptureOrRetrieve exn)
 
-                            if error.IsSome then
+                            match error with
+                            | ValueSome error ->
                                 let __stack_go2 =
                                     noBounce
                                     || yieldOnBindLimit().Invoke(&sm)
@@ -182,8 +183,9 @@ module CancellableValueTasks =
                                 if __stack_go2 then
                                     MethodBuilder.SetException(
                                         &sm.Data.MethodBuilder,
-                                        error.Value.SourceException
+                                        error.SourceException
                                     )
+                            | ValueNone -> ()
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)

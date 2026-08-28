@@ -33,9 +33,11 @@ type Trampoline private () =
             running <- true
 
             while pending.IsSome do
-                let next = pending.Value
-                pending <- ValueNone
-                next.Invoke()
+                match pending with
+                | ValueSome next ->
+                    pending <- ValueNone
+                    next.Invoke()
+                | ValueNone -> ()
         finally
             running <- false
 

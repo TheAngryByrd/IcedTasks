@@ -409,13 +409,15 @@ module ColdTasks =
                             with exn ->
                                 error <- ValueSome(ExceptionCache.CaptureOrRetrieve exn)
 
-                            if error.IsSome then
+                            match error with
+                            | ValueSome error ->
                                 let __stack_go2 =
                                     noBounce
                                     || yieldOnBindLimit().Invoke(&sm)
 
                                 if __stack_go2 then
-                                    sm.Data.MethodBuilder.SetException(error.Value.SourceException)
+                                    sm.Data.MethodBuilder.SetException(error.SourceException)
+                            | ValueNone -> ()
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         sm.Data.MethodBuilder.SetStateMachine(state)
@@ -483,13 +485,15 @@ module ColdTasks =
                             with exn ->
                                 error <- ValueSome(ExceptionCache.CaptureOrRetrieve exn)
 
-                            if error.IsSome then
+                            match error with
+                            | ValueSome error ->
                                 let __stack_go2 =
                                     noBounce
                                     || yieldOnBindLimit().Invoke(&sm)
 
                                 if __stack_go2 then
-                                    sm.Data.MethodBuilder.SetException(error.Value.SourceException)
+                                    sm.Data.MethodBuilder.SetException(error.SourceException)
+                            | ValueNone -> ()
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         sm.Data.MethodBuilder.SetStateMachine(state)
