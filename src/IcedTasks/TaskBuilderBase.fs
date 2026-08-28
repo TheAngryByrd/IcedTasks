@@ -385,7 +385,7 @@ module TaskBase =
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
-            /// <remarks>This is the identify function.</remarks>
+            /// <remarks>This is the identity function.</remarks>
             ///
             /// <returns>'Awaiter</returns>
             [<NoEagerConstraintApplication>]
@@ -433,7 +433,7 @@ module TaskBase =
 
             /// <summary>Allows the computation expression to turn other types into other types</summary>
             ///
-            /// <remarks>This is the identify function for For binds.</remarks>
+            /// <remarks>This is the identity function for For binds.</remarks>
             ///
             /// <returns>IEnumerable</returns>
             member inline _.Source(enumerable: #seq<_>) : #seq<_> = enumerable
@@ -447,7 +447,7 @@ module TaskBase =
 
             /// <summary>Allows the computation expression to turn other types into other types</summary>
             ///
-            /// <remarks>This is the identify function for For binds.</remarks>
+            /// <remarks>This is the identity function for For binds.</remarks>
             ///
             /// <returns>IEnumerable</returns>
             member inline _.Source(asyncEnumerable: #IAsyncEnumerable<_>) = asyncEnumerable

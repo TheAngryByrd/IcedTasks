@@ -456,8 +456,7 @@ module CancellableTasks =
     // Reason is I don't want people to assume cancellation is happening without the caller being explicit about where the CancellationToken came from.
     // Similar reasoning for `IcedTasks.ColdTasks.ColdTaskBuilderBase`.
 
-    // Contains a set of standard functional helper function
-
+    /// Contains functional helper functions for composing and converting CancellableTask values.
     [<RequireQualifiedAccess>]
     module CancellableTask =
 
@@ -549,10 +548,18 @@ module CancellableTasks =
                 return r1, r2
             }
 
-        /// <summary>Takes two CancellableTask, starts them concurrently, and returns a tuple of the pair.</summary>
+        /// <summary>Takes two CancellableTasks, starts them concurrently with the same cancellation token, and returns a tuple of the pair.</summary>
         /// <param name="left">The left value.</param>
         /// <param name="right">The right value.</param>
         /// <returns>A tuple of the parameters passed in.</returns>
+        /// <example id="cancellable-task-parallel-zip-1">
+        /// <code lang="F#">
+        /// let both =
+        ///     CancellableTask.parallelZip firstOperation secondOperation
+        ///
+        /// let! left, right = both cancellationToken
+        /// </code>
+        /// </example>
         let inline parallelZip
             ([<InlineIfLambda>] left: CancellableTask<'left>)
             ([<InlineIfLambda>] right: CancellableTask<'right>)
@@ -567,7 +574,7 @@ module CancellableTasks =
             }
 
 
-        /// <summary>Creates a task that will complete when all of the <see cref='T:IcedTasks.CancellableTasks.CancellableTask`1'/> in an enumerable collection have completed.</summary>
+        /// <summary>Creates a task that will complete when all of the <see cref='T:IcedTasks.CancellableTasks.CancellableTask`1'/> values in an enumerable collection have completed.</summary>
         /// <param name="tasks">The tasks to wait on for completion</param>
         /// <returns>A CancellableTask that represents the completion of all of the supplied tasks.</returns>
         /// <exception cref="T:System.ArgumentNullException">The <paramref name="tasks" /> argument was <see langword="null" />.</exception>
@@ -584,12 +591,20 @@ module CancellableTasks =
                 return results
             }
 
-        /// <summary>Creates a task that will complete when all of the <see cref='T:IcedTasks.CancellableTasks.CancellableTask`1'/> in an enumerable collection have completed.</summary>
+        /// <summary>Creates a task that runs the supplied CancellableTasks with a maximum degree of parallelism and completes when all have completed.</summary>
         /// <param name="tasks">The tasks to wait on for completion</param>
         /// <param name="maxDegreeOfParallelism">The maximum number of tasks to run concurrently.</param>
         /// <returns>A CancellableTask that represents the completion of all of the supplied tasks.</returns>
         /// <exception cref="T:System.ArgumentNullException">The <paramref name="tasks" /> argument was <see langword="null" />.</exception>
         /// <exception cref="T:System.ArgumentException">The <paramref name="tasks" /> collection contained a <see langword="null" /> task.</exception>
+        /// <example id="cancellable-task-when-all-throttled-1">
+        /// <code lang="F#">
+        /// let loadAll ids =
+        ///     ids
+        ///     |> Seq.map loadOne
+        ///     |> CancellableTask.whenAllThrottled 4
+        /// </code>
+        /// </example>
         let inline whenAllThrottled (maxDegreeOfParallelism: int) (tasks: CancellableTask<_> seq) =
             cancellableTask {
                 let! ct = getCancellationToken ()
@@ -634,14 +649,14 @@ module CancellableTasks =
             }
 
 
-        /// <summary>Coverts a CancellableTask to a CancellableTask\&lt;unit\&gt;.</summary>
+        /// <summary>Converts a non-generic CancellableTask to a CancellableTask\&lt;unit\&gt;.</summary>
         /// <param name="unitCancellableTask">The CancellableTask to convert.</param>
-        /// <returns>a CancellableTask\&lt;unit\&gt;.</returns>
+        /// <returns>A CancellableTask\&lt;unit\&gt; that completes when <paramref name="unitCancellableTask" /> completes.</returns>
         let inline ofUnit ([<InlineIfLambda>] unitCancellableTask: CancellableTask) =
             cancellableTask { return! unitCancellableTask }
 
-        /// <summary>Coverts a CancellableTask\&lt;_\&gt; to a CancellableTask.</summary>
+        /// <summary>Converts a CancellableTask\&lt;_&gt; to a non-generic CancellableTask by discarding the result.</summary>
         /// <param name="ctask">The CancellableTask to convert.</param>
-        /// <returns>a CancellableTask.</returns>
+        /// <returns>A non-generic CancellableTask that completes when <paramref name="ctask" /> completes.</returns>
         let inline toUnit ([<InlineIfLambda>] ctask: CancellableTask<_>) : CancellableTask =
             fun ct -> ctask ct

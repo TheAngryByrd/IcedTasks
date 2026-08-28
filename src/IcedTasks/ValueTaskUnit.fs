@@ -18,7 +18,7 @@ open IcedTasks
 open IcedTasks.TaskLike
 open IcedTasks.TaskBase
 
-/// Contains methods to build ValueTasks using the F# computation expression syntax
+/// Contains methods to build non-generic ValueTasks using the F# computation expression syntax.
 [<AutoOpen>]
 module ValueTasksUnit =
     open System
@@ -30,7 +30,7 @@ module ValueTasksUnit =
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
 
     ///<summary>
-    /// Contains methods to build ValueTasks using the F# computation expression syntax
+    /// Contains methods to build non-generic ValueTasks using the F# computation expression syntax.
     /// </summary>
     type ValueTaskUnitBuilder() =
 
@@ -142,16 +142,16 @@ module ValueTasksUnit =
                 )
             )
 
-    /// Contains the valueTask computation expression builder.
+    /// Contains the valueTaskUnit computation expression builder.
     [<AutoOpen>]
     module ValueTaskBuilder =
 
         /// <summary>
-        /// Builds a valueTask using computation expression syntax.
+        /// Builds a non-generic ValueTask using computation expression syntax.
         /// </summary>
         let valueTaskUnit = ValueTaskUnitBuilder()
 
         /// <summary>
-        /// Builds a valueTask using computation expression syntax.
+        /// Alias for <see cref="F:IcedTasks.ValueTasksUnit.ValueTasksUnit.ValueTaskBuilder.valueTaskUnit" />.
         /// </summary>
         let vTaskUnit = valueTaskUnit

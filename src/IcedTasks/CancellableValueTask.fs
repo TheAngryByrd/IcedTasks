@@ -16,7 +16,7 @@ open IcedTasks.ValueTasks
 open IcedTasks.TaskLike
 open IcedTasks.CancellableTaskBase
 
-/// Contains methods to build CancellableTasks using the F# computation expression syntax
+/// Contains methods to build CancellableValueTasks using the F# computation expression syntax.
 [<AutoOpen>]
 module CancellableValueTasks =
 
@@ -289,7 +289,7 @@ module CancellableValueTasks =
             )
 
 
-    /// Contains the cancellableTask computation expression builder.
+    /// Contains the cancellableValueTask computation expression builder.
     [<AutoOpen>]
     module CancellableValueTaskBuilder =
 
@@ -366,7 +366,7 @@ module CancellableValueTasks =
                         |> Async.AwaitValueTask
                 }
 
-            /// <summary>Executes a computation in the thread pool.</summary>
+            /// <summary>Converts an Async computation to a CancellableValueTask that starts as a task with the supplied cancellation token.</summary>
             static member inline AsCancellableValueTask
                 (computation: Async<'T>)
                 : CancellableValueTask<_> =
@@ -420,7 +420,7 @@ module CancellableValueTasks =
     // Reason is I don't want people to assume cancellation is happening without the caller being explicit about where the CancellationToken came from.
     // Similar reasoning for `IcedTasks.ColdTasks.ColdTaskBuilderBase`.
 
-    /// Contains a set of standard functional helper function
+    /// Contains functional helper functions for composing and converting CancellableValueTask values.
     [<RequireQualifiedAccess>]
     module CancellableValueTask =
 
@@ -513,10 +513,18 @@ module CancellableValueTasks =
                 return r1, r2
             }
 
-        /// <summary>Takes two CancellableValueTask, starts them concurrently, and returns a tuple of the pair.</summary>
+        /// <summary>Takes two CancellableValueTasks, starts them concurrently with the same cancellation token, and returns a tuple of the pair.</summary>
         /// <param name="left">The left value.</param>
         /// <param name="right">The right value.</param>
         /// <returns>A tuple of the parameters passed in.</returns>
+        /// <example id="cancellable-value-task-parallel-zip-1">
+        /// <code lang="F#">
+        /// let both =
+        ///     CancellableValueTask.parallelZip firstOperation secondOperation
+        ///
+        /// let! left, right = both cancellationToken |> Async.AwaitValueTask
+        /// </code>
+        /// </example>
         let inline parallelZip
             ([<InlineIfLambda>] left: CancellableValueTask<'left>)
             ([<InlineIfLambda>] right: CancellableValueTask<'right>)
@@ -531,15 +539,15 @@ module CancellableValueTasks =
             }
 
 
-        /// <summary>Coverts a CancellableValueTask to a CancellableValueTask\&lt;unit\&gt;.</summary>
+        /// <summary>Converts a non-generic CancellableValueTask to a CancellableValueTask\&lt;unit\&gt;.</summary>
         /// <param name="unitCancellableTask">The CancellableValueTask to convert.</param>
-        /// <returns>a CancellableValueTask\&lt;unit\&gt;.</returns>
+        /// <returns>A CancellableValueTask\&lt;unit\&gt; that completes when <paramref name="unitCancellableTask" /> completes.</returns>
         let inline ofUnit ([<InlineIfLambda>] unitCancellableTask: CancellableValueTask) =
             cancellableValueTask { return! unitCancellableTask }
 
-        /// <summary>Coverts a CancellableValueTask\&lt;_\&gt; to a CancellableValueTask.</summary>
-        /// <param name="Task">The CancellableValueTask to convert.</param>
-        /// <returns>a CancellableValueTask.</returns>
+        /// <summary>Converts a CancellableValueTask\&lt;_&gt; to a non-generic CancellableValueTask by discarding the result.</summary>
+        /// <param name="cancellableTask">The CancellableValueTask to convert.</param>
+        /// <returns>A non-generic CancellableValueTask that completes when <paramref name="cancellableTask" /> completes.</returns>
         let inline toUnit
             ([<InlineIfLambda>] cancellableTask: CancellableValueTask<_>)
             : CancellableValueTask =

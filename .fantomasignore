@@ -1,2 +1,4 @@
 # Ignore AssemblyInfo files
 AssemblyInfo.fs
+.claude/**
+runtime-scripts/**

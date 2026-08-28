@@ -640,7 +640,7 @@ module ColdTasks =
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///
-            /// <remarks>This is the identify function.</remarks>
+            /// <remarks>This is the identity function.</remarks>
             ///
             /// <returns>CancellationToken -> 'Awaiter</returns>
             [<NoEagerConstraintApplication>]
@@ -652,7 +652,7 @@ module ColdTasks =
 
             /// <summary>Allows the computation expression to turn other types into unit -> 'Awaiter</summary>
             ///
-            /// <remarks>This is the identify function.</remarks>
+            /// <remarks>This is the identity function.</remarks>
             ///
             /// <returns>unit -> 'Awaiter</returns>
             [<NoEagerConstraintApplication>]
@@ -763,7 +763,7 @@ module ColdTasks =
 
             /// <summary>Allows the computation expression to turn other types into other types</summary>
             ///
-            /// <remarks>This is the identify function for For binds.</remarks>
+            /// <remarks>This is the identity function for For binds.</remarks>
             ///
             /// <returns>IEnumerable</returns>
             member inline _.Source(s: #seq<_>) : #seq<_> = s
@@ -837,7 +837,7 @@ module ColdTasks =
 
             member inline this.Source(coldTask: ColdTask) = (coldTask ()).GetAwaiter()
 
-    /// Contains a set of standard functional helper function
+    /// Contains functional helper functions for composing and converting ColdTask values.
     [<RequireQualifiedAccess>]
     module ColdTask =
 
@@ -900,10 +900,17 @@ module ColdTasks =
                 return r1, r2
             }
 
-        /// <summary>Takes two ColdTask, starts them concurrently, and returns a tuple of the pair.</summary>
+        /// <summary>Takes two ColdTasks, starts them concurrently when the returned ColdTask is invoked, and returns a tuple of the pair.</summary>
         /// <param name="left">The left value.</param>
         /// <param name="right">The right value.</param>
         /// <returns>A tuple of the parameters passed in.</returns>
+        /// <example id="cold-task-parallel-zip-1">
+        /// <code lang="F#">
+        /// let both = ColdTask.parallelZip firstOperation secondOperation
+        ///
+        /// let! left, right = both ()
+        /// </code>
+        /// </example>
         let inline parallelZip
             ([<InlineIfLambda>] left: ColdTask<'left>)
             ([<InlineIfLambda>] right: ColdTask<'right>)
@@ -916,15 +923,15 @@ module ColdTasks =
                 return r1, r2
             }
 
-        /// <summary>Coverts a ColdTask to a ColdTask\&lt;unit\&gt;.</summary>
+        /// <summary>Converts a non-generic ColdTask to a ColdTask\&lt;unit\&gt;.</summary>
         /// <param name="unitColdTask">The ColdTask to convert.</param>
-        /// <returns>a ColdTask\&lt;unit\&gt;.</returns>
+        /// <returns>A ColdTask\&lt;unit\&gt; that completes when <paramref name="unitColdTask" /> completes.</returns>
         let inline ofUnit ([<InlineIfLambda>] unitColdTask: ColdTask) =
             coldTask { return! unitColdTask }
 
-        /// <summary>Coverts a ColdTask\&lt;_\&gt; to a ColdTask.</summary>
+        /// <summary>Converts a ColdTask\&lt;_&gt; to a non-generic ColdTask by discarding the result.</summary>
         /// <param name="coldTask">The ColdTask to convert.</param>
-        /// <returns>a ColdTask.</returns>
+        /// <returns>A non-generic ColdTask that completes when <paramref name="coldTask" /> completes.</returns>
         let inline toUnit ([<InlineIfLambda>] coldTask: ColdTask<_>) : ColdTask =
             fun () -> coldTask () :> Task
 
