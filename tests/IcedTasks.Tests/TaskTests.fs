@@ -694,7 +694,7 @@ module TaskTests =
 
 
                         let fakeWork id yieldTimes (l: ResizeArray<_>) =
-                            task {
+                            backgroundTask {
                                 lock l (fun () -> l.Add(id))
                                 do! Task.yieldMany yieldTimes
                                 let dt = DateTimeOffset.UtcNow
