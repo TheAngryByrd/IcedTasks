@@ -295,10 +295,13 @@ module ColdTasks =
         /// </summary>
         static member inline RunDynamic(code: ColdTaskCode<'T, 'T>) : ColdTask<'T> =
 
-            let mutable sm = ColdTaskStateMachine<'T>()
             let initialResumptionFunc = ColdTaskResumptionFunc<'T>(fun sm -> code.Invoke(&sm))
 
-            let resumptionInfo =
+            // Each start needs its own state machine and resumption info, as the static path copies
+            // its state machine on each start: binds store the continuation of the running start in
+            // them, so a start that shared them would resume an earlier start instead of running
+            // the code again.
+            let newResumptionInfo () =
                 { new ColdTaskResumptionDynamicInfo<'T>(initialResumptionFunc) with
                     member info.MoveNext(sm) =
                         let mutable savedExn = null
@@ -332,7 +335,8 @@ module ColdTasks =
                 }
 
             fun () ->
-                sm.ResumptionDynamicInfo <- resumptionInfo
+                let mutable sm = ColdTaskStateMachine<'T>()
+                sm.ResumptionDynamicInfo <- newResumptionInfo ()
                 sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                 sm.Data.MethodBuilder.Start(&sm)
                 sm.Data.MethodBuilder.Task
@@ -423,9 +427,10 @@ module ColdTasks =
                             isNull SynchronizationContext.Current
                             && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
                         then
-                            let mutable sm = sm
+                            let sm = sm // copy
 
                             fun () ->
+                                let mutable sm = sm // host a local mutable copy for each start
                                 sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                                 sm.Data.MethodBuilder.Start(&sm)
                                 sm.Data.MethodBuilder.Task

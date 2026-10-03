@@ -11,6 +11,18 @@ open FSharp.Control
 module CancellableValueTaskTests =
     open TimeProviderExtensions
 
+    // This builder takes the dynamic path in every build configuration: its Run calls
+    // RunDynamic, which the inherited Run falls back to when it does not compile the state machine
+    // statically. Unlike TaskDynamicBuilder it does not inline base.Run, so this file needs no
+    // #nowarn "3511", which would hide static compilation failures of the other tests in it.
+    type CancellableValueTaskDynamicBuilder() =
+        inherit CancellableValueTaskBuilder()
+
+        member _.Run(code) =
+            CancellableValueTaskBuilder.RunDynamic(code)
+
+    let dCancellableValueTask = CancellableValueTaskDynamicBuilder()
+
     let builderTests =
         testList "CancellableValueTaskBuilder" [
             testList "Return" [
@@ -1314,6 +1326,53 @@ module CancellableValueTaskTests =
                     use cts = new CancellationTokenSource()
                     Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
                     Expect.equal actual cts.Token ""
+            ]
+
+            testList "Multi Start" [
+
+                testCaseAsync "Multi start cancellableValueTask that suspends"
+                <| MultiStart.sequential
+                    (fun enter ->
+                        cancellableValueTask {
+                            let result = enter ()
+                            do! Task.Yield()
+                            return result
+                        }
+                    )
+                    (fun work -> (work CancellationToken.None).AsTask())
+
+                testCaseAsync "Multi start cancellableValueTask while suspended"
+                <| MultiStart.overlapping
+                    (fun enter gate ->
+                        cancellableValueTask {
+                            let result = enter ()
+                            do! gate
+                            return result
+                        }
+                    )
+                    (fun work -> (work CancellationToken.None).AsTask())
+
+                testCaseAsync "Multi start dynamic cancellableValueTask that suspends"
+                <| MultiStart.sequential
+                    (fun enter ->
+                        dCancellableValueTask {
+                            let result = enter ()
+                            do! Task.Yield()
+                            return result
+                        }
+                    )
+                    (fun work -> (work CancellationToken.None).AsTask())
+
+                testCaseAsync "Multi start dynamic cancellableValueTask while suspended"
+                <| MultiStart.overlapping
+                    (fun enter gate ->
+                        dCancellableValueTask {
+                            let result = enter ()
+                            do! gate
+                            return result
+                        }
+                    )
+                    (fun work -> (work CancellationToken.None).AsTask())
             ]
         ]
 

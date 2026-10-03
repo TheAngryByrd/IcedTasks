@@ -52,12 +52,14 @@ module CancellableTasks =
             (code: CancellableTaskBaseCode<'T, 'T, _>)
             : CancellableTask<'T> =
 
-            let mutable sm = CancellableTaskBaseStateMachine<'T, _>()
-
             let initialResumptionFunc =
                 CancellableTaskBaseResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm))
 
-            let resumptionInfo =
+            // Each start needs its own state machine and resumption info, as the static path copies
+            // its state machine on each start: binds store the continuation of the running start in
+            // them, so a start that shared them would resume an earlier start instead of running
+            // the code again.
+            let newResumptionInfo () =
                 { new CancellableTaskBaseResumptionDynamicInfo<'T, _>(initialResumptionFunc) with
                     member info.MoveNext(sm) =
                         let mutable savedExn = null
@@ -95,8 +97,9 @@ module CancellableTasks =
                 if ct.IsCancellationRequested then
                     Task.FromCanceled<_>(ct)
                 else
+                    let mutable sm = CancellableTaskBaseStateMachine<'T, _>()
                     sm.Data.CancellationToken <- ct
-                    sm.ResumptionDynamicInfo <- resumptionInfo
+                    sm.ResumptionDynamicInfo <- newResumptionInfo ()
                     sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                     sm.Data.MethodBuilder.Start(&sm)
                     sm.Data.MethodBuilder.Task
@@ -281,12 +284,13 @@ module CancellableTasks =
                             isNull SynchronizationContext.Current
                             && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
                         then
-                            let mutable sm = sm
+                            let sm = sm // copy contents of state machine so we can capture it
 
                             fun (ct) ->
                                 if ct.IsCancellationRequested then
                                     Task.FromCanceled<_>(ct)
                                 else
+                                    let mutable sm = sm // host a local mutable copy for each start
                                     sm.Data.CancellationToken <- ct
                                     sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                                     sm.Data.MethodBuilder.Start(&sm)
