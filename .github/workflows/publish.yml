@@ -33,6 +33,9 @@ jobs:
       name: nuget
       url: https://www.nuget.org/packages/IcedTasks/${{ needs.set_version.outputs.no-v }}
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
     steps:
       - uses: actions/checkout@v5
       - name: Setup necessary dotnet SDKs
@@ -43,9 +46,14 @@ jobs:
             8.x
             9.x
             10.x
+      - name: NuGet login (trusted publishing)
+        uses: NuGet/login@v1
+        id: nuget-login
+        with:
+          user: ${{ secrets.NUGET_USER }}
       - name: publish
         env:
-          NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}
+          NUGET_TOKEN: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FAKE_DETAILED_ERRORS: true
           CI: true
