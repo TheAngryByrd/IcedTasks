@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.10-beta001] - 2026-10-02
+
+### Fixed
+- [Fix multi-start of cold and cancellable tasks on the dynamic path](https://github.com/TheAngryByrd/IcedTasks/pull/67) - Credits @xperiandri
+- [Align the background cold builder exception path](https://github.com/TheAngryByrd/IcedTasks/pull/66) - Credits @TheAngryByrd
+
+### Changed
+- [Use NuGet trusted publishing in the publish workflow](https://github.com/TheAngryByrd/IcedTasks/pull/68) - Credits @TheAngryByrd
+
 ## [0.11.9] - 2025-09-05
 
 ### Changed
@@ -334,7 +343,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Increased soeed and lowered memory usage of ColdTask and CancellableTask
 - Build for netstandard2.0 and netstandard2.1
 
-[Unreleased]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.9...HEAD
+[Unreleased]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.10-beta001...HEAD
+[0.11.10-beta001]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.9...v0.11.10-beta001
 [0.11.9]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.8...v0.11.9
 [0.11.9-beta001]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.8...v0.11.9-beta001
 [0.11.8]: https://github.com/TheAngryByrd/IcedTasks//compare/v0.11.7...v0.11.8
