@@ -706,7 +706,7 @@ module AsyncExTests =
                             return index
                         }
 
-                    Expect.equal actual index "Should be ok"
+                    Expect.equal actual (loops * 2) "Every iteration must run"
                 }
 
                 yield!
@@ -759,7 +759,7 @@ module AsyncExTests =
                             return index
                         }
 
-                    Expect.equal actual index "Should be ok"
+                    Expect.equal actual (loops * 2) "Every iteration must run"
                 }
                 // https://github.com/fsprojects/FSharp.Control.TaskSeq/issues/179
                 testCaseAsync "IAsyncEnumerable cancellation"

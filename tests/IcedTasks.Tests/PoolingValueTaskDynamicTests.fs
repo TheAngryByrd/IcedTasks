@@ -629,7 +629,7 @@ module PoolingValueTaskDynamicTests =
                         }
                         |> Async.AwaitValueTask
 
-                    Expect.equal actual index "Should be ok"
+                    Expect.equal actual (loops * 2) "Every iteration must run"
                 }
 
 
@@ -685,7 +685,7 @@ module PoolingValueTaskDynamicTests =
                         }
                         |> Async.AwaitValueTask
 
-                    Expect.equal actual index "Should be ok"
+                    Expect.equal actual (loops * 2) "Every iteration must run"
                 }
             ]
 

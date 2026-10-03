@@ -617,7 +617,7 @@ module TaskTests =
                         }
                         |> Async.AwaitTask
 
-                    Expect.equal actual index "Should be ok"
+                    Expect.equal actual (loops * 2) "Every iteration must run"
                 }
                 yield!
                     [
@@ -671,7 +671,7 @@ module TaskTests =
                         }
                         |> Async.AwaitTask
 
-                    Expect.equal actual index "Should be ok"
+                    Expect.equal actual (loops * 2) "Every iteration must run"
                 }
 
             ]

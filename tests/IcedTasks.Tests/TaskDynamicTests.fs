@@ -627,7 +627,7 @@ module TaskDynamicTests =
                         }
                         |> Async.AwaitTask
 
-                    Expect.equal actual index "Should be ok"
+                    Expect.equal actual (loops * 2) "Every iteration must run"
                 }
 
 
@@ -683,7 +683,7 @@ module TaskDynamicTests =
                         }
                         |> Async.AwaitTask
 
-                    Expect.equal actual index "Should be ok"
+                    Expect.equal actual (loops * 2) "Every iteration must run"
                 }
 
             ]
