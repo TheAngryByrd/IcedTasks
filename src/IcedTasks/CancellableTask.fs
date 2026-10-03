@@ -55,10 +55,6 @@ module CancellableTasks =
             let initialResumptionFunc =
                 CancellableTaskBaseResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm))
 
-            // Each start needs its own state machine and resumption info, as the static path copies
-            // its state machine on each start: binds store the continuation of the running start in
-            // them, so a start that shared them would resume an earlier start instead of running
-            // the code again.
             let newResumptionInfo () =
                 { new CancellableTaskBaseResumptionDynamicInfo<'T, _>(initialResumptionFunc) with
                     member info.MoveNext(sm) =
@@ -284,13 +280,13 @@ module CancellableTasks =
                             isNull SynchronizationContext.Current
                             && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
                         then
-                            let sm = sm // copy contents of state machine so we can capture it
+                            let sm = sm
 
                             fun (ct) ->
                                 if ct.IsCancellationRequested then
                                     Task.FromCanceled<_>(ct)
                                 else
-                                    let mutable sm = sm // host a local mutable copy for each start
+                                    let mutable sm = sm
                                     sm.Data.CancellationToken <- ct
                                     sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                                     sm.Data.MethodBuilder.Start(&sm)
