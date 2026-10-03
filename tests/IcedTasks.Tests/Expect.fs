@@ -227,21 +227,46 @@ open System.Runtime.CompilerServices
 [<Extension>]
 type ManualTimeProviderExtensions =
 
+    /// Advances the fake clock, but only after the code under test has registered the timers it is waiting on.
+    ///
+    /// Why the wait is needed:
+    /// A <c>ManualTimeProvider</c> does not move time by itself. A test moves it with <c>Advance</c>, and
+    /// <c>Advance</c> fires only the timers that exist at that moment. The code under test creates its timer
+    /// when it reaches <c>timeProvider.Delay(...)</c> or when a cancellation token source starts its countdown.
+    /// That often happens on another thread, a moment after the test started the task. If the test calls
+    /// <c>Advance</c> before the timer exists, time moves but nothing fires. The timer is then created with
+    /// a due time that is still in the future, no later <c>Advance</c> comes, and the test waits forever.
+    ///
+    /// What this method does:
+    /// <c>ActiveTimers</c> is the number of timers that are registered and have not fired yet. This method
+    /// yields until that number reaches <paramref name="minActiveTimers"/>, then calls <c>Advance</c>. The
+    /// wait normally ends within microseconds. If the count is not reached within 30 seconds, the test fails
+    /// with a message that shows the expected and actual counts instead of hanging.
+    ///
+    /// How to choose <paramref name="minActiveTimers"/>:
+    /// Count the timers the code under test must have created before this advance. A <c>Delay</c> is one
+    /// timer. A <c>CreateCancellationTokenSource(timeout)</c> is one timer. Timers that already fired or were
+    /// disposed by cancellation do not count. Pass 0 when no timer is expected and the advance is only there
+    /// to move the clock. Example: a task that awaits one <c>Delay</c> under a cancellation token source with
+    /// a timeout has 2 active timers until one of them fires.
     [<Extension>]
-    static member ForwardTimeAsync(this: ManualTimeProvider, time) =
-        backgroundTask {
-            do! Task.Yield()
-            this.Advance(time)
-            //https://github.com/dotnet/runtime/issues/85326
-            // I'm not sure why we have to do this many yields or delays, but sometimes the timer doesn't fire and the test run forever.
-            // I've spent way too much time on this already.
-            do! Task.Delay(150)
+    static member ForwardTimeAsync(this: ManualTimeProvider, time: TimeSpan, minActiveTimers: int) =
+        let timeout = TimeSpan.FromSeconds 30.
 
-            do!
-                Task.yieldMany (
-                    Int32.MaxValue
-                    / 100000
-                )
+        backgroundTask {
+            let started = Diagnostics.Stopwatch.StartNew()
+
+            while this.ActiveTimers < minActiveTimers do
+                if started.Elapsed > timeout then
+                    Expecto.Tests.failtestf
+                        "Expected at least %d active timers before advancing time but found %d after %O"
+                        minActiveTimers
+                        this.ActiveTimers
+                        started.Elapsed
+
+                do! Task.Yield()
+
+            this.Advance(time)
         }
 
 

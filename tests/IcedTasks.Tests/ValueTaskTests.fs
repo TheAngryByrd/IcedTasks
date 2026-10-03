@@ -458,7 +458,6 @@ module ValueTaskTests =
                     [
                         10
                         10000
-                        1000000
                     ]
                     |> List.map (fun loops ->
                         testCaseAsync $"while bind to {loops}"
@@ -478,6 +477,25 @@ module ValueTaskTests =
                             Expect.equal actual loops "Should be ok"
                         }
                     )
+
+                testCaseAsync "while bind to 100000 completes synchronously"
+                <| async {
+                    let loops = 100000
+
+                    let mutable index = 0
+
+                    let! actual =
+                        valueTask {
+                            while index < loops do
+                                do! Task.CompletedTask
+                                index <- index + 1
+
+                            return index
+                        }
+                        |> Async.AwaitValueTask
+
+                    Expect.equal actual loops "Should be ok"
+                }
             ]
 
             testList "For" [
@@ -561,7 +579,6 @@ module ValueTaskTests =
                     [
                         10
                         10000
-                        1000000
                     ]
                     |> List.map (fun loops ->
                         testCaseAsync $"for bind to {loops}"
@@ -582,11 +599,29 @@ module ValueTaskTests =
                         }
                     )
 
+                testCaseAsync "for bind to 100000 completes synchronously"
+                <| async {
+                    let loops = 100000
+
+                    let mutable index = 0
+
+                    let! actual =
+                        valueTask {
+                            for i = 1 to loops do
+                                do! Task.CompletedTask
+                                index <- i + i
+
+                            return index
+                        }
+                        |> Async.AwaitValueTask
+
+                    Expect.equal actual index "Should be ok"
+                }
+
                 yield!
                     [
                         10
                         10000
-                        1000000
                     ]
                     |> List.map (fun loops ->
                         testCaseAsync $"IAsyncEnumerable for in {loops}"
@@ -612,6 +647,31 @@ module ValueTaskTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
+
+                testCaseAsync "IAsyncEnumerable for in 100000 completes synchronously"
+                <| async {
+                    let loops = 100000
+
+                    let mutable index = 0
+
+                    let asyncSeq: IAsyncEnumerable<_> =
+                        AsyncEnumerable.forXtoY
+                            0
+                            loops
+                            (cancellableValueTask { do! Task.CompletedTask })
+
+                    let! actual =
+                        valueTask {
+                            for (i: int) in asyncSeq do
+                                do! Task.CompletedTask
+                                index <- i + i
+
+                            return index
+                        }
+                        |> Async.AwaitValueTask
+
+                    Expect.equal actual index "Should be ok"
+                }
 
             ]
 

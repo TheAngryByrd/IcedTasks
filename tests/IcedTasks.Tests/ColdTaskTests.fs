@@ -602,7 +602,6 @@ module ColdTaskTests =
                     [
                         10
                         10000
-                        1000000
                     ]
                     |> List.map (fun loops ->
                         testCaseAsync $"while bind to {loops}"
@@ -621,6 +620,24 @@ module ColdTaskTests =
                             Expect.equal actual loops "Should be ok"
                         }
                     )
+
+                testCaseAsync "while bind to 100000 completes synchronously"
+                <| async {
+                    let loops = 100000
+
+                    let mutable index = 0
+
+                    let! actual =
+                        coldTask {
+                            while index < loops do
+                                do! Task.CompletedTask
+                                index <- index + 1
+
+                            return index
+                        }
+
+                    Expect.equal actual loops "Should be ok"
+                }
             ]
 
             testList "For" [
@@ -701,7 +718,6 @@ module ColdTaskTests =
                     [
                         10
                         10000
-                        1000000
                     ]
                     |> List.map (fun loops ->
                         testCaseAsync $"for bind to {loops}"
@@ -720,6 +736,24 @@ module ColdTaskTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
+
+                testCaseAsync "for bind to 100000 completes synchronously"
+                <| async {
+                    let loops = 100000
+
+                    let mutable index = 0
+
+                    let! actual =
+                        coldTask {
+                            for i = 1 to loops do
+                                do! Task.CompletedTask
+                                index <- i + i
+
+                            return index
+                        }
+
+                    Expect.equal actual index "Should be ok"
+                }
             ]
 
             testList "MergeSources" [

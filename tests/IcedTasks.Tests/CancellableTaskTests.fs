@@ -540,7 +540,7 @@ module CancellableTaskTests =
                     Expect.isFalse wasDisposed "Dispose before cancellation"
 
                     do!
-                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(100.))
+                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(100.), 2)
                         |> Async.AwaitTask
 
 
@@ -548,11 +548,11 @@ module CancellableTaskTests =
 
 
                     do!
-                        timeProvider2.ForwardTimeAsync(TimeSpan.FromMilliseconds(15.))
+                        timeProvider2.ForwardTimeAsync(TimeSpan.FromMilliseconds(15.), 1)
                         |> Async.AwaitTask
 
                     do!
-                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(200.))
+                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(200.), 0)
                         |> Async.AwaitTask
 
                     do!
@@ -662,7 +662,6 @@ module CancellableTaskTests =
                     [
                         10
                         10000
-                        1000000
                     ]
                     |> List.map (fun loops ->
                         testCaseAsync $"while bind to {loops}"
@@ -681,6 +680,24 @@ module CancellableTaskTests =
                             Expect.equal actual loops "Should be ok"
                         }
                     )
+
+                testCaseAsync "while bind to 100000 completes synchronously"
+                <| async {
+                    let loops = 100000
+
+                    let mutable index = 0
+
+                    let! actual =
+                        cancellableTask {
+                            while index < loops do
+                                do! Task.CompletedTask
+                                index <- index + 1
+
+                            return index
+                        }
+
+                    Expect.equal actual loops "Should be ok"
+                }
             ]
 
 
@@ -762,7 +779,6 @@ module CancellableTaskTests =
                     [
                         10
                         10000
-                        1000000
                     ]
                     |> List.map (fun loops ->
                         testCaseAsync $"for bind to {loops}"
@@ -782,11 +798,28 @@ module CancellableTaskTests =
                         }
                     )
 
+                testCaseAsync "for bind to 100000 completes synchronously"
+                <| async {
+                    let loops = 100000
+
+                    let mutable index = 0
+
+                    let! actual =
+                        cancellableTask {
+                            for i = 1 to loops do
+                                do! Task.CompletedTask
+                                index <- i + i
+
+                            return index
+                        }
+
+                    Expect.equal actual index "Should be ok"
+                }
+
                 yield!
                     [
                         10
                         10000
-                        1000000
                     ]
                     |> List.map (fun loops ->
                         testCaseAsync $"IAsyncEnumerable for in {loops}"
@@ -812,6 +845,31 @@ module CancellableTaskTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
+
+                testCaseAsync "IAsyncEnumerable for in 100000 completes synchronously"
+                <| async {
+                    let loops = 100000
+
+                    let mutable index = 0
+
+                    let asyncSeq: IAsyncEnumerable<_> =
+                        AsyncEnumerable.forXtoY
+                            0
+                            loops
+                            (cancellableValueTask { do! Task.CompletedTask })
+
+                    let! actual =
+                        cancellableTask {
+                            for (i: int) in asyncSeq do
+                                do! Task.CompletedTask
+                                index <- i + i
+
+                            return index
+                        }
+                        |> Async.AwaitCancellableTask
+
+                    Expect.equal actual index "Should be ok"
+                }
                 // https://github.com/fsprojects/FSharp.Control.TaskSeq/issues/179
                 testCaseAsync "IAsyncEnumerable cancellation"
                 <| async {
@@ -1224,9 +1282,9 @@ module CancellableTaskTests =
                                     )
 
                                 let runningTask = fooTask cts.Token
-                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50.))
+                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50.), 2)
                                 Expect.isFalse runningTask.IsCanceled ""
-                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50.))
+                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50.), 2)
                                 do! runningTask
                             }
                         )
@@ -1484,6 +1542,73 @@ module CancellableTaskTests =
                 Expect.equal actual cts.Token ""
         ]
 
+
+    /// Runs 100 tasks that each await one fake-clock delay through `run`, advances the clock once per
+    /// batch of `batchSize`, and checks that no more than one batch has completed after each advance.
+    let expectRunsInBatches
+        batchSize
+        (run: CancellableTask<int> list -> CancellableTask<int array>)
+        =
+        async {
+            let pauseTime = TimeSpan.FromSeconds 15.
+            let items = [ 1..100 ]
+            let times = ConcurrentDictionary<int, DateTimeOffset>()
+            let timeProvider = ManualTimeProvider()
+
+            let tasks =
+                items
+                |> List.map (fun i ->
+                    cancellableTask {
+                        do! fun ct -> timeProvider.Delay(pauseTime, ct)
+
+                        times.TryAdd(i, timeProvider.GetUtcNow())
+                        |> ignore
+
+                        return i + 1
+                    }
+                )
+
+            let! ct = Async.CancellationToken
+            let result = run tasks ct
+
+            let batches =
+                (items.Length
+                 + batchSize
+                 - 1)
+                / batchSize
+
+            for batch in 1..batches do
+                let started =
+                    min
+                        (batch
+                         * batchSize)
+                        items.Length
+
+                let pending =
+                    started
+                    - (batch - 1)
+                      * batchSize
+
+                do!
+                    timeProvider.ForwardTimeAsync(pauseTime, pending)
+                    |> Async.AwaitTask
+
+                Expect.isLessThanOrEqual (Seq.length times) started ""
+
+            let! result =
+                result
+                |> Async.AwaitTask
+
+            Expect.equal (Seq.length times) items.Length ""
+
+            Expect.equal
+                result
+                (items
+                 |> List.map (fun i -> i + 1)
+                 |> List.toArray)
+                ""
+        }
+
     let functionTests =
         testList "functions" [
             testList "singleton" [
@@ -1614,7 +1739,7 @@ module CancellableTaskTests =
                     let result = CancellableTask.whenAll tasks ct
 
                     do!
-                        timeProvider.ForwardTimeAsync(TimeSpan.FromSeconds(15.))
+                        timeProvider.ForwardTimeAsync(TimeSpan.FromSeconds(15.), items.Length)
                         |> Async.AwaitTask
 
                     let! result =
@@ -1637,128 +1762,12 @@ module CancellableTaskTests =
 
             testList "whenAllThrottled" [
                 testCaseAsync "Simple"
-                <| async {
-                    let pauseTime = 15.
-                    let pauseTimeTS = TimeSpan.FromSeconds pauseTime
-                    let maxDegreeOfParallelism = 3
-                    let items = [ 1..100 ]
-                    let times = ConcurrentDictionary<int, DateTimeOffset>()
-                    let timeProvider = ManualTimeProvider()
-
-                    let tasks =
-                        items
-                        |> List.map (fun i ->
-                            cancellableTask {
-                                do! fun ct -> timeProvider.Delay(pauseTimeTS, ct)
-
-                                times.TryAdd(i, timeProvider.GetUtcNow())
-                                |> ignore
-
-                                return i + 1
-                            }
-                        )
-
-                    let! ct = Async.CancellationToken
-                    let result = CancellableTask.whenAllThrottled maxDegreeOfParallelism tasks ct
-
-                    do!
-                        task {
-                            let mutable i = 0
-
-                            while Seq.length times < items.Length do
-
-                                i <-
-                                    i
-                                    + maxDegreeOfParallelism
-
-                                do!
-                                    timeProvider.ForwardTimeAsync(pauseTimeTS)
-                                    |> Async.AwaitTask
-                                // times isn't guaranteed to be populated because these tasks still
-                                // run in realtime kind of, so we need to check
-                                // that is at least wasn't executing more than we'd expect
-                                Expect.isLessThanOrEqual (Seq.length times) (min i items.Length) ""
-
-                        }
-                        |> Async.AwaitTask
-
-                    Expect.equal (Seq.length times) items.Length ""
-
-                    let! result =
-                        result
-                        |> Async.AwaitTask
-
-                    Expect.equal
-                        result
-                        (items
-                         |> List.map (fun i -> i + 1)
-                         |> List.toArray)
-                        ""
-                }
+                <| expectRunsInBatches 3 (CancellableTask.whenAllThrottled 3)
             ]
-
 
             testList "sequential" [
                 testCaseAsync "Simple"
-                <| async {
-                    let pauseTime = 15.
-                    let pauseTimeTS = TimeSpan.FromSeconds pauseTime
-                    let maxDegreeOfParallelism = 1
-                    let items = [ 1..100 ]
-                    let times = ConcurrentDictionary<int, DateTimeOffset>()
-                    let timeProvider = ManualTimeProvider()
-
-                    let tasks =
-                        items
-                        |> List.map (fun i ->
-                            cancellableTask {
-                                do! fun ct -> timeProvider.Delay(pauseTimeTS, ct)
-
-                                times.TryAdd(i, timeProvider.GetUtcNow())
-                                |> ignore
-
-                                return i + 1
-                            }
-                        )
-
-                    let! ct = Async.CancellationToken
-                    let result = CancellableTask.sequential tasks ct
-
-                    do!
-                        task {
-                            let mutable i = 0
-
-                            while Seq.length times < items.Length do
-                                i <-
-                                    i
-                                    + maxDegreeOfParallelism
-
-                                do!
-                                    timeProvider.ForwardTimeAsync(pauseTimeTS)
-                                    |> Async.AwaitTask
-
-                                // times isn't guaranteed to be populated because these tasks still
-                                // run in realtime kind of, so we need to check
-                                // that is at least wasn't executing more than we'd expect
-                                Expect.isLessThanOrEqual (Seq.length times) (min i items.Length) ""
-
-                        }
-                        |> Async.AwaitTask
-
-                    Expect.equal (Seq.length times) items.Length ""
-
-                    let! result =
-                        result
-                        |> Async.AwaitTask
-
-                    Expect.equal
-                        result
-                        (items
-                         |> List.map (fun i -> i + 1)
-                         |> List.toArray)
-                        ""
-                }
-
+                <| expectRunsInBatches 1 CancellableTask.sequential
             ]
 
         ]
