@@ -4,6 +4,15 @@ open System
 open System.Threading.Tasks
 open IcedTasks
 
+#if TEST_NET48
+[<AutoOpen>]
+module ValueTaskPolyfill =
+    type ValueTask with
+
+        static member CompletedTask = ValueTask()
+        static member FromResult(result: 'T) = ValueTask<'T>(result)
+#endif
+
 module Task =
     /// Runs Task.Yield() `max` times. Useful for places where we want the scheduler to asynchronously yield but really fast.
     /// We run it max times to ensure it really gets async yielded.

@@ -55,6 +55,13 @@ jobs:
           name: Test Results (${{ matrix.os }}-${{ matrix.configuration }})
           path: '**/TestResults/testResults*.trx'
           reporter: dotnet-trx
+      - name: Test Report (.NET Framework)
+        uses: dorny/test-reporter@v1
+        if: always() && runner.os == 'Windows'
+        with:
+          name: Test Results (${{ matrix.os }}-${{ matrix.configuration }}-net48)
+          path: '**/TestResults/testResults*.junit.xml'
+          reporter: java-junit
   # Builds the project in a dev container
   build-devcontainer:
     runs-on: ubuntu-latest

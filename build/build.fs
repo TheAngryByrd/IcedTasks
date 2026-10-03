@@ -399,6 +399,42 @@ let dotnetTest ctx =
             })
         sln
 
+    // Expecto has no VSTest adapter for .NET Framework, so dotnet test cannot run the net48 build.
+    if Environment.isWindows then
+        let config =
+            match configuration (ctx.Context.AllExecutingTargets) with
+            | DotNet.BuildConfiguration.Debug -> "Debug"
+            | DotNet.BuildConfiguration.Release -> "Release"
+            | DotNet.BuildConfiguration.Custom c -> c
+
+        !!(rootDirectory
+           </> $"tests/*/bin/{config}/net48/*.Tests*.exe")
+        |> Seq.iter (fun exe ->
+            let resultsDir =
+                IO.Path.GetFullPath(
+                    IO.Path.GetDirectoryName exe
+                    </> ".."
+                    </> ".."
+                    </> ".."
+                    </> "TestResults"
+                )
+
+            Directory.ensure resultsDir
+
+            let summary =
+                resultsDir
+                </> "testResults.net48.junit.xml"
+
+            CreateProcess.fromRawCommand exe [
+                "--summary"
+                "--junit-summary"
+                summary
+            ]
+            |> CreateProcess.ensureExitCode
+            |> Proc.run
+            |> ignore
+        )
+
 let watchTests _ =
     !!testsGlob
     |> Seq.map (fun proj ->
