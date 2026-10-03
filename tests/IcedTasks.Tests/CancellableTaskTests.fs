@@ -12,6 +12,24 @@ module CancellableTaskTests =
     open TimeProviderExtensions
     open System.Collections.Generic
 
+    // These builders take the dynamic path in every build configuration: their Run calls
+    // RunDynamic, which the inherited Run falls back to when it does not compile the state machine
+    // statically. Unlike TaskDynamicBuilder they do not inline base.Run, so this file needs no
+    // #nowarn "3511", which would hide static compilation failures of the other tests in it.
+    type CancellableTaskDynamicBuilder() =
+        inherit CancellableTaskBuilder()
+
+        member _.Run(code) = CancellableTaskBuilder.RunDynamic(code)
+
+    type BackgroundCancellableTaskDynamicBuilder() =
+        inherit BackgroundCancellableTaskBuilder()
+
+        member _.Run(code) =
+            BackgroundCancellableTaskBuilder.RunDynamic(code)
+
+    let dCancellableTask = CancellableTaskDynamicBuilder()
+    let dBackgroundCancellableTask = BackgroundCancellableTaskDynamicBuilder()
+
     let builderTests =
         testList "CancellableTaskBuilder" [
             testList "Return" [
@@ -1275,7 +1293,96 @@ module CancellableTaskTests =
 
             ]
 
+            testList "Multi Start" [
 
+                testCaseAsync "Multi start cancellableTask that suspends"
+                <| MultiStart.sequential
+                    (fun enter ->
+                        cancellableTask {
+                            let result = enter ()
+                            do! Task.Yield()
+                            return result
+                        }
+                    )
+                    (fun work -> work CancellationToken.None)
+
+                testCaseAsync "Multi start cancellableTask while suspended"
+                <| MultiStart.overlapping
+                    (fun enter gate ->
+                        cancellableTask {
+                            let result = enter ()
+                            do! gate
+                            return result
+                        }
+                    )
+                    (fun work -> work CancellationToken.None)
+
+                testCaseAsync "Multi start dynamic cancellableTask that suspends"
+                <| MultiStart.sequential
+                    (fun enter ->
+                        dCancellableTask {
+                            let result = enter ()
+                            do! Task.Yield()
+                            return result
+                        }
+                    )
+                    (fun work -> work CancellationToken.None)
+
+                testCaseAsync "Multi start dynamic cancellableTask while suspended"
+                <| MultiStart.overlapping
+                    (fun enter gate ->
+                        dCancellableTask {
+                            let result = enter ()
+                            do! gate
+                            return result
+                        }
+                    )
+                    (fun work -> work CancellationToken.None)
+
+                testCaseAsync "Multi start backgroundCancellableTask that suspends"
+                <| MultiStart.sequential
+                    (fun enter ->
+                        backgroundCancellableTask {
+                            let result = enter ()
+                            do! Task.Yield()
+                            return result
+                        }
+                    )
+                    (fun work -> work CancellationToken.None)
+
+                testCaseAsync "Multi start backgroundCancellableTask while suspended"
+                <| MultiStart.overlapping
+                    (fun enter gate ->
+                        backgroundCancellableTask {
+                            let result = enter ()
+                            do! gate
+                            return result
+                        }
+                    )
+                    (fun work -> work CancellationToken.None)
+
+                testCaseAsync "Multi start dynamic backgroundCancellableTask that suspends"
+                <| MultiStart.sequential
+                    (fun enter ->
+                        dBackgroundCancellableTask {
+                            let result = enter ()
+                            do! Task.Yield()
+                            return result
+                        }
+                    )
+                    (fun work -> work CancellationToken.None)
+
+                testCaseAsync "Multi start dynamic backgroundCancellableTask while suspended"
+                <| MultiStart.overlapping
+                    (fun enter gate ->
+                        dBackgroundCancellableTask {
+                            let result = enter ()
+                            do! gate
+                            return result
+                        }
+                    )
+                    (fun work -> work CancellationToken.None)
+            ]
         ]
 
     let asyncBuilderTests =

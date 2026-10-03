@@ -114,6 +114,83 @@ module Expect =
         |> Async.StartImmediateAsTask
         |> ValueTask<unit>
 
+/// Checks that a cold or cancellable value runs its body again every time it is started,
+/// also when the body suspends and when an earlier start is still suspended.
+/// See https://github.com/TheAngryByrd/IcedTasks/issues/65
+module MultiStart =
+    open System.Threading
+    open Expecto
+
+    /// Starts the value made by `makeWork` twice, the second time after the first start completed.
+    /// Its body should call the function given to `makeWork`, suspend and return what it returned.
+    /// `start` starts the value once; each task it returns is awaited once.
+    let sequential (makeWork: (unit -> int) -> 'Work) (start: 'Work -> Task<int>) =
+        async {
+            let entered = ref 0
+            let work = makeWork (fun () -> Interlocked.Increment(&entered.contents))
+
+            let! first =
+                start work
+                |> Async.AwaitTask
+
+            let! second =
+                start work
+                |> Async.AwaitTask
+
+            Expect.equal entered.Value 2 "Each start should run the body"
+            Expect.equal (first, second) (1, 2) "Each start should return its own result"
+        }
+
+    /// Starts the value made by `makeWork` twice, the second time while the first one is suspended.
+    /// Its body should call the function given to `makeWork`, await the given gate and return what
+    /// that function returned. `start` starts the value once; each task it returns is awaited once.
+    let overlapping (makeWork: (unit -> int) -> Task -> 'Work) (start: 'Work -> Task<int>) =
+        async {
+            let entered = ref 0
+
+            let gate =
+                TaskCompletionSource<unit>(TaskCreationOptions.RunContinuationsAsynchronously)
+
+            let work =
+                makeWork (fun () -> Interlocked.Increment(&entered.contents)) (gate.Task :> Task)
+
+            let first = start work
+
+            // A second start that waits for the first one to resume blocks until the gate opens,
+            // so open it after a while to fail the test instead of hanging it.
+            use watchdog =
+                new Timer(
+                    (fun _ ->
+                        gate.TrySetResult(())
+                        |> ignore
+                    ),
+                    null,
+                    TimeSpan.FromSeconds(5.),
+                    Timeout.InfiniteTimeSpan
+                )
+
+            let second = start work
+            let secondReturnedWhileFirstSuspended = not gate.Task.IsCompleted
+
+            gate.TrySetResult(())
+            |> ignore
+
+            let! first =
+                first
+                |> Async.AwaitTask
+
+            let! second =
+                second
+                |> Async.AwaitTask
+
+            Expect.isTrue
+                secondReturnedWhileFirstSuspended
+                "Starting the value again should not wait for the suspended first start"
+
+            Expect.equal entered.Value 2 "Each start should run the body"
+            Expect.equal (first, second) (1, 2) "Each start should return its own result"
+        }
+
 
 type Expect =
 

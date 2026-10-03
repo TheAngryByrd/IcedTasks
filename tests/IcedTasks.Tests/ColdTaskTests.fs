@@ -15,6 +15,24 @@ module ColdTaskHelpers =
 module ColdTaskTests =
     open System.Threading
 
+    // These builders take the dynamic path in every build configuration: their Run calls
+    // RunDynamic, which the inherited Run falls back to when it does not compile the state machine
+    // statically. Unlike TaskDynamicBuilder they do not inline base.Run, so this file needs no
+    // #nowarn "3511", which would hide static compilation failures of the other tests in it.
+    type ColdTaskDynamicBuilder() =
+        inherit ColdTaskBuilder()
+
+        member _.Run(code) = ColdTaskBuilder.RunDynamic(code)
+
+    type BackgroundColdTaskDynamicBuilder() =
+        inherit BackgroundColdTaskBuilder()
+
+        member _.Run(code) =
+            BackgroundColdTaskBuilder.RunDynamic(code)
+
+    let dColdTask = ColdTaskDynamicBuilder()
+    let dBackgroundColdTask = BackgroundColdTaskDynamicBuilder()
+
     let builderTests =
         testList "ColdTaskBuilder" [
             testList "Return" [
@@ -812,6 +830,94 @@ module ColdTaskTests =
 
                     Expect.hasLength values 2 ""
                 }
+
+                testCaseAsync "Multi start coldTask that suspends"
+                <| MultiStart.sequential
+                    (fun enter ->
+                        coldTask {
+                            let result = enter ()
+                            do! Task.Yield()
+                            return result
+                        }
+                    )
+                    (fun work -> work ())
+
+                testCaseAsync "Multi start coldTask while suspended"
+                <| MultiStart.overlapping
+                    (fun enter gate ->
+                        coldTask {
+                            let result = enter ()
+                            do! gate
+                            return result
+                        }
+                    )
+                    (fun work -> work ())
+
+                testCaseAsync "Multi start dynamic coldTask that suspends"
+                <| MultiStart.sequential
+                    (fun enter ->
+                        dColdTask {
+                            let result = enter ()
+                            do! Task.Yield()
+                            return result
+                        }
+                    )
+                    (fun work -> work ())
+
+                testCaseAsync "Multi start dynamic coldTask while suspended"
+                <| MultiStart.overlapping
+                    (fun enter gate ->
+                        dColdTask {
+                            let result = enter ()
+                            do! gate
+                            return result
+                        }
+                    )
+                    (fun work -> work ())
+
+                testCaseAsync "Multi start backgroundColdTask that suspends"
+                <| MultiStart.sequential
+                    (fun enter ->
+                        backgroundColdTask {
+                            let result = enter ()
+                            do! Task.Yield()
+                            return result
+                        }
+                    )
+                    (fun work -> work ())
+
+                testCaseAsync "Multi start backgroundColdTask while suspended"
+                <| MultiStart.overlapping
+                    (fun enter gate ->
+                        backgroundColdTask {
+                            let result = enter ()
+                            do! gate
+                            return result
+                        }
+                    )
+                    (fun work -> work ())
+
+                testCaseAsync "Multi start dynamic backgroundColdTask that suspends"
+                <| MultiStart.sequential
+                    (fun enter ->
+                        dBackgroundColdTask {
+                            let result = enter ()
+                            do! Task.Yield()
+                            return result
+                        }
+                    )
+                    (fun work -> work ())
+
+                testCaseAsync "Multi start dynamic backgroundColdTask while suspended"
+                <| MultiStart.overlapping
+                    (fun enter gate ->
+                        dBackgroundColdTask {
+                            let result = enter ()
+                            do! gate
+                            return result
+                        }
+                    )
+                    (fun work -> work ())
             ]
         ]
 
