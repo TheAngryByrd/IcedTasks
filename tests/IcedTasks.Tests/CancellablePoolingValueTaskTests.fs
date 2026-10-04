@@ -1115,7 +1115,7 @@ module CancellablePoolingValueTaskTests =
                         let parallelList = ResizeArray<_>()
 
                         let fakeWork id yieldTimes (l: ResizeArray<_>) =
-                            cancellablePoolingValueTask {
+                            backgroundTask {
                                 lock l (fun () -> l.Add(id))
                                 do! Task.yieldMany yieldTimes
                                 let dt = DateTimeOffset.UtcNow

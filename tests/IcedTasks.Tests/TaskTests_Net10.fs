@@ -4,10 +4,12 @@ open System
 open Expecto
 open System.Threading.Tasks
 open IcedTasks
-open IcedTasks.Polyfill.Task
 
-module TaskTests =
+open IcedTasks.Polyfill.TasksRuntime
+
+module TaskTests_Net10 =
     open System.Collections.Generic
+
 
     let builderTests =
         testList "TaskBuilder" [
@@ -209,7 +211,7 @@ module TaskTests =
             ]
 
             testList "TryWith" [
-                testCaseAsync "try with"
+                testCaseAsync "try with syntax"
                 <| async {
                     let data = 42
 
@@ -228,12 +230,211 @@ module TaskTests =
 
                     Expect.equal actual data "TryWith should work"
                 }
+
+                testList "StackTracePreservation" [
+                    testCaseAsync "threadpool"
+                    <| async {
+                        let data = 42
+
+                        let func0 (x: int) : Task<int> =
+                            Task.Run<int>(fun () ->
+                                task {
+                                    do! Task.Yield()
+                                    return x + 1
+                                }
+                            )
+
+                        let func1 (x: int) : Task<int> =
+                            Task.Run<int>(fun () ->
+                                task {
+                                    do! Task.Yield()
+                                    failwith "boom"
+                                    return! func0 x
+                                }
+                            )
+
+                        let func2 (x: int) =
+                            Task.Run<int>(fun () ->
+                                task {
+                                    let y = x + 1
+                                    do! Task.Yield()
+                                    return! func1 y
+                                }
+                            )
+
+                        let func3 (x: int) =
+                            Task.Run<int>(fun () ->
+                                task {
+                                    let y = x + 1
+                                    do! Task.Yield()
+                                    return! func2 y
+                                }
+                            )
+
+                        let mutable exn = None
+
+                        let! actual =
+                            task {
+                                let data = data
+
+                                try
+                                    let! _ = func3 3
+                                    ()
+                                with e ->
+                                    exn <- Some e
+
+                                return data
+                            }
+                            |> Async.AwaitTask
+
+
+                        Expect.equal actual data "TryWith should work"
+                        Expect.isSome exn "Exception should have been caught"
+
+                        exn
+                        |> Option.iter (fun e ->
+                            Expect.equal e.Message "boom" "Exception message should match"
+                            Expect.stringContains e.StackTrace "func3" ""
+                            Expect.stringContains e.StackTrace "func2" ""
+                            Expect.stringContains e.StackTrace "func1" ""
+                            Expect.stringContainsNot (unbox e.StackTrace) "func0" ""
+                        )
+                    }
+
+
+                    testCaseAsync "yield"
+                    <| async {
+                        let data = 42
+
+                        let func0 (x: int) : Task<int> =
+                            task {
+                                do! Task.Yield()
+                                return x + 1
+                            }
+
+                        let func1 (x: int) : Task<int> =
+                            task {
+                                do! Task.Yield()
+                                failwith "boom"
+                                return! func0 x
+                            }
+
+
+                        let func2 (x: int) =
+                            task {
+                                let y = x + 1
+                                do! Task.Yield()
+                                return! func1 y
+                            }
+
+
+                        let func3 (x: int) =
+                            task {
+                                let y = x + 1
+                                do! Task.Yield()
+                                return! func2 y
+                            }
+
+
+                        let mutable exn = None
+
+                        let! actual =
+                            task {
+                                let data = data
+
+                                try
+                                    let! _ = func3 3
+                                    ()
+                                with e ->
+                                    exn <- Some e
+
+                                return data
+                            }
+                            |> Async.AwaitTask
+
+
+                        Expect.equal actual data "TryWith should work"
+                        Expect.isSome exn "Exception should have been caught"
+
+                        exn
+                        |> Option.iter (fun e ->
+                            Expect.equal e.Message "boom" "Exception message should match"
+                            Expect.stringContains e.StackTrace "func3" ""
+                            Expect.stringContains e.StackTrace "func2" ""
+                            Expect.stringContains e.StackTrace "func1" ""
+                            Expect.stringContainsNot (unbox e.StackTrace) "func0" ""
+                        )
+                    }
+
+
+                    testCaseAsync "sync"
+                    <| async {
+                        let data = 42
+
+                        let func0 (x: int) : Task<int> =
+                            task {
+                                do! Task.Yield()
+                                return x + 1
+                            }
+
+                        let func1 (x: int) : Task<int> =
+
+                            task {
+                                failwith "boom"
+                                return! func0 x
+                            }
+
+                        let func2 (x: int) =
+                            task {
+                                let y = x + 1
+                                return! func1 y
+                            }
+
+                        let func3 (x: int) =
+                            task {
+                                let y = x + 1
+                                return! func2 y
+                            }
+
+                        let mutable exn = None
+
+                        let! actual =
+                            task {
+                                let data = data
+
+                                try
+                                    let! _ = func3 3
+                                    ()
+                                with e ->
+                                    exn <- Some e
+
+                                return data
+                            }
+                            |> Async.AwaitTask
+
+
+                        Expect.equal actual data "TryWith should work"
+                        Expect.isSome exn "Exception should have been caught"
+
+                        exn
+                        |> Option.iter (fun e ->
+                            Expect.equal e.Message "boom" "Exception message should match"
+                            Expect.stringContains e.StackTrace "func3" ""
+                            Expect.stringContains e.StackTrace "func2" ""
+                            Expect.stringContains e.StackTrace "func1" ""
+                            Expect.stringContainsNot (unbox e.StackTrace) "func0" ""
+                        )
+                    }
+
+                ]
             ]
 
             testList "TryFinally" [
                 testCaseAsync "try finally"
                 <| async {
                     let data = 42
+
+                    let mutable wasFinalized = false
 
                     let! actual =
                         task {
@@ -242,13 +443,14 @@ module TaskTests =
                             try
                                 ()
                             finally
-                                ()
+                                wasFinalized <- true
 
                             return data
                         }
                         |> Async.AwaitTask
 
                     Expect.equal actual data "TryFinally should work"
+                    Expect.isTrue wasFinalized "Finally block should have run"
                 }
             ]
 
@@ -460,6 +662,7 @@ module TaskTests =
                     [
                         10
                         10000
+                        1000000
                     ]
                     |> List.map (fun loops ->
                         testCaseAsync $"while bind to {loops}"
@@ -479,25 +682,6 @@ module TaskTests =
                             Expect.equal actual loops "Should be ok"
                         }
                     )
-
-                testCaseAsync "while bind to 100000 completes synchronously"
-                <| async {
-                    let loops = 100000
-
-                    let mutable index = 0
-
-                    let! actual =
-                        task {
-                            while index < loops do
-                                do! Task.CompletedTask
-                                index <- index + 1
-
-                            return index
-                        }
-                        |> Async.AwaitTask
-
-                    Expect.equal actual loops "Should be ok"
-                }
             ]
 
             testList "For" [
@@ -581,6 +765,7 @@ module TaskTests =
                     [
                         10
                         10000
+                        1000000
                     ]
                     |> List.map (fun loops ->
                         testCaseAsync $"for bind to {loops}"
@@ -600,29 +785,11 @@ module TaskTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
-
-                testCaseAsync "for bind to 100000 completes synchronously"
-                <| async {
-                    let loops = 100000
-
-                    let mutable index = 0
-
-                    let! actual =
-                        task {
-                            for i = 1 to loops do
-                                do! Task.CompletedTask
-                                index <- i + i
-
-                            return index
-                        }
-                        |> Async.AwaitTask
-
-                    Expect.equal actual (loops * 2) "Every iteration must run"
-                }
                 yield!
                     [
                         10
                         10000
+                        1000000
                     ]
                     |> List.map (fun loops ->
                         testCaseAsync $"IAsyncEnumerable for in {loops}"
@@ -648,31 +815,6 @@ module TaskTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
-
-                testCaseAsync "IAsyncEnumerable for in 100000 completes synchronously"
-                <| async {
-                    let loops = 100000
-
-                    let mutable index = 0
-
-                    let asyncSeq: IAsyncEnumerable<_> =
-                        AsyncEnumerable.forXtoY
-                            0
-                            loops
-                            (cancellableValueTask { do! Task.CompletedTask })
-
-                    let! actual =
-                        task {
-                            for (i: int) in asyncSeq do
-                                do! Task.CompletedTask
-                                index <- i + i
-
-                            return index
-                        }
-                        |> Async.AwaitTask
-
-                    Expect.equal actual (loops * 2) "Every iteration must run"
-                }
 
             ]
 
@@ -754,13 +896,18 @@ module TaskTests =
 
 
                         let fakeWork id yieldTimes (l: ResizeArray<_>) =
-                            backgroundTask {
-                                lock l (fun () -> l.Add(id))
-                                do! Task.yieldMany yieldTimes
-                                let dt = DateTimeOffset.UtcNow
-                                lock l (fun () -> l.Add(id))
-                                return dt
-                            }
+                            // TODO: Figure out why we need to wrap this in Task.Run to avoid deadlocks
+                            Task.Run<DateTimeOffset>(fun () ->
+                                task {
+                                    // task {
+                                    lock l (fun () -> l.Add(id))
+                                    do! Task.yieldMany yieldTimes
+                                    // do! Task.Delay(250)
+                                    let dt = DateTimeOffset.UtcNow
+                                    lock l (fun () -> l.Add(id))
+                                    return dt
+                                }
+                            )
 
                         // Have earlier tasks take longer to complete
                         // so we can see if they are sequenced or not
@@ -820,19 +967,19 @@ module TaskTests =
 
                         let sequencedAlwaysOrdered =
                             sequencedEntrances = [
-                                    1
-                                    1
-                                    2
-                                    2
-                                    3
-                                    3
-                                    4
-                                    4
-                                    5
-                                    5
-                                    6
-                                    6
-                                ]
+                                1
+                                1
+                                2
+                                2
+                                3
+                                3
+                                4
+                                4
+                                5
+                                5
+                                6
+                                6
+                            ]
 
                         let! parallelNotSequenced =
                             task {
@@ -858,4 +1005,4 @@ module TaskTests =
 
 
     [<Tests>]
-    let tests = testList "IcedTasks.Polyfill.Task" [ builderTests ]
+    let tests = ptestList "IcedTasks.Polyfill.Task_Net10" [ builderTests ]

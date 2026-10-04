@@ -69,3 +69,8 @@ indent_size = 2
 [*.{yml,yaml}]
 indent_size = 2
 indent_style = space
+
+
+# C# analyzers
+[*.{cs,vb}]
+dotnet_diagnostic.CA2252.severity = none

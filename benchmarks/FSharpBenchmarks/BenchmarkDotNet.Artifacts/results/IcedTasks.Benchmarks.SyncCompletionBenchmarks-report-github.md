@@ -1,37 +1,47 @@
-``` ini
+```
 
-BenchmarkDotNet=v0.13.2, OS=Windows 11 (10.0.22621.1848)
-12th Gen Intel Core i9-12900F, 1 CPU, 24 logical and 16 physical cores
-.NET SDK=7.0.203
-  [Host]     : .NET 7.0.8 (7.0.823.31807), X64 RyuJIT AVX2 DEBUG
-  DefaultJob : .NET 7.0.8 (7.0.823.31807), X64 RyuJIT AVX2
+BenchmarkDotNet v0.15.7, Windows 11 (10.0.26100.7623/24H2/2024Update/HudsonValley)
+12th Gen Intel Core i9-12900F 2.40GHz, 1 CPU, 24 logical and 16 physical cores
+.NET SDK 10.0.100
+  [Host]   : .NET 9.0.13 (9.0.13, 9.0.1326.6317), X64 RyuJIT x86-64-v3 DEBUG
+  ShortRun : .NET 9.0.13 (9.0.13, 9.0.1326.6317), X64 RyuJIT x86-64-v3
 
+Job=ShortRun  IterationCount=3  LaunchCount=1  
+WarmupCount=3  
 
 ```
-|                                                                  Method |                                                                Categories | manyIterations |        Mean |      Error |    StdDev |  Ratio | RatioSD |     Gen0 |   Gen1 | Allocated | Alloc Ratio |
-|------------------------------------------------------------------------ |-------------------------------------------------------------------------- |--------------- |------------:|-----------:|----------:|-------:|--------:|---------:|-------:|----------:|------------:|
-|                                CSharp_TenBindsSync_TaskBuilder_BindTask |                                 NonAsyncBinds,CSharp,TaskBuilder,BindTask |           1000 |    50.52 μs |   0.465 μs |  0.412 μs |   1.00 |    0.00 |  50.4761 |      - |  792000 B |        1.00 |
-|                           CSharp_TenBindsSync_TaskBuilder_BindValueTask |                            NonAsyncBinds,CSharp,TaskBuilder,BindValueTask |           1000 |    65.17 μs |   0.493 μs |  0.461 μs |   1.29 |    0.01 |   4.5166 |      - |   72000 B |        0.09 |
-|                           CSharp_TenBindsSync_ValueTaskBuilder_BindTask |                            NonAsyncBinds,CSharp,ValueTaskBuilder,BindTask |           1000 |    48.53 μs |   0.837 μs |  1.089 μs |   0.96 |    0.02 |  45.8984 |      - |  720000 B |        0.91 |
-|                      CSharp_TenBindsSync_ValueTaskBuilder_BindValueTask |                       NonAsyncBinds,CSharp,ValueTaskBuilder,BindValueTask |           1000 |    67.96 μs |   0.647 μs |  0.605 μs |   1.35 |    0.02 |        - |      - |         - |        0.00 |
-|                              FSharp_TenBindsSync_AsyncBuilder_BindAsync |                               NonAsyncBinds,FSharp,AsyncBuilder,BindAsync |           1000 | 6,698.07 μs | 100.485 μs | 93.994 μs | 132.45 |    1.79 | 156.2500 |      - | 2511997 B |        3.17 |
-|                     Fsharp_TenBindSync_cancellableTaskBuilder_BindAsync |                     NonAsyncBinds,FSharp,CancellableTaskBuilder,BindAsync |           1000 |   906.74 μs |   6.296 μs |  5.581 μs |  17.95 |    0.18 | 391.6016 |      - | 6152000 B |        7.77 |
-|           Fsharp_TenBindSync_cancellableTaskBuilder_BindCancellableTask |           NonAsyncBinds,FSharp,CancellableTaskBuilder,BindCancellableTask |           1000 |    99.97 μs |   1.972 μs |  2.025 μs |   1.98 |    0.04 |  60.6689 |      - |  952000 B |        1.20 |
-|      Fsharp_TenBindSync_cancellableTaskBuilder_BindCancellableValueTask |      NonAsyncBinds,FSharp,CancellableTaskBuilder,BindCancellableValueTask |           1000 |   144.29 μs |   2.853 μs |  2.802 μs |   2.86 |    0.05 |  19.7754 |      - |  312000 B |        0.39 |
-|                      Fsharp_TenBindSync_cancellableTaskBuilder_BindTask |                      NonAsyncBinds,FSharp,CancellableTaskBuilder,BindTask |           1000 |   102.40 μs |   1.739 μs |  1.627 μs |   2.03 |    0.03 |  60.6689 |      - |  952000 B |        1.20 |
-|                 Fsharp_TenBindSync_cancellableTaskBuilder_BindValueTask |                 NonAsyncBinds,FSharp,CancellableTaskBuilder,BindValueTask |           1000 |   148.61 μs |   2.844 μs |  3.162 μs |   2.93 |    0.07 |  19.7754 |      - |  312000 B |        0.39 |
-|                Fsharp_TenBindSync_cancellableValueTaskBuilder_BindAsync |                NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindAsync |           1000 | 5,672.21 μs |  76.391 μs | 71.457 μs | 112.08 |    1.38 | 414.0625 |      - | 6488201 B |        8.19 |
-|      Fsharp_TenBindSync_cancellableValueTaskBuilder_BindCancellableTask |      NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindCancellableTask |           1000 |   100.89 μs |   1.418 μs |  1.257 μs |   2.00 |    0.03 |  56.5186 |      - |  888000 B |        1.12 |
-| Fsharp_TenBindSync_cancellableValueTaskBuilder_BindCancellableValueTask | NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindCancellableValueTask |           1000 |   150.76 μs |   2.915 μs |  3.119 μs |   2.98 |    0.06 |  15.6250 |      - |  248000 B |        0.31 |
-|                 Fsharp_TenBindSync_cancellableValueTaskBuilder_BindTask |                 NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindTask |           1000 |   100.80 μs |   1.923 μs |  2.758 μs |   2.02 |    0.06 |  56.5186 |      - |  888000 B |        1.12 |
-|            Fsharp_TenBindSync_cancellableValueTaskBuilder_BindValueTask |            NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindValueTask |           1000 |   149.93 μs |   1.406 μs |  1.174 μs |   2.97 |    0.04 |  15.6250 |      - |  248000 B |        0.31 |
-|                              Fsharp_TenBindSync_plyTaskBuilder_BindTask |                              NonAsyncBinds,FSharp,PlyTaskBuilder,BindTask |           1000 |    65.34 μs |   1.286 μs |  1.320 μs |   1.29 |    0.03 |  50.4150 |      - |  792000 B |        1.00 |
-|                         Fsharp_TenBindSync_plyTaskBuilder_BindValueTask |                         NonAsyncBinds,FSharp,PlyTaskBuilder,BindValueTask |           1000 |    76.00 μs |   0.521 μs |  0.462 μs |   1.50 |    0.01 |   4.5166 |      - |   72000 B |        0.09 |
-|                         Fsharp_TenBindSync_plyValueTaskBuilder_BindTask |                         NonAsyncBinds,FSharp,PlyValueTaskBuilder,BindTask |           1000 |    65.58 μs |   0.791 μs |  0.739 μs |   1.30 |    0.02 |  45.8984 |      - |  720000 B |        0.91 |
-|                    Fsharp_TenBindSync_plyValueTaskBuilder_BindValueTask |                    NonAsyncBinds,FSharp,PlyValueTaskBuilder,BindValueTask |           1000 |    75.13 μs |   0.777 μs |  0.726 μs |   1.49 |    0.02 |        - |      - |         - |        0.00 |
-|                                Fsharp_TenBindSync_TaskBuilder_BindAsync |                                NonAsyncBinds,FSharp,TaskBuilder,BindAsync |           1000 | 5,379.34 μs |  38.806 μs | 30.297 μs | 106.42 |    1.10 | 359.3750 |      - | 5665301 B |        7.15 |
-|                                 Fsharp_TenBindSync_TaskBuilder_BindTask |                                 NonAsyncBinds,FSharp,TaskBuilder,BindTask |           1000 |    57.09 μs |   0.741 μs |  0.657 μs |   1.13 |    0.02 |  50.4761 | 0.0610 |  792000 B |        1.00 |
-|                            Fsharp_TenBindSync_TaskBuilder_BindValueTask |                            NonAsyncBinds,FSharp,TaskBuilder,BindValueTask |           1000 |    68.12 μs |   1.147 μs |  1.073 μs |   1.35 |    0.02 |   4.5166 |      - |   72000 B |        0.09 |
-|                           Fsharp_TenBindSync_ValueTaskBuilder_BindAsync |                           NonAsyncBinds,FSharp,ValueTaskBuilder,BindAsync |           1000 | 5,407.33 μs |  64.063 μs | 59.924 μs | 107.00 |    1.44 | 359.3750 |      - | 5664162 B |        7.15 |
-|                            Fsharp_TenBindSync_ValueTaskBuilder_BindTask |                            NonAsyncBinds,FSharp,ValueTaskBuilder,BindTask |           1000 |    55.31 μs |   0.606 μs |  0.537 μs |   1.09 |    0.01 |  45.8984 |      - |  720000 B |        0.91 |
-|                       Fsharp_TenBindSync_ValueTaskBuilder_BindValueTask |                       NonAsyncBinds,FSharp,ValueTaskBuilder,BindValueTask |           1000 |    71.28 μs |   0.797 μs |  0.746 μs |   1.41 |    0.02 |        - |      - |         - |        0.00 |
+| Method                                                                  | Categories                                                                | Mean         | Error          | StdDev      | Ratio  | RatioSD | Gen0   | Allocated | Alloc Ratio |
+|------------------------------------------------------------------------ |-------------------------------------------------------------------------- |-------------:|---------------:|------------:|-------:|--------:|-------:|----------:|------------:|
+| CSharp_TenBindsSync_TaskBuilder_BindTask                                | NonAsyncBinds,CSharp,TaskBuilder,BindTask                                 |    58.554 ns |    117.4654 ns |   6.4387 ns |   1.01 |    0.13 | 0.0505 |     792 B |        1.00 |
+| CSharp_TenBindsSync_TaskBuilder_BindValueTask                           | NonAsyncBinds,CSharp,TaskBuilder,BindValueTask                            |    15.124 ns |      3.9592 ns |   0.2170 ns |   0.26 |    0.02 | 0.0046 |      72 B |        0.09 |
+| CSharp_TenBindsSync_ValueTaskBuilder_BindTask                           | NonAsyncBinds,CSharp,ValueTaskBuilder,BindTask                            |    50.681 ns |     12.6474 ns |   0.6932 ns |   0.87 |    0.08 | 0.0459 |     720 B |        0.91 |
+| CSharp_TenBindsSync_ValueTaskBuilder_BindValueTask                      | NonAsyncBinds,CSharp,ValueTaskBuilder,BindValueTask                       |    10.276 ns |      1.5095 ns |   0.0827 ns |   0.18 |    0.02 |      - |         - |        0.00 |
+| FSharp_TenBindsSync_AsyncBuilder_BindAsync                              | NonAsyncBinds,FSharp,AsyncBuilder,BindAsync                               | 8,023.515 ns | 13,598.6038 ns | 745.3854 ns | 138.08 |   16.69 | 0.1563 |    2512 B |        3.17 |
+| Fsharp_TenBindSync_cancellableTaskBuilder_BindAsync                     | NonAsyncBinds,FSharp,CancellableTaskBuilder,BindAsync                     | 1,077.877 ns |    214.9256 ns |  11.7808 ns |  18.55 |    1.68 | 0.3516 |    5528 B |        6.98 |
+| Fsharp_TenBindSync_cancellableTaskBuilder_BindCancellableTask           | NonAsyncBinds,FSharp,CancellableTaskBuilder,BindCancellableTask           |   189.676 ns |     35.0467 ns |   1.9210 ns |   3.26 |    0.29 | 0.0605 |     952 B |        1.20 |
+| Fsharp_TenBindSync_cancellableTaskBuilder_BindCancellableValueTask      | NonAsyncBinds,FSharp,CancellableTaskBuilder,BindCancellableValueTask      |   152.270 ns |     12.5215 ns |   0.6863 ns |   2.62 |    0.24 | 0.0198 |     312 B |        0.39 |
+| Fsharp_TenBindSync_cancellableTaskBuilder_BindTask                      | NonAsyncBinds,FSharp,CancellableTaskBuilder,BindTask                      |   195.979 ns |     52.8511 ns |   2.8969 ns |   3.37 |    0.31 | 0.0605 |     952 B |        1.20 |
+| Fsharp_TenBindSync_cancellableTaskBuilder_BindValueTask                 | NonAsyncBinds,FSharp,CancellableTaskBuilder,BindValueTask                 |   157.032 ns |     15.1115 ns |   0.8283 ns |   2.70 |    0.24 | 0.0198 |     312 B |        0.39 |
+| Fsharp_TenBindSync_cancellableValueTaskBuilder_BindAsync                | NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindAsync                |   976.370 ns |    426.2325 ns |  23.3632 ns |  16.80 |    1.55 | 0.3477 |    5464 B |        6.90 |
+| Fsharp_TenBindSync_cancellableValueTaskBuilder_BindCancellableTask      | NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindCancellableTask      |   190.752 ns |     91.9561 ns |   5.0404 ns |   3.28 |    0.30 | 0.0564 |     888 B |        1.12 |
+| Fsharp_TenBindSync_cancellableValueTaskBuilder_BindCancellableValueTask | NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindCancellableValueTask |   146.246 ns |     42.3326 ns |   2.3204 ns |   2.52 |    0.23 | 0.0156 |     248 B |        0.31 |
+| Fsharp_TenBindSync_cancellableValueTaskBuilder_BindTask                 | NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindTask                 |   194.265 ns |     90.7918 ns |   4.9766 ns |   3.34 |    0.31 | 0.0564 |     888 B |        1.12 |
+| Fsharp_TenBindSync_cancellableValueTaskBuilder_BindValueTask            | NonAsyncBinds,FSharp,CancellableValueTaskBuilder,BindValueTask            |   147.972 ns |     92.5910 ns |   5.0752 ns |   2.55 |    0.24 | 0.0156 |     248 B |        0.31 |
+| Fsharp_TenBindSync_plyTaskBuilder_BindTask                              | NonAsyncBinds,FSharp,PlyTaskBuilder,BindTask                              |    69.264 ns |     59.1529 ns |   3.2424 ns |   1.19 |    0.12 | 0.0505 |     792 B |        1.00 |
+| Fsharp_TenBindSync_plyTaskBuilder_BindValueTask                         | NonAsyncBinds,FSharp,PlyTaskBuilder,BindValueTask                         |    11.811 ns |      2.8312 ns |   0.1552 ns |   0.20 |    0.02 | 0.0046 |      72 B |        0.09 |
+| Fsharp_TenBindSync_plyValueTaskBuilder_BindTask                         | NonAsyncBinds,FSharp,PlyValueTaskBuilder,BindTask                         |    59.995 ns |     64.4577 ns |   3.5331 ns |   1.03 |    0.11 | 0.0459 |     720 B |        0.91 |
+| Fsharp_TenBindSync_plyValueTaskBuilder_BindValueTask                    | NonAsyncBinds,FSharp,PlyValueTaskBuilder,BindValueTask                    |     6.608 ns |      0.9976 ns |   0.0547 ns |   0.11 |    0.01 |      - |         - |        0.00 |
+| Fsharp_TenBindSync_TaskBuilderRuntime_BindAsync                         | NonAsyncBinds,FSharp,TaskBuilderRuntime,BindAsync                         |           NA |             NA |          NA |      ? |       ? |     NA |        NA |           ? |
+| Fsharp_TenBindSync_TaskBuilderRuntime_BindTask                          | NonAsyncBinds,FSharp,TaskBuilderRuntime,BindTask                          |           NA |             NA |          NA |      ? |       ? |     NA |        NA |           ? |
+| Fsharp_TenBindSync_TaskBuilderRuntime_BindValueTask                     | NonAsyncBinds,FSharp,TaskBuilderRuntime,BindValueTask                     |           NA |             NA |          NA |      ? |       ? |     NA |        NA |           ? |
+| Fsharp_TenBindSync_TaskBuilder_BindAsync                                | NonAsyncBinds,FSharp,TaskBuilder,BindAsync                                |   845.211 ns |    479.8705 ns |  26.3033 ns |  14.55 |    1.37 | 0.3359 |    5272 B |        6.66 |
+| Fsharp_TenBindSync_TaskBuilder_BindTask                                 | NonAsyncBinds,FSharp,TaskBuilder,BindTask                                 |    70.066 ns |     31.9889 ns |   1.7534 ns |   1.21 |    0.11 | 0.0504 |     792 B |        1.00 |
+| Fsharp_TenBindSync_TaskBuilder_BindValueTask                            | NonAsyncBinds,FSharp,TaskBuilder,BindValueTask                            |    23.122 ns |      5.1862 ns |   0.2843 ns |   0.40 |    0.04 | 0.0046 |      72 B |        0.09 |
+| Fsharp_TenBindSync_ValueTaskBuilder_BindAsync                           | NonAsyncBinds,FSharp,ValueTaskBuilder,BindAsync                           |   834.548 ns |    290.9838 ns |  15.9498 ns |  14.36 |    1.31 | 0.3359 |    5272 B |        6.66 |
+| Fsharp_TenBindSync_ValueTaskBuilder_BindTask                            | NonAsyncBinds,FSharp,ValueTaskBuilder,BindTask                            |    62.209 ns |     37.1952 ns |   2.0388 ns |   1.07 |    0.10 | 0.0459 |     720 B |        0.91 |
+| Fsharp_TenBindSync_ValueTaskBuilder_BindValueTask                       | NonAsyncBinds,FSharp,ValueTaskBuilder,BindValueTask                       |    19.224 ns |      0.5253 ns |   0.0288 ns |   0.33 |    0.03 |      - |         - |        0.00 |
+
+Benchmarks with issues:
+  SyncCompletionBenchmarks.Fsharp_TenBindSync_TaskBuilderRuntime_BindAsync: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+  SyncCompletionBenchmarks.Fsharp_TenBindSync_TaskBuilderRuntime_BindTask: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+  SyncCompletionBenchmarks.Fsharp_TenBindSync_TaskBuilderRuntime_BindValueTask: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)

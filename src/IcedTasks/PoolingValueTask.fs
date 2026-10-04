@@ -2,8 +2,6 @@ namespace IcedTasks
 
 namespace IcedTasks.PoolingValueTasks
 
-#if NET6_0_OR_GREATER
-
 open IcedTasks
 open IcedTasks.TaskLike
 open IcedTasks.TaskBase
@@ -262,5 +260,3 @@ module PoolingValueTasks =
                     ValueTask()
                 else
                     ValueTask(vtask.AsTask())
-
-#endif

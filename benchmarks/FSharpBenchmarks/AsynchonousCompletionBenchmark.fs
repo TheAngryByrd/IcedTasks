@@ -11,6 +11,7 @@ open System.Threading.Tasks
 open IcedTasks
 
 open System.IO
+open System.Runtime.CompilerServices
 
 
 [<AutoOpen>]
@@ -82,7 +83,25 @@ module AsyncHelpers =
             do! taskYield ()
             return 100
         }
+#if NET10_0_OR_GREATER
+    [<MethodImpl(MethodImplOptions.Async)>]
 
+    // [<MethodImpl(8192s)>]
+    let fsharp_tenBindAsync_TaskBuilderRuntime () =
+        IcedTasks.Polyfill.TasksRuntime.TaskBuilder.task {
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            do! taskYield ()
+            return 100
+        }
+#endif
 
     let fsharp_tenBindAsync_ValueTaskBuilder () =
         valueTask {
@@ -232,6 +251,22 @@ type AsyncCompletionBenchmarks() =
             z <- fsharp_tenBindAsync_TaskBuilder().GetAwaiter().GetResult()
 
         z
+
+
+    [<BenchmarkCategory(AsyncBinds, fsharp, taskBuilderRuntime);
+      Benchmark(OperationsPerInvoke = manyIterationsConst)>]
+    member x.FSharp_TenBindsAsync_TaskBuilderRuntime() : int =
+#if NET10_0_OR_GREATER
+        let mutable z = 0
+
+        for i in 1 .. x.manyIterations do
+            z <- fsharp_tenBindAsync_TaskBuilderRuntime().GetAwaiter().GetResult()
+
+
+        z
+#else
+        raise (NotSupportedException("Must be .NET 10 or greater"))
+#endif
 
     [<BenchmarkCategory(AsyncBinds, fsharp, valueTaskBuilder);
       Benchmark(OperationsPerInvoke = manyIterationsConst)>]
