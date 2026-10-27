@@ -24,8 +24,7 @@ The NS projects select the library TFM with `AdditionalProperties`:
 
 - Put a new test file in `tests/IcedTasks.Tests` and add it to the compile list of that project.
 - Link the file in the NS20 and NS21 projects too, unless it tests a pooling builder.
-- Guard `IAsyncEnumerable` and TaskSeq tests with `#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER`. The NS20 build has no such tests.
-- The NS20 project also references `Microsoft.Bcl.AsyncInterfaces`.
+- Guard TaskSeq tests with `#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER`. The NS20 build runs the `IAsyncEnumerable` tests through `Microsoft.Bcl.AsyncInterfaces`, and it skips the TaskSeq tests.
 
 ```mermaid
 flowchart TD
@@ -41,5 +40,7 @@ flowchart TD
 ## Configuration
 
 CI runs the tests in Debug and in Release. Debug takes the dynamic path of each builder. See [run and start paths](../builders/run-and-start-paths.md).
+
+Decision: [ADR 0007, separate netstandard test projects](../../adr/0007-separate-netstandard-test-projects.md).
 
 Related: [tests summary](summary.md), [namespaces and TFMs](../builders/namespaces-and-tfms.md).

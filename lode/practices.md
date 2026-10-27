@@ -3,12 +3,13 @@
 ## Code conventions
 
 - `Directory.Build.props` sets `TreatWarningsAsErrors`. A new warning fails the build.
-- `Directory.Build.props` sets `LangVersion` 8.0, and 9.0 with `Nullable` enabled for `net9.0`. Use `IcedTasks.Nullness` types (`ExceptionNull`, `IDisposableNull`, `IAsyncDisposableNull`) for values that can be null. The comment in `src/IcedTasks/Nullness.fs` says that nullness works only for FSharp.Core 9 and later.
+- `Directory.Build.props` sets `LangVersion` 8.0, and 9.0 with `Nullable` enabled for `net9.0` ([ADR 0011](../adr/0011-fsharp-core-per-target-framework.md)). Use `IcedTasks.Nullness` types (`ExceptionNull`, `IDisposableNull`, `IAsyncDisposableNull`) for values that can be null. The comment in `src/IcedTasks/Nullness.fs` says that nullness works only for FSharp.Core 9 and later.
 - Fantomas formats all F# code. A plain `dotnet build` runs Fantomas on F# projects outside `src/`. See [formatting and analyzers](build/formatting-and-analyzers.md).
 - `.editorconfig` sets LF, 4-space indent, `max_line_length=100`, and `fsharp_multiline_bracket_style = stroustrup`.
 - Central package management is on (`Directory.Packages.props`). Put versions there, not in a project file.
 - A builder member that a builder needs for type inference goes on the builder type, not in an extension module. The code comment says "on the real type to allow type inference to work" (`src/IcedTasks/CancellableTask.fs`).
 - Each resumable builder has a static path and a dynamic path. A change to one path needs the same change to the other. See [run and start paths](builders/run-and-start-paths.md).
+- Do not put `[<InlineIfLambda>]` on resumable code parameters, such as `task1` and `task2` in `Combine` and `computation` in `TryWith`. Plain lambda parameters, such as `guard` and `compensation`, have it. Commit d89d479 removed it from resumable code: "This was causing excessive compile times without any performance benefits".
 - Call `SetException` outside the `try ... with` unwind. The code links roslyn issue 26567 for this rule.
 
 ```fsharp

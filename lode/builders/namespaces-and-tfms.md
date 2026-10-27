@@ -59,4 +59,12 @@ The pooling files declare their namespace before the `#if`. On `netstandard` the
 - `PoolingValueTask.fs` reuses the module names `ValueTaskBuilder` and `ValueTask`.
 - `CancellablePoolingValueTask.fs` reuses the alias `CancellableValueTask<'T>` and the modules `CancellableValueTaskBuilder` and `CancellableValueTask`.
 
+Decisions:
+
+- [ADR 0004, library target frameworks](../../adr/0004-library-target-frameworks.md)
+- [ADR 0009, opt-in polyfill namespaces](../../adr/0009-opt-in-polyfill-namespaces.md)
+- [ADR 0010, Microsoft.Bcl.AsyncInterfaces on netstandard2.0](../../adr/0010-bcl-asyncinterfaces-on-netstandard2-0.md)
+- [ADR 0011, FSharp.Core per target framework](../../adr/0011-fsharp-core-per-target-framework.md)
+- [ADR 0012, one namespace for each builder file](../../adr/0012-namespace-per-builder-file.md)
+
 Related: [builder catalog](builder-catalog.md), [test projects and TFMs](../tests/test-projects-and-tfms.md).

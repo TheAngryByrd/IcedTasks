@@ -60,4 +60,9 @@ flowchart LR
     t2 --> aw
 ```
 
+Decisions:
+
+- [ADR 0002, start `Async` with `Async.StartImmediateAsTask`](../../adr/0002-start-async-with-startimmediateastask.md)
+- [ADR 0006, `asyncEx` task-await semantics](../../adr/0006-asyncex-task-await-semantics.md)
+
 Related: [and! and MergeSources](and-bang-merge-sources.md), [namespaces and TFMs](namespaces-and-tfms.md), [builder catalog](builder-catalog.md).

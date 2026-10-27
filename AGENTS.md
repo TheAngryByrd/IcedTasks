@@ -2,7 +2,7 @@
 
 Source: https://github.com/fjzeit/lode/blob/7a21c1c1f47d45eeeb851f5a2c85d5e8abecd78f/prompts/SystemPrompt.txt
 
-The repository guidelines above take precedence over this section. If a Lode rule conflicts with them, follow the repository guidelines.
+The repository guidelines above take precedence over this section. If a Lode rule conflicts with them, follow the repository guidelines. Decision records live in adr/. The Lode describes the current state and links to the ADR that records the reason for a choice.
 
 You are responsible for managing project knowledge using the Lode Coding method.
 

@@ -48,4 +48,9 @@ flowchart TD
 - Most `Source`, `Bind`, and `MergeSources` members that use SRTP constraints carry `[<NoEagerConstraintApplication>]`.
 - Each `HighPriority` module comes after its `LowPriority` module in the same file. F# prefers intrinsic members to extension members, and among extension members it prefers the module opened later.
 
+Decisions:
+
+- [ADR 0003, `Source` members and awaiter binds](../../adr/0003-source-members-and-awaiter-binds.md)
+- [ADR 0002, start `Async` with `Async.StartImmediateAsTask`](../../adr/0002-start-async-with-startimmediateastask.md)
+
 Related: [cancellation flow](cancellation-flow.md), [namespaces and TFMs](namespaces-and-tfms.md), [summary](summary.md).

@@ -40,7 +40,7 @@ Some result types have a module with the same name and functional helpers. The m
 - `ValueTask.fs` adds `ValueTask.FromCanceled`, `Async.AwaitValueTask`, and `Async.AsValueTask`.
 - `ColdTask.fs` adds `AwaitColdTask` on `AsyncEx` and `Async`, and `Async.AsColdTask`.
 - `CancellableTaskBuilderBase.fs` adds `AsyncEx.AwaitCancellableTask`, `Async.AwaitCancellableTask`, and `Async.AsCancellableTask`.
-- `CancellableValueTask.fs` adds `AsCancellableValueTask`. It uses `Async.StartAsTask`, not `StartImmediateAsTask`.
+- `CancellableValueTask.fs` and `CancellablePoolingValueTask.fs` add `AsCancellableValueTask`. Both use `Async.StartAsTask`, not `StartImmediateAsTask`. See [ADR 0002](../../adr/0002-start-async-with-startimmediateastask.md).
 
 ```mermaid
 flowchart LR

@@ -59,6 +59,7 @@ Read [summary](summary.md), [terminology](terminology.md), and this map at the s
 ## Outside Lode
 
 - [AGENTS.md](../AGENTS.md) - agent instructions and the Lode Coding prompt.
+- [adr/](../adr/) - decision records. A Lode file links the ADRs for its domain when one exists. Decision records live in `adr/`, because `docs/` is the generated fsdocs output and each docs build deletes it.
 - [README.md](../README.md) - user overview and developer setup.
 - [CHANGELOG.md](../CHANGELOG.md) - release notes.
 - [docsSrc/index.md](../docsSrc/index.md) - docs site landing page.

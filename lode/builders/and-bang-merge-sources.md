@@ -18,6 +18,7 @@ F# turns `let! a = x and! b = y` into a call to `MergeSources`.
 - `parallelAsync`: starts both `Async` values with `Async.StartImmediateAsTask` and the ambient `Async.CancellationToken`. `parallelAsyncUsingStartChild` uses `Async.StartChild`. See [AsyncEx and ParallelAsync](asyncex-and-parallelasync.md).
 - `asyncEx` has no `MergeSources`.
 - Use `and!` only for independent operands.
+- In `cancellableTask`, a fault in the left operand propagates without an await of the right result. The right operand keeps running, and the builder does not cancel it.
 
 ```fsharp
 // src/IcedTasks/CancellableTask.fs (CancellableTaskBuilder)
@@ -61,5 +62,7 @@ sequenceDiagram
 ## Tests
 
 The FsCheck property "parallelism" checks the concurrent start. It runs in `testSequencedGroup "MergeSourcesParallel - ..."` blocks, for example in `tests/IcedTasks.Tests/CancellableTaskTests.fs`. See [tests summary](../tests/summary.md).
+
+Decision: [ADR 0005, start both `and!` operands first](../../adr/0005-and-bang-starts-both-operands.md).
 
 Related: [cancellation flow](cancellation-flow.md), [companion modules](companion-modules.md).

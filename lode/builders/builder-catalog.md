@@ -50,4 +50,9 @@ flowchart TD
 
 The decision path above copies the "A short decision path" section of `docsSrc/Explanations/Choosing-a-builder.md`. That file also holds the full feature table.
 
+Decisions:
+
+- [ADR 0001, cold result types are function type aliases](../../adr/0001-function-type-aliases-for-cold-results.md)
+- [ADR 0008, shared builder base classes](../../adr/0008-shared-builder-base-classes.md)
+
 Related: [run and start paths](run-and-start-paths.md), [companion modules](companion-modules.md), [summary](summary.md).

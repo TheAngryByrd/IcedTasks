@@ -23,6 +23,7 @@ module ExpectoTemplate =
 - Each file that tests a cold or cancellable builder defines test builders whose `Run` calls `RunDynamic`. These test the dynamic path in Release.
 - The `*DynamicTests.fs` files test the hot builders on the dynamic path. Their test builders call `base.Run` from a `NoInlining` member, and the file has `#nowarn "3511"`.
 - `ColdTaskTests.fs` explains why the cold test builders call `RunDynamic` directly: a `#nowarn "3511"` would hide static compilation failures of the other tests in the file.
+- The build measures no code coverage. Commit bd902a0 removed it: "all this stuff is inlined and can't generate sane coverage reports".
 
 ```mermaid
 flowchart LR
