@@ -275,10 +275,12 @@ tmp/
 temp/
 .fsdocs
 runtime-scripts/
-docs/
+/docs/
 
 
 # AI LLM stuff
 
 .dotnet-home/
 .dotnet-cli-home/
+# Lode session scraps
+lode/tmp/

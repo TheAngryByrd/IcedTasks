@@ -27,7 +27,13 @@ let failOnEmptyChangelog (latestEntry: Changelog.ChangelogEntry) =
         failwith
             "No changes in CHANGELOG. Please add your changes under a heading specified in https://keepachangelog.com/"
 
-let mkLinkReference (newVersion: SemVerInfo) (changelog: Changelog.Changelog) gitHubRepoUrl =
+let mkLinkReference
+    (newVersion: SemVerInfo)
+    (changelog: Changelog.Changelog)
+    (gitHubRepoUrl: string)
+    =
+    let gitHubRepoUrl = gitHubRepoUrl.TrimEnd('/')
+
     if
         changelog.Entries
         |> List.isEmpty
@@ -230,7 +236,7 @@ let updateChangelog changelogPath (changelog: Fake.Core.Changelog.Changelog) git
     let linkReferenceForUnreleased =
         sprintf
             "[Unreleased]: %s/compare/%s...%s"
-            gitHubRepoUrl
+            (gitHubRepoUrl.TrimEnd('/'))
             (tagFromVersionNumber newVersion.AsString)
             "HEAD"
 

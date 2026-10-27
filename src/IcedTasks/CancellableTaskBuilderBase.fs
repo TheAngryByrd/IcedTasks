@@ -77,9 +77,7 @@ module CancellableTaskBase =
 
         /// <summary>Creates A Computation that returns the result v.</summary>
         ///
-        /// <remarks>A cancellation check is performed when the computation is executed.
-        ///
-        /// The existence of this method permits the use of return in the
+        /// <remarks>The existence of this method permits the use of return in the
         /// cancellableTasks { ... } computation expression syntax.</remarks>
         ///
         /// <param name="value">The value to return from the computation.</param>
@@ -181,9 +179,7 @@ module CancellableTaskBase =
         /// <summary>Creates a CancellableTask that enumerates the sequence seq
         /// on demand and runs body for each element.</summary>
         ///
-        /// <remarks>A cancellation check is performed on each iteration of the loop.
-        ///
-        /// The existence of this method permits the use of for in the
+        /// <remarks>The existence of this method permits the use of for in the
         /// cancellableTask { ... } computation expression syntax.</remarks>
         ///
         /// <param name="sequence">The sequence to enumerate.</param>
@@ -421,9 +417,7 @@ module CancellableTaskBase =
             /// <summary>Creates A CancellableTask that runs computation, and when
             /// computation generates a result T, runs binder res.</summary>
             ///
-            /// <remarks>A cancellation check is performed when the computation is executed.
-            ///
-            /// The existence of this method permits the use of let! in the
+            /// <remarks>The existence of this method permits the use of let! in the
             /// cancellableTask { ... } computation expression syntax.</remarks>
             ///
             /// <param name="getAwaiter">The computation to provide an unbound result.</param>

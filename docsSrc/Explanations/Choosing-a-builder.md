@@ -44,7 +44,7 @@ Related guides:
 | `coldTask` | `unit -> Task<'T>` | netstandard2.0 | Cold | Multiple | Multiple | Explicit | Explicit | Yes | Yes | No |
 | `backgroundColdTask` | `unit -> Task<'T>` | netstandard2.0 | Cold | Multiple | Multiple | Explicit | Explicit | Yes | Yes | No |
 | `cancellableTask` | `CancellationToken -> Task<'T>` | netstandard2.0 | Cold | Multiple | Multiple | Implicit | Implicit | Yes | Yes | Yes |
-| `backgroundCancellableTask` | `CancellationToken -> Task<'T>` | netstandard2.0 | Cold | Multiple | Multiple | Implicit | Implicit | Yes | Yes | Yes |
+| `backgroundCancellableTask` | `CancellationToken -> Task<'T>` | netstandard2.0 | Cold | Multiple | Multiple | Implicit | Implicit | No | Yes | Yes |
 | `cancellableValueTask` | `CancellationToken -> ValueTask<'T>` | netstandard2.0 | Cold | Once per start | Multiple | Implicit | Implicit | Yes | Yes | Yes |
 | `cancellablePoolingValueTask` | `CancellationToken -> ValueTask<'T>` | net6.0+ | Cold | Once per start | Multiple | Implicit | Implicit | Yes | Yes | Yes |
 | `cancelablePVTask` | `CancellationToken -> ValueTask<'T>` | net6.0+ | Cold | Once per start | Multiple | Implicit | Implicit | Yes | Yes | Yes |

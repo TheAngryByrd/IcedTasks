@@ -64,9 +64,7 @@ module TaskBase =
 
         /// <summary>Creates an computation that returns the result v.</summary>
         ///
-        /// <remarks>A cancellation check is performed when the computation is executed.
-        ///
-        /// The existence of this method permits the use of return in the
+        /// <remarks>The existence of this method permits the use of return in the
         /// task { ... } computation expression syntax.</remarks>
         ///
         /// <param name="value">The value to return from the computation.</param>
@@ -195,9 +193,7 @@ module TaskBase =
         /// <summary>Creates a Task that runs computation, and when
         /// computation generates a result T, runs binder res.</summary>
         ///
-        /// <remarks>A cancellation check is performed when the computation is executed.
-        ///
-        /// The existence of this method permits the use of let! in the
+        /// <remarks>The existence of this method permits the use of let! in the
         /// task { ... } computation expression syntax.</remarks>
         ///
         /// <param name="getAwaiter">The computation to provide an unbound result.</param>
@@ -359,9 +355,7 @@ module TaskBase =
         /// <summary>Creates a Task that enumerates the sequence seq
         /// on demand and runs body for each element.</summary>
         ///
-        /// <remarks>A cancellation check is performed on each iteration of the loop.
-        ///
-        /// The existence of this method permits the use of for in the
+        /// <remarks>The existence of this method permits the use of for in the
         /// task { ... } computation expression syntax.</remarks>
         ///
         /// <param name="sequence">The sequence to enumerate.</param>

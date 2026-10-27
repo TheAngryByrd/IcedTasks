@@ -503,9 +503,7 @@ module ColdTasks =
             /// <summary>Creates an ColdTask that runs computation, and when
             /// computation generates a result T, runs binder res.</summary>
             ///
-            /// <remarks>A cancellation check is performed when the computation is executed.
-            ///
-            /// The existence of this method permits the use of let! in the
+            /// <remarks>The existence of this method permits the use of let! in the
             /// coldTask { ... } computation expression syntax.</remarks>
             ///
             /// <param name="getAwaiter">The computation to provide an unbound result.</param>
