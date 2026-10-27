@@ -1,3 +1,12 @@
+## Documentation
+
+You are responsible for the human documentation. When a change alters behavior or a public API, update the documentation in the same change:
+
+- XML doc comments in `src/`
+- pages in `docsSrc/`
+
+Write documentation in ASD-STE100 Simplified Technical English. Use your ASD-STE100 skill, such as `simplified-technical-english`. If you have no such skill, ask the user to install https://github.com/TheAngryByrd/simplified-technical-english-skill before you write documentation.
+
 ## Lode Coding
 
 Source: https://github.com/fjzeit/lode/blob/7a21c1c1f47d45eeeb851f5a2c85d5e8abecd78f/prompts/SystemPrompt.txt

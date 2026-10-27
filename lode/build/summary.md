@@ -26,7 +26,9 @@ flowchart LR
 
 ## Toolchain
 
-- `global.json` pins the SDK version with `rollForward: latestMinor`.
+- `global.json` sets the SDK version to `<major>.0.100`, for example `8.0.100`, `9.0.100`, and `10.0.100`. A `.100` SDK is the first stable release of a major version.
+- `"rollForward": "latestMinor"` selects the newest installed SDK with the same major version. SDKs in one major version rarely have breaking changes. `latestMajor` is not used, because a new major version, such as 10 to 11, can have breaking changes.
+- Other docs name `global.json` and do not copy its version.
 - CI installs the 8.x, 9.x, and 10.x SDKs, because the tests target `net10.0;net9.0;net8.0`.
 - `.config/dotnet-tools.json` pins `fantomas`, `fsdocs-tool`, and `fsharp-analyzers`. The root `Directory.Build.targets` runs `dotnet tool restore` before a restore when the tool manifest changed. `src/Directory.Build.targets` does not import the root file, so a restore of `src/IcedTasks` alone does not restore the tools.
 - `.devcontainer/devcontainer.json` installs .NET 10.0, 9.0, and 8.0 and runs `dotnet tool restore && dotnet restore`.
