@@ -48,6 +48,7 @@ Read [summary](summary.md), [terminology](terminology.md), and this map at the s
 ## plans
 
 - [plans/open-enhancements.md](plans/open-enhancements.md) - open enhancement issues #3 and #4.
+- [plans/recursion-and-tail-calls.md](plans/recursion-and-tail-calls.md) - trampoline and tail-call design for issue #3 (branch `trampoline`).
 
 ## Out of scope
 
@@ -83,5 +84,5 @@ flowchart TD
     map --> tests["tests/ (3)"]
     map --> docs["docs/ (3)"]
     map --> bench["benchmarks/ (1)"]
-    map --> plans["plans/ (1)"]
+    map --> plans["plans/ (2)"]
 ```
