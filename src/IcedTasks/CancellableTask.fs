@@ -55,18 +55,18 @@ module CancellableTasks =
             let initialResumptionFunc =
                 CancellableTaskBaseResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm))
 
-            let bounceAllowed = Trampoline.Current.IsAwaited()
+            let newResumptionInfo () =
+                let bounceAllowed = Trampoline.Current.IsAwaited()
 
-            let maybeBounce state =
-                if
-                    bounceAllowed
-                    && Trampoline.Current.ShouldBounce
-                then
-                    Bounce state
-                else
-                    Immediate state
+                let maybeBounce state =
+                    if
+                        bounceAllowed
+                        && Trampoline.Current.ShouldBounce
+                    then
+                        Bounce state
+                    else
+                        Immediate state
 
-            let resumptionInfo =
                 let initialState = maybeBounce Running
 
                 { new CancellableTaskBaseResumptionDynamicInfo<'T, _>(initialResumptionFunc,
@@ -130,13 +130,12 @@ module CancellableTasks =
                 }
 
             fun (ct) ->
-                let mutable sm = CancellableTaskBaseStateMachine<'T, _>()
-
                 if ct.IsCancellationRequested then
                     Task.FromCanceled<_>(ct)
                 else
+                    let mutable sm = CancellableTaskBaseStateMachine<'T, _>()
                     sm.Data.CancellationToken <- ct
-                    sm.ResumptionDynamicInfo <- resumptionInfo
+                    sm.ResumptionDynamicInfo <- newResumptionInfo ()
                     sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                     sm.Data.MethodBuilder.Start(&sm)
                     sm.Data.MethodBuilder.Task
@@ -369,6 +368,7 @@ module CancellableTasks =
                             isNull SynchronizationContext.Current
                             && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
                         then
+                            let sm = sm
 
                             fun (ct) ->
                                 if ct.IsCancellationRequested then

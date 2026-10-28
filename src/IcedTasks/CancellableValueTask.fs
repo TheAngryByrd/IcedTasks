@@ -53,23 +53,21 @@ module CancellableValueTasks =
             (code: CancellableTaskBaseCode<'T, 'T, _>)
             : CancellableValueTask<'T> =
 
-            let mutable sm = CancellableTaskBaseStateMachine<'T, _>()
-
             let initialResumptionFunc =
                 CancellableTaskBaseResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm))
 
-            let bounceAllowed = Trampoline.Current.IsAwaited()
+            let newResumptionInfo () =
+                let bounceAllowed = Trampoline.Current.IsAwaited()
 
-            let maybeBounce state =
-                if
-                    bounceAllowed
-                    && Trampoline.Current.ShouldBounce
-                then
-                    Bounce state
-                else
-                    Immediate state
+                let maybeBounce state =
+                    if
+                        bounceAllowed
+                        && Trampoline.Current.ShouldBounce
+                    then
+                        Bounce state
+                    else
+                        Immediate state
 
-            let resumptionInfo =
                 let initialState = maybeBounce Running
 
                 { new CancellableTaskBaseResumptionDynamicInfo<'T, _>(initialResumptionFunc,
@@ -136,8 +134,9 @@ module CancellableValueTasks =
                 if ct.IsCancellationRequested then
                     ValueTask.FromCanceled<_>(ct)
                 else
+                    let mutable sm = CancellableTaskBaseStateMachine<'T, _>()
                     sm.Data.CancellationToken <- ct
-                    sm.ResumptionDynamicInfo <- resumptionInfo
+                    sm.ResumptionDynamicInfo <- newResumptionInfo ()
                     sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
                     sm.Data.MethodBuilder.Start(&sm)
                     sm.Data.MethodBuilder.Task

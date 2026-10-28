@@ -50,14 +50,14 @@ Use `and!` only when each operand can start without the result of the others.
 
 | Builder family | What `and!` combines | Start behavior |
 |---|---|---|
-| `cancellableTask`, `backgroundCancellableTask` | Cancellable operations and supported awaitables | Gets the ambient token, starts token-dependent operands with that token, then awaits results. |
+| `cancellableTask` | Cancellable operations and supported awaitables | Gets the ambient token, starts token-dependent operands with that token, then awaits results. |
 | `cancellableValueTask`, `cancellablePoolingValueTask` | Cancellable ValueTask operations and supported awaitables | Same token-flow model as `cancellableTask`, returning `ValueTask` for each start. |
 | `coldTask`, `backgroundColdTask` | Cold task operations and supported awaitables | Invokes the cold operands before awaiting either result. |
 | `task`, `backgroundTask`, `taskUnit`, `backgroundTaskUnit` | Task-like awaitables | Combines awaitables in the task builder. The operands are task-like values, so any work represented by them may already be started. |
 | `valueTask`, `poolingValueTask`, `valueTaskUnit` | ValueTask-like awaitables | Combines awaitables in the value-task builder. Treat each `ValueTask` result as single-consumption. |
 | `parallelAsync` | `Async<'T>` values | Explicitly starts `Async` values in parallel. The default `parallelAsync` uses `Async.StartImmediateAsTask`. |
 
-`asyncEx` does not provide `and!`. Use `parallelAsync` when you specifically want `Async<'T>` operations to start in parallel with applicative syntax.
+`backgroundCancellableTask` and `asyncEx` do not provide `and!`. Use `parallelAsync` when you specifically want `Async<'T>` operations to start in parallel with applicative syntax.
 
 ## Operand mixing
 

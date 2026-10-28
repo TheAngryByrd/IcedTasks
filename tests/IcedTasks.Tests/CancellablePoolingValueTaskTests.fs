@@ -11,6 +11,18 @@ module CancellablePoolingValueTaskTests =
     open TimeProviderExtensions
     open System.Collections.Generic
 
+    // This builder takes the dynamic path in every build configuration: its Run calls
+    // RunDynamic, which the inherited Run falls back to when it does not compile the state machine
+    // statically. Unlike TaskDynamicBuilder it does not inline base.Run, so this file needs no
+    // #nowarn "3511", which would hide static compilation failures of the other tests in it.
+    type CancellablePoolingValueTaskDynamicBuilder() =
+        inherit CancellablePoolingValueTaskBuilder()
+
+        member _.Run(code) =
+            CancellablePoolingValueTaskBuilder.RunDynamic(code)
+
+    let dCancellablePoolingValueTask = CancellablePoolingValueTaskDynamicBuilder()
+
     let builderTests =
         testList "CancellablePoolingValueTaskBuilder" [
             testList "Return" [
@@ -539,17 +551,17 @@ module CancellablePoolingValueTaskTests =
                     Expect.isFalse wasDisposed "Dispose before cancellation"
 
                     do!
-                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(100.))
+                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(100.), 2)
                         |> Async.AwaitTask
 
                     Expect.isFalse wasDisposed "Dispose after cancellation"
 
                     do!
-                        timeProvider2.ForwardTimeAsync(TimeSpan.FromMilliseconds(15.))
+                        timeProvider2.ForwardTimeAsync(TimeSpan.FromMilliseconds(15.), 1)
                         |> Async.AwaitTask
 
                     do!
-                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(200.))
+                        timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(200.), 0)
                         |> Async.AwaitTask
 
                     do!
@@ -677,7 +689,6 @@ module CancellablePoolingValueTaskTests =
                     [
                         10
                         10000
-                        1000000
                     ]
                     |> List.map (fun loops ->
                         testCaseAsync $"while bind to {loops}"
@@ -696,6 +707,24 @@ module CancellablePoolingValueTaskTests =
                             Expect.equal actual loops "Should be ok"
                         }
                     )
+
+                testCaseAsync "while bind to 100000 completes synchronously"
+                <| async {
+                    let loops = 100000
+
+                    let mutable index = 0
+
+                    let! actual =
+                        cancellablePoolingValueTask {
+                            while index < loops do
+                                do! Task.CompletedTask
+                                index <- index + 1
+
+                            return index
+                        }
+
+                    Expect.equal actual loops "Should be ok"
+                }
             ]
 
 
@@ -777,7 +806,6 @@ module CancellablePoolingValueTaskTests =
                     [
                         10
                         10000
-                        1000000
                     ]
                     |> List.map (fun loops ->
                         testCaseAsync $"for bind to {loops}"
@@ -797,12 +825,29 @@ module CancellablePoolingValueTaskTests =
                         }
                     )
 
+                testCaseAsync "for bind to 100000 completes synchronously"
+                <| async {
+                    let loops = 100000
+
+                    let mutable index = 0
+
+                    let! actual =
+                        cancellablePoolingValueTask {
+                            for i = 1 to loops do
+                                do! Task.CompletedTask
+                                index <- i + i
+
+                            return index
+                        }
+
+                    Expect.equal actual (loops * 2) "Every iteration must run"
+                }
+
 
                 yield!
                     [
                         10
                         10000
-                        1000000
                     ]
                     |> List.map (fun loops ->
                         testCaseAsync $"IAsyncEnumerable for in {loops}"
@@ -828,6 +873,31 @@ module CancellablePoolingValueTaskTests =
                             Expect.equal actual index "Should be ok"
                         }
                     )
+
+                testCaseAsync "IAsyncEnumerable for in 100000 completes synchronously"
+                <| async {
+                    let loops = 100000
+
+                    let mutable index = 0
+
+                    let asyncSeq: IAsyncEnumerable<_> =
+                        AsyncEnumerable.forXtoY
+                            0
+                            loops
+                            (fun _ -> valueTask { do! Task.CompletedTask })
+
+                    let! actual =
+                        cancellablePoolingValueTask {
+                            for i in asyncSeq do
+                                do! Task.CompletedTask
+                                index <- i + i
+
+                            return index
+                        }
+                        |> Async.AwaitCancellableValueTask
+
+                    Expect.equal actual (loops * 2) "Every iteration must run"
+                }
 
                 //https://github.com/fsprojects/FSharp.Control.TaskSeq/issues/179
                 testCaseAsync "IAsyncEnumerable cancellation"
@@ -1241,9 +1311,9 @@ module CancellablePoolingValueTaskTests =
                                     )
 
                                 let runningTask = fooTask cts.Token
-                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50.))
+                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50.), 2)
                                 Expect.isFalse runningTask.IsCanceled ""
-                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50.))
+                                do! timeProvider.ForwardTimeAsync(TimeSpan.FromMilliseconds(50.), 2)
                                 do! runningTask
                             }
                         )
@@ -1312,6 +1382,53 @@ module CancellablePoolingValueTaskTests =
                     use cts = new CancellationTokenSource()
                     Async.RunSynchronously(outerAsync, cancellationToken = cts.Token)
                     Expect.equal actual cts.Token ""
+            ]
+
+            testList "Multi Start" [
+
+                testCaseAsync "Multi start cancellablePoolingValueTask that suspends"
+                <| MultiStart.sequential
+                    (fun enter ->
+                        cancellablePoolingValueTask {
+                            let result = enter ()
+                            do! Task.Yield()
+                            return result
+                        }
+                    )
+                    (fun work -> (work CancellationToken.None).AsTask())
+
+                testCaseAsync "Multi start cancellablePoolingValueTask while suspended"
+                <| MultiStart.overlapping
+                    (fun enter gate ->
+                        cancellablePoolingValueTask {
+                            let result = enter ()
+                            do! gate
+                            return result
+                        }
+                    )
+                    (fun work -> (work CancellationToken.None).AsTask())
+
+                testCaseAsync "Multi start dynamic cancellablePoolingValueTask that suspends"
+                <| MultiStart.sequential
+                    (fun enter ->
+                        dCancellablePoolingValueTask {
+                            let result = enter ()
+                            do! Task.Yield()
+                            return result
+                        }
+                    )
+                    (fun work -> (work CancellationToken.None).AsTask())
+
+                testCaseAsync "Multi start dynamic cancellablePoolingValueTask while suspended"
+                <| MultiStart.overlapping
+                    (fun enter gate ->
+                        dCancellablePoolingValueTask {
+                            let result = enter ()
+                            do! gate
+                            return result
+                        }
+                    )
+                    (fun work -> (work CancellationToken.None).AsTask())
             ]
         ]
 

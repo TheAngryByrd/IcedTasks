@@ -254,22 +254,22 @@ IcedTasks | [![NuGet Badge](https://buildstats.info/nuget/IcedTasks)](https://ww
 
 ### Developing
 
-Make sure the following **requirements** are installed on your system:
+Install one of these:
 
-- [dotnet SDK](https://www.microsoft.com/net/download/core) 6.0 & 8.0 
-
-or
-
-- [VSCode Dev Container](https://code.visualstudio.com/docs/remote/containers)
+- The [.NET SDK](https://dotnet.microsoft.com/download) version that `global.json` specifies. The test projects also run on .NET 8.0 and .NET 9.0, so install those SDKs or runtimes too. CI installs the 8.x, 9.x, and 10.x SDKs.
+- [VS Code Dev Containers](https://code.visualstudio.com/docs/devcontainers/containers). The dev container installs .NET 10.0, 9.0, and 8.0.
 
 ---
 
 ### Environment Variables
 
-- `CONFIGURATION` will set the [configuration](https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-build?tabs=netcore2x#options) of the dotnet commands.  If not set, it will default to Release.
-  - `CONFIGURATION=Debug ./build.sh` will result in `-c` additions to commands such as in `dotnet build -c Debug`
-- `GITHUB_TOKEN` will be used to upload release notes and Nuget packages to GitHub.
-  - Be sure to set this before releasing
+- `CONFIGURATION` sets the [configuration](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-build#options) of the dotnet commands. The default is `Debug`. When the `Publish` target runs, the default is `Release`.
+  - `CONFIGURATION=Release ./build.sh` adds `-c Release` to commands such as `dotnet build`.
+- `CI` makes the build run in CI mode. Restore retries on failure, `CheckFormatCode` only checks the format, and `PublishToNuGet` and `GitHubRelease` can run.
+- `RELEASE_VERSION` sets the version for the `Release` target. See [Releasing](#releasing).
+- `NUGET_TOKEN` is the API key that `PublishToNuGet` uses. The publish workflow gets a short-lived key through [NuGet trusted publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing).
+- `GITHUB_TOKEN` is the token that `GitHubRelease` uses to create the GitHub release and upload the NuGet packages.
+
 ---
 
 ### Building
@@ -279,73 +279,43 @@ or
 $ ./build.sh  <optional buildtarget>// on unix
 ```
 
-The bin of your library should look similar to:
-
-```bash
-$ tree src/MyCoolNewLib/bin/
-src/MyCoolNewLib/bin/
-└── Debug
-    └── net50
-        ├── MyCoolNewLib.deps.json
-        ├── MyCoolNewLib.dll
-        ├── MyCoolNewLib.pdb
-        └── MyCoolNewLib.xml
-
-```
+The default target is `DotnetPack`. It runs `Clean`, `DotnetRestore`, `CheckFormatCode`, `DotnetBuild`, `DotnetTest`, and `DotnetPack`. Off CI, `CheckFormatCode` formats the source files in place. The build writes the library to `src/IcedTasks/bin/<configuration>/<target framework>/IcedTasks.dll` for each target framework, and the packages to `dist/`.
 
 ---
 
 ### Build Targets
 
-- `Clean` - Cleans artifact and temp directories.
-- `DotnetRestore` - Runs [dotnet restore](https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-restore?tabs=netcore2x) on the [solution file](https://docs.microsoft.com/en-us/visualstudio/extensibility/internals/solution-dot-sln-file?view=vs-2019).
-- [`DotnetBuild`](#Building) - Runs [dotnet build](https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-build?tabs=netcore2x) on the [solution file](https://docs.microsoft.com/en-us/visualstudio/extensibility/internals/solution-dot-sln-file?view=vs-2019).
-- `DotnetTest` - Runs [dotnet test](https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-test?tabs=netcore21) on the [solution file](https://docs.microsoft.com/en-us/visualstudio/extensibility/internals/solution-dot-sln-file?view=vs-2019).
-- `GenerateCoverageReport` - Code coverage is run during `DotnetTest` and this generates a report via [ReportGenerator](https://github.com/danielpalme/ReportGenerator).
-- `WatchTests` - Runs [dotnet watch](https://docs.microsoft.com/en-us/aspnet/core/tutorials/dotnet-watch?view=aspnetcore-3.0) with the test projects. Useful for rapid feedback loops.
-- `GenerateAssemblyInfo` - Generates [AssemblyInfo](https://docs.microsoft.com/en-us/dotnet/api/microsoft.visualbasic.applicationservices.assemblyinfo?view=netframework-4.8) for libraries.
-- `DotnetPack` - Runs [dotnet pack](https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-pack). This includes running [Source Link](https://github.com/dotnet/sourcelink).
-- `SourceLinkTest` - Runs a Source Link test tool to verify Source Links were properly generated.
-- `PublishToNuGet` - Publishes the NuGet packages generated in `DotnetPack` to NuGet via [paket push](https://fsprojects.github.io/Paket/paket-push.html).
-- `GitRelease` - Creates a commit message with the [Release Notes](https://fake.build/apidocs/v5/fake-core-releasenotes.html) and a git tag via the version in the `Release Notes`.
-- `GitHubRelease` - Publishes a [GitHub Release](https://help.github.com/en/articles/creating-releases) with the Release Notes and any NuGet packages.
-- `FormatCode` - Runs [Fantomas](https://github.com/fsprojects/fantomas) on the solution file.
-- `BuildDocs` - Generates Documentation from `docsSrc` and the [XML Documentation Comments](https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/xmldoc/) from your libraries in `src`.
-- `WatchDocs` - Generates documentation and starts a webserver locally.  It will rebuild and hot reload if it detects any changes made to `docsSrc` files, libraries in `src`, or the `docsTool` itself.
-- `ReleaseDocs` - Will stage, commit, and push docs generated in the `BuildDocs` target.
-- [`Release`](#Releasing) - Task that runs all release type tasks such as `PublishToNuGet`, `GitRelease`, `ReleaseDocs`, and `GitHubRelease`. Make sure to read [Releasing](#Releasing) to setup your environment correctly for releases.
+- `Clean` - Cleans the `bin`, `temp`, and `dist` directories, and the `bin` and `obj` directories of the source and test projects.
+- `DotnetRestore` - Runs [dotnet restore](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-restore) on the solution file.
+- `UpdateChangelog` - Moves the `Unreleased` changes in `CHANGELOG.md` into a new version entry. `Release` uses it.
+- `CheckFormatCode` - On CI, runs [Fantomas](https://github.com/fsprojects/fantomas) with `--check` and fails if a file needs formatting. Locally, formats the code.
+- [`DotnetBuild`](#building) - Runs [dotnet build](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-build) on the solution file.
+- `FSharpAnalyzers` - Runs the F# analyzers from `packages/analyzers` on the source projects. The build does not create that directory. The analyzers also run after each build of `src`, and their warnings do not fail the build.
+- `DotnetTest` - Runs [dotnet test](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-test) on the solution file.
+- `WatchTests` - Runs [dotnet watch](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-watch) test on each test project.
+- `GenerateAssemblyInfo` - Generates `AssemblyInfo.fs` for the source projects.
+- `DotnetPack` - Runs [dotnet pack](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-pack) and writes the packages to `dist/`.
+- `PublishToNuGet` - Pushes the packages in `dist/` to NuGet with `dotnet nuget push`. It runs only on CI.
+- `GitRelease` - Commits `CHANGELOG.md` and `AssemblyInfo.fs` with the release notes in the commit body, pushes the commit, and pushes a git tag for the version. It runs only on the `master` branch.
+- `GitHubRelease` - Publishes a [GitHub Release](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases) with the release notes and the NuGet packages. It runs only on CI.
+- `FormatCode` - Runs [Fantomas](https://github.com/fsprojects/fantomas) on all F# files.
+- `BuildDocs` - Generates the documentation from `docsSrc` and the [XML documentation comments](https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/xml-documentation) in `src`. The documentation pages reference the `Release` build, so set `CONFIGURATION=Release`.
+- `CleanDocsCache` - Cleans the fsdocs cache. `BuildDocs` runs it first.
+- `WatchDocs` - Generates the documentation and starts a local web server. It rebuilds when files in `docsSrc` or the projects in `src` change.
+- [`Release`](#releasing) - Runs `UpdateChangelog`, `GenerateAssemblyInfo`, and `GitRelease`. Use it on a local machine.
+- `Publish` - Runs the default target chain, `GenerateAssemblyInfo`, `PublishToNuGet`, and `GitHubRelease`. The publish workflow runs it on CI.
 
 ---
 
 ### Releasing
 
-- [Start a git repo with a remote](https://help.github.com/articles/adding-an-existing-project-to-github-using-the-command-line/)
+A release has two steps. A maintainer runs the `Release` target on a local machine. The pushed tag then starts the publish workflow, which runs the `Publish` target on CI.
 
-```sh
-git add .
-git commit -m "Scaffold"
-git remote add origin https://github.com/user/MyCoolNewLib.git
-git push -u origin master
-```
+1. Update `CHANGELOG.md`. Add an "Unreleased" section with the release notes for this version, in [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
-- [Create your NuGeT API key](https://docs.microsoft.com/en-us/nuget/nuget-org/publish-a-package#create-api-keys)
-  - [Add your NuGet API key to paket](https://fsprojects.github.io/Paket/paket-config.html#Adding-a-NuGet-API-key)
+NOTE: Add a link to the pull request next to each release note. The `Release` target adds the new notes to the body of the git commit. GitHub then shows on the pull request that a commit referenced it, for example ["added a commit that referenced this pull request"](https://github.com/TheAngryByrd/MiniScaffold/pull/179#ref-commit-837ad59). The build script writes the commit message "Bump version to x.y.z". A reader of a pull request can then see which version released the change. A reader of the `CHANGELOG` can find the discussion behind each change.
 
-  ```sh
-  paket config add-token "https://www.nuget.org" 4003d786-cc37-4004-bfdf-c4f3e8ef9b3a
-  ```
-
-  - or set the environment variable `NUGET_TOKEN` to your key
-
-- [Create a GitHub OAuth Token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/)
-  - You can then set the environment variable `GITHUB_TOKEN` to upload release notes and artifacts to github
-  - Otherwise it will fallback to username/password
-
-- Then update the `CHANGELOG.md` with an "Unreleased" section containing release notes for this version, in [KeepAChangelog](https://keepachangelog.com/en/1.1.0/) format.
-
-NOTE: Its highly recommend to add a link to the Pull Request next to the release note that it affects. The reason for this is when the `RELEASE` target is run, it will add these new notes into the body of git commit. GitHub will notice the links and will update the Pull Request with what commit referenced it saying ["added a commit that referenced this pull request"](https://github.com/TheAngryByrd/MiniScaffold/pull/179#ref-commit-837ad59). Since the build script automates the commit message, it will say "Bump Version to x.y.z". The benefit of this is when users goto a Pull Request, it will be clear when and which version those code changes released. Also when reading the `CHANGELOG`, if someone is curious about how or why those changes were made, they can easily discover the work and discussions.
-
-Here's an example of adding an "Unreleased" section to a `CHANGELOG.md` with a `0.1.0` section already released.
+This example adds an "Unreleased" section to a `CHANGELOG.md` that already has a released `0.1.0` section:
 
 ```markdown
 ## [Unreleased]
@@ -362,18 +332,15 @@ First release
 ### Added
 - This release already has lots of features
 
-[Unreleased]: https://github.com/user/MyCoolNewLib.git/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/user/MyCoolNewLib.git/releases/tag/v0.1.0
+[Unreleased]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/TheAngryByrd/IcedTasks/releases/tag/v0.1.0
 ```
 
-- You can then use the `Release` target, specifying the version number either in the `RELEASE_VERSION` environment
-  variable, or else as a parameter after the target name.  This will:
-  - update `CHANGELOG.md`, moving changes from the `Unreleased` section into a new `0.2.0` section
-    - if there were any prerelease versions of 0.2.0 in the changelog, it will also collect their changes into the final 0.2.0 entry
-  - make a commit bumping the version:  `Bump version to 0.2.0` and adds the new changelog section to the commit's body
-  - publish the package to NuGet
-  - push a git tag
-  - create a GitHub release for that git tag
+2. On the `master` branch, run the `Release` target. Give the version in the `RELEASE_VERSION` environment variable or as a parameter after the target name. The target does these steps:
+  - It updates `CHANGELOG.md` and moves the changes from the `Unreleased` section into a new `0.2.0` section.
+    - If the changelog has prerelease versions of 0.2.0, it also collects their changes into the final 0.2.0 entry.
+  - It makes the commit `Bump version to 0.2.0` with the new changelog section in the commit body.
+  - It pushes the commit and the git tag `v0.2.0`.
 
 macOS/Linux Parameter:
 
@@ -386,3 +353,5 @@ macOS/Linux Environment Variable:
 ```sh
 RELEASE_VERSION=0.2.0 ./build.sh Release
 ```
+
+3. The tag push starts `.github/workflows/publish.yml`. The workflow gets a NuGet API key through [NuGet trusted publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing) and runs `./build.sh Publish`. The `Publish` target builds, tests, and packs the library, publishes the packages to NuGet, and creates a GitHub release for the tag.
