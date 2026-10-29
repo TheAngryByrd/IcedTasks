@@ -23,9 +23,10 @@ Status: steps 1 to 4 done (local, not pushed). Draft PR [TheAngryByrd/IcedTasks#
 
 ## Current mechanism (`src/IcedTasks/Trampoline.fs`)
 
-- `Trampoline` is per thread (`[<ThreadStatic>]` field `current`). It is an `ICriticalNotifyCompletion` over a `Queue<Action>`. A bounce is `ResumableCode.Yield` plus `MethodBuilder.AwaitOnCompleted(Trampoline.Current.Ref)`, which enqueues the state machine.
+- `Trampoline` is per thread (`[<ThreadStatic>]` field `current`). It is an `ICriticalNotifyCompletion` over a `Queue<Action>`. A bounce is `ResumableCode.Yield` plus `MethodBuilder.AwaitOnCompleted(&trampoline)` on a stack local (`bounceWhen` in `ColdTask.fs` and `CancellableTaskBuilderBase.fs`), which enqueues the state machine without an allocation.
 - Owner: the outermost start on a thread (`RunAsOwner`) sets `running`, runs the start, and drains the queue in `finally`. A start while the trampoline runs (`Run`) does not drain. So bounced work always unwinds to the owner's shallow stack before it runs again.
-- `ShouldBounce` is `running && not HasSufficientStack`. With no owner further up there is nowhere to unwind to, so it never bounces then. The state machines check it after their first `IsAwaited()` and again before `SetResult` and `SetException`.
+- `ShouldBounce` is `running && not HasSufficientStack`. With no owner further up there is nowhere to unwind to, so it never bounces then. The state machines check it after their first `IsAwaited()` (`yieldOnBindLimit`).
+- `ShouldBounceCompletion` is the check before `SetResult` and `SetException` (`yieldOnCompletionLimit`, `maybeBounceCompletion`). It is `ShouldBounce`, except on netstandard2.0, where it is also true when no trampoline runs. Reason: .NET Framework runs continuations inline with no stack guard, so a completion chain after a real async resumption can overflow. The bounce runs at once on the same thread and makes the trampoline the owner of the rest of the chain. Resumable Async2 counts depth for this (`completeCounted`, `MaxDepth`); IcedTasks uses the stack check instead, so it does not bounce where the stack is sufficient.
 - Each cold builder's `Run` and `RunDynamic` wrap the start function with `Trampoline.wrap`. The result is a `TrampolinedStart<'Arg, 'Result>`, a sealed subclass of `FSharpFunc<'Arg, 'Result>`, so `ColdTask<'T>` and `CancellableTask<'T>` stay function aliases ([ADR 0001](../../adr/0001-function-type-aliases-for-cold-results.md)). `'Arg` is `unit` or `CancellationToken`. `'Result` is `Task<'T>` or `ValueTask<'T>`.
 - `Source` members start a bound function with `Trampoline.bind`. It type-tests for `INestedStart<'Arg, 'Result>` and calls `StartNested`. Any other function is called as it is.
 - `StartNested` sets the `primed` flag (only when `CanLeaveStack`), calls the start, and clears the flag in `finally`. It owns the trampoline when none runs. The state machine reads and clears it with `IsAwaited()` as its first action, so no user code runs between set and read. Only a primed start can bounce.
@@ -104,7 +105,7 @@ type INestedStart<'Arg, 'Result> =
 
 ### 2. netstandard2.0 on .NET Framework
 
-.NET Framework runs continuations inline with no stack guard. A completion chain there can overflow even when every start bounced. Planned: bounce completions too and limit the chain with a `Depth` counter (inc/dec around nested starts and completions), as in resumable Async2 (`ShouldBounceCompletion`). Not done; the tests run only on .NET 8 to 10.
+Done with `ShouldBounceCompletion` (see the current mechanism). Not tested on .NET Framework: the test projects run only on .NET 8 to 10, where the runtime guards inline continuations.
 
 ### 3. Tail calls
 

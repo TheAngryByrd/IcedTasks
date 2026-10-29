@@ -54,25 +54,31 @@ module CancellableTaskBase =
     and CancellableTaskBaseCode<'TOverall, 'T, 'Builder> =
         ResumableCode<CancellableTaskBaseStateMachineData<'TOverall, 'Builder>, 'T>
 
-    let inline yieldOnBindLimit () =
+    /// Bounces when `shouldBounce` says so. The trampoline is passed by reference, so a bounce does not
+    /// allocate.
+    let inline bounceWhen ([<InlineIfLambda>] shouldBounce: Trampoline -> bool) =
         CancellableTaskBaseCode(fun sm ->
-            if Trampoline.Current.ShouldBounce then
+            let mutable __stack_trampoline = Trampoline.Current
+
+            if shouldBounce __stack_trampoline then
                 let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
 
                 if __stack_yield_fin then
                     Trampoline.Resumed()
 
                 if not __stack_yield_fin then
-                    MethodBuilder.AwaitOnCompleted(
-                        &sm.Data.MethodBuilder,
-                        Trampoline.Current.Ref,
-                        &sm
-                    )
+                    MethodBuilder.AwaitOnCompleted(&sm.Data.MethodBuilder, &__stack_trampoline, &sm)
 
                 __stack_yield_fin
             else
                 true
         )
+
+    let inline yieldOnBindLimit () =
+        bounceWhen (fun trampoline -> trampoline.ShouldBounce)
+
+    let inline yieldOnCompletionLimit () =
+        bounceWhen (fun trampoline -> trampoline.ShouldBounceCompletion)
 
     /// <summary>
     /// Contains methods to build TaskLikes using the F# computation expression syntax

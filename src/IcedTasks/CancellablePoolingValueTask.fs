@@ -72,6 +72,15 @@ module CancellablePoolingValueTasks =
 
                 let started = ref false
 
+                let maybeBounceCompletion state =
+                    if
+                        bounceAllowed
+                        && Trampoline.Current.ShouldBounceCompletion
+                    then
+                        Bounce state
+                    else
+                        Immediate state
+
                 let initialState = maybeBounce Running
 
                 { new CancellableTaskBaseResumptionDynamicInfo<'T, _>(initialResumptionFunc,
@@ -106,7 +115,7 @@ module CancellablePoolingValueTasks =
 
                                     try
                                         if info.ResumptionFunc.Invoke(&sm) then
-                                            setState (maybeBounce SetResult)
+                                            setState (maybeBounceCompletion SetResult)
                                         else
                                             keepGoing <-
                                                 match getCurrent () with
@@ -114,7 +123,7 @@ module CancellablePoolingValueTasks =
                                                 | _ -> false
                                     with exn ->
                                         setState (
-                                            maybeBounce
+                                            maybeBounceCompletion
                                             <| SetException(ExceptionCache.CaptureOrRetrieve exn)
                                         )
 
@@ -132,11 +141,8 @@ module CancellablePoolingValueTasks =
                                 | Bounce next ->
                                     setState next
 
-                                    MethodBuilder.AwaitOnCompleted(
-                                        &sm.Data.MethodBuilder,
-                                        Trampoline.Current.Ref,
-                                        &sm
-                                    )
+                                    let mutable trampoline = Trampoline.Current
+                                    MethodBuilder.AwaitOnCompleted(&sm.Data.MethodBuilder, &trampoline, &sm)
                                 | SetResult ->
                                     Trampoline.Current.Trust()
                                     MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
@@ -187,7 +193,7 @@ module CancellablePoolingValueTasks =
                                 if __stack_code_fin then
                                     let __stack_go2 =
                                         noBounce
-                                        || yieldOnBindLimit().Invoke(&sm)
+                                        || yieldOnCompletionLimit().Invoke(&sm)
 
                                     if __stack_go2 then
                                         Trampoline.Current.Trust()
@@ -203,7 +209,7 @@ module CancellablePoolingValueTasks =
                             | ValueSome error ->
                                 let __stack_go2 =
                                     noBounce
-                                    || yieldOnBindLimit().Invoke(&sm)
+                                    || yieldOnCompletionLimit().Invoke(&sm)
 
                                 if __stack_go2 then
                                     Trampoline.Current.Trust()

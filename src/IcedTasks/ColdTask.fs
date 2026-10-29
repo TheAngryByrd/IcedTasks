@@ -55,21 +55,31 @@ module ColdTasks =
     /// A special compiler-recognised delegate type for specifying blocks of ColdTask code with access to the state machine
     and ColdTaskCode<'TOverall, 'T> = ResumableCode<ColdTaskStateMachineData<'TOverall>, 'T>
 
-    let inline yieldOnBindLimit () =
+    /// Bounces when `shouldBounce` says so. The trampoline is passed by reference, so a bounce does not
+    /// allocate.
+    let inline bounceWhen ([<InlineIfLambda>] shouldBounce: Trampoline -> bool) =
         ColdTaskCode(fun sm ->
-            if Trampoline.Current.ShouldBounce then
+            let mutable __stack_trampoline = Trampoline.Current
+
+            if shouldBounce __stack_trampoline then
                 let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
 
                 if __stack_yield_fin then
                     Trampoline.Resumed()
 
                 if not __stack_yield_fin then
-                    sm.Data.MethodBuilder.AwaitOnCompleted(Trampoline.Current.Ref, &sm)
+                    sm.Data.MethodBuilder.AwaitOnCompleted(&__stack_trampoline, &sm)
 
                 __stack_yield_fin
             else
                 true
         )
+
+    let inline yieldOnBindLimit () =
+        bounceWhen (fun trampoline -> trampoline.ShouldBounce)
+
+    let inline yieldOnCompletionLimit () =
+        bounceWhen (fun trampoline -> trampoline.ShouldBounceCompletion)
 
     /// Contains the coldTask computation expression builder.
     type ColdTaskBuilderBase() =
@@ -329,6 +339,15 @@ module ColdTasks =
 
                 let started = ref false
 
+                let maybeBounceCompletion state =
+                    if
+                        bounceAllowed
+                        && Trampoline.Current.ShouldBounceCompletion
+                    then
+                        Bounce state
+                    else
+                        Immediate state
+
                 let initialState = maybeBounce Running
 
                 { new ColdTaskResumptionDynamicInfo<'T>(initialResumptionFunc,
@@ -363,7 +382,7 @@ module ColdTasks =
 
                                     try
                                         if info.ResumptionFunc.Invoke(&sm) then
-                                            setState (maybeBounce SetResult)
+                                            setState (maybeBounceCompletion SetResult)
                                         else
                                             keepGoing <-
                                                 match getCurrent () with
@@ -371,7 +390,7 @@ module ColdTasks =
                                                 | _ -> false
                                     with exn ->
                                         setState (
-                                            maybeBounce
+                                            maybeBounceCompletion
                                             <| SetException(ExceptionCache.CaptureOrRetrieve exn)
                                         )
 
@@ -383,7 +402,8 @@ module ColdTasks =
                                     sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
                                 | Bounce next ->
                                     setState next
-                                    sm.Data.MethodBuilder.AwaitOnCompleted(Trampoline.Current.Ref, &sm)
+                                    let mutable trampoline = Trampoline.Current
+                                    sm.Data.MethodBuilder.AwaitOnCompleted(&trampoline, &sm)
                                 | SetResult ->
                                     Trampoline.Current.Trust()
                                     sm.Data.MethodBuilder.SetResult sm.Data.Result
@@ -431,7 +451,7 @@ module ColdTasks =
                                 if __stack_code_fin then
                                     let __stack_go2 =
                                         noBounce
-                                        || yieldOnBindLimit().Invoke(&sm)
+                                        || yieldOnCompletionLimit().Invoke(&sm)
 
                                     if __stack_go2 then
                                         Trampoline.Current.Trust()
@@ -444,7 +464,7 @@ module ColdTasks =
                             | ValueSome error ->
                                 let __stack_go2 =
                                     noBounce
-                                    || yieldOnBindLimit().Invoke(&sm)
+                                    || yieldOnCompletionLimit().Invoke(&sm)
 
                                 if __stack_go2 then
                                     Trampoline.Current.Trust()
@@ -516,7 +536,7 @@ module ColdTasks =
                                 if __stack_code_fin then
                                     let __stack_go2 =
                                         noBounce
-                                        || yieldOnBindLimit().Invoke(&sm)
+                                        || yieldOnCompletionLimit().Invoke(&sm)
 
                                     if __stack_go2 then
                                         Trampoline.Current.Trust()
@@ -529,7 +549,7 @@ module ColdTasks =
                             | ValueSome error ->
                                 let __stack_go2 =
                                     noBounce
-                                    || yieldOnBindLimit().Invoke(&sm)
+                                    || yieldOnCompletionLimit().Invoke(&sm)
 
                                 if __stack_go2 then
                                     Trampoline.Current.Trust()

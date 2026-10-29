@@ -79,8 +79,6 @@ type Trampoline private (previous: Trampoline voption) =
         member this.OnCompleted continuation = this.Enqueue continuation
         member this.UnsafeOnCompleted continuation = this.Enqueue continuation
 
-    member this.Ref: ICriticalNotifyCompletion ref = ref this
-
     static member Current =
         let existing = Trampoline.current
 
@@ -164,6 +162,20 @@ type Trampoline private (previous: Trampoline voption) =
     member _.ShouldBounce =
         running
         && not Trampoline.HasSufficientStack
+
+    /// The check before a nested start sets its result or exception. Setting it runs the awaiting
+    /// parent inline. On .NET Framework, continuations run inline with no stack guard, so a chain of
+    /// completions can overflow even when no trampoline runs. So on netstandard2.0 a completion with no
+    /// trampoline running bounces too. The trampoline runs it at once on the same thread and owns the
+    /// rest of the chain, where the stack check limits it. A depth count is not used, because it would
+    /// also bounce where the stack is sufficient.
+    member this.ShouldBounceCompletion =
+#if NETSTANDARD2_0
+        not running
+        || not Trampoline.HasSufficientStack
+#else
+        this.ShouldBounce
+#endif
 
     /// Reads and clears the flag that StartNested sets. Only a start that reads true may bounce.
     member _.IsAwaited() =
