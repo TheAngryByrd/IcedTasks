@@ -1,6 +1,6 @@
 # Recursion and tail calls (design, branch `trampoline`)
 
-Status: design. Draft PR [TheAngryByrd/IcedTasks#54 "Enable safe recursion with trampoline"](https://github.com/TheAngryByrd/IcedTasks/pull/54) on the branch `trampoline` (remote `majocha`). Addresses issue [#3](https://github.com/TheAngryByrd/IcedTasks/issues/3). See [open enhancements](open-enhancements.md).
+Status: steps 1 to 3 done (local, not pushed). Draft PR [TheAngryByrd/IcedTasks#54 "Enable safe recursion with trampoline"](https://github.com/TheAngryByrd/IcedTasks/pull/54) on the branch `trampoline` (remote `majocha`). Addresses issue [#3](https://github.com/TheAngryByrd/IcedTasks/issues/3). See [open enhancements](open-enhancements.md).
 
 ## Goals
 
@@ -21,77 +21,77 @@ Status: design. Draft PR [TheAngryByrd/IcedTasks#54 "Enable safe recursion with 
 - `E:\repos\Async2\Async2\Async2.fs` (resumable code). `Async2<'t>` is an interface with `StartImmediate`, `Await`, and `TailCall`. Only `Await` (a builder `Bind`) starts a nested machine, which can bounce. `StartImmediate` inside a running trampoline installs a fresh trampoline (`Trampoline.Isolate`) and drains it before it returns, so a caller can block on the task.
 - `E:\repos\FSharp.Control.Async2` (runtime async). The tail-call loop uses a `TailBox` and captures the `ExecutionContext` at the hand-over.
 
-## Current branch mechanism (`src/IcedTasks/Trampoline.fs`)
+## Current mechanism (`src/IcedTasks/Trampoline.fs`)
 
-- `Trampoline` is per thread (`ThreadLocal`). It is an `ICriticalNotifyCompletion` with one `pending` slot. A bounce is `ResumableCode.Yield` plus `MethodBuilder.AwaitOnCompleted(Trampoline.Current.Ref)`.
-- `ShouldBounce` counts calls modulo `MaxDepth = 50`. The counter never decrements, so it is not a nesting depth.
-- "Is awaited" signal: `Source` members call `Trampoline.Allow f x`, which calls `Prime()` before it calls `f`. The start calls `IsAwaited()`, which reads and clears the flag. Only a primed start can bounce.
-- The dynamic path makes a resumption info per start (`newResumptionInfo ()` / `makeResumptionInfo ()`). The info reads `IsAwaited()` when it is made, so each start of a multi-start value has its own flag (see [run and start paths](../builders/run-and-start-paths.md)).
-
-```fsharp
-// src/IcedTasks/CancellableTaskBuilderBase.fs (branch)
-                (fun ct -> Awaitable.GetTaskAwaiter(Trampoline.Allow cancellableTask ct))
-```
-
-### Defects to remove
-
-1. Wrapper deadlock. `let! x = fun ct -> Task.FromResult((inner ct).Result)`: `Source` primes, `inner` takes the flag and bounces, the wrapper blocks on `.Result`, and the trampoline cannot run.
-2. Stale flag. A bound function that is not an IcedTasks value never takes the flag. A later unrelated start in the same frame takes it, and that start can be blocked on with `GetResult()`.
-3. One `pending` slot. A second enqueue while the slot is full overwrites the first continuation. `ShouldBounce` checks `pending.IsNone` to avoid this. A queue removes the hazard.
-4. `ThreadLocal` costs more than `[<ThreadStatic>]` on each check.
-
-## Target design
-
-### 1. Exact invocation types
-
-`Run` of each cold builder returns an instance of a sealed class. The class inherits `FSharpFunc<CancellationToken, Task<'T>>` (or `FSharpFunc<unit, Task<'T>>`), so the public aliases do not change ([ADR 0001](../../adr/0001-function-type-aliases-for-cold-results.md)). An internal interface gives the extra starts:
+- `Trampoline` is per thread (`[<ThreadStatic>]` field `current`). It is an `ICriticalNotifyCompletion` with one `pending` slot. A bounce is `ResumableCode.Yield` plus `MethodBuilder.AwaitOnCompleted(Trampoline.Current.Ref)`. The first bounce on a trampoline that is not running drains it inline (`start ()`).
+- `ShouldBounce` counts calls modulo `MaxDepth = 50`. The counter never decrements, so it is not a nesting depth. Step 4 replaces it.
+- Each cold builder's `Run` and `RunDynamic` wrap the start function with `Trampoline.wrap`. The result is a `TrampolinedStart<'Arg, 'Result>`, a sealed subclass of `FSharpFunc<'Arg, 'Result>`, so `ColdTask<'T>` and `CancellableTask<'T>` stay function aliases ([ADR 0001](../../adr/0001-function-type-aliases-for-cold-results.md)). `'Arg` is `unit` or `CancellationToken`. `'Result` is `Task<'T>` or `ValueTask<'T>`.
+- `Source` members start a bound function with `Trampoline.bind`. It type-tests for `INestedStart<'Arg, 'Result>` and calls `StartNested`. Any other function is called as it is.
+- `StartNested` sets the `primed` flag, calls the start, and clears the flag in `finally`. The state machine reads and clears it with `IsAwaited()` as its first action, so no user code runs between set and read. Only a primed start can bounce.
+- `Invoke` (a call from user code) is `StartImmediate`. When the trampoline of the thread is running, the start gets a fresh trampoline and the old one is restored after it. When the stack is low (`HasSufficientStack` is false), the start runs on a new thread with a 16 MB stack (`RunOnNewThread`) and the caller waits for its synchronous part with `Join`. The new thread runs in the captured `ExecutionContext`.
+- SynchronizationContext rule (`CanLeaveStack`): no bounce and no thread hop when `SynchronizationContext.Current` is not null or `TaskScheduler.Current` is not the default. There the behavior is as on `master`, including a stack overflow at extreme depth.
+- The dynamic path makes a resumption info per start (`newResumptionInfo ()` / `makeResumptionInfo ()`) and reads `IsAwaited()` when it makes it (see [run and start paths](../builders/run-and-start-paths.md)).
+- On netstandard2.0, `HasSufficientStack` calls `EnsureSufficientExecutionStack` and catches `InsufficientExecutionStackException`, because `TryEnsureSufficientExecutionStack` does not exist there.
 
 ```fsharp
-type ICancellableStart<'T> =
-    abstract StartNested: CancellationToken -> Task<'T>
-    abstract TailCall: CancellationToken * TaskCompletionSource<'T> -> unit
-
-[<Sealed>]
-type CancellableStart<'T, 'SM>(sm: 'SM) =   // 'SM: the compiled state machine struct
-    inherit FSharpFunc<CancellationToken, Task<'T>>()
-    override _.Invoke ct = (* start immediate: own or isolate the trampoline *)
-    interface ICancellableStart<'T> with ...
+// src/IcedTasks/Trampoline.fs
+    let inline bind (f: 'Arg -> 'Result) (arg: 'Arg) : 'Result =
+        match box f with
+        | :? INestedStart<'Arg, 'Result> as nested -> nested.StartNested arg
+        | _ -> f arg
 ```
-
-Checked in `dotnet fsi`: `box (CancellableStart ...) :?> (CancellationToken -> Task<int>)` is callable, and `:? ICancellableStart<int>` matches.
-
-`Source` and `ReturnFromFinal` type-test the bound function. An exact match calls `StartNested` or `TailCall`. Any other function is called normally and its task is awaited as today. No thread-static flag remains, so defects 1 and 2 cannot occur.
-
-Open: an `[<InlineIfLambda>]` lambda literal passed to `Source` may need a closure only for the type test. Measure with `benchmarks/`.
-
-### 2. Start kinds
 
 ```mermaid
 flowchart TD
     call["cold value is started"] --> kind{"how?"}
-    kind -->|"f ct (user code)"| imm["Invoke: start immediate"]
-    kind -->|"let! / return! of exact type"| nested["StartNested"]
-    kind -->|"tail return! of exact type"| tail["TailCall(ct, tcs)"]
-    imm --> own{"trampoline running on this thread?"}
-    own -->|no| owner["own it, run, drain before return"]
-    own -->|yes| iso["isolate: fresh trampoline, run, drain, restore"]
-    nested --> b{"ShouldBounce?"}
-    b -->|no| inline["run inline, Depth + 1"]
+    kind -->|"f ct (user code)"| imm["Invoke: StartImmediate"]
+    kind -->|"let! / return! of a TrampolinedStart"| nested["StartNested: prime, start, unprime"]
+    imm --> low{"stack low and CanLeaveStack?"}
+    low -->|yes| hop["RunOnNewThread, Join"]
+    low -->|no| own{"trampoline running?"}
+    own -->|no| run["start inline"]
+    own -->|yes| iso["fresh trampoline, start, restore"]
+    nested --> b{"primed and ShouldBounce?"}
+    b -->|no| inline["run inline"]
     b -->|yes| bounce["Yield, AwaitOnCompleted(trampoline)"]
-    tail --> nested
 ```
 
-Invariant: a task that user code can see is complete or truly pending when `Invoke` returns. It is never waiting on a trampoline that an outer frame on this thread owns.
+Invariant: a task that user code gets from `Invoke` is complete or truly pending. It never waits on a trampoline that an outer frame on the same thread owns.
 
-### 3. Bounce trigger
+Why the thread hop: an isolated start drains its trampoline on the current stack. Recursion through hot tasks (`return! f (n - 1) ct`, user-code starts) therefore grows the stack, and the branch's mutual recursion tests (10 000 to 40 000 levels) need the hop. Thread affinity is lost only where `master` overflows: `[<ThreadStatic>]` values, a `lock` held by the waiting thread, UI-thread checks.
 
-- net6.0 and later: bounce only when `RuntimeHelpers.TryEnsureSufficientExecutionStack()` is false. No fixed depth. This keeps goal 3 for the remaining case below.
+### Defects removed
+
+1. Wrapper deadlock: a plain function is not a `TrampolinedStart`, so its inner start is immediate.
+2. Stale flag: `StartNested` always clears the flag.
+
+### Defects still open
+
+3. One `pending` slot. A second enqueue while the slot is full overwrites the first continuation. `ShouldBounce` checks `pending.IsNone` to avoid this. Step 4 uses a queue.
+4. Cost of `Trampoline.bind`: for an `[<InlineIfLambda>]` lambda literal, the type test needs a closure. Measure with `benchmarks/`.
+5. Speed of the dynamic path: the 9 `Recursion` tests take 41 s in Debug before step 3 and 65 s after it, on net10.0. The full Release suite takes about 9 s. The likely causes are the thread hops in the mutual recursion tests and the extra `TrampolinedStart` per value; neither is measured yet.
+
+## Target design
+
+### 1. Tail-call interface
+
+`TailCall` goes on the same object as `StartNested`:
+
+```fsharp
+type INestedStart<'Arg, 'Result> =
+    abstract StartNested: 'Arg -> 'Result
+    // step 5: abstract TailCall: 'Arg * TaskCompletionSource<'T> -> unit
+```
+
+### 2. Bounce trigger
+
+- net6.0 and later: bounce only when `RuntimeHelpers.TryEnsureSufficientExecutionStack()` is false. No fixed depth. This keeps goal 3 for the remaining case below. `HasSufficientStack` exists already for the thread hop.
 - netstandard2.0: .NET Framework runs continuations inline with no stack guard, so completions also bounce, and a `Depth` counter (inc/dec around nested starts and completions) limits the chain, as in resumable Async2 (`ShouldBounceCompletion`).
 - The trampoline is a `Queue<Action>` in a `[<ThreadStatic>]` field. The owner drains it in `finally`.
 
 Remaining case with a fixed depth: a frame inside a drain sets a `TaskCompletionSource`, an awaiting machine resumes inline, `let!`s a child that bounces, suspends, and the frame then blocks on that machine. With the stack-only trigger this can occur only where today's code overflows.
 
-### 4. Tail calls
+### 3. Tail calls
 
 As in resumable Async2. `ReturnFromFinal(callee)` of an exact type:
 
@@ -142,9 +142,11 @@ Results on net10.0, Debug and Release, main and NS20 projects (same in each):
 | `let!` recursion under `BlockedContext` (all three) | pass | pass |
 | coldTask: block and `let!` under `BlockedContext` | pass | deadlock |
 
-Total: `master` 90 of 90, `trampoline` 14 of 90.
+Total: `master` 90 of 90, `trampoline` before step 3 14 of 90, after step 3 90 of 90 (the full suites also pass: 919 main, 711 NS20, Debug and Release).
 
-Lesson: a bounced child is incomplete when its parent binds it, so the parent's `TaskAwaiter` captures the `SynchronizationContext` and posts its resumption. Under a blocked context that post never runs. Bouncing under a non-default `SynchronizationContext` therefore needs one of two rules: do not bounce, or resume a bounced child's parent without the context. The design must pick one.
+The `TaskCompletionSource` case passes because `SetResult` runs when no trampoline is running. A stronger case calls `SetResult` from inside a bounced frame, which is the remaining case of the bounce trigger section.
+
+Lesson: a bounced child is incomplete when its parent binds it, so the parent's `TaskAwaiter` captures the `SynchronizationContext` and posts its resumption. Under a blocked context that post never runs. Bouncing under a non-default `SynchronizationContext` therefore needs one of two rules: do not bounce, or resume a bounced child's parent without the context. Decided: do not bounce (`CanLeaveStack`). The second rule cannot tell a bounced child from one that waits for real I/O after it bounced.
 
 Still to add:
 
@@ -152,12 +154,13 @@ Still to add:
 - Thread-pool starvation (`ThreadPool.SetMaxThreads`).
 - A non-IcedTasks callee that wraps an IcedTasks value in tail position.
 - Near-overflow depth.
+- `SetResult` of a `TaskCompletionSource` from inside a bounced frame, then block.
 
 ## Order of work
 
 1. Merge `master` into `trampoline` (done locally, not pushed).
 2. Add the deadlock tests. Record which fail on the branch (done, see the table above; not committed).
-3. Replace `Allow`/`Prime`/`IsAwaited` with the exact invocation types.
+3. Replace `Allow`/`Prime`/`IsAwaited` with the exact invocation types (done; not committed).
 4. Replace the trampoline with the queue and the stack-only trigger.
 5. Add `TailCallSource` and `ReturnFromFinal`.
 6. Benchmarks, then docs (`docsSrc/`, XML docs) and the lode builder files.

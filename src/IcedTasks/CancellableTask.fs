@@ -129,7 +129,8 @@ module CancellableTasks =
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
                 }
 
-            fun (ct) ->
+            Trampoline.wrap
+            <| fun (ct) ->
                 if ct.IsCancellationRequested then
                     Task.FromCanceled<_>(ct)
                 else
@@ -192,7 +193,8 @@ module CancellableTasks =
                     (AfterCode<_, _>(fun sm ->
                         let sm = sm
 
-                        fun (ct) ->
+                        Trampoline.wrap
+                        <| fun (ct) ->
                             if ct.IsCancellationRequested then
                                 Task.FromCanceled<_>(ct)
                             else
@@ -209,7 +211,7 @@ module CancellableTasks =
         member inline _.Source
             ([<InlineIfLambda>] x: CancellationToken -> Task<_>)
             : CancellationToken -> Awaiter<TaskAwaiter<_>, _> =
-            fun ct -> Awaitable.GetTaskAwaiter(Trampoline.Allow x ct)
+            fun ct -> Awaitable.GetTaskAwaiter(Trampoline.bind x ct)
 
         [<NoEagerConstraintApplication>]
         member inline this.MergeSources
@@ -306,7 +308,8 @@ module CancellableTasks =
             then
                 CancellableTaskBuilder.RunDynamic(code)
             else
-                fun (ct) ->
+                Trampoline.wrap
+                <| fun (ct) ->
                     Task.Run<'T>((fun () -> CancellableTaskBuilder.RunDynamic (code) (ct)), ct)
 
         /// <summary>
@@ -370,7 +373,8 @@ module CancellableTasks =
                         then
                             let sm = sm
 
-                            fun (ct) ->
+                            Trampoline.wrap
+                            <| fun (ct) ->
                                 if ct.IsCancellationRequested then
                                     Task.FromCanceled<_>(ct)
                                 else
@@ -381,7 +385,8 @@ module CancellableTasks =
                                     sm.Data.MethodBuilder.Task
                         else
 
-                            fun (ct) ->
+                            Trampoline.wrap
+                            <| fun (ct) ->
                                 if ct.IsCancellationRequested then
                                     Task.FromCanceled<_>(ct)
                                 else

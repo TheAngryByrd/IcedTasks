@@ -130,7 +130,8 @@ module CancellableValueTasks =
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
                 }
 
-            fun (ct) ->
+            Trampoline.wrap
+            <| fun (ct) ->
                 if ct.IsCancellationRequested then
                     ValueTask.FromCanceled<_>(ct)
                 else
@@ -192,7 +193,8 @@ module CancellableValueTasks =
                     (AfterCode<_, _>(fun sm ->
                         let sm = sm
 
-                        fun (ct) ->
+                        Trampoline.wrap
+                        <| fun (ct) ->
                             if ct.IsCancellationRequested then
                                 ValueTask.FromCanceled<_>(ct)
                             else
@@ -211,7 +213,7 @@ module CancellableValueTasks =
             ([<InlineIfLambda>] x: CancellationToken -> ValueTask<_>)
             : CancellationToken -> Awaiter<ValueTaskAwaiter<_>, _> =
             fun ct ->
-                Trampoline.Allow x ct
+                Trampoline.bind x ct
                 |> Awaitable.GetAwaiter
 
         [<NoEagerConstraintApplication>]

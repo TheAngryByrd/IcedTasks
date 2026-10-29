@@ -345,7 +345,7 @@ module CancellableTaskBase =
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
                 ([<InlineIfLambda>] cancellableAwaitable: CancellationToken -> 'Awaitable)
                 : CancellationToken -> 'Awaiter =
-                (fun ct -> Awaitable.GetAwaiter(Trampoline.Allow cancellableAwaitable ct))
+                (fun ct -> Awaitable.GetAwaiter(Trampoline.bind cancellableAwaitable ct))
 
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
@@ -358,7 +358,7 @@ module CancellableTaskBase =
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult1>>
                 ([<InlineIfLambda>] coldAwaitable: unit -> 'Awaitable)
                 : CancellationToken -> 'Awaiter =
-                (fun ct -> Awaitable.GetAwaiter(Trampoline.Allow coldAwaitable ()))
+                (fun ct -> Awaitable.GetAwaiter(Trampoline.bind coldAwaitable ()))
 
             /// <summary>
             /// The entry point for the dynamic implementation of the corresponding operation. Do not use directly, only used when executing quotations that involve tasks or other reflective execution of F# code.
@@ -732,7 +732,7 @@ module CancellableTaskBase =
                 ([<InlineIfLambda>] coldTask: unit -> Task<'T>)
                 : CancellationToken -> Awaiter<TaskAwaiter<'T>, 'T> =
                 (fun (ct: CancellationToken) ->
-                    Awaitable.GetTaskAwaiter(Trampoline.Allow coldTask ())
+                    Awaitable.GetTaskAwaiter(Trampoline.bind coldTask ())
                 )
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
@@ -753,7 +753,7 @@ module CancellableTaskBase =
             member inline _.Source
                 ([<InlineIfLambda>] cancellableTask: CancellationToken -> Task<'T>)
                 : CancellationToken -> Awaiter<TaskAwaiter<'T>, 'T> =
-                (fun ct -> Awaitable.GetTaskAwaiter(Trampoline.Allow cancellableTask ct))
+                (fun ct -> Awaitable.GetTaskAwaiter(Trampoline.bind cancellableTask ct))
 
             /// <summary>Allows the computation expression to turn other types into CancellationToken -> 'Awaiter</summary>
             ///

@@ -372,7 +372,8 @@ module ColdTasks =
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
                 }
 
-            fun () ->
+            Trampoline.wrap
+            <| fun () ->
                 let mutable sm = ColdTaskStateMachine<'T>()
 
                 sm.ResumptionDynamicInfo <- makeResumptionInfo ()
@@ -425,7 +426,8 @@ module ColdTasks =
                     (AfterCode<_, _>(fun sm ->
                         let sm = sm
 
-                        fun () ->
+                        Trampoline.wrap
+                        <| fun () ->
                             let mutable sm = sm
                             sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                             sm.Data.MethodBuilder.Start(&sm)
@@ -452,7 +454,8 @@ module ColdTasks =
                 ColdTaskBuilder.RunDynamic(code)
             else
 
-                fun () -> Task.Run<'T>(fun () -> ColdTaskBuilder.RunDynamic (code) ())
+                Trampoline.wrap
+                <| fun () -> Task.Run<'T>(fun () -> ColdTaskBuilder.RunDynamic (code) ())
 
         /// <summary>
         /// Hosts the task code in a state machine and starts the task, executing in the threadpool using Task.Run
@@ -509,14 +512,16 @@ module ColdTasks =
                         then
                             let sm = sm // copy
 
-                            fun () ->
+                            Trampoline.wrap
+                            <| fun () ->
                                 let mutable sm = sm
                                 sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                                 sm.Data.MethodBuilder.Start(&sm)
                                 sm.Data.MethodBuilder.Task
                         else
 
-                            fun () ->
+                            Trampoline.wrap
+                            <| fun () ->
                                 Task.Run<'T>(fun () ->
                                     let mutable sm = sm // host local mutable copy of contents of state machine on this thread pool thread
                                     sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
@@ -785,7 +790,7 @@ module ColdTasks =
             ///
             /// <returns>unit -> 'Awaiter</returns>
             member inline _.Source([<InlineIfLambda>] task: ColdTask<'TResult1>) =
-                (fun () -> (Trampoline.Allow task ()).GetAwaiter())
+                (fun () -> (Trampoline.bind task ()).GetAwaiter())
 
             /// <summary>Allows the computation expression to turn other types into unit -> 'Awaiter</summary>
             ///
