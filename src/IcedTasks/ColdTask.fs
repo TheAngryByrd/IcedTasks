@@ -60,6 +60,9 @@ module ColdTasks =
             if Trampoline.Current.ShouldBounce then
                 let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
 
+                if __stack_yield_fin then
+                    Trampoline.Resumed()
+
                 if not __stack_yield_fin then
                     sm.Data.MethodBuilder.AwaitOnCompleted(Trampoline.Current.Ref, &sm)
 
@@ -232,6 +235,9 @@ module ColdTasks =
 
                         if not (Awaiter.IsCompleted awaiter) then
                             let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
+
+                            if __stack_yield_fin then
+                                Trampoline.Resumed()
                             __stack_condition_fin <- __stack_yield_fin
 
                         if __stack_condition_fin then
@@ -321,6 +327,8 @@ module ColdTasks =
                     else
                         Immediate state
 
+                let started = ref false
+
                 let initialState = maybeBounce Running
 
                 { new ColdTaskResumptionDynamicInfo<'T>(initialResumptionFunc,
@@ -334,39 +342,58 @@ module ColdTasks =
 
                         let setState state = info.ResumptionData <- state
 
-                        match getCurrent () with
-                        | Immediate state ->
-                            setState state
-                            info.MoveNext &sm
-                        | Running ->
-                            let mutable keepGoing = true
+                        if started.Value then
+                            Trampoline.Resumed()
+                        else
+                            started.Value <- true
+                            Trampoline.Started()
 
-                            try
-                                if info.ResumptionFunc.Invoke(&sm) then
-                                    setState (maybeBounce SetResult)
-                                else
-                                    keepGoing <-
-                                        match getCurrent () with
-                                        | Awaiting _ -> true
-                                        | _ -> false
-                            with exn ->
-                                setState (
-                                    maybeBounce
-                                    <| SetException(ExceptionCache.CaptureOrRetrieve exn)
-                                )
+                        try
+                            let mutable step = true
 
-                            if keepGoing then
-                                info.MoveNext &sm
-                        | Awaiting awaiter ->
-                            setState Running
-                            let mutable awaiter = awaiter
-                            sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
-                        | Bounce next ->
-                            setState next
-                            sm.Data.MethodBuilder.AwaitOnCompleted(Trampoline.Current.Ref, &sm)
-                        | SetResult -> sm.Data.MethodBuilder.SetResult sm.Data.Result
-                        | SetException edi ->
-                            sm.Data.MethodBuilder.SetException(edi.SourceException)
+                            while step do
+                                step <- false
+
+                                match getCurrent () with
+                                | Immediate state ->
+                                    setState state
+                                    step <- true
+                                | Running ->
+                                    let mutable keepGoing = true
+
+                                    try
+                                        if info.ResumptionFunc.Invoke(&sm) then
+                                            setState (maybeBounce SetResult)
+                                        else
+                                            keepGoing <-
+                                                match getCurrent () with
+                                                | Awaiting _ -> true
+                                                | _ -> false
+                                    with exn ->
+                                        setState (
+                                            maybeBounce
+                                            <| SetException(ExceptionCache.CaptureOrRetrieve exn)
+                                        )
+
+                                    if keepGoing then
+                                        step <- true
+                                | Awaiting awaiter ->
+                                    setState Running
+                                    let mutable awaiter = awaiter
+                                    sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
+                                | Bounce next ->
+                                    setState next
+                                    sm.Data.MethodBuilder.AwaitOnCompleted(Trampoline.Current.Ref, &sm)
+                                | SetResult ->
+                                    Trampoline.Current.Trust()
+                                    sm.Data.MethodBuilder.SetResult sm.Data.Result
+                                    Trampoline.Current.ClearTrust()
+                                | SetException edi ->
+                                    Trampoline.Current.Trust()
+                                    sm.Data.MethodBuilder.SetException(edi.SourceException)
+                                    Trampoline.Current.ClearTrust()
+                        finally
+                            Trampoline.Exited()
 
                     member _.SetStateMachine(sm, state) =
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
@@ -391,6 +418,7 @@ module ColdTasks =
                         let mutable error = ValueNone
 
                         let noBounce = not (Trampoline.Current.IsAwaited())
+                        Trampoline.Started()
 
                         let __stack_go1 =
                             noBounce
@@ -406,7 +434,9 @@ module ColdTasks =
                                         || yieldOnBindLimit().Invoke(&sm)
 
                                     if __stack_go2 then
+                                        Trampoline.Current.Trust()
                                         sm.Data.MethodBuilder.SetResult(sm.Data.Result)
+                                        Trampoline.Current.ClearTrust()
                             with exn ->
                                 error <- ValueSome(ExceptionCache.CaptureOrRetrieve exn)
 
@@ -417,8 +447,12 @@ module ColdTasks =
                                     || yieldOnBindLimit().Invoke(&sm)
 
                                 if __stack_go2 then
+                                    Trampoline.Current.Trust()
                                     sm.Data.MethodBuilder.SetException(error.SourceException)
+                                    Trampoline.Current.ClearTrust()
                             | ValueNone -> ()
+
+                        Trampoline.Exited()
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         sm.Data.MethodBuilder.SetStateMachine(state)
@@ -469,6 +503,7 @@ module ColdTasks =
                         let mutable error = ValueNone
 
                         let noBounce = not (Trampoline.Current.IsAwaited())
+                        Trampoline.Started()
 
                         let __stack_go1 =
                             noBounce
@@ -484,7 +519,9 @@ module ColdTasks =
                                         || yieldOnBindLimit().Invoke(&sm)
 
                                     if __stack_go2 then
+                                        Trampoline.Current.Trust()
                                         sm.Data.MethodBuilder.SetResult(sm.Data.Result)
+                                        Trampoline.Current.ClearTrust()
                             with exn ->
                                 error <- ValueSome(ExceptionCache.CaptureOrRetrieve exn)
 
@@ -495,8 +532,12 @@ module ColdTasks =
                                     || yieldOnBindLimit().Invoke(&sm)
 
                                 if __stack_go2 then
+                                    Trampoline.Current.Trust()
                                     sm.Data.MethodBuilder.SetException(error.SourceException)
+                                    Trampoline.Current.ClearTrust()
                             | ValueNone -> ()
+
+                        Trampoline.Exited()
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         sm.Data.MethodBuilder.SetStateMachine(state)
@@ -608,6 +649,9 @@ module ColdTasks =
                             continuation(ExceptionCache.GetResultOrThrow awaiter).Invoke(&sm)
                         else
                             let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
+
+                            if __stack_yield_fin then
+                                Trampoline.Resumed()
 
                             if __stack_yield_fin then
                                 continuation(ExceptionCache.GetResultOrThrow awaiter).Invoke(&sm)

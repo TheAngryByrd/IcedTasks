@@ -59,6 +59,9 @@ module CancellableTaskBase =
             if Trampoline.Current.ShouldBounce then
                 let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
 
+                if __stack_yield_fin then
+                    Trampoline.Resumed()
+
                 if not __stack_yield_fin then
                     MethodBuilder.AwaitOnCompleted(
                         &sm.Data.MethodBuilder,
@@ -287,6 +290,9 @@ module CancellableTaskBase =
                             // This will yield with __stack_yield_fin = false
                             // This will resume with __stack_yield_fin = true
                             let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
+
+                            if __stack_yield_fin then
+                                Trampoline.Resumed()
                             __stack_fin <- __stack_yield_fin
 
                         if __stack_fin then
@@ -461,6 +467,9 @@ module CancellableTaskBase =
                             // This will yield with __stack_yield_fin = false
                             // This will resume with __stack_yield_fin = true
                             let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
+
+                            if __stack_yield_fin then
+                                Trampoline.Resumed()
                             __stack_fin <- __stack_yield_fin
 
                         if __stack_fin then
@@ -519,6 +528,9 @@ module CancellableTaskBase =
                             // This will yield with __stack_yield_fin = false
                             // This will resume with __stack_yield_fin = true
                             let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
+
+                            if __stack_yield_fin then
+                                Trampoline.Resumed()
                             __stack_fin <- __stack_yield_fin
 
                         if __stack_fin then

@@ -11,8 +11,19 @@ open IcedTasks
 /// trampoline, because every start runs inline. A trampoline must not turn any of them into a deadlock.
 module SyncOverAsyncTests =
 
-    /// Runs `body` on a dedicated thread with a large stack and fails the test if it does not
-    /// finish in time. A deadlocked thread is a background thread, so it does not stop the test run.
+    let largeStack =
+        64
+        * 1024
+        * 1024
+
+    /// A small stack makes the trampoline bounce and hop threads at the depths below.
+    let smallStack = 512 * 1024
+
+    let private stackSize = AsyncLocal<int>()
+
+    /// Runs `body` on a dedicated thread and fails the test if it does not finish in time.
+    /// A deadlocked thread is a background thread, so it does not stop the test run.
+    /// The stack is large unless `withStack` sets another size.
     let runGuarded (body: unit -> 'T) : 'T =
         let timeout = TimeSpan.FromSeconds 10.
         let result = ref ValueNone
@@ -26,9 +37,7 @@ module SyncOverAsyncTests =
                         with e ->
                             ValueSome(Error(ExceptionDispatchInfo.Capture e))
                 ),
-                64
-                * 1024
-                * 1024,
+                (if stackSize.Value = 0 then largeStack else stackSize.Value),
                 IsBackground = true
             )
 
@@ -43,6 +52,22 @@ module SyncOverAsyncTests =
             error.Throw()
             Unchecked.defaultof<_>
         | ValueNone -> failtest "The computation thread ended without a result"
+
+    let withStack size (body: unit -> 'T) =
+        let previous = stackSize.Value
+        stackSize.Value <- size
+
+        try
+            body ()
+        finally
+            stackSize.Value <- previous
+
+    /// Cases that do not block under a SynchronizationContext run on both stacks. On the small stack the
+    /// builders bounce and hop threads, where they would overflow without the trampoline.
+    let stacks = [
+        "large stack", largeStack
+        "small stack", smallStack
+    ]
 
     let waits: (string * (Task<int> -> int)) list = [
         "Result", (fun t -> t.Result)
@@ -159,6 +184,34 @@ module SyncOverAsyncTests =
                     + x
             }
 
+        /// Like resumeInlineThenBlock, but a let! starts the computation that the source resumes. Such a
+        /// computation can also bounce before it sets its result.
+        let resumeInlineNestedThenBlock depth : ColdTask<int> =
+            let source = TaskCompletionSource<int>()
+
+            let resumed =
+                coldTask {
+                    let! v = source.Task
+                    let! r = bound depth
+                    return r + v
+                }
+
+            let waiter =
+                coldTask {
+                    let! r = resumed
+                    return r
+                }
+
+            coldTask {
+                let started = waiter ()
+                let! x = bound depth
+                source.SetResult 1
+
+                return
+                    started.GetAwaiter().GetResult()
+                    + x
+            }
+
     module Cancellable =
 
         let rec bound n : CancellableTask<int> =
@@ -231,6 +284,27 @@ module SyncOverAsyncTests =
                         + 1
             }
 
+        let resumeInlineThenBlock depth : CancellableTask<int> =
+            let source = TaskCompletionSource<int>()
+
+            let waiter =
+                cancellableTask {
+                    let! v = source.Task
+                    let! r = bound depth
+                    return r + v
+                }
+
+            cancellableTask {
+                let! ct = CancellableTask.getCancellationToken ()
+                let started = waiter ct
+                let! x = bound depth
+                source.SetResult 1
+
+                return
+                    started.GetAwaiter().GetResult()
+                    + x
+            }
+
     module CancellableValue =
 
         let rec bound n : CancellableValueTask<int> =
@@ -273,10 +347,12 @@ module SyncOverAsyncTests =
 
     let forEachWaitAndDepth name (case: (Task<int> -> int) -> int -> int) =
         testList name [
-            for waitName, wait in waits do
-                for depth in depths do
-                    testCase $"{waitName}, depth {depth}"
-                    <| fun () -> Expect.equal (case wait depth) depth ""
+            for stackName, stack in stacks do
+                for waitName, wait in waits do
+                    for depth in depths do
+                        testCase $"{stackName}, {waitName}, depth {depth}"
+                        <| fun () ->
+                            Expect.equal (withStack stack (fun () -> case wait depth)) depth ""
         ]
 
     let forEachDepth name (case: int -> int) =
@@ -284,6 +360,26 @@ module SyncOverAsyncTests =
             for depth in depths do
                 testCase $"depth {depth}"
                 <| fun () -> Expect.equal (case depth) depth ""
+        ]
+
+    let forEachStackAndDepth name (case: int -> Task<int>) =
+        testList name [
+            for stackName, stack in stacks do
+                for depth in depths do
+                    testCase $"{stackName}, depth {depth}"
+                    <| fun () ->
+                        let actual =
+                            withStack
+                                stack
+                                (fun () ->
+                                    runGuarded (fun () -> (case depth).GetAwaiter().GetResult())
+                                )
+
+                        Expect.equal
+                            actual
+                            (2 * depth
+                             + 1)
+                            ""
         ]
 
     let coldTaskTests =
@@ -296,21 +392,10 @@ module SyncOverAsyncTests =
             <| fun wait depth -> block wait (Cold.wrapped wait depth)
             forEachWaitAndDepth "Block after a let! of a plain function"
             <| fun wait depth -> block wait (Cold.afterPlainBind wait depth)
-            testList "Inline resume from a TaskCompletionSource, then block" [
-                for depth in depths do
-                    testCase $"depth {depth}"
-                    <| fun () ->
-                        let actual =
-                            runGuarded (fun () ->
-                                (Cold.resumeInlineThenBlock depth ()).GetAwaiter().GetResult()
-                            )
-
-                        Expect.equal
-                            actual
-                            (2 * depth
-                             + 1)
-                            ""
-            ]
+            forEachStackAndDepth "Inline resume from a TaskCompletionSource, then block"
+            <| fun depth -> Cold.resumeInlineThenBlock depth ()
+            forEachStackAndDepth "Inline resume of a let! started computation, then block"
+            <| fun depth -> Cold.resumeInlineNestedThenBlock depth ()
             forEachDepth "let! recursion under a blocked SynchronizationContext"
             <| fun depth -> blockUnderContext (Cold.bound depth)
             forEachDepth "Block and let! under a blocked SynchronizationContext"
@@ -332,6 +417,8 @@ module SyncOverAsyncTests =
             forEachWaitAndDepth "Mutual recursion with coldTask, blocking on the cold side"
             <| fun wait depth ->
                 block wait (fun () -> Cancellable.mutualBound wait depth CancellationToken.None)
+            forEachStackAndDepth "Inline resume from a TaskCompletionSource, then block"
+            <| fun depth -> Cancellable.resumeInlineThenBlock depth CancellationToken.None
             forEachDepth "let! recursion under a blocked SynchronizationContext"
             <| fun depth ->
                 blockUnderContext (fun () -> Cancellable.bound depth CancellationToken.None)

@@ -70,6 +70,8 @@ module CancellablePoolingValueTasks =
                     else
                         Immediate state
 
+                let started = ref false
+
                 let initialState = maybeBounce Running
 
                 { new CancellableTaskBaseResumptionDynamicInfo<'T, _>(initialResumptionFunc,
@@ -83,50 +85,68 @@ module CancellablePoolingValueTasks =
 
                         let setState state = info.ResumptionData <- state
 
-                        match getCurrent () with
-                        | Immediate state ->
-                            setState state
-                            info.MoveNext &sm
-                        | Running ->
-                            let mutable keepGoing = true
+                        if started.Value then
+                            Trampoline.Resumed()
+                        else
+                            started.Value <- true
+                            Trampoline.Started()
 
-                            try
-                                if info.ResumptionFunc.Invoke(&sm) then
-                                    setState (maybeBounce SetResult)
-                                else
-                                    keepGoing <-
-                                        match getCurrent () with
-                                        | Awaiting _ -> true
-                                        | _ -> false
-                            with exn ->
-                                setState (
-                                    maybeBounce
-                                    <| SetException(ExceptionCache.CaptureOrRetrieve exn)
-                                )
+                        try
+                            let mutable step = true
 
-                            if keepGoing then
-                                info.MoveNext &sm
-                        | Awaiting awaiter ->
-                            setState Running
-                            let mutable awaiter = awaiter
+                            while step do
+                                step <- false
 
-                            MethodBuilder.AwaitUnsafeOnCompleted(
-                                &sm.Data.MethodBuilder,
-                                &awaiter,
-                                &sm
-                            )
-                        | Bounce next ->
-                            setState next
+                                match getCurrent () with
+                                | Immediate state ->
+                                    setState state
+                                    step <- true
+                                | Running ->
+                                    let mutable keepGoing = true
 
-                            MethodBuilder.AwaitOnCompleted(
-                                &sm.Data.MethodBuilder,
-                                Trampoline.Current.Ref,
-                                &sm
-                            )
-                        | SetResult ->
-                            MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
-                        | SetException edi ->
-                            MethodBuilder.SetException(&sm.Data.MethodBuilder, edi.SourceException)
+                                    try
+                                        if info.ResumptionFunc.Invoke(&sm) then
+                                            setState (maybeBounce SetResult)
+                                        else
+                                            keepGoing <-
+                                                match getCurrent () with
+                                                | Awaiting _ -> true
+                                                | _ -> false
+                                    with exn ->
+                                        setState (
+                                            maybeBounce
+                                            <| SetException(ExceptionCache.CaptureOrRetrieve exn)
+                                        )
+
+                                    if keepGoing then
+                                        step <- true
+                                | Awaiting awaiter ->
+                                    setState Running
+                                    let mutable awaiter = awaiter
+
+                                    MethodBuilder.AwaitUnsafeOnCompleted(
+                                        &sm.Data.MethodBuilder,
+                                        &awaiter,
+                                        &sm
+                                    )
+                                | Bounce next ->
+                                    setState next
+
+                                    MethodBuilder.AwaitOnCompleted(
+                                        &sm.Data.MethodBuilder,
+                                        Trampoline.Current.Ref,
+                                        &sm
+                                    )
+                                | SetResult ->
+                                    Trampoline.Current.Trust()
+                                    MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
+                                    Trampoline.Current.ClearTrust()
+                                | SetException edi ->
+                                    Trampoline.Current.Trust()
+                                    MethodBuilder.SetException(&sm.Data.MethodBuilder, edi.SourceException)
+                                    Trampoline.Current.ClearTrust()
+                        finally
+                            Trampoline.Exited()
 
                     member _.SetStateMachine(sm, state) =
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
@@ -154,6 +174,7 @@ module CancellablePoolingValueTasks =
                         let mutable error = ValueNone
 
                         let noBounce = not (Trampoline.Current.IsAwaited())
+                        Trampoline.Started()
 
                         let __stack_go1 =
                             noBounce
@@ -169,10 +190,12 @@ module CancellablePoolingValueTasks =
                                         || yieldOnBindLimit().Invoke(&sm)
 
                                     if __stack_go2 then
+                                        Trampoline.Current.Trust()
                                         MethodBuilder.SetResult(
                                             &sm.Data.MethodBuilder,
                                             sm.Data.Result
                                         )
+                                        Trampoline.Current.ClearTrust()
                             with exn ->
                                 error <- ValueSome(ExceptionCache.CaptureOrRetrieve exn)
 
@@ -183,11 +206,15 @@ module CancellablePoolingValueTasks =
                                     || yieldOnBindLimit().Invoke(&sm)
 
                                 if __stack_go2 then
+                                    Trampoline.Current.Trust()
                                     MethodBuilder.SetException(
                                         &sm.Data.MethodBuilder,
                                         error.SourceException
                                     )
+                                    Trampoline.Current.ClearTrust()
                             | ValueNone -> ()
+
+                        Trampoline.Exited()
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
