@@ -2,9 +2,29 @@
 
 Each resumable builder has a `Run` member with two paths. The base builders have no `Run`. Each derived builder adds `Run` and `RunDynamic`. See [and! and MergeSources](and-bang-merge-sources.md) for where `MergeSources` is defined.
 
-- Static path: `Run` checks `if __useResumableCode then __stateMachine<...>(MoveNextMethodImpl)(SetStateMachineMethodImpl)(AfterCode)`. The compiler makes a struct state machine.
+- Static path: `Run` checks `if __useResumableCode then __stateMachine<...>(MoveNextMethodImpl)(SetStateMachineMethodImpl)(AfterCode)`. The compiler makes a struct state machine. The `MoveNext` body after `__resumeAt` is a shared resumable code helper. A builder supplies only `SetStateMachine` and the start in `AfterCode`:
+  - `TaskBase.moveNext` and `TaskBase.moveNextUnit` (`TaskBuilderBase.fs`) for the hot builders. Both call `moveNextWith`, which takes the `SetResult` call as resumable code, because the unit builders' method builders take no result.
+  - `CancellableTaskBase.trampolinedMoveNext` (`CancellableTaskBuilderBase.fs`) and `ColdTasks.trampolinedMoveNext` (`ColdTask.fs`) for the cold builders. They hold the trampoline hooks and the start and completion bounces. There are two copies because the state machine data types differ and `ColdTaskStateMachineData` has a concrete method builder.
 - Dynamic path: otherwise `Run` calls `static member RunDynamic`. The hot builders make a `...ResumptionDynamicInfo` object expression with `MoveNext` and `SetStateMachine`. The cold builders derive from `TrampolinedResumptionInfo<_>` (`Trampoline.fs`), which has the shared `MoveNext`, and override only the method builder calls (see [recursion and tail calls](../plans/recursion-and-tail-calls.md)).
 - The dynamic `MoveNext` uses `MethodBuilder.AwaitOnCompleted`. The static `Bind` uses `AwaitUnsafeOnCompleted` (`src/IcedTasks/TaskBuilderBase.fs`).
+
+```fsharp
+// src/IcedTasks/CancellableTask.fs (CancellableTaskBuilder.Run, static path)
+                    (MoveNextMethodImpl<_>(fun sm ->
+                        __resumeAt sm.ResumptionPoint
+                        let __stack_fin = trampolinedMoveNext(code).Invoke(&sm)
+
+                        __stack_fin
+                        |> ignore
+                    ))
+```
+
+Rules for the helpers:
+
+- The `MoveNextMethodImpl` lambda and `__resumeAt` stay in `Run`. A helper that returns the whole lambda fails with FS3402: `__stateMachine` must see the lambda at the call site, and `__resumeAt` is not valid in a function of its own.
+- Bind the helper result to a `__stack_` local, then ignore the local. `trampolinedMoveNext(code).Invoke(&sm) |> ignore` does not compile statically: each `Run` that the library itself uses (the `MergeSources` members) fails with FS3401 and FS0073.
+- The helpers return `bool` for the same reason that `Trampoline.exited` does: `MoveNext` must not end with a call to a unit function (see [recursion and tail calls](../plans/recursion-and-tail-calls.md)).
+- A helper has no hoisted local, only `__stack_` locals. The compiler clears a hoisted local at the end of its `let` scope. In a helper that scope ends before `MoveNext` returns, so the clear also runs when `MoveNext` suspends. The clear erases the value that the resumption needs, and it writes to the state machine after `exited ()`. So the state that crosses a bounce is in data fields: `Error` and `NoBounce` on `CancellableTaskBaseStateMachineData` and `ColdTaskStateMachineData`. Check: in the IL of a consuming assembly, no `stfld` comes after the last `call exited` in a `MoveNext`.
 
 ## Hot and cold
 

@@ -43,6 +43,49 @@ module TaskBase =
     and TaskBaseCode<'TOverall, 'T, 'Builder> =
         ResumableCode<TaskBaseStateMachineData<'TOverall, 'Builder>, 'T>
 
+    /// The MoveNext body of the static path. Run invokes it after `__resumeAt`. It runs `code`. Then it
+    /// runs `setResult`, or it sets the exception on the method builder. It always returns true.
+    let inline moveNextWith
+        (code: TaskBaseCode<'T, 'T, 'Builder>)
+        (setResult: TaskBaseCode<'T, unit, 'Builder>)
+        : TaskBaseCode<'T, bool, 'Builder> =
+        TaskBaseCode(fun sm ->
+            let mutable __stack_exn = null
+
+            try
+                let __stack_code_fin = code.Invoke(&sm)
+
+                if __stack_code_fin then
+                    setResult.Invoke(&sm)
+                    |> ignore
+            with exn ->
+                __stack_exn <- exn
+            // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
+            match __stack_exn with
+            | null -> ()
+            | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
+
+            true
+        )
+
+    /// The MoveNext body for a method builder that takes the result.
+    let inline moveNext (code: TaskBaseCode<'T, 'T, 'Builder>) =
+        moveNextWith
+            code
+            (TaskBaseCode(fun sm ->
+                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
+                true
+            ))
+
+    /// The MoveNext body for a method builder that takes no result.
+    let inline moveNextUnit (code: TaskBaseCode<'T, 'T, 'Builder>) =
+        moveNextWith
+            code
+            (TaskBaseCode(fun sm ->
+                MethodBuilder.SetResult(&sm.Data.MethodBuilder)
+                true
+            ))
+
     /// <summary>
     /// Contains methods to build TaskLikes using the F# computation expression syntax
     /// </summary>

@@ -10,16 +10,17 @@
 - A builder member that a builder needs for type inference goes on the builder type, not in an extension module. The code comment says "on the real type to allow type inference to work" (`src/IcedTasks/CancellableTask.fs`).
 - Each resumable builder has a static path and a dynamic path. A change to one path needs the same change to the other. See [run and start paths](builders/run-and-start-paths.md).
 - Do not put `[<InlineIfLambda>]` on resumable code parameters, such as `task1` and `task2` in `Combine` and `computation` in `TryWith`. Plain lambda parameters, such as `guard` and `compensation`, have it. Commit d89d479 removed it from resumable code: "This was causing excessive compile times without any performance benefits".
+- Do not copy a `MoveNext` body into a new builder. Use `moveNext`, `moveNextUnit`, or `trampolinedMoveNext`. See [run and start paths](builders/run-and-start-paths.md).
 - Call `SetException` outside the `try ... with` unwind. The code links roslyn issue 26567 for this rule.
 
 ```fsharp
-// src/IcedTasks/CancellableTask.fs
-                        with exn ->
-                            __stack_exn <- exn
-                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
-                        match __stack_exn with
-                        | null -> ()
-                        | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
+// src/IcedTasks/TaskBuilderBase.fs (TaskBase.moveNextWith)
+            with exn ->
+                __stack_exn <- exn
+            // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
+            match __stack_exn with
+            | null -> ()
+            | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
 ```
 
 ## Gotchas

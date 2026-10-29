@@ -96,22 +96,11 @@ module PoolingValueTasks =
             if __useResumableCode then
                 __stateMachine<TaskBaseStateMachineData<'T, _>, ValueTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
-                        //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
-                        let mutable __stack_exn = null
+                        let __stack_fin = moveNext(code).Invoke(&sm)
 
-                        try
-                            let __stack_code_fin = code.Invoke(&sm)
-
-                            if __stack_code_fin then
-                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
-                        with exn ->
-                            __stack_exn <- exn
-                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
-                        match __stack_exn with
-                        | null -> ()
-                        | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
-                    //-- RESUMABLE CODE END
+                        __stack_fin
+                        |> ignore
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)

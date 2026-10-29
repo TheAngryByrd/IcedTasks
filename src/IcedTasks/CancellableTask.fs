@@ -90,47 +90,9 @@ module CancellableTasks =
                 __stateMachine<CancellableTaskBaseStateMachineData<'T, _>, CancellableTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         __resumeAt sm.ResumptionPoint
+                        let __stack_fin = trampolinedMoveNext(code).Invoke(&sm)
 
-                        let mutable error: exn = Unchecked.defaultof<_>
-
-                        let noBounce = not (Trampoline.started ())
-
-                        let __stack_go1 =
-                            noBounce
-                            || yieldOnBindLimit().Invoke(&sm)
-
-                        if __stack_go1 then
-                            try
-                                let __stack_code_fin = code.Invoke(&sm)
-
-                                if __stack_code_fin then
-                                    let __stack_go2 =
-                                        noBounce
-                                        || yieldOnCompletionLimit().Invoke(&sm)
-
-                                    if __stack_go2 then
-                                        Trampoline.trust ()
-
-                                        MethodBuilder.SetResult(
-                                            &sm.Data.MethodBuilder,
-                                            sm.Data.Result
-                                        )
-
-                                        Trampoline.clearTrust ()
-                            with exn ->
-                                error <- exn
-
-                            if not (obj.ReferenceEquals(error, null)) then
-                                let __stack_go2 =
-                                    noBounce
-                                    || yieldOnCompletionLimit().Invoke(&sm)
-
-                                if __stack_go2 then
-                                    Trampoline.trust ()
-                                    MethodBuilder.SetException(&sm.Data.MethodBuilder, error)
-                                    Trampoline.clearTrust ()
-
-                        Trampoline.exited ()
+                        __stack_fin
                         |> ignore
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
@@ -271,47 +233,9 @@ module CancellableTasks =
                 __stateMachine<CancellableTaskBaseStateMachineData<'T, _>, CancellableTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         __resumeAt sm.ResumptionPoint
+                        let __stack_fin = trampolinedMoveNext(code).Invoke(&sm)
 
-                        let mutable error: exn = Unchecked.defaultof<_>
-
-                        let noBounce = not (Trampoline.started ())
-
-                        let __stack_go1 =
-                            noBounce
-                            || yieldOnBindLimit().Invoke(&sm)
-
-                        if __stack_go1 then
-                            try
-                                let __stack_code_fin = code.Invoke(&sm)
-
-                                if __stack_code_fin then
-                                    let __stack_go2 =
-                                        noBounce
-                                        || yieldOnCompletionLimit().Invoke(&sm)
-
-                                    if __stack_go2 then
-                                        Trampoline.trust ()
-
-                                        MethodBuilder.SetResult(
-                                            &sm.Data.MethodBuilder,
-                                            sm.Data.Result
-                                        )
-
-                                        Trampoline.clearTrust ()
-                            with exn ->
-                                error <- exn
-
-                            if not (obj.ReferenceEquals(error, null)) then
-                                let __stack_go2 =
-                                    noBounce
-                                    || yieldOnCompletionLimit().Invoke(&sm)
-
-                                if __stack_go2 then
-                                    Trampoline.trust ()
-                                    MethodBuilder.SetException(&sm.Data.MethodBuilder, error)
-                                    Trampoline.clearTrust ()
-
-                        Trampoline.exited ()
+                        __stack_fin
                         |> ignore
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->

@@ -43,6 +43,14 @@ module ColdTasks =
         [<DefaultValue(false)>]
         val mutable MethodBuilder: AsyncTaskMethodBuilder<'T>
 
+        /// The exception of the code. The static path keeps it across the bounce before the completion.
+        [<DefaultValue(false)>]
+        val mutable Error: exn
+
+        /// True when this start cannot bounce. The static path keeps it across the bounces.
+        [<DefaultValue(false)>]
+        val mutable NoBounce: bool
+
     /// This is used by the compiler as a template for creating state machine structs
     and ColdTaskStateMachine<'TOverall> = ResumableStateMachine<ColdTaskStateMachineData<'TOverall>>
     /// Represents the runtime continuation of a ColdTask state machine created dynamically
@@ -79,6 +87,50 @@ module ColdTasks =
 
     let inline yieldOnCompletionLimit () =
         bounceWhen Trampoline.shouldBounceCompletion
+
+    /// The MoveNext body of the static path. Run invokes it after `__resumeAt`. It runs `code` and calls
+    /// the trampoline hooks. When the trampoline lets it, it bounces before the start and before the
+    /// completion. It always returns true. Run ignores this value, so that MoveNext does not end with a
+    /// call to a unit function. The state that crosses a bounce is in the data fields, not in local values.
+    /// The compiler clears a hoisted local value at the end of its scope. Here, that scope also ends when
+    /// MoveNext suspends.
+    let inline trampolinedMoveNext (code: ColdTaskCode<'T, 'T>) : ColdTaskCode<'T, bool> =
+        ColdTaskCode(fun sm ->
+            sm.Data.Error <- Unchecked.defaultof<_>
+            sm.Data.NoBounce <- not (Trampoline.started ())
+
+            let __stack_go1 =
+                sm.Data.NoBounce
+                || yieldOnBindLimit().Invoke(&sm)
+
+            if __stack_go1 then
+                try
+                    let __stack_code_fin = code.Invoke(&sm)
+
+                    if __stack_code_fin then
+                        let __stack_go2 =
+                            sm.Data.NoBounce
+                            || yieldOnCompletionLimit().Invoke(&sm)
+
+                        if __stack_go2 then
+                            Trampoline.trust ()
+                            sm.Data.MethodBuilder.SetResult(sm.Data.Result)
+                            Trampoline.clearTrust ()
+                with exn ->
+                    sm.Data.Error <- exn
+
+                if not (obj.ReferenceEquals(sm.Data.Error, null)) then
+                    let __stack_go2 =
+                        sm.Data.NoBounce
+                        || yieldOnCompletionLimit().Invoke(&sm)
+
+                    if __stack_go2 then
+                        Trampoline.trust ()
+                        sm.Data.MethodBuilder.SetException(sm.Data.Error)
+                        Trampoline.clearTrust ()
+
+            Trampoline.exited ()
+        )
 
     /// Contains the coldTask computation expression builder.
     type ColdTaskBuilderBase() =
@@ -357,42 +409,9 @@ module ColdTasks =
                 __stateMachine<ColdTaskStateMachineData<'T>, ColdTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         __resumeAt sm.ResumptionPoint
+                        let __stack_fin = trampolinedMoveNext(code).Invoke(&sm)
 
-                        let mutable error: exn = Unchecked.defaultof<_>
-
-                        let noBounce = not (Trampoline.started ())
-
-                        let __stack_go1 =
-                            noBounce
-                            || yieldOnBindLimit().Invoke(&sm)
-
-                        if __stack_go1 then
-                            try
-                                let __stack_code_fin = code.Invoke(&sm)
-
-                                if __stack_code_fin then
-                                    let __stack_go2 =
-                                        noBounce
-                                        || yieldOnCompletionLimit().Invoke(&sm)
-
-                                    if __stack_go2 then
-                                        Trampoline.trust ()
-                                        sm.Data.MethodBuilder.SetResult(sm.Data.Result)
-                                        Trampoline.clearTrust ()
-                            with exn ->
-                                error <- exn
-
-                            if not (obj.ReferenceEquals(error, null)) then
-                                let __stack_go2 =
-                                    noBounce
-                                    || yieldOnCompletionLimit().Invoke(&sm)
-
-                                if __stack_go2 then
-                                    Trampoline.trust ()
-                                    sm.Data.MethodBuilder.SetException(error)
-                                    Trampoline.clearTrust ()
-
-                        Trampoline.exited ()
+                        __stack_fin
                         |> ignore
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
@@ -442,42 +461,9 @@ module ColdTasks =
                 __stateMachine<ColdTaskStateMachineData<'T>, ColdTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         __resumeAt sm.ResumptionPoint
+                        let __stack_fin = trampolinedMoveNext(code).Invoke(&sm)
 
-                        let mutable error: exn = Unchecked.defaultof<_>
-
-                        let noBounce = not (Trampoline.started ())
-
-                        let __stack_go1 =
-                            noBounce
-                            || yieldOnBindLimit().Invoke(&sm)
-
-                        if __stack_go1 then
-                            try
-                                let __stack_code_fin = code.Invoke(&sm)
-
-                                if __stack_code_fin then
-                                    let __stack_go2 =
-                                        noBounce
-                                        || yieldOnCompletionLimit().Invoke(&sm)
-
-                                    if __stack_go2 then
-                                        Trampoline.trust ()
-                                        sm.Data.MethodBuilder.SetResult(sm.Data.Result)
-                                        Trampoline.clearTrust ()
-                            with exn ->
-                                error <- exn
-
-                            if not (obj.ReferenceEquals(error, null)) then
-                                let __stack_go2 =
-                                    noBounce
-                                    || yieldOnCompletionLimit().Invoke(&sm)
-
-                                if __stack_go2 then
-                                    Trampoline.trust ()
-                                    sm.Data.MethodBuilder.SetException(error)
-                                    Trampoline.clearTrust ()
-
-                        Trampoline.exited ()
+                        __stack_fin
                         |> ignore
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->

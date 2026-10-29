@@ -32,6 +32,14 @@ module CancellableTaskBase =
         [<DefaultValue(false)>]
         val mutable MethodBuilder: 'Builder
 
+        /// The exception of the code. The static path keeps it across the bounce before the completion.
+        [<DefaultValue(false)>]
+        val mutable Error: exn
+
+        /// True when this start cannot bounce. The static path keeps it across the bounces.
+        [<DefaultValue(false)>]
+        val mutable NoBounce: bool
+
         /// <summary>Throws a <see cref="T:System.OperationCanceledException" /> if this token has had cancellation requested.</summary>
         /// <exception cref="T:System.OperationCanceledException">The token has had cancellation requested.</exception>
         /// <exception cref="T:System.ObjectDisposedException">The associated <see cref="T:System.Threading.CancellationTokenSource" /> has been disposed.</exception>
@@ -82,6 +90,52 @@ module CancellableTaskBase =
 
     let inline yieldOnCompletionLimit () =
         bounceWhen Trampoline.shouldBounceCompletion
+
+    /// The MoveNext body of the static path. Run invokes it after `__resumeAt`. It runs `code` and calls
+    /// the trampoline hooks. When the trampoline lets it, it bounces before the start and before the
+    /// completion. It always returns true. Run ignores this value, so that MoveNext does not end with a
+    /// call to a unit function. The state that crosses a bounce is in the data fields, not in local values.
+    /// The compiler clears a hoisted local value at the end of its scope. Here, that scope also ends when
+    /// MoveNext suspends.
+    let inline trampolinedMoveNext
+        (code: CancellableTaskBaseCode<'T, 'T, 'Builder>)
+        : CancellableTaskBaseCode<'T, bool, 'Builder> =
+        CancellableTaskBaseCode(fun sm ->
+            sm.Data.Error <- Unchecked.defaultof<_>
+            sm.Data.NoBounce <- not (Trampoline.started ())
+
+            let __stack_go1 =
+                sm.Data.NoBounce
+                || yieldOnBindLimit().Invoke(&sm)
+
+            if __stack_go1 then
+                try
+                    let __stack_code_fin = code.Invoke(&sm)
+
+                    if __stack_code_fin then
+                        let __stack_go2 =
+                            sm.Data.NoBounce
+                            || yieldOnCompletionLimit().Invoke(&sm)
+
+                        if __stack_go2 then
+                            Trampoline.trust ()
+                            MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
+                            Trampoline.clearTrust ()
+                with exn ->
+                    sm.Data.Error <- exn
+
+                if not (obj.ReferenceEquals(sm.Data.Error, null)) then
+                    let __stack_go2 =
+                        sm.Data.NoBounce
+                        || yieldOnCompletionLimit().Invoke(&sm)
+
+                    if __stack_go2 then
+                        Trampoline.trust ()
+                        MethodBuilder.SetException(&sm.Data.MethodBuilder, sm.Data.Error)
+                        Trampoline.clearTrust ()
+
+            Trampoline.exited ()
+        )
 
     /// <summary>
     /// Contains methods to build TaskLikes using the F# computation expression syntax
