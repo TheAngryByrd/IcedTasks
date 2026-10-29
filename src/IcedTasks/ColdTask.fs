@@ -435,7 +435,7 @@ module ColdTasks =
                     (MoveNextMethodImpl<_>(fun sm ->
                         __resumeAt sm.ResumptionPoint
 
-                        let mutable error = ValueNone
+                        let mutable error: exn = Unchecked.defaultof<_>
 
                         let noBounce = not (Trampoline.Current.IsAwaited())
                         Trampoline.Started()
@@ -458,19 +458,17 @@ module ColdTasks =
                                         sm.Data.MethodBuilder.SetResult(sm.Data.Result)
                                         Trampoline.Current.ClearTrust()
                             with exn ->
-                                error <- ValueSome(ExceptionCache.CaptureOrRetrieve exn)
+                                error <- exn
 
-                            match error with
-                            | ValueSome error ->
+                            if not (obj.ReferenceEquals(error, null)) then
                                 let __stack_go2 =
                                     noBounce
                                     || yieldOnCompletionLimit().Invoke(&sm)
 
                                 if __stack_go2 then
                                     Trampoline.Current.Trust()
-                                    sm.Data.MethodBuilder.SetException(error.SourceException)
+                                    sm.Data.MethodBuilder.SetException(error)
                                     Trampoline.Current.ClearTrust()
-                            | ValueNone -> ()
 
                         Trampoline.Exited() |> ignore
                     ))
@@ -480,12 +478,13 @@ module ColdTasks =
                     (AfterCode<_, _>(fun sm ->
                         let sm = sm
 
-                        Trampoline.wrap
-                        <| fun () ->
-                            let mutable sm = sm
-                            sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
-                            sm.Data.MethodBuilder.Start(&sm)
-                            sm.Data.MethodBuilder.Task
+                        Trampoline.asFunc
+                            { new TrampolinedStart<_, _>() with
+                                member _.Start(()) =
+                                    let mutable sm = sm
+                                    sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
+                                    sm.Data.MethodBuilder.Start(&sm)
+                                    sm.Data.MethodBuilder.Task }
                     ))
             else
                 ColdTaskBuilder.RunDynamic(code)
@@ -520,7 +519,7 @@ module ColdTasks =
                     (MoveNextMethodImpl<_>(fun sm ->
                         __resumeAt sm.ResumptionPoint
 
-                        let mutable error = ValueNone
+                        let mutable error: exn = Unchecked.defaultof<_>
 
                         let noBounce = not (Trampoline.Current.IsAwaited())
                         Trampoline.Started()
@@ -543,19 +542,17 @@ module ColdTasks =
                                         sm.Data.MethodBuilder.SetResult(sm.Data.Result)
                                         Trampoline.Current.ClearTrust()
                             with exn ->
-                                error <- ValueSome(ExceptionCache.CaptureOrRetrieve exn)
+                                error <- exn
 
-                            match error with
-                            | ValueSome error ->
+                            if not (obj.ReferenceEquals(error, null)) then
                                 let __stack_go2 =
                                     noBounce
                                     || yieldOnCompletionLimit().Invoke(&sm)
 
                                 if __stack_go2 then
                                     Trampoline.Current.Trust()
-                                    sm.Data.MethodBuilder.SetException(error.SourceException)
+                                    sm.Data.MethodBuilder.SetException(error)
                                     Trampoline.Current.ClearTrust()
-                            | ValueNone -> ()
 
                         Trampoline.Exited() |> ignore
                     ))
@@ -573,22 +570,24 @@ module ColdTasks =
                         then
                             let sm = sm // copy
 
-                            Trampoline.wrap
-                            <| fun () ->
-                                let mutable sm = sm
-                                sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
-                                sm.Data.MethodBuilder.Start(&sm)
-                                sm.Data.MethodBuilder.Task
+                            Trampoline.asFunc
+                                { new TrampolinedStart<_, _>() with
+                                    member _.Start(()) =
+                                        let mutable sm = sm
+                                        sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
+                                        sm.Data.MethodBuilder.Start(&sm)
+                                        sm.Data.MethodBuilder.Task }
                         else
 
-                            Trampoline.wrap
-                            <| fun () ->
-                                Task.Run<'T>(fun () ->
-                                    let mutable sm = sm // host local mutable copy of contents of state machine on this thread pool thread
-                                    sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
-                                    sm.Data.MethodBuilder.Start(&sm)
-                                    sm.Data.MethodBuilder.Task
-                                )
+                            Trampoline.asFunc
+                                { new TrampolinedStart<_, _>() with
+                                    member _.Start(()) =
+                                        Task.Run<'T>(fun () ->
+                                            let mutable sm = sm // host local mutable copy of contents of state machine on this thread pool thread
+                                            sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
+                                            sm.Data.MethodBuilder.Start(&sm)
+                                            sm.Data.MethodBuilder.Task
+                                        ) }
                     ))
             else
                 BackgroundColdTaskBuilder.RunDynamic(code)

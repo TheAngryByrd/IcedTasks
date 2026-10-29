@@ -23,7 +23,7 @@ A hot builder calls `MethodBuilder.Start` in `AfterCode` and returns the task. A
                     ))
 ```
 
-Each cold builder passes the start function through `Trampoline.wrap`, so the value is a `TrampolinedStart`. A call from user code is an immediate start, and a `Source` bind is a nested start. See [recursion and tail calls](../plans/recursion-and-tail-calls.md).
+Each cold builder's value is a `TrampolinedStart`: the static `Run` makes one with an object expression around the state machine, and `RunDynamic` passes a closure through `Trampoline.wrap`. A call from user code is an immediate start, and a `Source` bind is a nested start. See [recursion and tail calls](../plans/recursion-and-tail-calls.md).
 
 ## Multi-start invariant
 

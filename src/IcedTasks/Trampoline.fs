@@ -16,6 +16,11 @@ type DynamicState =
     | Bounce of DynamicState
     | Immediate of DynamicState
 
+/// The start function of a cold value, without the trampoline around it.
+[<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+type IStart<'Arg, 'Result> =
+    abstract Start: 'Arg -> 'Result
+
 type Trampoline private (previous: Trampoline voption) =
 
     [<ThreadStatic; DefaultValue>]
@@ -59,7 +64,7 @@ type Trampoline private (previous: Trampoline voption) =
 
     /// Runs `start` as the owner of this trampoline, then drains what it bounced. The owner is the
     /// outermost start on the thread, so a bounce unwinds to a shallow stack before it runs again.
-    member private this.RunAsOwner(start: 'Arg -> 'Result, arg: 'Arg, prime: bool) : 'Result =
+    member private this.RunAsOwner(start: IStart<'Arg, 'Result>, arg: 'Arg, prime: bool) : 'Result =
         running <- true
 
         try
@@ -67,11 +72,11 @@ type Trampoline private (previous: Trampoline voption) =
         finally
             this.Drain()
 
-    member private _.Run(start: 'Arg -> 'Result, arg: 'Arg, prime: bool) : 'Result =
+    member private _.Run(start: IStart<'Arg, 'Result>, arg: 'Arg, prime: bool) : 'Result =
         primed <- prime
 
         try
-            start arg
+            start.Start arg
         finally
             primed <- false
 
@@ -243,7 +248,7 @@ type Trampoline private (previous: Trampoline voption) =
 
     /// A start from user code. The caller can block on the result, so the start must not leave work in an
     /// enclosing trampoline: it owns the trampoline, or a fresh one, and drains it before it returns.
-    static member StartImmediate(start: 'Arg -> 'Result, arg: 'Arg) : 'Result =
+    static member StartImmediate(start: IStart<'Arg, 'Result>, arg: 'Arg) : 'Result =
         if
             not Trampoline.HasSufficientStack
             && Trampoline.CanLeaveStack
@@ -264,7 +269,7 @@ type Trampoline private (previous: Trampoline voption) =
                     Trampoline.current <- trampoline
 
     /// A start from a builder bind. The binder awaits the result, so the start may bounce.
-    static member StartNested(start: 'Arg -> 'Result, arg: 'Arg) : 'Result =
+    static member StartNested(start: IStart<'Arg, 'Result>, arg: 'Arg) : 'Result =
         let trampoline = Trampoline.Current
         let prime = Trampoline.CanLeaveStack
 
@@ -280,20 +285,37 @@ type INestedStart<'Arg, 'Result> =
 
 /// The start function of a cold builder. Calling it is a start from user code. A builder bind finds it
 /// with a type test and calls StartNested. Because ColdTask and CancellableTask are function aliases,
-/// the type is the only way to tell the two starts apart.
-[<Sealed; System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
-type TrampolinedStart<'Arg, 'Result>(start: 'Arg -> 'Result) =
+/// the type is the only way to tell the two starts apart. A builder's Run derives from it with an object
+/// expression that holds the state machine, so one object is both the function and the start.
+[<AbstractClass; System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+type TrampolinedStart<'Arg, 'Result>() =
     inherit FSharpFunc<'Arg, 'Result>()
 
-    override _.Invoke(arg) = Trampoline.StartImmediate(start, arg)
+    abstract Start: 'Arg -> 'Result
+
+    override this.Invoke(arg) = Trampoline.StartImmediate(this, arg)
+
+    interface IStart<'Arg, 'Result> with
+        member this.Start(arg) = this.Start arg
 
     interface INestedStart<'Arg, 'Result> with
-        member _.StartNested(arg) = Trampoline.StartNested(start, arg)
+        member this.StartNested(arg) = Trampoline.StartNested(this, arg)
+
+/// A TrampolinedStart around a function, for the starts that do not hold a state machine.
+[<Sealed; System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+type FuncStart<'Arg, 'Result>(start: 'Arg -> 'Result) =
+    inherit TrampolinedStart<'Arg, 'Result>()
+
+    override _.Start(arg) = start arg
 
 module Trampoline =
 
     let inline wrap (start: 'Arg -> 'Result) : 'Arg -> 'Result =
-        unbox<'Arg -> 'Result> (box (TrampolinedStart start))
+        unbox<'Arg -> 'Result> (box (FuncStart start))
+
+    /// Gives a TrampolinedStart the type of the function that it is.
+    let inline asFunc (start: TrampolinedStart<'Arg, 'Result>) : 'Arg -> 'Result =
+        unbox<'Arg -> 'Result> (box start)
 
     /// Starts a bound value. Only a TrampolinedStart is started as nested, so a plain function that
     /// blocks on a cold value inside cannot make that value bounce.
