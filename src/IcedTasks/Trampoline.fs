@@ -6,200 +6,116 @@ open System.Collections.Generic
 open System.Threading
 open System.Threading.Tasks
 open System.Runtime.CompilerServices
+open Microsoft.FSharp.Core.CompilerServices
 open IcedTasks.TaskLike
+open IcedTasks.Nullness
 
-type DynamicState =
-    | Running
-    | SetResult
-    | SetException of ExceptionDispatchInfo
-    | Awaiting of ICriticalNotifyCompletion
-    | Bounce of DynamicState
-    | Immediate of DynamicState
-
-/// The start function of a cold value, without the trampoline around it.
+/// The queue of bounced state machines on one thread. This type holds only the state of one
+/// trampoline. The Trampoline module holds the rules for when to bounce and when to drain.
+[<Sealed>]
 [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
-type IStart<'Arg, 'Result> =
-    abstract Start: 'Arg -> 'Result
-
-type Trampoline private (previous: Trampoline voption) =
+type Trampoline internal (owner: Owner) =
 
     [<ThreadStatic; DefaultValue>]
-    static val mutable private current: Trampoline
+    static val mutable private onThread: Trampoline
 
     let queue = Queue<Action>()
 
-    // A trampoline that a resumption owns runs from the start and counts the MoveNext frames on it.
-    // A start owns the other trampolines, and RunAsOwner sets running.
-    let mutable running = previous.IsSome
-    let mutable frames = if previous.IsSome then 1 else 0
+    // A trampoline that a resumption owns counts the MoveNext frames on it.
+    let mutable frames =
+        match owner with
+        | ResumptionOwned _ -> 1
+        | StartOwned -> 0
 
-    let mutable primed = false
+    /// The trampoline of this thread, if it has one.
+    static member internal OnThread =
+        match box Trampoline.onThread with
+        | null -> ValueNone
+        | _ -> ValueSome Trampoline.onThread
 
-    let mutable trusted = false
+    /// Makes `trampoline` the trampoline of this thread.
+    static member internal Install(trampoline: Trampoline) = Trampoline.onThread <- trampoline
 
-    static let runInContext =
-        ContextCallback(fun state ->
-            match state with
-            | :? (unit -> unit) as run -> run ()
-            | _ -> ()
-        )
+    /// True while an owner further up the stack drains this trampoline. A trampoline that a resumption
+    /// owns runs from the start. A start sets it when it becomes the owner.
+    member val internal Running =
+        (match owner with
+         | ResumptionOwned _ -> true
+         | StartOwned -> false) with get, set
 
-    member private _.Drain() =
+    /// Set by a nested start, and read and cleared by the state machine that it starts.
+    member val internal Primed = false with get, set
+
+    /// Set when IcedTasks itself causes the next resumption on this thread.
+    member val internal Trusted = false with get, set
+
+    member internal this.Drain() =
         try
             while queue.Count > 0 do
                 let continuation = queue.Dequeue()
-                trusted <- true
+                this.Trusted <- true
                 continuation.Invoke()
-                trusted <- false
+                this.Trusted <- false
         finally
-            trusted <- false
-            running <- false
+            this.Trusted <- false
+            this.Running <- false
 
     member private this.Enqueue(continuation: Action) =
         queue.Enqueue continuation
 
-        if not running then
-            running <- true
+        if not this.Running then
+            this.Running <- true
             this.Drain()
-
-    /// Runs `start` as the owner of this trampoline, then drains what it bounced. The owner is the
-    /// outermost start on the thread, so a bounce unwinds to a shallow stack before it runs again.
-    member private this.RunAsOwner(start: IStart<'Arg, 'Result>, arg: 'Arg, prime: bool) : 'Result =
-        running <- true
-
-        try
-            this.Run(start, arg, prime)
-        finally
-            this.Drain()
-
-    member private _.Run(start: IStart<'Arg, 'Result>, arg: 'Arg, prime: bool) : 'Result =
-        primed <- prime
-
-        try
-            start.Start arg
-        finally
-            primed <- false
 
     interface ICriticalNotifyCompletion with
         member this.OnCompleted continuation = this.Enqueue continuation
         member this.UnsafeOnCompleted continuation = this.Enqueue continuation
 
-    static member Current =
-        let existing = Trampoline.current
-
-        if isNull (box existing) then
-            let created = Trampoline(ValueNone)
-            Trampoline.current <- created
-            created
-        else
-            existing
-
-    member _.IsRunning = running
-
-    /// Marks the next resumption on this thread as one that IcedTasks itself causes: a drained bounce, or
-    /// the completion of a builder task that resumes its awaiter inline.
-    member _.Trust() = trusted <- true
-
-    member _.ClearTrust() = trusted <- false
-
-    member private _.TakeTrust() =
-        let wasTrusted = trusted
-        trusted <- false
-        wasTrusted
-
-    member private _.IsResumptionOwner = previous.IsSome
-
-    member private _.EnterFrame() = frames <- frames + 1
+    /// Enters a MoveNext frame. Only a trampoline that a resumption owns counts its frames.
+    member internal _.EnterFrame() =
+        match owner with
+        | ResumptionOwned _ -> frames <- frames + 1
+        | StartOwned -> ()
 
     /// Leaves a MoveNext frame. When the resumption that created this trampoline leaves, drain what it
     /// bounced, then give the thread back to the trampoline that ran before.
-    member private this.ExitFrame() =
-        frames <- frames - 1
+    member internal this.ExitFrame() =
+        match owner with
+        | StartOwned -> ()
+        | ResumptionOwned previous ->
+            frames <- frames - 1
 
-        if frames = 0 then
-            frames <- 1
+            if frames = 0 then
+                frames <- 1
 
-            try
-                this.Drain()
-            finally
-                frames <- 0
-                Trampoline.current <- previous.Value
+                try
+                    this.Drain()
+                finally
+                    frames <- 0
+                    Trampoline.Install previous
 
-    /// Called when a state machine starts, after it reads IsAwaited.
-    static member Started() =
-        let trampoline = Trampoline.current
+/// The owner of a trampoline. The owner drains it.
+and [<Struct; NoEquality; NoComparison>] internal Owner =
+    /// The outermost start on the thread. It drains the trampoline before it returns.
+    | StartOwned
+    /// A resumption from code that is not IcedTasks. It drains the trampoline when its last MoveNext
+    /// frame exits. Then it gives the thread back to the previous trampoline.
+    | ResumptionOwned of previous: Trampoline
 
-        if not (isNull (box trampoline)) then
-            trampoline.ClearTrust()
+/// The rules for when a cold start bounces, and the hooks that the state machines call.
+[<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+module Trampoline =
 
-            if trampoline.IsResumptionOwner then
-                trampoline.EnterFrame()
+    /// The trampoline of this thread. If the thread has no trampoline, this makes one.
+    let current () =
+        match Trampoline.OnThread with
+        | ValueSome existing -> existing
+        | ValueNone ->
+            let created = Trampoline(StartOwned)
+            Trampoline.Install created
+            created
 
-    /// Called when a state machine resumes after an await. Other code, for example
-    /// TaskCompletionSource.SetResult, can resume an awaiting state machine inline while a trampoline runs
-    /// further up the stack. That code can then block on the resumed task, and the drain that would complete
-    /// it never runs. So such a resumption owns a fresh trampoline until its MoveNext returns.
-    static member Resumed() =
-        let trampoline = Trampoline.current
-
-        if not (isNull (box trampoline)) then
-            if
-                not (trampoline.TakeTrust())
-                && trampoline.IsRunning
-            then
-                Trampoline.current <- Trampoline(ValueSome trampoline)
-            elif trampoline.IsResumptionOwner then
-                trampoline.EnterFrame()
-
-    /// Called when MoveNext returns, after the state machine suspends or completes. It must not read the
-    /// state machine, because another thread can already run it, or a pool can already reuse it.
-    /// It returns a value so that callers can ignore it: a call to a unit method at the end of MoveNext
-    /// gets the IL tail. prefix, and the JIT then compiles MoveNext without tiering and dynamic PGO.
-    static member Exited() : bool =
-        let trampoline = Trampoline.current
-
-        if
-            not (isNull (box trampoline))
-            && trampoline.IsResumptionOwner
-        then
-            trampoline.ExitFrame()
-
-        true
-
-    /// Bounce only when an owner drains this trampoline further up the stack, and only when the stack
-    /// runs low. A bounce at any other depth could change code that works without one.
-    member _.ShouldBounce =
-        running
-        && not Trampoline.HasSufficientStack
-
-    /// The check before a nested start sets its result or exception. Setting it runs the awaiting
-    /// parent inline. On .NET Framework, continuations run inline with no stack guard, so a chain of
-    /// completions can overflow even when no trampoline runs. So on netstandard2.0 a completion with no
-    /// trampoline running bounces too. The trampoline runs it at once on the same thread and owns the
-    /// rest of the chain, where the stack check limits it. A depth count is not used, because it would
-    /// also bounce where the stack is sufficient.
-    member this.ShouldBounceCompletion =
-#if NETSTANDARD2_0
-        not running
-        || not Trampoline.HasSufficientStack
-#else
-        this.ShouldBounce
-#endif
-
-    /// Reads and clears the flag that StartNested sets. Only a start that reads true may bounce.
-    member _.IsAwaited() =
-        let wasPrimed = primed
-        primed <- false
-        wasPrimed
-
-    /// A bounced child is incomplete when its parent binds it. The parent then posts its resumption to the
-    /// SynchronizationContext or TaskScheduler, and a blocked context never runs it. So the stack is only
-    /// left without them.
-    static member CanLeaveStack =
-        isNull SynchronizationContext.Current
-        && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
-
-    static member HasSufficientStack =
+    let internal hasSufficientStack () =
 #if NETSTANDARD2_0
         try
             RuntimeHelpers.EnsureSufficientExecutionStack()
@@ -210,9 +126,90 @@ type Trampoline private (previous: Trampoline voption) =
         RuntimeHelpers.TryEnsureSufficientExecutionStack()
 #endif
 
+    /// A bounced child is incomplete when its parent binds it. The parent then posts its resumption to the
+    /// SynchronizationContext or TaskScheduler, and a blocked context never runs it. So the stack is only
+    /// left without them.
+    let internal canLeaveStack () =
+        isNull SynchronizationContext.Current
+        && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
+
+    /// Bounce only when an owner drains this trampoline further up the stack, and only when the stack
+    /// runs low. A bounce at any other depth could change code that works without one.
+    let shouldBounce (trampoline: Trampoline) =
+        trampoline.Running
+        && not (hasSufficientStack ())
+
+    /// The check before a nested start sets its result or exception. Setting it runs the awaiting
+    /// parent inline. On .NET Framework, continuations run inline with no stack guard, so a chain of
+    /// completions can overflow even when no trampoline runs. So on netstandard2.0 a completion with no
+    /// trampoline running bounces too. The trampoline runs it at once on the same thread and owns the
+    /// rest of the chain, where the stack check limits it. A depth count is not used, because it would
+    /// also bounce where the stack is sufficient.
+    let shouldBounceCompletion (trampoline: Trampoline) =
+#if NETSTANDARD2_0
+        not trampoline.Running
+        || not (hasSufficientStack ())
+#else
+        shouldBounce trampoline
+#endif
+
+    /// Marks the next resumption on this thread as one that IcedTasks itself causes: the completion of a
+    /// builder task that resumes its awaiter inline.
+    let trust () = (current ()).Trusted <- true
+
+    let clearTrust () = (current ()).Trusted <- false
+
+    /// Called when a state machine starts, as its first action. It returns true when the start may
+    /// bounce: only a nested start primes the trampoline, and no user code runs between the prime and
+    /// this read.
+    let started () =
+        let trampoline = current ()
+        trampoline.Trusted <- false
+        trampoline.EnterFrame()
+        let primed = trampoline.Primed
+        trampoline.Primed <- false
+        primed
+
+    /// Called when a state machine resumes after an await. Other code, for example
+    /// TaskCompletionSource.SetResult, can resume an awaiting state machine inline while a trampoline runs
+    /// further up the stack. That code can then block on the resumed task, and the drain that would complete
+    /// it never runs. So such a resumption owns a fresh trampoline until its MoveNext returns.
+    let resumed () =
+        match Trampoline.OnThread with
+        | ValueNone -> ()
+        | ValueSome trampoline ->
+            let trusted = trampoline.Trusted
+            trampoline.Trusted <- false
+
+            if
+                not trusted
+                && trampoline.Running
+            then
+                Trampoline.Install(Trampoline(ResumptionOwned trampoline))
+            else
+                trampoline.EnterFrame()
+
+    /// Called when MoveNext returns, after the state machine suspends or completes. It must not read the
+    /// state machine, because another thread can already run it, or a pool can already reuse it.
+    /// It returns a value so that callers can ignore it: a call to a unit function at the end of MoveNext
+    /// gets the IL tail. prefix, and the JIT then compiles MoveNext without tiering and dynamic PGO.
+    let exited () : bool =
+        match Trampoline.OnThread with
+        | ValueNone -> ()
+        | ValueSome trampoline -> trampoline.ExitFrame()
+
+        true
+
+    let private runInContext =
+        ContextCallback(fun state ->
+            match state with
+            | :? (unit -> unit) as run -> run ()
+            | _ -> ()
+        )
+
     /// Runs `start` on a new thread with a fresh stack and waits for its synchronous part.
     /// The caller still sees a task that is complete or truly pending, so it can block on it.
-    static member RunOnNewThread(start: unit -> 'Result) : 'Result =
+    let internal runOnNewThread (start: unit -> 'Result) : 'Result =
         let result = ref ValueNone
         let context = ExecutionContext.Capture()
 
@@ -246,60 +243,67 @@ type Trampoline private (previous: Trampoline voption) =
             Unchecked.defaultof<_>
         | ValueNone -> failwith "The start thread ended without a result"
 
-    /// A start from user code. The caller can block on the result, so the start must not leave work in an
-    /// enclosing trampoline: it owns the trampoline, or a fresh one, and drains it before it returns.
-    static member StartImmediate(start: IStart<'Arg, 'Result>, arg: 'Arg) : 'Result =
-        if
-            not Trampoline.HasSufficientStack
-            && Trampoline.CanLeaveStack
-        then
-            Trampoline.RunOnNewThread(fun () -> Trampoline.StartImmediate(start, arg))
-        else
-            let trampoline = Trampoline.Current
-
-            if not trampoline.IsRunning then
-                trampoline.RunAsOwner(start, arg, false)
-            else
-                let isolated = Trampoline(ValueNone)
-                Trampoline.current <- isolated
-
-                try
-                    isolated.RunAsOwner(start, arg, false)
-                finally
-                    Trampoline.current <- trampoline
-
-    /// A start from a builder bind. The binder awaits the result, so the start may bounce.
-    static member StartNested(start: IStart<'Arg, 'Result>, arg: 'Arg) : 'Result =
-        let trampoline = Trampoline.Current
-        let prime = Trampoline.CanLeaveStack
-
-        if trampoline.IsRunning then
-            trampoline.Run(start, arg, prime)
-        else
-            trampoline.RunAsOwner(start, arg, prime)
-
-/// Starts a cold value from a builder bind.
-[<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
-type INestedStart<'Arg, 'Result> =
-    abstract StartNested: 'Arg -> 'Result
-
 /// The start function of a cold builder. Calling it is a start from user code. A builder bind finds it
 /// with a type test and calls StartNested. Because ColdTask and CancellableTask are function aliases,
 /// the type is the only way to tell the two starts apart. A builder's Run derives from it with an object
 /// expression that holds the state machine, so one object is both the function and the start.
-[<AbstractClass; System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+[<AbstractClass;
+  System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
 type TrampolinedStart<'Arg, 'Result>() =
     inherit FSharpFunc<'Arg, 'Result>()
 
+    /// Starts the state machine, without the trampoline around it.
     abstract Start: 'Arg -> 'Result
 
-    override this.Invoke(arg) = Trampoline.StartImmediate(this, arg)
+    member private this.Run(trampoline: Trampoline, arg: 'Arg, prime: bool) =
+        trampoline.Primed <- prime
 
-    interface IStart<'Arg, 'Result> with
-        member this.Start(arg) = this.Start arg
+        try
+            this.Start arg
+        finally
+            trampoline.Primed <- false
 
-    interface INestedStart<'Arg, 'Result> with
-        member this.StartNested(arg) = Trampoline.StartNested(this, arg)
+    /// Runs the start as the owner of the trampoline, then drains what it bounced. The owner is the
+    /// outermost start on the thread, so a bounce unwinds to a shallow stack before it runs again.
+    member private this.RunAsOwner(trampoline: Trampoline, arg: 'Arg, prime: bool) =
+        trampoline.Running <- true
+
+        try
+            this.Run(trampoline, arg, prime)
+        finally
+            trampoline.Drain()
+
+    /// A start from user code. The caller can block on the result, so the start must not leave work in an
+    /// enclosing trampoline: it owns the trampoline, or a fresh one, and drains it before it returns.
+    override this.Invoke(arg) =
+        if
+            not (Trampoline.hasSufficientStack ())
+            && Trampoline.canLeaveStack ()
+        then
+            Trampoline.runOnNewThread (fun () -> this.Invoke arg)
+        else
+            let trampoline = Trampoline.current ()
+
+            if not trampoline.Running then
+                this.RunAsOwner(trampoline, arg, false)
+            else
+                let isolated = Trampoline(StartOwned)
+                Trampoline.Install isolated
+
+                try
+                    this.RunAsOwner(isolated, arg, false)
+                finally
+                    Trampoline.Install trampoline
+
+    /// A start from a builder bind. The binder awaits the result, so the start may bounce.
+    member this.StartNested(arg: 'Arg) : 'Result =
+        let trampoline = Trampoline.current ()
+        let prime = Trampoline.canLeaveStack ()
+
+        if trampoline.Running then
+            this.Run(trampoline, arg, prime)
+        else
+            this.RunAsOwner(trampoline, arg, prime)
 
 /// A TrampolinedStart around a function, for the starts that do not hold a state machine.
 [<Sealed; System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
@@ -308,9 +312,11 @@ type FuncStart<'Arg, 'Result>(start: 'Arg -> 'Result) =
 
     override _.Start(arg) = start arg
 
-module Trampoline =
+[<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+module TrampolinedStart =
 
-    let inline wrap (start: 'Arg -> 'Result) : 'Arg -> 'Result =
+    /// Puts a TrampolinedStart around a function.
+    let inline ofFunc (start: 'Arg -> 'Result) : 'Arg -> 'Result =
         unbox<'Arg -> 'Result> (box (FuncStart start))
 
     /// Gives a TrampolinedStart the type of the function that it is.
@@ -321,8 +327,87 @@ module Trampoline =
     /// blocks on a cold value inside cannot make that value bounce.
     let inline bind (f: 'Arg -> 'Result) (arg: 'Arg) : 'Result =
         match box f with
-        | :? INestedStart<'Arg, 'Result> as nested -> nested.StartNested arg
+        | :? TrampolinedStart<'Arg, 'Result> as start -> start.StartNested arg
         | _ -> f arg
+
+/// The resumption info of a cold builder's dynamic path. It runs the code, calls the trampoline hooks,
+/// and bounces where the static path bounces. A builder gives only the calls to its method builder.
+[<AbstractClass;
+  System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+type TrampolinedResumptionInfo<'Data>(initial: ResumptionFunc<'Data>) =
+    inherit ResumptionDynamicInfo<'Data>(initial)
+
+    let mutable started = false
+    let mutable bounceAllowed = false
+    let mutable completing = false
+    let mutable error: ExceptionNull = null
+
+    /// Calls AwaitOnCompleted on the method builder.
+    abstract Await:
+        sm: byref<ResumableStateMachine<'Data>> * awaiter: ICriticalNotifyCompletion -> unit
+
+    /// Calls SetResult on the method builder.
+    abstract SetResult: sm: byref<ResumableStateMachine<'Data>> -> unit
+
+    /// Calls SetException on the method builder.
+    abstract SetException: sm: byref<ResumableStateMachine<'Data>> * error: exn -> unit
+
+    member private this.Complete(sm: byref<ResumableStateMachine<'Data>>) =
+        Trampoline.trust ()
+
+        match error with
+        | null -> this.SetResult(&sm)
+        | error -> this.SetException(&sm, error)
+
+        Trampoline.clearTrust ()
+
+    /// Runs the code to its next await or to its end. An await stores its awaiter in ResumptionData.
+    member private this.Step(sm: byref<ResumableStateMachine<'Data>>) =
+        let mutable finished = false
+
+        try
+            this.ResumptionData <- null
+            finished <- this.ResumptionFunc.Invoke(&sm)
+        with exn ->
+            error <- exn
+
+        if
+            finished
+            || not (isNull error)
+        then
+            completing <- true
+
+            if
+                bounceAllowed
+                && Trampoline.shouldBounceCompletion (Trampoline.current ())
+            then
+                this.Await(&sm, Trampoline.current ())
+            else
+                this.Complete(&sm)
+        else
+            match this.ResumptionData with
+            | :? ICriticalNotifyCompletion as awaiter -> this.Await(&sm, awaiter)
+            | _ -> ()
+
+    override this.MoveNext(sm) =
+        let bounce =
+            if started then
+                Trampoline.resumed ()
+                false
+            else
+                started <- true
+                bounceAllowed <- Trampoline.started ()
+
+                bounceAllowed
+                && Trampoline.shouldBounce (Trampoline.current ())
+
+        try
+            if bounce then this.Await(&sm, Trampoline.current ())
+            elif completing then this.Complete(&sm)
+            else this.Step(&sm)
+        finally
+            Trampoline.exited ()
+            |> ignore
 
 module ExceptionCache =
     let store = ConditionalWeakTable<exn, ExceptionDispatchInfo>()

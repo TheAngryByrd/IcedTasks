@@ -3,7 +3,7 @@
 Each resumable builder has a `Run` member with two paths. The base builders have no `Run`. Each derived builder adds `Run` and `RunDynamic`. See [and! and MergeSources](and-bang-merge-sources.md) for where `MergeSources` is defined.
 
 - Static path: `Run` checks `if __useResumableCode then __stateMachine<...>(MoveNextMethodImpl)(SetStateMachineMethodImpl)(AfterCode)`. The compiler makes a struct state machine.
-- Dynamic path: otherwise `Run` calls `static member RunDynamic`. `RunDynamic` makes a `...ResumptionDynamicInfo` object expression with `MoveNext` and `SetStateMachine`.
+- Dynamic path: otherwise `Run` calls `static member RunDynamic`. The hot builders make a `...ResumptionDynamicInfo` object expression with `MoveNext` and `SetStateMachine`. The cold builders derive from `TrampolinedResumptionInfo<_>` (`Trampoline.fs`), which has the shared `MoveNext`, and override only the method builder calls (see [recursion and tail calls](../plans/recursion-and-tail-calls.md)).
 - The dynamic `MoveNext` uses `MethodBuilder.AwaitOnCompleted`. The static `Bind` uses `AwaitUnsafeOnCompleted` (`src/IcedTasks/TaskBuilderBase.fs`).
 
 ## Hot and cold
@@ -23,7 +23,7 @@ A hot builder calls `MethodBuilder.Start` in `AfterCode` and returns the task. A
                     ))
 ```
 
-Each cold builder's value is a `TrampolinedStart`: the static `Run` makes one with an object expression around the state machine, and `RunDynamic` passes a closure through `Trampoline.wrap`. A call from user code is an immediate start, and a `Source` bind is a nested start. See [recursion and tail calls](../plans/recursion-and-tail-calls.md).
+Each cold builder's value is a `TrampolinedStart`: the static `Run` makes one with an object expression around the state machine, and `RunDynamic` passes a closure through `TrampolinedStart.ofFunc`. A call from user code is an immediate start, and a `Source` bind is a nested start. See [recursion and tail calls](../plans/recursion-and-tail-calls.md).
 
 ## Multi-start invariant
 

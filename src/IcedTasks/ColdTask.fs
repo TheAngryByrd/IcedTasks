@@ -59,13 +59,13 @@ module ColdTasks =
     /// allocate.
     let inline bounceWhen ([<InlineIfLambda>] shouldBounce: Trampoline -> bool) =
         ColdTaskCode(fun sm ->
-            let mutable __stack_trampoline = Trampoline.Current
+            let mutable __stack_trampoline = Trampoline.current ()
 
             if shouldBounce __stack_trampoline then
                 let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
 
                 if __stack_yield_fin then
-                    Trampoline.Resumed()
+                    Trampoline.resumed ()
 
                 if not __stack_yield_fin then
                     sm.Data.MethodBuilder.AwaitOnCompleted(&__stack_trampoline, &sm)
@@ -75,11 +75,10 @@ module ColdTasks =
                 true
         )
 
-    let inline yieldOnBindLimit () =
-        bounceWhen (fun trampoline -> trampoline.ShouldBounce)
+    let inline yieldOnBindLimit () = bounceWhen Trampoline.shouldBounce
 
     let inline yieldOnCompletionLimit () =
-        bounceWhen (fun trampoline -> trampoline.ShouldBounceCompletion)
+        bounceWhen Trampoline.shouldBounceCompletion
 
     /// Contains the coldTask computation expression builder.
     type ColdTaskBuilderBase() =
@@ -247,7 +246,8 @@ module ColdTasks =
                             let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
 
                             if __stack_yield_fin then
-                                Trampoline.Resumed()
+                                Trampoline.resumed ()
+
                             __stack_condition_fin <- __stack_yield_fin
 
                         if __stack_condition_fin then
@@ -270,7 +270,8 @@ module ColdTasks =
                         if awaiter.IsCompleted then
                             cont.Invoke(&sm)
                         else
-                            sm.ResumptionDynamicInfo.ResumptionData <- Awaiting awaiter
+                            sm.ResumptionDynamicInfo.ResumptionData <-
+                                (awaiter :> ICriticalNotifyCompletion)
 
                             sm.ResumptionDynamicInfo.ResumptionFunc <- cont
                             false
@@ -325,105 +326,27 @@ module ColdTasks =
 
             let initialResumptionFunc = ColdTaskResumptionFunc<'T>(fun sm -> code.Invoke &sm)
 
-            let makeResumptionInfo () =
-                let bounceAllowed = Trampoline.Current.IsAwaited()
+            let newResumptionInfo () =
+                { new TrampolinedResumptionInfo<ColdTaskStateMachineData<'T>>(initialResumptionFunc) with
+                    member _.Await(sm, awaiter) =
+                        let mutable awaiter = awaiter
+                        sm.Data.MethodBuilder.AwaitOnCompleted(&awaiter, &sm)
 
-                let maybeBounce state =
-                    if
-                        bounceAllowed
-                        && Trampoline.Current.ShouldBounce
-                    then
-                        Bounce state
-                    else
-                        Immediate state
+                    member _.SetResult(sm) =
+                        sm.Data.MethodBuilder.SetResult sm.Data.Result
 
-                let started = ref false
-
-                let maybeBounceCompletion state =
-                    if
-                        bounceAllowed
-                        && Trampoline.Current.ShouldBounceCompletion
-                    then
-                        Bounce state
-                    else
-                        Immediate state
-
-                let initialState = maybeBounce Running
-
-                { new ColdTaskResumptionDynamicInfo<'T>(initialResumptionFunc,
-                                                        ResumptionData = initialState) with
-                    member info.MoveNext(sm) =
-
-                        let getCurrent () =
-                            match info.ResumptionData with
-                            | :? DynamicState as state -> state
-                            | _ -> failwith "Invalid resumption data"
-
-                        let setState state = info.ResumptionData <- state
-
-                        if started.Value then
-                            Trampoline.Resumed()
-                        else
-                            started.Value <- true
-                            Trampoline.Started()
-
-                        try
-                            let mutable step = true
-
-                            while step do
-                                step <- false
-
-                                match getCurrent () with
-                                | Immediate state ->
-                                    setState state
-                                    step <- true
-                                | Running ->
-                                    let mutable keepGoing = true
-
-                                    try
-                                        if info.ResumptionFunc.Invoke(&sm) then
-                                            setState (maybeBounceCompletion SetResult)
-                                        else
-                                            keepGoing <-
-                                                match getCurrent () with
-                                                | Awaiting _ -> true
-                                                | _ -> false
-                                    with exn ->
-                                        setState (
-                                            maybeBounceCompletion
-                                            <| SetException(ExceptionCache.CaptureOrRetrieve exn)
-                                        )
-
-                                    if keepGoing then
-                                        step <- true
-                                | Awaiting awaiter ->
-                                    setState Running
-                                    let mutable awaiter = awaiter
-                                    sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
-                                | Bounce next ->
-                                    setState next
-                                    let mutable trampoline = Trampoline.Current
-                                    sm.Data.MethodBuilder.AwaitOnCompleted(&trampoline, &sm)
-                                | SetResult ->
-                                    Trampoline.Current.Trust()
-                                    sm.Data.MethodBuilder.SetResult sm.Data.Result
-                                    Trampoline.Current.ClearTrust()
-                                | SetException edi ->
-                                    Trampoline.Current.Trust()
-                                    sm.Data.MethodBuilder.SetException(edi.SourceException)
-                                    Trampoline.Current.ClearTrust()
-                        finally
-                            Trampoline.Exited() |> ignore
+                    member _.SetException(sm, error) =
+                        sm.Data.MethodBuilder.SetException error
 
                     member _.SetStateMachine(sm, state) =
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
                 }
 
-            Trampoline.wrap
+            TrampolinedStart.ofFunc
             <| fun () ->
                 let mutable sm = ColdTaskStateMachine<'T>()
 
-                sm.ResumptionDynamicInfo <- makeResumptionInfo ()
+                sm.ResumptionDynamicInfo <- newResumptionInfo ()
                 sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                 sm.Data.MethodBuilder.Start(&sm)
                 sm.Data.MethodBuilder.Task
@@ -437,8 +360,7 @@ module ColdTasks =
 
                         let mutable error: exn = Unchecked.defaultof<_>
 
-                        let noBounce = not (Trampoline.Current.IsAwaited())
-                        Trampoline.Started()
+                        let noBounce = not (Trampoline.started ())
 
                         let __stack_go1 =
                             noBounce
@@ -454,9 +376,9 @@ module ColdTasks =
                                         || yieldOnCompletionLimit().Invoke(&sm)
 
                                     if __stack_go2 then
-                                        Trampoline.Current.Trust()
+                                        Trampoline.trust ()
                                         sm.Data.MethodBuilder.SetResult(sm.Data.Result)
-                                        Trampoline.Current.ClearTrust()
+                                        Trampoline.clearTrust ()
                             with exn ->
                                 error <- exn
 
@@ -466,11 +388,12 @@ module ColdTasks =
                                     || yieldOnCompletionLimit().Invoke(&sm)
 
                                 if __stack_go2 then
-                                    Trampoline.Current.Trust()
+                                    Trampoline.trust ()
                                     sm.Data.MethodBuilder.SetException(error)
-                                    Trampoline.Current.ClearTrust()
+                                    Trampoline.clearTrust ()
 
-                        Trampoline.Exited() |> ignore
+                        Trampoline.exited ()
+                        |> ignore
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         sm.Data.MethodBuilder.SetStateMachine(state)
@@ -478,13 +401,14 @@ module ColdTasks =
                     (AfterCode<_, _>(fun sm ->
                         let sm = sm
 
-                        Trampoline.asFunc
+                        TrampolinedStart.asFunc
                             { new TrampolinedStart<_, _>() with
                                 member _.Start(()) =
                                     let mutable sm = sm
                                     sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                                     sm.Data.MethodBuilder.Start(&sm)
-                                    sm.Data.MethodBuilder.Task }
+                                    sm.Data.MethodBuilder.Task
+                            }
                     ))
             else
                 ColdTaskBuilder.RunDynamic(code)
@@ -507,7 +431,7 @@ module ColdTasks =
                 ColdTaskBuilder.RunDynamic(code)
             else
 
-                Trampoline.wrap
+                TrampolinedStart.ofFunc
                 <| fun () -> Task.Run<'T>(fun () -> ColdTaskBuilder.RunDynamic (code) ())
 
         /// <summary>
@@ -521,8 +445,7 @@ module ColdTasks =
 
                         let mutable error: exn = Unchecked.defaultof<_>
 
-                        let noBounce = not (Trampoline.Current.IsAwaited())
-                        Trampoline.Started()
+                        let noBounce = not (Trampoline.started ())
 
                         let __stack_go1 =
                             noBounce
@@ -538,9 +461,9 @@ module ColdTasks =
                                         || yieldOnCompletionLimit().Invoke(&sm)
 
                                     if __stack_go2 then
-                                        Trampoline.Current.Trust()
+                                        Trampoline.trust ()
                                         sm.Data.MethodBuilder.SetResult(sm.Data.Result)
-                                        Trampoline.Current.ClearTrust()
+                                        Trampoline.clearTrust ()
                             with exn ->
                                 error <- exn
 
@@ -550,11 +473,12 @@ module ColdTasks =
                                     || yieldOnCompletionLimit().Invoke(&sm)
 
                                 if __stack_go2 then
-                                    Trampoline.Current.Trust()
+                                    Trampoline.trust ()
                                     sm.Data.MethodBuilder.SetException(error)
-                                    Trampoline.Current.ClearTrust()
+                                    Trampoline.clearTrust ()
 
-                        Trampoline.Exited() |> ignore
+                        Trampoline.exited ()
+                        |> ignore
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         sm.Data.MethodBuilder.SetStateMachine(state)
@@ -570,24 +494,32 @@ module ColdTasks =
                         then
                             let sm = sm // copy
 
-                            Trampoline.asFunc
+                            TrampolinedStart.asFunc
                                 { new TrampolinedStart<_, _>() with
                                     member _.Start(()) =
                                         let mutable sm = sm
-                                        sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
+
+                                        sm.Data.MethodBuilder <-
+                                            AsyncTaskMethodBuilder<'T>.Create()
+
                                         sm.Data.MethodBuilder.Start(&sm)
-                                        sm.Data.MethodBuilder.Task }
+                                        sm.Data.MethodBuilder.Task
+                                }
                         else
 
-                            Trampoline.asFunc
+                            TrampolinedStart.asFunc
                                 { new TrampolinedStart<_, _>() with
                                     member _.Start(()) =
                                         Task.Run<'T>(fun () ->
                                             let mutable sm = sm // host local mutable copy of contents of state machine on this thread pool thread
-                                            sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
+
+                                            sm.Data.MethodBuilder <-
+                                                AsyncTaskMethodBuilder<'T>.Create()
+
                                             sm.Data.MethodBuilder.Start(&sm)
                                             sm.Data.MethodBuilder.Task
-                                        ) }
+                                        )
+                                }
                     ))
             else
                 BackgroundColdTaskBuilder.RunDynamic(code)
@@ -637,7 +569,10 @@ module ColdTasks =
                         )
 
                     sm.ResumptionDynamicInfo.ResumptionFunc <- resumptionFunc
-                    sm.ResumptionDynamicInfo.ResumptionData <- Awaiting awaiter
+
+                    sm.ResumptionDynamicInfo.ResumptionData <-
+                        (awaiter :> ICriticalNotifyCompletion)
+
                     false
 
 
@@ -670,7 +605,7 @@ module ColdTasks =
                             let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
 
                             if __stack_yield_fin then
-                                Trampoline.Resumed()
+                                Trampoline.resumed ()
 
                             if __stack_yield_fin then
                                 continuation(ExceptionCache.GetResultOrThrow awaiter).Invoke(&sm)
@@ -853,7 +788,7 @@ module ColdTasks =
             ///
             /// <returns>unit -> 'Awaiter</returns>
             member inline _.Source([<InlineIfLambda>] task: ColdTask<'TResult1>) =
-                (fun () -> (Trampoline.bind task ()).GetAwaiter())
+                (fun () -> (TrampolinedStart.bind task ()).GetAwaiter())
 
             /// <summary>Allows the computation expression to turn other types into unit -> 'Awaiter</summary>
             ///

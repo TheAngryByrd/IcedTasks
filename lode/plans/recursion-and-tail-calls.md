@@ -23,52 +23,58 @@ Status: steps 1 to 4 done (local, not pushed). Draft PR [TheAngryByrd/IcedTasks#
 
 ## Current mechanism (`src/IcedTasks/Trampoline.fs`)
 
-- `Trampoline` is per thread (`[<ThreadStatic>]` field `current`). It is an `ICriticalNotifyCompletion` over a `Queue<Action>`. A bounce is `ResumableCode.Yield` plus `MethodBuilder.AwaitOnCompleted(&trampoline)` on a stack local (`bounceWhen` in `ColdTask.fs` and `CancellableTaskBuilderBase.fs`), which enqueues the state machine without an allocation.
-- Owner: the outermost start on a thread (`RunAsOwner`) sets `running`, runs the start, and drains the queue in `finally`. A start while the trampoline runs (`Run`) does not drain. So bounced work always unwinds to the owner's shallow stack before it runs again.
-- `ShouldBounce` is `running && not HasSufficientStack`. With no owner further up there is nowhere to unwind to, so it never bounces then. The state machines check it after their first `IsAwaited()` (`yieldOnBindLimit`).
-- `ShouldBounceCompletion` is the check before `SetResult` and `SetException` (`yieldOnCompletionLimit`, `maybeBounceCompletion`). It is `ShouldBounce`, except on netstandard2.0, where it is also true when no trampoline runs. Reason: .NET Framework runs continuations inline with no stack guard, so a completion chain after a real async resumption can overflow. The bounce runs at once on the same thread and makes the trampoline the owner of the rest of the chain. Resumable Async2 counts depth for this (`completeCounted`, `MaxDepth`); IcedTasks uses the stack check instead, so it does not bounce where the stack is sufficient.
-- Each cold builder's start value is a `TrampolinedStart<'Arg, 'Result>`, an abstract subclass of `FSharpFunc<'Arg, 'Result>` with an abstract `Start`, so `ColdTask<'T>` and `CancellableTask<'T>` stay function aliases ([ADR 0001](../../adr/0001-function-type-aliases-for-cold-results.md)). `'Arg` is `unit` or `CancellationToken`. `'Result` is `Task<'T>` or `ValueTask<'T>`. The static `Run` builds it with an object expression that holds the state machine copy, then `Trampoline.asFunc` gives it the function type: one object per value, as on `master`. `RunDynamic` and the background escape use `Trampoline.wrap`, which puts a `FuncStart` around a closure (two objects). The `Trampoline` start members take an `IStart<'Arg, 'Result>`.
+- Code shape (`src/IcedTasks/Trampoline.fs`, in compile order):
+  - `Trampoline` class: the state of one trampoline only. The queue, `frames`, and the `internal` properties `Running`, `Primed`, `Trusted`, plus `Drain`, `EnterFrame`, `ExitFrame`. Ownership is the struct union `Owner`: `StartOwned`, or `ResumptionOwned of previous: Trampoline`. `EnterFrame` and `ExitFrame` match on it, so only a resumption-owned trampoline counts frames and restores `previous`.
+  - `Trampoline` module: the rules and the hooks as functions (`current`, `shouldBounce`, `shouldBounceCompletion`, `trust`, `clearTrust`, `started`, `resumed`, `exited`, internal `hasSufficientStack`, `canLeaveStack`, `runOnNewThread`). The builders call only this module and `TrampolinedStart`.
+  - `TrampolinedStart<'Arg, 'Result>`: the immediate start (`Invoke`) and the nested start (`StartNested`) are its members. No `IStart` or `INestedStart` interface: the start type itself carries both starts.
+  - `TrampolinedStart` module: `ofFunc`, `asFunc`, `bind`.
+  - `TrampolinedResumptionInfo<'Data>`: the dynamic path, written once for the four cold builders.
+- `Trampoline` is per thread (`[<ThreadStatic>]` field `onThread`, read as `Trampoline.OnThread: Trampoline voption`, written with `Trampoline.Install`). It is not `AllowNullLiteral`: with nullness on (net9.0), a nullable type fails the `AwaitOnCompleted` awaiter constraint. It is an `ICriticalNotifyCompletion` over a `Queue<Action>`. A bounce is `ResumableCode.Yield` plus `MethodBuilder.AwaitOnCompleted(&trampoline)` on a stack local (`bounceWhen` in `ColdTask.fs` and `CancellableTaskBuilderBase.fs`), which enqueues the state machine without an allocation.
+- Owner: the outermost start on a thread (`RunAsOwner`) sets `Running`, runs the start, and drains the queue in `finally`. A start while the trampoline runs (`Run`) does not drain. So bounced work always unwinds to the owner's shallow stack before it runs again.
+- `shouldBounce` is `Running && not (hasSufficientStack ())`. With no owner further up there is nowhere to unwind to, so it never bounces then. The static `MoveNext` checks it after `started ()` (`yieldOnBindLimit`).
+- `shouldBounceCompletion` is the check before `SetResult` and `SetException` (`yieldOnCompletionLimit`, and `Step` in the dynamic path). It is `shouldBounce`, except on netstandard2.0, where it is also true when no trampoline runs. Reason: .NET Framework runs continuations inline with no stack guard, so a completion chain after a real async resumption can overflow. The bounce runs at once on the same thread and makes the trampoline the owner of the rest of the chain. Resumable Async2 counts depth for this (`completeCounted`, `MaxDepth`); IcedTasks uses the stack check instead, so it does not bounce where the stack is sufficient.
+- Each cold builder's start value is a `TrampolinedStart<'Arg, 'Result>`, an abstract subclass of `FSharpFunc<'Arg, 'Result>` with an abstract `Start`, so `ColdTask<'T>` and `CancellableTask<'T>` stay function aliases ([ADR 0001](../../adr/0001-function-type-aliases-for-cold-results.md)). `'Arg` is `unit` or `CancellationToken`. `'Result` is `Task<'T>` or `ValueTask<'T>`. The static `Run` builds it with an object expression that holds the state machine copy, then `TrampolinedStart.asFunc` gives it the function type: one object per value, as on `master`. `RunDynamic` and the background escape use `TrampolinedStart.ofFunc`, which puts a `FuncStart` around a closure (two objects).
 - Allocation per start against `master` (net10.0, probe with `GC.GetAllocatedBytesForCurrentThread`): +8 B. The static `MoveNext` hoists `error: exn` (held across the completion bounce, so it cannot be a `__stack_` local) and `noBounce` (fits in padding). Keep `error` a plain `exn` with `Unchecked.defaultof` and `obj.ReferenceEquals(error, null)`: a `ValueOption` plus a `ValueSome error` binding costs 24 B, and an `ExceptionDispatchInfo` is not needed because `master` passes the plain exception too.
-- `Source` members start a bound function with `Trampoline.bind`. It type-tests for `INestedStart<'Arg, 'Result>` and calls `StartNested`. Any other function is called as it is.
-- `StartNested` sets the `primed` flag (only when `CanLeaveStack`), calls the start, and clears the flag in `finally`. It owns the trampoline when none runs. The state machine reads and clears it with `IsAwaited()` as its first action, so no user code runs between set and read. Only a primed start can bounce.
-- `Invoke` (a call from user code) is `StartImmediate`. It owns the trampoline of the thread, or, when that one runs, a fresh trampoline that it owns, and the old one is restored after it. When the stack is low (`HasSufficientStack` is false), `StartImmediate` runs again on a new thread with a 16 MB stack (`RunOnNewThread`), and the caller waits for its synchronous part with `Join`. The new thread runs in the captured `ExecutionContext`.
-- SynchronizationContext rule (`CanLeaveStack`): no bounce and no thread hop when `SynchronizationContext.Current` is not null or `TaskScheduler.Current` is not the default. There the behavior is as on `master`, including a stack overflow at extreme depth.
-- The dynamic path makes a resumption info per start (`newResumptionInfo ()` / `makeResumptionInfo ()`) and reads `IsAwaited()` when it makes it (see [run and start paths](../builders/run-and-start-paths.md)).
-- Resumption isolation: code that is not IcedTasks (for example `TaskCompletionSource.SetResult`) can resume an awaiting state machine inline while a trampoline runs further up the stack. If that resumption bounces into the running trampoline, and the code then blocks on the resumed task, nothing drains the bounce. So a resumption that is not trusted, while a trampoline runs, installs a fresh trampoline (`Trampoline(ValueSome previous)`) that it owns until its `MoveNext` returns. A trusted resumption is a drained bounce (`Drain` calls `Trust()` before each item) or the completion of a cold builder task (`Trust()` and `ClearTrust()` around `SetResult` and `SetException`).
-- The hooks: `Trampoline.Started()` after `IsAwaited()`, `Trampoline.Resumed()` after each `ResumableCode.Yield` that returns true (the resume branch of `Bind`, `TryFinallyAsync` and `yieldOnBindLimit`), and `Trampoline.Exited()` as the last statement of `MoveNext`. The dynamic path calls them once per entry from a loop that replaces the recursive `info.MoveNext` calls. A resumption-owned trampoline counts the `MoveNext` frames on it. When the count goes to 0 it drains, then restores the previous trampoline. No hook can go before `__resumeAt` (FS3511: it must be the start of `MoveNext`), and `Exited()` must not read the state machine: after `AwaitUnsafeOnCompleted` another thread can run it, and after `SetResult` a pooling builder can reuse it. `Exited()` returns `bool` and the static `MoveNext` calls `Trampoline.Exited() |> ignore`. A unit call at the end of `MoveNext` gets the IL `tail.` prefix in the user's assembly, and the JIT compiles a method with an explicit tail call straight to FullOpts: no tiering, no dynamic PGO, so the bind's `Await` is not devirtualized and the bound computation is boxed per level. This shows only when the library is referenced as a DLL (found in Async2, where SimpleRecursion went from 32.5 to 51.6 MB). Check: scan the IL of a consuming assembly for `tail.` + `call Exited`, or `DOTNET_JitDisasm=MoveNext`.
-- On netstandard2.0, `HasSufficientStack` calls `EnsureSufficientExecutionStack` and catches `InsufficientExecutionStackException`, because `TryEnsureSufficientExecutionStack` does not exist there.
+- `Source` members start a bound function with `TrampolinedStart.bind`. It type-tests for `TrampolinedStart<'Arg, 'Result>` and calls `StartNested`. Any other function is called as it is.
+- `StartNested` sets `Primed` (only when `canLeaveStack ()`), calls `Start`, and clears it in `finally`. It owns the trampoline when none runs. The state machine reads and clears it with `started ()` as its first action, so no user code runs between set and read. Only a primed start can bounce.
+- `Invoke` (a call from user code) is the immediate start. It owns the trampoline of the thread, or, when that one runs, a fresh trampoline that it owns, and the old one is restored after it. When the stack is low (`hasSufficientStack ()` is false), `Invoke` runs again on a new thread with a 16 MB stack (`runOnNewThread`), and the caller waits for its synchronous part with `Join`. The new thread runs in the captured `ExecutionContext`.
+- SynchronizationContext rule (`canLeaveStack`): no bounce and no thread hop when `SynchronizationContext.Current` is not null or `TaskScheduler.Current` is not the default. There the behavior is as on `master`, including a stack overflow at extreme depth.
+- Dynamic path: `TrampolinedResumptionInfo<'Data>` derives from `ResumptionDynamicInfo<'Data>` and holds four fields (`started`, `bounceAllowed`, `completing`, `error`). `MoveNext` calls the hooks, bounces the first entry when primed and `shouldBounce`, then either completes (after a completion bounce) or runs `Step`. `Step` clears `ResumptionData`, invokes `ResumptionFunc`, then completes (with a completion bounce check) or registers the awaiter that the dynamic `Bind` stored in `ResumptionData` (the boxed awaiter itself, as on `master`). A builder's `RunDynamic` overrides only `Await` (`AwaitOnCompleted`, as on `master`), `SetResult`, `SetException`, and `SetStateMachine`. The bounce passes the trampoline to `Await`. Against the earlier `DynamicState` loop (a union stored in `ResumptionData`, with `Bounce`/`Immediate` wrappers, closures, and a ref cell per start) this is 96 B less per start and 2 to 3 times faster in the probe.
+- Resumption isolation: code that is not IcedTasks (for example `TaskCompletionSource.SetResult`) can resume an awaiting state machine inline while a trampoline runs further up the stack. If that resumption bounces into the running trampoline, and the code then blocks on the resumed task, nothing drains the bounce. So a resumption that is not trusted, while a trampoline runs, installs a fresh trampoline (`Trampoline(ResumptionOwned previous)`) that it owns until its `MoveNext` returns. A trusted resumption is a drained bounce (`Drain` sets `Trusted` before each item) or the completion of a cold builder task (`trust ()` and `clearTrust ()` around `SetResult` and `SetException`).
+- The hooks: `Trampoline.started ()` as the first action (it also returns the primed flag), `Trampoline.resumed ()` after each `ResumableCode.Yield` that returns true (the resume branch of `Bind`, `TryFinallyAsync` and `yieldOnBindLimit`), and `Trampoline.exited ()` as the last statement of `MoveNext`. The dynamic path calls them once per `MoveNext`. A resumption-owned trampoline counts the `MoveNext` frames on it. When the count goes to 0 it drains, then restores the previous trampoline. No hook can go before `__resumeAt` (FS3511: it must be the start of `MoveNext`), and `exited ()` must not read the state machine: after `AwaitUnsafeOnCompleted` another thread can run it, and after `SetResult` a pooling builder can reuse it. `exited ()` returns `bool` and the static `MoveNext` calls `Trampoline.exited () |> ignore`. A unit call at the end of `MoveNext` gets the IL `tail.` prefix in the user's assembly, and the JIT compiles a method with an explicit tail call straight to FullOpts: no tiering, no dynamic PGO, so the bind's `Await` is not devirtualized and the bound computation is boxed per level. This shows only when the library is referenced as a DLL (found in Async2, where SimpleRecursion went from 32.5 to 51.6 MB). Check: scan the IL of a consuming assembly for `tail.` + `call exited`, or `DOTNET_JitDisasm=MoveNext`.
+- On netstandard2.0, `hasSufficientStack` calls `EnsureSufficientExecutionStack` and catches `InsufficientExecutionStackException`, because `TryEnsureSufficientExecutionStack` does not exist there.
+- Measuring: a probe outside the repository builds with the newest SDK, which compiles Debug statically. To measure the dynamic path, call `ColdTaskBuilder.RunDynamic(b.Delay(fun () -> b.Bind(b.Source x, ...)))` directly.
 
 ```fsharp
-// src/IcedTasks/Trampoline.fs
+// src/IcedTasks/Trampoline.fs (module TrampolinedStart)
     let inline bind (f: 'Arg -> 'Result) (arg: 'Arg) : 'Result =
         match box f with
-        | :? INestedStart<'Arg, 'Result> as nested -> nested.StartNested arg
+        | :? TrampolinedStart<'Arg, 'Result> as start -> start.StartNested arg
         | _ -> f arg
 ```
 
 ```fsharp
-// src/IcedTasks/Trampoline.fs
-    static member Resumed() =
-        let trampoline = Trampoline.current
+// src/IcedTasks/ColdTask.fs (ColdTaskBuilder.RunDynamic)
+                { new TrampolinedResumptionInfo<ColdTaskStateMachineData<'T>>(initialResumptionFunc) with
+                    member _.Await(sm, awaiter) =
+                        let mutable awaiter = awaiter
+                        sm.Data.MethodBuilder.AwaitOnCompleted(&awaiter, &sm)
 
-        if not (isNull (box trampoline)) then
-            if not (trampoline.TakeTrust()) && trampoline.IsRunning then
-                Trampoline.current <- Trampoline(ValueSome trampoline)
-            elif trampoline.IsResumptionOwner then
-                trampoline.EnterFrame()
+                    member _.SetResult(sm) =
+                        sm.Data.MethodBuilder.SetResult sm.Data.Result
 ```
 
 ```mermaid
 flowchart TD
     call["cold value is started"] --> kind{"how?"}
-    kind -->|"f ct (user code)"| imm["Invoke: StartImmediate"]
+    kind -->|"f ct (user code)"| imm["Invoke: immediate start"]
     kind -->|"let! / return! of a TrampolinedStart"| nested["StartNested: prime, start, unprime; own if none runs"]
-    imm --> low{"stack low and CanLeaveStack?"}
-    low -->|yes| hop["RunOnNewThread, Join"]
+    imm --> low{"stack low and canLeaveStack?"}
+    low -->|yes| hop["runOnNewThread, Join"]
     low -->|no| own{"trampoline running?"}
     own -->|no| run["own it: start, drain"]
     own -->|yes| iso["own a fresh one: start, drain, restore"]
-    nested --> b{"primed and ShouldBounce?"}
+    nested --> b{"primed and shouldBounce?"}
     b -->|no| inline["run inline"]
     b -->|"yes: running and stack low"| bounce["Yield, enqueue; the owner drains it"]
 ```
@@ -87,7 +93,7 @@ Why the thread hop: an isolated start drains its trampoline on the current stack
 
 ### Defects still open
 
-6. Cost of `Trampoline.bind`: for an `[<InlineIfLambda>]` lambda literal, the type test needs a closure: +32 B per `do! fun ct -> ...` bind in the `getCancellationTokenLambda` benchmarks. The test is how a nested start is found, so it stays.
+6. Cost of `TrampolinedStart.bind`: for an `[<InlineIfLambda>]` lambda literal, the type test needs a closure: +32 B per `do! fun ct -> ...` bind in the `getCancellationTokenLambda` benchmarks. The test is how a nested start is found, so it stays.
 7. Speed of the dynamic path: the 9 `Recursion` tests take 41 s in Debug before step 3 and 65 s after it, on net10.0. The full Release suite takes about 9 s. The likely causes are the thread hops in the mutual recursion tests and the extra `TrampolinedStart` per value; neither is measured yet.
 8. Stale trust: a hot state machine (`task`, `valueTask`) that a cold completion resumes does not clear the trust flag. If it then completes a `TaskCompletionSource` that resumes a cold waiter inline, the waiter is trusted and is not isolated. `ClearTrust()` after `SetResult` limits the window to that inline call. No test covers it.
 9. Flaky: `IcedTasks.CancellableValueTask.CancellableValueTaskBuilder.For.TaskSeq receives CancellationToken` errored in 2 of 6 full NS21 Debug runs on the branch, with a `NullReferenceException` in `Seq.toArray` inside TaskSeq's `DisposeAsync`. It passed in 15 runs alone and in 3 full runs on `master`. The `master` suite has no `Recursion` tests and takes 5.5 s against about 95 s on the branch, so the load differs. Not yet known if the trampoline causes it.
@@ -99,14 +105,15 @@ Why the thread hop: an isolated start drains its trampoline on the current stack
 `TailCall` goes on the same object as `StartNested`:
 
 ```fsharp
-type INestedStart<'Arg, 'Result> =
-    abstract StartNested: 'Arg -> 'Result
+type TrampolinedStart<'Arg, 'Result> =
+    // ...
+    member StartNested: 'Arg -> 'Result
     // step 5: abstract TailCall: 'Arg * TaskCompletionSource<'T> -> unit
 ```
 
 ### 2. netstandard2.0 on .NET Framework
 
-Done with `ShouldBounceCompletion` (see the current mechanism). Not tested on .NET Framework: the test projects run only on .NET 8 to 10, where the runtime guards inline continuations.
+Done with `shouldBounceCompletion` (see the current mechanism). Not tested on .NET Framework: the test projects run only on .NET 8 to 10, where the runtime guards inline continuations.
 
 ### 3. Tail calls
 
