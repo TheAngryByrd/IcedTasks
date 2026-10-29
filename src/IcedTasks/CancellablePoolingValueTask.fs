@@ -152,7 +152,7 @@ module CancellablePoolingValueTasks =
                                     MethodBuilder.SetException(&sm.Data.MethodBuilder, edi.SourceException)
                                     Trampoline.Current.ClearTrust()
                         finally
-                            Trampoline.Exited()
+                            Trampoline.Exited() |> ignore
 
                     member _.SetStateMachine(sm, state) =
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
@@ -220,7 +220,7 @@ module CancellablePoolingValueTasks =
                                     Trampoline.Current.ClearTrust()
                             | ValueNone -> ()
 
-                        Trampoline.Exited()
+                        Trampoline.Exited() |> ignore
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)

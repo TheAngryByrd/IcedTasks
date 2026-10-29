@@ -148,7 +148,9 @@ type Trampoline private (previous: Trampoline voption) =
 
     /// Called when MoveNext returns, after the state machine suspends or completes. It must not read the
     /// state machine, because another thread can already run it, or a pool can already reuse it.
-    static member Exited() =
+    /// It returns a value so that callers can ignore it: a call to a unit method at the end of MoveNext
+    /// gets the IL tail. prefix, and the JIT then compiles MoveNext without tiering and dynamic PGO.
+    static member Exited() : bool =
         let trampoline = Trampoline.current
 
         if
@@ -156,6 +158,8 @@ type Trampoline private (previous: Trampoline voption) =
             && trampoline.IsResumptionOwner
         then
             trampoline.ExitFrame()
+
+        true
 
     /// Bounce only when an owner drains this trampoline further up the stack, and only when the stack
     /// runs low. A bounce at any other depth could change code that works without one.

@@ -413,7 +413,7 @@ module ColdTasks =
                                     sm.Data.MethodBuilder.SetException(edi.SourceException)
                                     Trampoline.Current.ClearTrust()
                         finally
-                            Trampoline.Exited()
+                            Trampoline.Exited() |> ignore
 
                     member _.SetStateMachine(sm, state) =
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
@@ -472,7 +472,7 @@ module ColdTasks =
                                     Trampoline.Current.ClearTrust()
                             | ValueNone -> ()
 
-                        Trampoline.Exited()
+                        Trampoline.Exited() |> ignore
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         sm.Data.MethodBuilder.SetStateMachine(state)
@@ -557,7 +557,7 @@ module ColdTasks =
                                     Trampoline.Current.ClearTrust()
                             | ValueNone -> ()
 
-                        Trampoline.Exited()
+                        Trampoline.Exited() |> ignore
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         sm.Data.MethodBuilder.SetStateMachine(state)
