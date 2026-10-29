@@ -564,7 +564,7 @@ module ColdTasks =
                 else
                     let resumptionFunc =
                         ColdTaskResumptionFunc(fun sm ->
-                            let result = ExceptionCache.GetResultOrThrow awaiter
+                            let result = ExceptionCache.getResult awaiter
                             (continuation result).Invoke(&sm)
                         )
 
@@ -600,7 +600,7 @@ module ColdTasks =
                         let mutable awaiter = getAwaiter ()
 
                         if Awaiter.IsCompleted awaiter then
-                            continuation(ExceptionCache.GetResultOrThrow awaiter).Invoke(&sm)
+                            continuation(ExceptionCache.getResult awaiter).Invoke(&sm)
                         else
                             let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
 
@@ -608,7 +608,7 @@ module ColdTasks =
                                 Trampoline.resumed ()
 
                             if __stack_yield_fin then
-                                continuation(ExceptionCache.GetResultOrThrow awaiter).Invoke(&sm)
+                                continuation(ExceptionCache.getResult awaiter).Invoke(&sm)
                             else
                                 sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
                                 false

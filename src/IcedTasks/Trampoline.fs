@@ -410,28 +410,21 @@ type TrampolinedResumptionInfo<'Data>(initial: ResumptionFunc<'Data>) =
             |> ignore
 
 module ExceptionCache =
-    let store = ConditionalWeakTable<exn, ExceptionDispatchInfo>()
+    let private store = ConditionalWeakTable<exn, ExceptionDispatchInfo>()
 
-    let inline CaptureOrRetrieve (exn: exn) =
-        match store.TryGetValue exn with
-        | true, edi when edi.SourceException = exn -> edi
-        | _ ->
-            let edi = ExceptionDispatchInfo.Capture exn
+    let private capture =
+        ConditionalWeakTable<exn, ExceptionDispatchInfo>.CreateValueCallback(fun error -> ExceptionDispatchInfo.Capture error)
 
-            try
-                store.Add(exn, edi)
-            with _ ->
-                ()
-
-            edi
-
-    let inline Throw (exn: exn) =
-        let edi = CaptureOrRetrieve exn
-        edi.Throw()
+    /// Rethrows `error` with the dispatch info captured the first time it was seen, so a failure
+    /// propagating through many frames does not grow its stack trace at every frame.
+    let throwCached (error: exn) : 'T =
+        store.GetValue(error, capture).Throw()
         Unchecked.defaultof<_>
 
-    let inline GetResultOrThrow awaiter =
+    /// Gets the result of `awaiter`. If the awaited operation failed, rethrows its exception with
+    /// `throwCached`, so the stack trace stays the same when each awaiting frame rethrows the failure.
+    let inline getResult awaiter =
         try
             Awaiter.GetResult awaiter
         with exn ->
-            Throw exn
+            throwCached exn
