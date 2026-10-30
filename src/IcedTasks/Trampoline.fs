@@ -409,6 +409,38 @@ type TrampolinedResumptionInfo<'Data>(initial: ResumptionFunc<'Data>) =
             Trampoline.exited ()
             |> ignore
 
+/// The bounce points of the static path. A builder gives `await`, the call that registers the state
+/// machine with the trampoline, because that call depends on the state machine data of the builder.
+[<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+module TrampolinedCode =
+
+    /// Bounces when `shouldBounce` says so.
+    let inline bounceWhen
+        ([<InlineIfLambda>] shouldBounce: Trampoline -> bool)
+        (await: ResumableCode<'Data, unit>)
+        : ResumableCode<'Data, unit> =
+        ResumableCode<'Data, unit>(fun sm ->
+            if shouldBounce (Trampoline.current ()) then
+                let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
+
+                if __stack_yield_fin then
+                    Trampoline.resumed ()
+
+                if not __stack_yield_fin then
+                    await.Invoke(&sm)
+                    |> ignore
+
+                __stack_yield_fin
+            else
+                true
+        )
+
+    let inline yieldOnBindLimit (await: ResumableCode<'Data, unit>) =
+        bounceWhen Trampoline.shouldBounce await
+
+    let inline yieldOnCompletionLimit (await: ResumableCode<'Data, unit>) =
+        bounceWhen Trampoline.shouldBounceCompletion await
+
 module ExceptionCache =
     let private store = ConditionalWeakTable<exn, ExceptionDispatchInfo>()
 

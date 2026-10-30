@@ -63,30 +63,14 @@ module ColdTasks =
     /// A special compiler-recognised delegate type for specifying blocks of ColdTask code with access to the state machine
     and ColdTaskCode<'TOverall, 'T> = ResumableCode<ColdTaskStateMachineData<'TOverall>, 'T>
 
-    /// Bounces when `shouldBounce` says so. The trampoline is passed by reference, so a bounce does not
-    /// allocate.
-    let inline bounceWhen ([<InlineIfLambda>] shouldBounce: Trampoline -> bool) =
-        ColdTaskCode(fun sm ->
+    /// Registers the state machine with the trampoline. The trampoline is passed by reference, so a
+    /// bounce does not allocate.
+    let inline awaitTrampoline () =
+        ColdTaskCode<_, unit>(fun sm ->
             let mutable __stack_trampoline = Trampoline.current ()
-
-            if shouldBounce __stack_trampoline then
-                let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-
-                if __stack_yield_fin then
-                    Trampoline.resumed ()
-
-                if not __stack_yield_fin then
-                    sm.Data.MethodBuilder.AwaitOnCompleted(&__stack_trampoline, &sm)
-
-                __stack_yield_fin
-            else
-                true
+            sm.Data.MethodBuilder.AwaitOnCompleted(&__stack_trampoline, &sm)
+            true
         )
-
-    let inline yieldOnBindLimit () = bounceWhen Trampoline.shouldBounce
-
-    let inline yieldOnCompletionLimit () =
-        bounceWhen Trampoline.shouldBounceCompletion
 
     /// The MoveNext body of the static path. Run invokes it after `__resumeAt`. It runs `code` and calls
     /// the trampoline hooks. When the trampoline lets it, it bounces before the start and before the
@@ -101,7 +85,7 @@ module ColdTasks =
 
             let __stack_go1 =
                 sm.Data.NoBounce
-                || yieldOnBindLimit().Invoke(&sm)
+                || TrampolinedCode.yieldOnBindLimit(awaitTrampoline ()).Invoke(&sm)
 
             if __stack_go1 then
                 try
@@ -110,7 +94,9 @@ module ColdTasks =
                     if __stack_code_fin then
                         let __stack_go2 =
                             sm.Data.NoBounce
-                            || yieldOnCompletionLimit().Invoke(&sm)
+                            || TrampolinedCode
+                                .yieldOnCompletionLimit(awaitTrampoline ())
+                                .Invoke(&sm)
 
                         if __stack_go2 then
                             Trampoline.trust ()
@@ -122,7 +108,7 @@ module ColdTasks =
                 if not (obj.ReferenceEquals(sm.Data.Error, null)) then
                     let __stack_go2 =
                         sm.Data.NoBounce
-                        || yieldOnCompletionLimit().Invoke(&sm)
+                        || TrampolinedCode.yieldOnCompletionLimit(awaitTrampoline ()).Invoke(&sm)
 
                     if __stack_go2 then
                         Trampoline.trust ()

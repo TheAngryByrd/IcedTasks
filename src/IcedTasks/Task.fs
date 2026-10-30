@@ -51,44 +51,9 @@ module Tasks =
 
             let mutable sm = TaskBaseStateMachine<'T, _>()
 
-            let initialResumptionFunc =
-                TaskBaseResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm))
+            sm.ResumptionDynamicInfo <-
+                newResumptionInfo (TaskBaseResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm)))
 
-            let resumptionInfo =
-                { new TaskBaseResumptionDynamicInfo<'T, _>(initialResumptionFunc) with
-                    member info.MoveNext(sm) =
-                        let mutable savedExn = null
-
-                        try
-                            sm.ResumptionDynamicInfo.ResumptionData <- null
-                            let step = info.ResumptionFunc.Invoke(&sm)
-
-                            if step then
-                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
-                            else
-                                match sm.ResumptionDynamicInfo.ResumptionData with
-                                | :? ICriticalNotifyCompletion as awaiter ->
-                                    let mutable awaiter = awaiter
-                                    // assert not (isNull awaiter)
-                                    MethodBuilder.AwaitOnCompleted(
-                                        &sm.Data.MethodBuilder,
-                                        &awaiter,
-                                        &sm
-                                    )
-                                | awaiter -> assert not (isNull awaiter)
-
-                        with exn ->
-                            savedExn <- exn
-                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
-                        match savedExn with
-                        | null -> ()
-                        | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
-
-                    member _.SetStateMachine(sm, state) =
-                        MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
-                }
-
-            sm.ResumptionDynamicInfo <- resumptionInfo
             sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
             MethodBuilder.Start(&sm.Data.MethodBuilder, &sm)
             MethodBuilder.get_Task (&sm.Data.MethodBuilder)

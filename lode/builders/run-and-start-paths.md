@@ -4,8 +4,10 @@ Each resumable builder has a `Run` member with two paths. The base builders have
 
 - Static path: `Run` checks `if __useResumableCode then __stateMachine<...>(MoveNextMethodImpl)(SetStateMachineMethodImpl)(AfterCode)`. The compiler makes a struct state machine. The `MoveNext` body after `__resumeAt` is a shared resumable code helper. A builder supplies only `SetStateMachine` and the start in `AfterCode`:
   - `TaskBase.moveNext` and `TaskBase.moveNextUnit` (`TaskBuilderBase.fs`) for the hot builders. Both call `moveNextWith`, which takes the `SetResult` call as resumable code, because the unit builders' method builders take no result.
-  - `CancellableTaskBase.trampolinedMoveNext` (`CancellableTaskBuilderBase.fs`) and `ColdTasks.trampolinedMoveNext` (`ColdTask.fs`) for the cold builders. They hold the trampoline hooks and the start and completion bounces. There are two copies because the state machine data types differ and `ColdTaskStateMachineData` has a concrete method builder.
-- Dynamic path: otherwise `Run` calls `static member RunDynamic`. The hot builders make a `...ResumptionDynamicInfo` object expression with `MoveNext` and `SetStateMachine`. The cold builders derive from `TrampolinedResumptionInfo<_>` (`Trampoline.fs`), which has the shared `MoveNext`, and override only the method builder calls (see [recursion and tail calls](../plans/recursion-and-tail-calls.md)).
+  - `CancellableTaskBase.trampolinedMoveNext` (`CancellableTaskBuilderBase.fs`) and `ColdTasks.trampolinedMoveNext` (`ColdTask.fs`) for the cold builders. They hold the trampoline hooks and call `TrampolinedCode.yieldOnBindLimit` and `yieldOnCompletionLimit` for the start and completion bounces. There are two copies because each reads the data fields of its own state machine data type.
+- Dynamic path: otherwise `Run` calls `static member RunDynamic`. `RunDynamic` keeps only the start code. Two base classes hold the shared `MoveNext`, and a builder overrides only the method builder calls:
+  - `TaskBaseResumptionInfo<_, _>` (`TaskBuilderBase.fs`) for the hot builders. `newResumptionInfo` and `newResumptionInfoUnit` make it. The unit form exists because the unit builders' method builders take no result.
+  - `TrampolinedResumptionInfo<_>` (`Trampoline.fs`) for the cold builders (see [recursion and tail calls](../plans/recursion-and-tail-calls.md)). `CancellableTaskBase.newResumptionInfo` makes it for the three cancellable builders. `ColdTaskBuilder.RunDynamic` has its own object expression, because it is the only copy for its data type.
 - The dynamic `MoveNext` uses `MethodBuilder.AwaitOnCompleted`. The static `Bind` uses `AwaitUnsafeOnCompleted` (`src/IcedTasks/TaskBuilderBase.fs`).
 
 ```fsharp
@@ -47,7 +49,7 @@ Each cold builder's value is a `TrampolinedStart`: the static `Run` makes one wi
 
 ## Multi-start invariant
 
-Each start of a cold value must use its own state machine and its own resumption info. The dynamic `Bind` stores the continuation of the running start in the resumption info. If two starts share it, the second start resumes the first start and does not run the body again (PR #67, issue #65). `RunDynamic` thus makes both objects inside the start function:
+Each start of a cold value must use its own state machine and its own resumption info. The dynamic `Bind` stores the continuation of the running start in the resumption info. If two starts share it, the second start resumes the first start and does not run the body again (PR #67, issue #65). `RunDynamic` thus makes both objects inside the start function. The initial resumption function stays outside it, so a start allocates no delegate. `CancellableTaskBase.newResumptionInfo` thus takes that function as an argument:
 
 ```fsharp
 // src/IcedTasks/ColdTask.fs (ColdTaskBuilder.RunDynamic)

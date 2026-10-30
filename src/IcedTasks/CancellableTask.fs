@@ -55,22 +55,6 @@ module CancellableTasks =
             let initialResumptionFunc =
                 CancellableTaskBaseResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm))
 
-            let newResumptionInfo () =
-                { new TrampolinedResumptionInfo<CancellableTaskBaseStateMachineData<'T, _>>(initialResumptionFunc) with
-                    member _.Await(sm, awaiter) =
-                        let mutable awaiter = awaiter
-                        MethodBuilder.AwaitOnCompleted(&sm.Data.MethodBuilder, &awaiter, &sm)
-
-                    member _.SetResult(sm) =
-                        MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
-
-                    member _.SetException(sm, error) =
-                        MethodBuilder.SetException(&sm.Data.MethodBuilder, error)
-
-                    member _.SetStateMachine(sm, state) =
-                        MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
-                }
-
             TrampolinedStart.ofFunc
             <| fun (ct) ->
                 if ct.IsCancellationRequested then
@@ -78,7 +62,7 @@ module CancellableTasks =
                 else
                     let mutable sm = CancellableTaskBaseStateMachine<'T, _>()
                     sm.Data.CancellationToken <- ct
-                    sm.ResumptionDynamicInfo <- newResumptionInfo ()
+                    sm.ResumptionDynamicInfo <- newResumptionInfo initialResumptionFunc
                     sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                     sm.Data.MethodBuilder.Start(&sm)
                     sm.Data.MethodBuilder.Task

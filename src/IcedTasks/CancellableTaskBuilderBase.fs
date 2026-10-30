@@ -62,34 +62,14 @@ module CancellableTaskBase =
     and CancellableTaskBaseCode<'TOverall, 'T, 'Builder> =
         ResumableCode<CancellableTaskBaseStateMachineData<'TOverall, 'Builder>, 'T>
 
-    /// Bounces when `shouldBounce` says so. The trampoline is passed by reference, so a bounce does not
-    /// allocate.
-    let inline bounceWhen ([<InlineIfLambda>] shouldBounce: Trampoline -> bool) =
-        CancellableTaskBaseCode(fun sm ->
+    /// Registers the state machine with the trampoline. The trampoline is passed by reference, so a
+    /// bounce does not allocate.
+    let inline awaitTrampoline () =
+        CancellableTaskBaseCode<_, unit, _>(fun sm ->
             let mutable __stack_trampoline = Trampoline.current ()
-
-            if shouldBounce __stack_trampoline then
-                let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-
-                if __stack_yield_fin then
-                    Trampoline.resumed ()
-
-                if not __stack_yield_fin then
-                    MethodBuilder.AwaitOnCompleted(
-                        &sm.Data.MethodBuilder,
-                        &__stack_trampoline,
-                        &sm
-                    )
-
-                __stack_yield_fin
-            else
-                true
+            MethodBuilder.AwaitOnCompleted(&sm.Data.MethodBuilder, &__stack_trampoline, &sm)
+            true
         )
-
-    let inline yieldOnBindLimit () = bounceWhen Trampoline.shouldBounce
-
-    let inline yieldOnCompletionLimit () =
-        bounceWhen Trampoline.shouldBounceCompletion
 
     /// The MoveNext body of the static path. Run invokes it after `__resumeAt`. It runs `code` and calls
     /// the trampoline hooks. When the trampoline lets it, it bounces before the start and before the
@@ -106,7 +86,7 @@ module CancellableTaskBase =
 
             let __stack_go1 =
                 sm.Data.NoBounce
-                || yieldOnBindLimit().Invoke(&sm)
+                || TrampolinedCode.yieldOnBindLimit(awaitTrampoline ()).Invoke(&sm)
 
             if __stack_go1 then
                 try
@@ -115,7 +95,9 @@ module CancellableTaskBase =
                     if __stack_code_fin then
                         let __stack_go2 =
                             sm.Data.NoBounce
-                            || yieldOnCompletionLimit().Invoke(&sm)
+                            || TrampolinedCode
+                                .yieldOnCompletionLimit(awaitTrampoline ())
+                                .Invoke(&sm)
 
                         if __stack_go2 then
                             Trampoline.trust ()
@@ -127,7 +109,7 @@ module CancellableTaskBase =
                 if not (obj.ReferenceEquals(sm.Data.Error, null)) then
                     let __stack_go2 =
                         sm.Data.NoBounce
-                        || yieldOnCompletionLimit().Invoke(&sm)
+                        || TrampolinedCode.yieldOnCompletionLimit(awaitTrampoline ()).Invoke(&sm)
 
                     if __stack_go2 then
                         Trampoline.trust ()
@@ -136,6 +118,24 @@ module CancellableTaskBase =
 
             Trampoline.exited ()
         )
+
+    /// The resumption info of one start on the dynamic path. A cold value can start many times, so each
+    /// start must call this function and use its own resumption info.
+    let inline newResumptionInfo (initial: CancellableTaskBaseResumptionFunc<'T, 'Builder>) =
+        { new TrampolinedResumptionInfo<CancellableTaskBaseStateMachineData<'T, 'Builder>>(initial) with
+            member _.Await(sm, awaiter) =
+                let mutable awaiter = awaiter
+                MethodBuilder.AwaitOnCompleted(&sm.Data.MethodBuilder, &awaiter, &sm)
+
+            member _.SetResult(sm) =
+                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
+
+            member _.SetException(sm, error) =
+                MethodBuilder.SetException(&sm.Data.MethodBuilder, error)
+
+            member _.SetStateMachine(sm, state) =
+                MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
+        }
 
     /// <summary>
     /// Contains methods to build TaskLikes using the F# computation expression syntax
