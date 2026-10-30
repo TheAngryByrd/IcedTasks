@@ -51,9 +51,44 @@ module Tasks =
 
             let mutable sm = TaskBaseStateMachine<'T, _>()
 
-            sm.ResumptionDynamicInfo <-
-                newResumptionInfo (TaskBaseResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm)))
+            let initialResumptionFunc =
+                TaskBaseResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm))
 
+            let resumptionInfo =
+                { new TaskBaseResumptionDynamicInfo<'T, _>(initialResumptionFunc) with
+                    member info.MoveNext(sm) =
+                        let mutable savedExn = null
+
+                        try
+                            sm.ResumptionDynamicInfo.ResumptionData <- null
+                            let step = info.ResumptionFunc.Invoke(&sm)
+
+                            if step then
+                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
+                            else
+                                match sm.ResumptionDynamicInfo.ResumptionData with
+                                | :? ICriticalNotifyCompletion as awaiter ->
+                                    let mutable awaiter = awaiter
+                                    // assert not (isNull awaiter)
+                                    MethodBuilder.AwaitOnCompleted(
+                                        &sm.Data.MethodBuilder,
+                                        &awaiter,
+                                        &sm
+                                    )
+                                | awaiter -> assert not (isNull awaiter)
+
+                        with exn ->
+                            savedExn <- exn
+                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
+                        match savedExn with
+                        | null -> ()
+                        | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
+
+                    member _.SetStateMachine(sm, state) =
+                        MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
+                }
+
+            sm.ResumptionDynamicInfo <- resumptionInfo
             sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
             MethodBuilder.Start(&sm.Data.MethodBuilder, &sm)
             MethodBuilder.get_Task (&sm.Data.MethodBuilder)
@@ -63,11 +98,22 @@ module Tasks =
             if __useResumableCode then
                 __stateMachine<TaskBaseStateMachineData<'T, _>, _>
                     (MoveNextMethodImpl<_>(fun sm ->
+                        //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
-                        let __stack_fin = moveNext(code).Invoke(&sm)
+                        let mutable __stack_exn = null
 
-                        __stack_fin
-                        |> ignore
+                        try
+                            let __stack_code_fin = code.Invoke(&sm)
+
+                            if __stack_code_fin then
+                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
+                        with exn ->
+                            __stack_exn <- exn
+                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
+                        match __stack_exn with
+                        | null -> ()
+                        | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
+                    //-- RESUMABLE CODE END
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
@@ -122,11 +168,22 @@ module Tasks =
             if __useResumableCode then
                 __stateMachine<TaskBaseStateMachineData<'T, _>, _>
                     (MoveNextMethodImpl<_>(fun sm ->
+                        //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
-                        let __stack_fin = moveNext(code).Invoke(&sm)
+                        let mutable __stack_exn = null
 
-                        __stack_fin
-                        |> ignore
+                        try
+                            let __stack_code_fin = code.Invoke(&sm)
+
+                            if __stack_code_fin then
+                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
+                        with exn ->
+                            __stack_exn <- exn
+                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
+                        match __stack_exn with
+                        | null -> ()
+                        | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
+                    //-- RESUMABLE CODE END
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)

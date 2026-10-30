@@ -2,11 +2,9 @@
 
 Each resumable builder has a `Run` member with two paths. The base builders have no `Run`. Each derived builder adds `Run` and `RunDynamic`. See [and! and MergeSources](and-bang-merge-sources.md) for where `MergeSources` is defined.
 
-- Static path: `Run` checks `if __useResumableCode then __stateMachine<...>(MoveNextMethodImpl)(SetStateMachineMethodImpl)(AfterCode)`. The compiler makes a struct state machine. The `MoveNext` body after `__resumeAt` is a shared resumable code helper. A builder supplies only `SetStateMachine` and the start in `AfterCode`:
-  - `TaskBase.moveNext` and `TaskBase.moveNextUnit` (`TaskBuilderBase.fs`) for the hot builders. Both call `moveNextWith`, which takes the `SetResult` call as resumable code, because the unit builders' method builders take no result.
+- Static path: `Run` checks `if __useResumableCode then __stateMachine<...>(MoveNextMethodImpl)(SetStateMachineMethodImpl)(AfterCode)`. The compiler makes a struct state machine. A hot builder has its own `MoveNext` body. The cold builders share one, and a builder supplies only `SetStateMachine` and the start in `AfterCode`:
   - `TrampolinedCode.moveNext` (`Trampoline.fs`) for all cold builders. It holds the trampoline hooks and the start and completion bounces. The cold builders can share it because `ColdTaskStateMachineData` and `CancellableTaskBaseStateMachineData` are both abbreviations of `TrampolinedData<'Context, 'T, 'Builder>`. `'Context` is `CancellationToken` or the empty struct `NoContext`.
-- Dynamic path: otherwise `Run` calls `static member RunDynamic`. `RunDynamic` keeps only the start code. Two base classes hold the shared `MoveNext`, and a builder overrides only the method builder calls:
-  - `TaskBaseResumptionInfo<_, _>` (`TaskBuilderBase.fs`) for the hot builders. `newResumptionInfo` and `newResumptionInfoUnit` make it. The unit form exists because the unit builders' method builders take no result.
+- Dynamic path: otherwise `Run` calls `static member RunDynamic`. A hot builder's `RunDynamic` makes a `...ResumptionDynamicInfo` object expression with `MoveNext` and `SetStateMachine`. The cold builders' `RunDynamic` keeps only the start code. A base class holds the shared `MoveNext`, and a builder overrides only the method builder calls:
   - `TrampolinedResumptionInfo<_>` (`Trampoline.fs`) for the cold builders (see [recursion and tail calls](../plans/recursion-and-tail-calls.md)). `TrampolinedCode.newResumptionInfo` makes it.
 - The dynamic `MoveNext` uses `MethodBuilder.AwaitOnCompleted`. The static `Bind` uses `AwaitUnsafeOnCompleted` (`src/IcedTasks/TaskBuilderBase.fs`).
 
