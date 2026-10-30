@@ -61,8 +61,11 @@ module CancellableTasks =
                     Task.FromCanceled<_>(ct)
                 else
                     let mutable sm = CancellableTaskBaseStateMachine<'T, _>()
-                    sm.Data.CancellationToken <- ct
-                    sm.ResumptionDynamicInfo <- newResumptionInfo initialResumptionFunc
+                    sm.Data.Context <- ct
+
+                    sm.ResumptionDynamicInfo <-
+                        TrampolinedCode.newResumptionInfo initialResumptionFunc
+
                     sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                     sm.Data.MethodBuilder.Start(&sm)
                     sm.Data.MethodBuilder.Task
@@ -74,7 +77,7 @@ module CancellableTasks =
                 __stateMachine<CancellableTaskBaseStateMachineData<'T, _>, CancellableTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         __resumeAt sm.ResumptionPoint
-                        let __stack_fin = trampolinedMoveNext(code).Invoke(&sm)
+                        let __stack_fin = TrampolinedCode.moveNext(code).Invoke(&sm)
 
                         __stack_fin
                         |> ignore
@@ -90,7 +93,7 @@ module CancellableTasks =
                                 Task.FromCanceled<_>(ct)
                             else
                                 let mutable sm = sm
-                                sm.Data.CancellationToken <- ct
+                                sm.Data.Context <- ct
 
                                 sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
 
@@ -214,7 +217,7 @@ module CancellableTasks =
                 __stateMachine<CancellableTaskBaseStateMachineData<'T, _>, CancellableTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         __resumeAt sm.ResumptionPoint
-                        let __stack_fin = trampolinedMoveNext(code).Invoke(&sm)
+                        let __stack_fin = TrampolinedCode.moveNext(code).Invoke(&sm)
 
                         __stack_fin
                         |> ignore
@@ -238,7 +241,7 @@ module CancellableTasks =
                                     Task.FromCanceled<_>(ct)
                                 else
                                     let mutable sm = sm
-                                    sm.Data.CancellationToken <- ct
+                                    sm.Data.Context <- ct
 
                                     sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
 
@@ -254,7 +257,7 @@ module CancellableTasks =
                                     Task.Run<'T>(
                                         (fun () ->
                                             let mutable sm = sm
-                                            sm.Data.CancellationToken <- ct
+                                            sm.Data.Context <- ct
 
                                             sm.Data.MethodBuilder <-
                                                 AsyncTaskMethodBuilder<'T>.Create()

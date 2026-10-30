@@ -404,8 +404,38 @@ type TrampolinedResumptionInfo<'Data>(initial: ResumptionFunc<'Data>) =
             Trampoline.exited ()
             |> ignore
 
-/// The bounce points of the static path. A builder gives `await`, the call that registers the state
-/// machine with the trampoline, because that call depends on the state machine data of the builder.
+/// The context of a cold builder that has no argument. It has no data, so it uses only padding in
+/// TrampolinedData. A `unit` field would add a reference field to each state machine.
+[<Struct;
+  NoComparison;
+  NoEquality;
+  System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+type NoContext = struct end
+
+/// The data of a cold builder's state machine. The cold builders share it, so that the code in
+/// TrampolinedCode exists once. `'Context` is what a start gives to the code.
+[<Struct; NoComparison; NoEquality>]
+type TrampolinedData<'Context, 'T, 'Builder> =
+    /// What the start gives to the code, for example the cancellation token.
+    [<DefaultValue(false)>]
+    val mutable Context: 'Context
+
+    [<DefaultValue(false)>]
+    val mutable Result: 'T
+
+    [<DefaultValue(false)>]
+    val mutable MethodBuilder: 'Builder
+
+    /// The exception of the code. The static path keeps it across the bounce before the completion.
+    [<DefaultValue(false)>]
+    val mutable Error: exn
+
+    /// True when this start cannot bounce. The static path keeps it across the bounces.
+    [<DefaultValue(false)>]
+    val mutable NoBounce: bool
+
+/// The yield and bounce points and the MoveNext body of the static path, and the resumption info of the
+/// dynamic path. The cold builders call only this module, so their Run has no trampoline logic.
 [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
 module TrampolinedCode =
 
@@ -444,3 +474,78 @@ module TrampolinedCode =
 
     let inline yieldOnCompletionLimit (await: ResumableCode<'Data, unit>) =
         bounceWhen Trampoline.shouldBounceCompletion await
+
+    /// Registers the state machine with the trampoline. The trampoline is passed by reference, so a
+    /// bounce does not allocate.
+    let inline awaitTrampoline () =
+        ResumableCode<TrampolinedData<'Context, 'T, 'Builder>, unit>(fun sm ->
+            let mutable __stack_trampoline = Trampoline.current ()
+            MethodBuilder.AwaitOnCompleted(&sm.Data.MethodBuilder, &__stack_trampoline, &sm)
+            true
+        )
+
+    /// The MoveNext body of the static path. Run invokes it after `__resumeAt`. It runs `code` and calls
+    /// the trampoline hooks. When the trampoline lets it, it bounces before the start and before the
+    /// completion. It always returns true. Run ignores this value, so that MoveNext does not end with a
+    /// call to a unit function. The state that crosses a bounce is in the data fields, not in local values.
+    /// The compiler clears a hoisted local value at the end of its scope. Here, that scope also ends when
+    /// MoveNext suspends.
+    let inline moveNext
+        (code: ResumableCode<TrampolinedData<'Context, 'T, 'Builder>, 'T>)
+        : ResumableCode<TrampolinedData<'Context, 'T, 'Builder>, bool> =
+        ResumableCode<TrampolinedData<'Context, 'T, 'Builder>, bool>(fun sm ->
+            sm.Data.Error <- Unchecked.defaultof<_>
+            sm.Data.NoBounce <- not (Trampoline.started ())
+
+            let __stack_go1 =
+                sm.Data.NoBounce
+                || yieldOnBindLimit(awaitTrampoline ()).Invoke(&sm)
+
+            if __stack_go1 then
+                try
+                    let __stack_code_fin = code.Invoke(&sm)
+
+                    if __stack_code_fin then
+                        let __stack_go2 =
+                            sm.Data.NoBounce
+                            || yieldOnCompletionLimit(awaitTrampoline ()).Invoke(&sm)
+
+                        if __stack_go2 then
+                            Trampoline.trust ()
+                            MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
+                            Trampoline.clearTrust ()
+                with exn ->
+                    sm.Data.Error <- exn
+
+                if not (obj.ReferenceEquals(sm.Data.Error, null)) then
+                    let __stack_go2 =
+                        sm.Data.NoBounce
+                        || yieldOnCompletionLimit(awaitTrampoline ()).Invoke(&sm)
+
+                    if __stack_go2 then
+                        Trampoline.trust ()
+                        MethodBuilder.SetException(&sm.Data.MethodBuilder, sm.Data.Error)
+                        Trampoline.clearTrust ()
+
+            Trampoline.exited ()
+        )
+
+    /// The resumption info of one start on the dynamic path. A cold value can start many times, so each
+    /// start must call this function and use its own resumption info.
+    let inline newResumptionInfo
+        (initial: ResumptionFunc<TrampolinedData<'Context, 'T, 'Builder>>)
+        =
+        { new TrampolinedResumptionInfo<TrampolinedData<'Context, 'T, 'Builder>>(initial) with
+            member _.Await(sm, awaiter) =
+                let mutable awaiter = awaiter
+                MethodBuilder.AwaitOnCompleted(&sm.Data.MethodBuilder, &awaiter, &sm)
+
+            member _.SetResult(sm) =
+                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
+
+            member _.SetException(sm, error) =
+                MethodBuilder.SetException(&sm.Data.MethodBuilder, error)
+
+            member _.SetStateMachine(sm, state) =
+                MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
+        }

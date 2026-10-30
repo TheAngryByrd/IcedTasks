@@ -1,6 +1,6 @@
 # Cancellation flow
 
-The cancellable builders keep the ambient `CancellationToken` in the state machine data. `CancellableTaskBaseStateMachineData` holds `CancellationToken`, `Result`, `MethodBuilder`, and a `ThrowIfCancellationRequested()` member (`src/IcedTasks/CancellableTaskBuilderBase.fs`).
+The cancellable builders keep the ambient `CancellationToken` in the state machine data. `CancellableTaskBaseStateMachineData` is an abbreviation of `TrampolinedData<CancellationToken, 'T, 'Builder>` (`src/IcedTasks/Trampoline.fs`), so the token is in the `Context` field.
 
 ## Invariants
 
@@ -11,7 +11,7 @@ The cancellable builders keep the ambient `CancellationToken` in the state machi
   - `BindNoCancellation` and `BindDynamicNoCancellation` are internal and do not check the token.
 - Nested work: a bound `CancellationToken -> 'Awaiter` gets the ambient token.
 - Cleanup: `TryFinallyAsync` and the `IAsyncDisposable` `Using` call `BindNoCancellation`. Async disposal and `finally` code thus run when the token is cancelled.
-- `for` over `IAsyncEnumerable` gives `sm.Data.CancellationToken` to the enumerator. `TaskBuilderBase` gives `CancellationToken.None`.
+- `for` over `IAsyncEnumerable` gives `sm.Data.Context` to the enumerator. `TaskBuilderBase` gives `CancellationToken.None`.
 - `Return` and `For` over `seq` do not check the token. A `for` loop over `seq` checks the token only at the binds in its body.
 
 ```fsharp
@@ -19,9 +19,9 @@ The cancellable builders keep the ambient `CancellationToken` in the state machi
                 CancellableTaskBaseCode<'TOverall, 'TResult2, 'Builder>(fun sm ->
                     if __useResumableCode then
                         //-- RESUMABLE CODE START
-                        sm.Data.ThrowIfCancellationRequested()
+                        sm.Data.Context.ThrowIfCancellationRequested()
                         // Get an awaiter from the Awaiter
-                        let mutable awaiter = getAwaiter sm.Data.CancellationToken
+                        let mutable awaiter = getAwaiter sm.Data.Context
 ```
 
 ```mermaid
@@ -34,7 +34,7 @@ sequenceDiagram
     alt ct.IsCancellationRequested
         CT-->>Caller: Task.FromCanceled(ct)
     else not cancelled
-        CT->>SM: set Data.CancellationToken, Start
+        CT->>SM: set Data.Context, Start
         SM->>SM: ThrowIfCancellationRequested
         SM->>Inner: getAwaiter ct
         Inner-->>SM: result

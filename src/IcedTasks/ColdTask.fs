@@ -35,21 +35,7 @@ module ColdTasks =
     type ColdTask = unit -> Task
 
     /// The extra data stored in ResumableStateMachine for tasks
-    [<Struct; NoComparison; NoEquality>]
-    type ColdTaskStateMachineData<'T> =
-        [<DefaultValue(false)>]
-        val mutable Result: 'T
-
-        [<DefaultValue(false)>]
-        val mutable MethodBuilder: AsyncTaskMethodBuilder<'T>
-
-        /// The exception of the code. The static path keeps it across the bounce before the completion.
-        [<DefaultValue(false)>]
-        val mutable Error: exn
-
-        /// True when this start cannot bounce. The static path keeps it across the bounces.
-        [<DefaultValue(false)>]
-        val mutable NoBounce: bool
+    type ColdTaskStateMachineData<'T> = TrampolinedData<NoContext, 'T, AsyncTaskMethodBuilder<'T>>
 
     /// This is used by the compiler as a template for creating state machine structs
     and ColdTaskStateMachine<'TOverall> = ResumableStateMachine<ColdTaskStateMachineData<'TOverall>>
@@ -62,61 +48,6 @@ module ColdTasks =
 
     /// A special compiler-recognised delegate type for specifying blocks of ColdTask code with access to the state machine
     and ColdTaskCode<'TOverall, 'T> = ResumableCode<ColdTaskStateMachineData<'TOverall>, 'T>
-
-    /// Registers the state machine with the trampoline. The trampoline is passed by reference, so a
-    /// bounce does not allocate.
-    let inline awaitTrampoline () =
-        ColdTaskCode<_, unit>(fun sm ->
-            let mutable __stack_trampoline = Trampoline.current ()
-            sm.Data.MethodBuilder.AwaitOnCompleted(&__stack_trampoline, &sm)
-            true
-        )
-
-    /// The MoveNext body of the static path. Run invokes it after `__resumeAt`. It runs `code` and calls
-    /// the trampoline hooks. When the trampoline lets it, it bounces before the start and before the
-    /// completion. It always returns true. Run ignores this value, so that MoveNext does not end with a
-    /// call to a unit function. The state that crosses a bounce is in the data fields, not in local values.
-    /// The compiler clears a hoisted local value at the end of its scope. Here, that scope also ends when
-    /// MoveNext suspends.
-    let inline trampolinedMoveNext (code: ColdTaskCode<'T, 'T>) : ColdTaskCode<'T, bool> =
-        ColdTaskCode(fun sm ->
-            sm.Data.Error <- Unchecked.defaultof<_>
-            sm.Data.NoBounce <- not (Trampoline.started ())
-
-            let __stack_go1 =
-                sm.Data.NoBounce
-                || TrampolinedCode.yieldOnBindLimit(awaitTrampoline ()).Invoke(&sm)
-
-            if __stack_go1 then
-                try
-                    let __stack_code_fin = code.Invoke(&sm)
-
-                    if __stack_code_fin then
-                        let __stack_go2 =
-                            sm.Data.NoBounce
-                            || TrampolinedCode
-                                .yieldOnCompletionLimit(awaitTrampoline ())
-                                .Invoke(&sm)
-
-                        if __stack_go2 then
-                            Trampoline.trust ()
-                            sm.Data.MethodBuilder.SetResult(sm.Data.Result)
-                            Trampoline.clearTrust ()
-                with exn ->
-                    sm.Data.Error <- exn
-
-                if not (obj.ReferenceEquals(sm.Data.Error, null)) then
-                    let __stack_go2 =
-                        sm.Data.NoBounce
-                        || TrampolinedCode.yieldOnCompletionLimit(awaitTrampoline ()).Invoke(&sm)
-
-                    if __stack_go2 then
-                        Trampoline.trust ()
-                        sm.Data.MethodBuilder.SetException(sm.Data.Error)
-                        Trampoline.clearTrust ()
-
-            Trampoline.exited ()
-        )
 
     /// Contains the coldTask computation expression builder.
     type ColdTaskBuilderBase() =
@@ -361,27 +292,12 @@ module ColdTasks =
 
             let initialResumptionFunc = ColdTaskResumptionFunc<'T>(fun sm -> code.Invoke &sm)
 
-            let newResumptionInfo () =
-                { new TrampolinedResumptionInfo<ColdTaskStateMachineData<'T>>(initialResumptionFunc) with
-                    member _.Await(sm, awaiter) =
-                        let mutable awaiter = awaiter
-                        sm.Data.MethodBuilder.AwaitOnCompleted(&awaiter, &sm)
-
-                    member _.SetResult(sm) =
-                        sm.Data.MethodBuilder.SetResult sm.Data.Result
-
-                    member _.SetException(sm, error) =
-                        sm.Data.MethodBuilder.SetException error
-
-                    member _.SetStateMachine(sm, state) =
-                        MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
-                }
 
             TrampolinedStart.create
             <| fun () ->
                 let mutable sm = ColdTaskStateMachine<'T>()
 
-                sm.ResumptionDynamicInfo <- newResumptionInfo ()
+                sm.ResumptionDynamicInfo <- TrampolinedCode.newResumptionInfo initialResumptionFunc
                 sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                 sm.Data.MethodBuilder.Start(&sm)
                 sm.Data.MethodBuilder.Task
@@ -392,7 +308,7 @@ module ColdTasks =
                 __stateMachine<ColdTaskStateMachineData<'T>, ColdTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         __resumeAt sm.ResumptionPoint
-                        let __stack_fin = trampolinedMoveNext(code).Invoke(&sm)
+                        let __stack_fin = TrampolinedCode.moveNext(code).Invoke(&sm)
 
                         __stack_fin
                         |> ignore
@@ -442,7 +358,7 @@ module ColdTasks =
                 __stateMachine<ColdTaskStateMachineData<'T>, ColdTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         __resumeAt sm.ResumptionPoint
-                        let __stack_fin = trampolinedMoveNext(code).Invoke(&sm)
+                        let __stack_fin = TrampolinedCode.moveNext(code).Invoke(&sm)
 
                         __stack_fin
                         |> ignore

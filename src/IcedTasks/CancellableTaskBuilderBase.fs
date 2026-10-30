@@ -21,30 +21,8 @@ module CancellableTaskBase =
 
 
     /// The extra data stored in ResumableStateMachine for tasks
-    [<Struct; NoComparison; NoEquality>]
     type CancellableTaskBaseStateMachineData<'T, 'Builder> =
-        [<DefaultValue(false)>]
-        val mutable CancellationToken: CancellationToken
-
-        [<DefaultValue(false)>]
-        val mutable Result: 'T
-
-        [<DefaultValue(false)>]
-        val mutable MethodBuilder: 'Builder
-
-        /// The exception of the code. The static path keeps it across the bounce before the completion.
-        [<DefaultValue(false)>]
-        val mutable Error: exn
-
-        /// True when this start cannot bounce. The static path keeps it across the bounces.
-        [<DefaultValue(false)>]
-        val mutable NoBounce: bool
-
-        /// <summary>Throws a <see cref="T:System.OperationCanceledException" /> if this token has had cancellation requested.</summary>
-        /// <exception cref="T:System.OperationCanceledException">The token has had cancellation requested.</exception>
-        /// <exception cref="T:System.ObjectDisposedException">The associated <see cref="T:System.Threading.CancellationTokenSource" /> has been disposed.</exception>
-        member inline this.ThrowIfCancellationRequested() =
-            this.CancellationToken.ThrowIfCancellationRequested()
+        TrampolinedData<CancellationToken, 'T, 'Builder>
 
     /// This is used by the compiler as a template for creating state machine structs
     and CancellableTaskBaseStateMachine<'TOverall, 'Builder> =
@@ -61,81 +39,6 @@ module CancellableTaskBase =
     /// A special compiler-recognised delegate type for specifying blocks of cancellableTasks code with access to the state machine
     and CancellableTaskBaseCode<'TOverall, 'T, 'Builder> =
         ResumableCode<CancellableTaskBaseStateMachineData<'TOverall, 'Builder>, 'T>
-
-    /// Registers the state machine with the trampoline. The trampoline is passed by reference, so a
-    /// bounce does not allocate.
-    let inline awaitTrampoline () =
-        CancellableTaskBaseCode<_, unit, _>(fun sm ->
-            let mutable __stack_trampoline = Trampoline.current ()
-            MethodBuilder.AwaitOnCompleted(&sm.Data.MethodBuilder, &__stack_trampoline, &sm)
-            true
-        )
-
-    /// The MoveNext body of the static path. Run invokes it after `__resumeAt`. It runs `code` and calls
-    /// the trampoline hooks. When the trampoline lets it, it bounces before the start and before the
-    /// completion. It always returns true. Run ignores this value, so that MoveNext does not end with a
-    /// call to a unit function. The state that crosses a bounce is in the data fields, not in local values.
-    /// The compiler clears a hoisted local value at the end of its scope. Here, that scope also ends when
-    /// MoveNext suspends.
-    let inline trampolinedMoveNext
-        (code: CancellableTaskBaseCode<'T, 'T, 'Builder>)
-        : CancellableTaskBaseCode<'T, bool, 'Builder> =
-        CancellableTaskBaseCode(fun sm ->
-            sm.Data.Error <- Unchecked.defaultof<_>
-            sm.Data.NoBounce <- not (Trampoline.started ())
-
-            let __stack_go1 =
-                sm.Data.NoBounce
-                || TrampolinedCode.yieldOnBindLimit(awaitTrampoline ()).Invoke(&sm)
-
-            if __stack_go1 then
-                try
-                    let __stack_code_fin = code.Invoke(&sm)
-
-                    if __stack_code_fin then
-                        let __stack_go2 =
-                            sm.Data.NoBounce
-                            || TrampolinedCode
-                                .yieldOnCompletionLimit(awaitTrampoline ())
-                                .Invoke(&sm)
-
-                        if __stack_go2 then
-                            Trampoline.trust ()
-                            MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
-                            Trampoline.clearTrust ()
-                with exn ->
-                    sm.Data.Error <- exn
-
-                if not (obj.ReferenceEquals(sm.Data.Error, null)) then
-                    let __stack_go2 =
-                        sm.Data.NoBounce
-                        || TrampolinedCode.yieldOnCompletionLimit(awaitTrampoline ()).Invoke(&sm)
-
-                    if __stack_go2 then
-                        Trampoline.trust ()
-                        MethodBuilder.SetException(&sm.Data.MethodBuilder, sm.Data.Error)
-                        Trampoline.clearTrust ()
-
-            Trampoline.exited ()
-        )
-
-    /// The resumption info of one start on the dynamic path. A cold value can start many times, so each
-    /// start must call this function and use its own resumption info.
-    let inline newResumptionInfo (initial: CancellableTaskBaseResumptionFunc<'T, 'Builder>) =
-        { new TrampolinedResumptionInfo<CancellableTaskBaseStateMachineData<'T, 'Builder>>(initial) with
-            member _.Await(sm, awaiter) =
-                let mutable awaiter = awaiter
-                MethodBuilder.AwaitOnCompleted(&sm.Data.MethodBuilder, &awaiter, &sm)
-
-            member _.SetResult(sm) =
-                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
-
-            member _.SetException(sm, error) =
-                MethodBuilder.SetException(&sm.Data.MethodBuilder, error)
-
-            member _.SetStateMachine(sm, state) =
-                MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
-        }
 
     /// <summary>
     /// Contains methods to build TaskLikes using the F# computation expression syntax
@@ -300,9 +203,9 @@ module CancellableTaskBase =
                     continuation:
                         ('TResult1 -> CancellableTaskBaseCode<'TOverall, 'TResult2, 'Builder>)
                 ) : bool =
-                sm.Data.ThrowIfCancellationRequested()
+                sm.Data.Context.ThrowIfCancellationRequested()
 
-                let mutable awaiter = getAwaiter sm.Data.CancellationToken
+                let mutable awaiter = getAwaiter sm.Data.Context
 
                 let cont =
                     (CancellableTaskBaseResumptionFunc<'TOverall, _>(fun sm ->
@@ -344,9 +247,9 @@ module CancellableTaskBase =
                 CancellableTaskBaseCode<'TOverall, 'TResult2, 'Builder>(fun sm ->
                     if __useResumableCode then
                         //-- RESUMABLE CODE START
-                        sm.Data.ThrowIfCancellationRequested()
+                        sm.Data.Context.ThrowIfCancellationRequested()
                         // Get an awaiter from the Awaiter
-                        let mutable awaiter = getAwaiter sm.Data.CancellationToken
+                        let mutable awaiter = getAwaiter sm.Data.Context
 
                         let mutable __stack_fin = true
 
@@ -444,7 +347,7 @@ module CancellableTaskBase =
                     continuation:
                         ('TResult1 -> CancellableTaskBaseCode<'TOverall, 'TResult2, 'Builder>)
                 ) : bool =
-                sm.Data.ThrowIfCancellationRequested()
+                sm.Data.Context.ThrowIfCancellationRequested()
                 let mutable awaiter = awaiter
 
                 // shortcut to continue immediately
@@ -582,7 +485,7 @@ module CancellableTaskBase =
                 CancellableTaskBaseCode<'TOverall, 'TResult2, 'Builder>(fun sm ->
                     if __useResumableCode then
                         //-- RESUMABLE CODE START
-                        sm.Data.ThrowIfCancellationRequested()
+                        sm.Data.Context.ThrowIfCancellationRequested()
                         // Get an awaiter from the Awaiter
                         let mutable awaiter = awaiter
 
@@ -934,7 +837,7 @@ module CancellableTaskBase =
                 CancellableTaskBaseCode<_, _, _>(fun sm ->
                     this
                         .Using(
-                            source.GetAsyncEnumerator sm.Data.CancellationToken,
+                            source.GetAsyncEnumerator sm.Data.Context,
                             (fun (e: IAsyncEnumerator<'T>) ->
                                 this.WhileAsync(
                                     (fun () ->

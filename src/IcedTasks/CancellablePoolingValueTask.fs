@@ -64,8 +64,11 @@ module CancellablePoolingValueTasks =
                     ValueTask.FromCanceled<_>(ct)
                 else
                     let mutable sm = CancellableTaskBaseStateMachine<'T, _>()
-                    sm.Data.CancellationToken <- ct
-                    sm.ResumptionDynamicInfo <- newResumptionInfo initialResumptionFunc
+                    sm.Data.Context <- ct
+
+                    sm.ResumptionDynamicInfo <-
+                        TrampolinedCode.newResumptionInfo initialResumptionFunc
+
                     sm.Data.MethodBuilder <- PoolingAsyncValueTaskMethodBuilder<'T>.Create()
                     sm.Data.MethodBuilder.Start(&sm)
                     sm.Data.MethodBuilder.Task
@@ -76,7 +79,7 @@ module CancellablePoolingValueTasks =
                 __stateMachine<CancellableTaskBaseStateMachineData<'T, _>, CancellableValueTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
                         __resumeAt sm.ResumptionPoint
-                        let __stack_fin = trampolinedMoveNext(code).Invoke(&sm)
+                        let __stack_fin = TrampolinedCode.moveNext(code).Invoke(&sm)
 
                         __stack_fin
                         |> ignore
@@ -92,7 +95,7 @@ module CancellablePoolingValueTasks =
                                 ValueTask.FromCanceled<_>(ct)
                             else
                                 let mutable sm = sm
-                                sm.Data.CancellationToken <- ct
+                                sm.Data.Context <- ct
 
                                 sm.Data.MethodBuilder <-
                                     PoolingAsyncValueTaskMethodBuilder<'T>.Create()
