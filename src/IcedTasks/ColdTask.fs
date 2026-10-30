@@ -281,10 +281,7 @@ module ColdTasks =
                         let mutable awaiter = Awaitable.GetAwaiter __stack_vtask
 
                         if not (Awaiter.IsCompleted awaiter) then
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-
-                            if __stack_yield_fin then
-                                Trampoline.resumed ()
+                            let __stack_yield_fin = TrampolinedCode.yieldForAwait().Invoke(&sm)
 
                             __stack_condition_fin <- __stack_yield_fin
 
@@ -380,7 +377,7 @@ module ColdTasks =
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
                 }
 
-            TrampolinedStart.ofFunc
+            TrampolinedStart.create
             <| fun () ->
                 let mutable sm = ColdTaskStateMachine<'T>()
 
@@ -406,14 +403,12 @@ module ColdTasks =
                     (AfterCode<_, _>(fun sm ->
                         let sm = sm
 
-                        TrampolinedStart.asFunc
-                            { new TrampolinedStart<_, _>() with
-                                member _.Start(()) =
-                                    let mutable sm = sm
-                                    sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
-                                    sm.Data.MethodBuilder.Start(&sm)
-                                    sm.Data.MethodBuilder.Task
-                            }
+                        TrampolinedStart.create (fun () ->
+                            let mutable sm = sm
+                            sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
+                            sm.Data.MethodBuilder.Start(&sm)
+                            sm.Data.MethodBuilder.Task
+                        )
                     ))
             else
                 ColdTaskBuilder.RunDynamic(code)
@@ -436,7 +431,7 @@ module ColdTasks =
                 ColdTaskBuilder.RunDynamic(code)
             else
 
-                TrampolinedStart.ofFunc
+                TrampolinedStart.create
                 <| fun () -> Task.Run<'T>(fun () -> ColdTaskBuilder.RunDynamic (code) ())
 
         /// <summary>
@@ -466,32 +461,26 @@ module ColdTasks =
                         then
                             let sm = sm // copy
 
-                            TrampolinedStart.asFunc
-                                { new TrampolinedStart<_, _>() with
-                                    member _.Start(()) =
-                                        let mutable sm = sm
+                            TrampolinedStart.create (fun () ->
+                                let mutable sm = sm
 
-                                        sm.Data.MethodBuilder <-
-                                            AsyncTaskMethodBuilder<'T>.Create()
+                                sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
 
-                                        sm.Data.MethodBuilder.Start(&sm)
-                                        sm.Data.MethodBuilder.Task
-                                }
+                                sm.Data.MethodBuilder.Start(&sm)
+                                sm.Data.MethodBuilder.Task
+                            )
                         else
 
-                            TrampolinedStart.asFunc
-                                { new TrampolinedStart<_, _>() with
-                                    member _.Start(()) =
-                                        Task.Run<'T>(fun () ->
-                                            let mutable sm = sm // host local mutable copy of contents of state machine on this thread pool thread
+                            TrampolinedStart.create (fun () ->
+                                Task.Run<'T>(fun () ->
+                                    let mutable sm = sm // host local mutable copy of contents of state machine on this thread pool thread
 
-                                            sm.Data.MethodBuilder <-
-                                                AsyncTaskMethodBuilder<'T>.Create()
+                                    sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
 
-                                            sm.Data.MethodBuilder.Start(&sm)
-                                            sm.Data.MethodBuilder.Task
-                                        )
-                                }
+                                    sm.Data.MethodBuilder.Start(&sm)
+                                    sm.Data.MethodBuilder.Task
+                                )
+                            )
                     ))
             else
                 BackgroundColdTaskBuilder.RunDynamic(code)
@@ -574,10 +563,7 @@ module ColdTasks =
                         if Awaiter.IsCompleted awaiter then
                             continuation(ExceptionCache.getResult awaiter).Invoke(&sm)
                         else
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-
-                            if __stack_yield_fin then
-                                Trampoline.resumed ()
+                            let __stack_yield_fin = TrampolinedCode.yieldForAwait().Invoke(&sm)
 
                             if __stack_yield_fin then
                                 continuation(ExceptionCache.getResult awaiter).Invoke(&sm)

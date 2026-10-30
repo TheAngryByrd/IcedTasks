@@ -55,7 +55,7 @@ module CancellableTasks =
             let initialResumptionFunc =
                 CancellableTaskBaseResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm))
 
-            TrampolinedStart.ofFunc
+            TrampolinedStart.create
             <| fun (ct) ->
                 if ct.IsCancellationRequested then
                     Task.FromCanceled<_>(ct)
@@ -85,21 +85,18 @@ module CancellableTasks =
                     (AfterCode<_, _>(fun sm ->
                         let sm = sm
 
-                        TrampolinedStart.asFunc
-                            { new TrampolinedStart<_, _>() with
-                                member _.Start(ct) =
-                                    if ct.IsCancellationRequested then
-                                        Task.FromCanceled<_>(ct)
-                                    else
-                                        let mutable sm = sm
-                                        sm.Data.CancellationToken <- ct
+                        TrampolinedStart.create (fun ct ->
+                            if ct.IsCancellationRequested then
+                                Task.FromCanceled<_>(ct)
+                            else
+                                let mutable sm = sm
+                                sm.Data.CancellationToken <- ct
 
-                                        sm.Data.MethodBuilder <-
-                                            AsyncTaskMethodBuilder<'T>.Create()
+                                sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
 
-                                        sm.Data.MethodBuilder.Start(&sm)
-                                        sm.Data.MethodBuilder.Task
-                            }
+                                sm.Data.MethodBuilder.Start(&sm)
+                                sm.Data.MethodBuilder.Task
+                        )
                     ))
             else
                 CancellableTaskBuilder.RunDynamic(code)
@@ -205,7 +202,7 @@ module CancellableTasks =
             then
                 CancellableTaskBuilder.RunDynamic(code)
             else
-                TrampolinedStart.ofFunc
+                TrampolinedStart.create
                 <| fun (ct) ->
                     Task.Run<'T>((fun () -> CancellableTaskBuilder.RunDynamic (code) (ct)), ct)
 
@@ -236,12 +233,26 @@ module CancellableTasks =
                         then
                             let sm = sm
 
-                            TrampolinedStart.asFunc
-                                { new TrampolinedStart<_, _>() with
-                                    member _.Start(ct) =
-                                        if ct.IsCancellationRequested then
-                                            Task.FromCanceled<_>(ct)
-                                        else
+                            TrampolinedStart.create (fun ct ->
+                                if ct.IsCancellationRequested then
+                                    Task.FromCanceled<_>(ct)
+                                else
+                                    let mutable sm = sm
+                                    sm.Data.CancellationToken <- ct
+
+                                    sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
+
+                                    sm.Data.MethodBuilder.Start(&sm)
+                                    sm.Data.MethodBuilder.Task
+                            )
+                        else
+
+                            TrampolinedStart.create (fun ct ->
+                                if ct.IsCancellationRequested then
+                                    Task.FromCanceled<_>(ct)
+                                else
+                                    Task.Run<'T>(
+                                        (fun () ->
                                             let mutable sm = sm
                                             sm.Data.CancellationToken <- ct
 
@@ -250,29 +261,10 @@ module CancellableTasks =
 
                                             sm.Data.MethodBuilder.Start(&sm)
                                             sm.Data.MethodBuilder.Task
-                                }
-                        else
-
-                            TrampolinedStart.asFunc
-                                { new TrampolinedStart<_, _>() with
-                                    member _.Start(ct) =
-                                        if ct.IsCancellationRequested then
-                                            Task.FromCanceled<_>(ct)
-                                        else
-                                            Task.Run<'T>(
-                                                (fun () ->
-                                                    let mutable sm = sm
-                                                    sm.Data.CancellationToken <- ct
-
-                                                    sm.Data.MethodBuilder <-
-                                                        AsyncTaskMethodBuilder<'T>.Create()
-
-                                                    sm.Data.MethodBuilder.Start(&sm)
-                                                    sm.Data.MethodBuilder.Task
-                                                ),
-                                                ct
-                                            )
-                                }
+                                        ),
+                                        ct
+                                    )
+                            )
                     ))
 
             else

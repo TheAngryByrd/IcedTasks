@@ -56,7 +56,7 @@ module CancellableValueTasks =
             let initialResumptionFunc =
                 CancellableTaskBaseResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm))
 
-            TrampolinedStart.ofFunc
+            TrampolinedStart.create
             <| fun (ct) ->
                 if ct.IsCancellationRequested then
                     ValueTask.FromCanceled<_>(ct)
@@ -85,21 +85,18 @@ module CancellableValueTasks =
                     (AfterCode<_, _>(fun sm ->
                         let sm = sm
 
-                        TrampolinedStart.asFunc
-                            { new TrampolinedStart<_, _>() with
-                                member _.Start(ct) =
-                                    if ct.IsCancellationRequested then
-                                        ValueTask.FromCanceled<_>(ct)
-                                    else
-                                        let mutable sm = sm
-                                        sm.Data.CancellationToken <- ct
+                        TrampolinedStart.create (fun ct ->
+                            if ct.IsCancellationRequested then
+                                ValueTask.FromCanceled<_>(ct)
+                            else
+                                let mutable sm = sm
+                                sm.Data.CancellationToken <- ct
 
-                                        sm.Data.MethodBuilder <-
-                                            AsyncValueTaskMethodBuilder<'T>.Create()
+                                sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
 
-                                        sm.Data.MethodBuilder.Start(&sm)
-                                        sm.Data.MethodBuilder.Task
-                            }
+                                sm.Data.MethodBuilder.Start(&sm)
+                                sm.Data.MethodBuilder.Task
+                        )
                     ))
             else
                 CancellableValueTaskBuilder.RunDynamic(code)

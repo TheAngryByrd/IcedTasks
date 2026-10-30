@@ -305,23 +305,18 @@ type TrampolinedStart<'Arg, 'Result>() =
         else
             this.RunAsOwner(trampoline, arg, prime)
 
-/// A TrampolinedStart around a function, for the starts that do not hold a state machine.
-[<Sealed; System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
-type FuncStart<'Arg, 'Result>(start: 'Arg -> 'Result) =
-    inherit TrampolinedStart<'Arg, 'Result>()
-
-    override _.Start(arg) = start arg
-
 [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
 module TrampolinedStart =
 
-    /// Puts a TrampolinedStart around a function.
-    let inline ofFunc (start: 'Arg -> 'Result) : 'Arg -> 'Result =
-        unbox<'Arg -> 'Result> (box (FuncStart start))
-
-    /// Gives a TrampolinedStart the type of the function that it is.
-    let inline asFunc (start: TrampolinedStart<'Arg, 'Result>) : 'Arg -> 'Result =
-        unbox<'Arg -> 'Result> (box start)
+    /// Makes a TrampolinedStart that runs `start`. The object holds what `start` uses, so one object is
+    /// both the function and the start.
+    let inline create ([<InlineIfLambda>] start: 'Arg -> 'Result) : 'Arg -> 'Result =
+        unbox<'Arg -> 'Result> (
+            box
+                { new TrampolinedStart<'Arg, 'Result>() with
+                    member _.Start(arg) = start arg
+                }
+        )
 
     /// Starts a bound value. Only a TrampolinedStart is started as nested, so a plain function that
     /// blocks on a cold value inside cannot make that value bounce.
@@ -414,6 +409,18 @@ type TrampolinedResumptionInfo<'Data>(initial: ResumptionFunc<'Data>) =
 [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
 module TrampolinedCode =
 
+    /// Yields the state machine. The result is false when it yields and true when it resumes. Each
+    /// yield of a cold builder must use this function, because a resumption must call the trampoline.
+    let inline yieldForAwait () : ResumableCode<'Data, unit> =
+        ResumableCode<'Data, unit>(fun sm ->
+            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
+
+            if __stack_yield_fin then
+                Trampoline.resumed ()
+
+            __stack_yield_fin
+        )
+
     /// Bounces when `shouldBounce` says so.
     let inline bounceWhen
         ([<InlineIfLambda>] shouldBounce: Trampoline -> bool)
@@ -421,10 +428,7 @@ module TrampolinedCode =
         : ResumableCode<'Data, unit> =
         ResumableCode<'Data, unit>(fun sm ->
             if shouldBounce (Trampoline.current ()) then
-                let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-
-                if __stack_yield_fin then
-                    Trampoline.resumed ()
+                let __stack_yield_fin = yieldForAwait().Invoke(&sm)
 
                 if not __stack_yield_fin then
                     await.Invoke(&sm)
@@ -440,25 +444,3 @@ module TrampolinedCode =
 
     let inline yieldOnCompletionLimit (await: ResumableCode<'Data, unit>) =
         bounceWhen Trampoline.shouldBounceCompletion await
-
-module ExceptionCache =
-    let private store = ConditionalWeakTable<exn, ExceptionDispatchInfo>()
-
-    let private capture =
-        ConditionalWeakTable<exn, ExceptionDispatchInfo>.CreateValueCallback(fun error ->
-            ExceptionDispatchInfo.Capture error
-        )
-
-    /// Rethrows `error` with the dispatch info captured the first time it was seen, so a failure
-    /// propagating through many frames does not grow its stack trace at every frame.
-    let throwCached (error: exn) : 'T =
-        store.GetValue(error, capture).Throw()
-        Unchecked.defaultof<_>
-
-    /// Gets the result of `awaiter`. If the awaited operation failed, rethrows its exception with
-    /// `throwCached`, so the stack trace stays the same when each awaiting frame rethrows the failure.
-    let inline getResult awaiter =
-        try
-            Awaiter.GetResult awaiter
-        with exn ->
-            throwCached exn

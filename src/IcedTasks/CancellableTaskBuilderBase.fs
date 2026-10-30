@@ -353,10 +353,7 @@ module CancellableTaskBase =
                         if not (Awaiter.IsCompleted awaiter) then
                             // This will yield with __stack_yield_fin = false
                             // This will resume with __stack_yield_fin = true
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-
-                            if __stack_yield_fin then
-                                Trampoline.resumed ()
+                            let __stack_yield_fin = TrampolinedCode.yieldForAwait().Invoke(&sm)
 
                             __stack_fin <- __stack_yield_fin
 
@@ -535,10 +532,7 @@ module CancellableTaskBase =
                         if not (Awaiter.IsCompleted awaiter) then
                             // This will yield with __stack_yield_fin = false
                             // This will resume with __stack_yield_fin = true
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-
-                            if __stack_yield_fin then
-                                Trampoline.resumed ()
+                            let __stack_yield_fin = TrampolinedCode.yieldForAwait().Invoke(&sm)
 
                             __stack_fin <- __stack_yield_fin
 
@@ -597,10 +591,7 @@ module CancellableTaskBase =
                         if not (Awaiter.IsCompleted awaiter) then
                             // This will yield with __stack_yield_fin = false
                             // This will resume with __stack_yield_fin = true
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-
-                            if __stack_yield_fin then
-                                Trampoline.resumed ()
+                            let __stack_yield_fin = TrampolinedCode.yieldForAwait().Invoke(&sm)
 
                             __stack_fin <- __stack_yield_fin
 
