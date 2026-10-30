@@ -14,6 +14,7 @@ module ColdTaskHelpers =
 
 module ColdTaskTests =
     open System.Threading
+    open System.Runtime.CompilerServices
 
     // These builders take the dynamic path in every build configuration: their Run calls
     // RunDynamic, which the inherited Run falls back to when it does not compile the state machine
@@ -1208,6 +1209,51 @@ module ColdTaskTests =
 
         ]
 
+    let private reused = InvalidOperationException("reused")
+
+    [<MethodImpl(MethodImplOptions.NoInlining)>]
+    let private throwA () : int = raise reused
+
+    [<MethodImpl(MethodImplOptions.NoInlining)>]
+    let private throwB () : int = raise reused
+
+    let rec private failAt (site: unit -> int) depth : ColdTask<int> =
+        coldTask {
+            if depth = 0 then
+                do! Task.Yield()
+                return site ()
+            else
+                let! value = failAt site (depth - 1)
+                return value + 1
+        }
+
+    /// Runs on a large stack, because a deep failure completes through a chain of inline continuations.
+    let private failureTraceOf site depth =
+        let trace = ref ""
+
+        let thread =
+            Thread(
+                (fun () ->
+                    try
+                        (failAt site depth ()).GetAwaiter().GetResult()
+                        |> ignore
+                    with error ->
+                        trace.Value <- error.StackTrace
+                ),
+                64
+                * 1024
+                * 1024
+            )
+
+        thread.Start()
+        thread.Join()
+        trace.Value
+
+    let private failureTrace depth =
+        failureTraceOf (fun () -> failwith "failure") depth
+
+    let private frames (trace: string) = trace.Split(char 10).Length
+
     let recursionTests =
         testList "Recursion" [
             testCaseAsync "Non-tail recursion"
@@ -1249,6 +1295,28 @@ module ColdTaskTests =
                 let root: Task<int> = (foo 100) ()
                 let result = root.GetAwaiter().GetResult()
                 Expect.equal result 42 "Immediate start recursion should complete without hanging"
+            testCase "A shallow failure keeps each frame in its stack trace"
+            <| fun () ->
+                let trace = failureTrace 6
+                Expect.isGreaterThanOrEqual (frames trace) 7 "Each level should add a frame"
+                Expect.isFalse (trace.Contains "ExceptionCache") "The cache should not run"
+            testCase "A deep failure has a short stack trace"
+            <| fun () ->
+                Expect.isLessThan
+                    (frames (failureTrace 1000))
+                    500
+                    "The trace should not grow with the depth"
+            testCase "A reused exception reports each throw site"
+            <| fun () ->
+                for depth in
+                    [
+                        3
+                        200
+                    ] do
+                    for i in 1..20 do
+                        let site, name = if i % 2 = 0 then throwA, "throwA" else throwB, "throwB"
+
+                        Expect.stringContains (failureTraceOf site depth) name "Wrong throw site"
             testCaseAsync "Mutual recursion ColdTask <-> CancellableTask (start cold)"
             <| async {
                 let rec coldSide n : ColdTask<int> =
@@ -1256,7 +1324,9 @@ module ColdTaskTests =
                         if n = 0 then
                             return 0
                         else
-                            return! cancellableSide (n - 1) CancellationToken.None
+                            return!
+                                cancellableSide (n - 1)
+                                |> CancellableTask.toColdTask CancellationToken.None
                     }
 
                 and cancellableSide n : CancellableTask<int> =
@@ -1284,7 +1354,9 @@ module ColdTaskTests =
                         if n = 0 then
                             return acc
                         else
-                            return! cancellableAcc (n - 1) (acc + 1) CancellationToken.None
+                            return!
+                                cancellableAcc (n - 1) (acc + 1)
+                                |> CancellableTask.toColdTask CancellationToken.None
                     }
 
                 and cancellableAcc n acc : CancellableTask<int> =

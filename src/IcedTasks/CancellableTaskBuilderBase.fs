@@ -261,7 +261,7 @@ module CancellableTaskBase =
                             __stack_fin <- __stack_yield_fin
 
                         if __stack_fin then
-                            let result = ExceptionCache.getResult awaiter
+                            let result = Awaiter.GetResult awaiter
                             (continuation result).Invoke(&sm)
                         else
                             let mutable awaiter = awaiter :> ICriticalNotifyCompletion
@@ -358,7 +358,7 @@ module CancellableTaskBase =
                 else
                     let resumptionFunc =
                         CancellableTaskBaseResumptionFunc(fun sm ->
-                            let result = ExceptionCache.getResult awaiter
+                            let result = Awaiter.GetResult awaiter
                             (continuation result).Invoke(&sm)
                         )
 
@@ -499,7 +499,7 @@ module CancellableTaskBase =
                             __stack_fin <- __stack_yield_fin
 
                         if __stack_fin then
-                            let result = ExceptionCache.getResult awaiter
+                            let result = Awaiter.GetResult awaiter
                             (continuation result).Invoke(&sm)
                         else
                             let mutable awaiter = awaiter :> ICriticalNotifyCompletion

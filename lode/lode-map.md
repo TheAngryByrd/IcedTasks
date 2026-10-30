@@ -68,6 +68,7 @@ Read [summary](summary.md), [terminology](terminology.md), and this map at the s
 - [docsSrc/Explanations/Why-is-there-different-binds.md](../docsSrc/Explanations/Why-is-there-different-binds.md) - the reason for `Source`.
 - [docsSrc/Explanations/Understanding-and-bang.md](../docsSrc/Explanations/Understanding-and-bang.md) - `and!` behavior by builder.
 - [docsSrc/Explanations/Pooling-builders.md](../docsSrc/Explanations/Pooling-builders.md) - pooling builders.
+- [docsSrc/Explanations/Recursion-and-stack-safety.md](../docsSrc/Explanations/Recursion-and-stack-safety.md) - which recursive calls are stack safe.
 - [docsSrc/Explanations/Polyfill-namespaces-and-shadowing.md](../docsSrc/Explanations/Polyfill-namespaces-and-shadowing.md) - polyfill namespaces.
 
 ```gitignore

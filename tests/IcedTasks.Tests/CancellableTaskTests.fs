@@ -1796,6 +1796,34 @@ module CancellableTaskTests =
                 let! result = loop 100_000
                 Expect.equal result 55 ""
             }
+            testCaseAsync "toColdTask gives its token to the cancellable task"
+            <| async {
+                use cts = new CancellationTokenSource()
+
+                let getToken: CancellableTask<CancellationToken> =
+                    cancellableTask {
+                        let! ct = CancellableTask.getCancellationToken ()
+                        return ct
+                    }
+
+                let cold =
+                    getToken
+                    |> CancellableTask.toColdTask cts.Token
+
+                let! direct =
+                    cold ()
+                    |> Async.AwaitTask
+
+                let! bound =
+                    coldTask {
+                        let! ct = cold
+                        return ct
+                    }
+                    |> Async.AwaitColdTask
+
+                Expect.equal direct cts.Token "A start from user code should use the token"
+                Expect.equal bound cts.Token "A bind should use the token"
+            }
             testCaseAsync "Mutual recursion CancellableTask <-> ColdTask (start cancellable)"
             <| async {
 
@@ -1815,7 +1843,9 @@ module CancellableTaskTests =
                         if n = 0 then
                             return false
                         else
-                            return! evenC (n - 1) CancellationToken.None
+                            return!
+                                evenC (n - 1)
+                                |> CancellableTask.toColdTask CancellationToken.None
                     }
 
                 use cts = new CancellationTokenSource()
@@ -1853,7 +1883,10 @@ module CancellableTaskTests =
                         if n = 0 then
                             return 1
                         else
-                            let! v = cancellablePart (n - 1) CancellationToken.None
+                            let! v =
+                                cancellablePart (n - 1)
+                                |> CancellableTask.toColdTask CancellationToken.None
+
                             return v + 1
                     }
 

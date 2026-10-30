@@ -16,7 +16,7 @@ module SyncOverAsyncTests =
         * 1024
         * 1024
 
-    /// A small stack makes the trampoline bounce and hop threads at the depths below.
+    /// A small stack makes the trampoline bounce at the depths below.
     let smallStack = 512 * 1024
 
     let private stackSize = AsyncLocal<int>()
@@ -63,7 +63,7 @@ module SyncOverAsyncTests =
             stackSize.Value <- previous
 
     /// Cases that do not block under a SynchronizationContext run on both stacks. On the small stack the
-    /// builders bounce and hop threads, where they would overflow without the trampoline.
+    /// builders bounce, where they would overflow without the trampoline.
     let stacks = [
         "large stack", largeStack
         "small stack", smallStack
@@ -349,10 +349,15 @@ module SyncOverAsyncTests =
         testList name [
             for stackName, stack in stacks do
                 for waitName, wait in waits do
+                    // A start from user code stays on the stack, so depth 1000 overflows the small stack.
                     for depth in depths do
-                        testCase $"{stackName}, {waitName}, depth {depth}"
-                        <| fun () ->
-                            Expect.equal (withStack stack (fun () -> case wait depth)) depth ""
+                        if
+                            stack = largeStack
+                            || depth < 1000
+                        then
+                            testCase $"{stackName}, {waitName}, depth {depth}"
+                            <| fun () ->
+                                Expect.equal (withStack stack (fun () -> case wait depth)) depth ""
         ]
 
     let forEachDepth name (case: int -> int) =
@@ -382,8 +387,47 @@ module SyncOverAsyncTests =
                             ""
         ]
 
+    /// Uses the stack until the runtime reports that it is low, then calls `body`.
+    let rec private atLowStackFrom depth (body: unit -> int) : int =
+        if System.Runtime.CompilerServices.RuntimeHelpers.TryEnsureSufficientExecutionStack() then
+            let result = atLowStackFrom (depth + 1) body
+            // Work after the call keeps this call out of tail position, so the stack grows.
+            if depth < 0 then 0 else result
+        else
+            body ()
+
+    let private atLowStack body = atLowStackFrom 0 body
+
+    let private lockAtLowStack =
+        testCase "A lock is held across a start at low stack"
+        <| fun () ->
+            let gate = obj ()
+
+            let body () =
+                lock
+                    gate
+                    (fun () ->
+                        let child = coldTask { return lock gate (fun () -> 1) }
+                        child().Result
+                    )
+
+            Expect.equal (runGuarded (fun () -> atLowStack body)) 1 ""
+
+    let private threadAtLowStack =
+        testCase "A start at low stack stays on its thread"
+        <| fun () ->
+            let body () =
+                let thread = Environment.CurrentManagedThreadId
+                let child = coldTask { return Environment.CurrentManagedThreadId }
+
+                if child().Result = thread then 1 else 0
+
+            Expect.equal (runGuarded (fun () -> atLowStack body)) 1 ""
+
     let coldTaskTests =
         testList "coldTask" [
+            lockAtLowStack
+            threadAtLowStack
             forEachWaitAndDepth "Block on a user started child"
             <| fun wait depth -> block wait (Cold.blocking wait depth)
             forEachWaitAndDepth "Block and let! on alternate levels"

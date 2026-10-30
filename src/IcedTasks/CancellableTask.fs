@@ -534,3 +534,18 @@ module CancellableTasks =
         /// <returns>A non-generic CancellableTask that completes when <paramref name="ctask" /> completes.</returns>
         let inline toUnit ([<InlineIfLambda>] ctask: CancellableTask<_>) : CancellableTask =
             fun ct -> ctask ct
+
+        /// <summary>Converts a CancellableTask\&lt;_&gt; to a ColdTask\&lt;_&gt; that starts it with a given token.</summary>
+        /// <remarks>
+        /// Use this function to bind a CancellableTask in a coldTask builder. A call such as <c>ctask ct</c> starts the
+        /// task at once, and recursion through that call can overflow the stack. The value that this function returns
+        /// starts when the builder binds it, so that recursion does not overflow the stack.
+        /// </remarks>
+        /// <param name="cancellationToken">The token that the CancellableTask receives when it starts.</param>
+        /// <param name="ctask">The CancellableTask to convert.</param>
+        /// <returns>A ColdTask\&lt;_&gt; that starts <paramref name="ctask" /> with <paramref name="cancellationToken" />.</returns>
+        let inline toColdTask
+            (cancellationToken: CancellationToken)
+            (ctask: CancellableTask<'T>)
+            : unit -> Task<'T> =
+            TrampolinedStart.create (fun () -> TrampolinedStart.bind ctask cancellationToken)

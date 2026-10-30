@@ -1,7 +1,6 @@
 namespace IcedTasks
 
 open System
-open System.Runtime.ExceptionServices
 open System.Collections.Generic
 open System.Threading
 open System.Threading.Tasks
@@ -200,49 +199,6 @@ module Trampoline =
 
         true
 
-    let private runInContext =
-        ContextCallback(fun state ->
-            match state with
-            | :? (unit -> unit) as run -> run ()
-            | _ -> ()
-        )
-
-    /// Runs `start` on a new thread with a fresh stack and waits for its synchronous part.
-    /// The caller still sees a task that is complete or truly pending, so it can block on it.
-    let internal runOnNewThread (start: unit -> 'Result) : 'Result =
-        let result = ref ValueNone
-        let context = ExecutionContext.Capture()
-
-        let run () =
-            result.Value <-
-                try
-                    ValueSome(Ok(start ()))
-                with e ->
-                    ValueSome(Error(ExceptionDispatchInfo.Capture e))
-
-        let thread =
-            Thread(
-                (fun () ->
-                    match context with
-                    | null -> run ()
-                    | context -> ExecutionContext.Run(context, runInContext, box run)
-                ),
-                16
-                * 1024
-                * 1024,
-                IsBackground = true
-            )
-
-        thread.Start()
-        thread.Join()
-
-        match result.Value with
-        | ValueSome(Ok value) -> value
-        | ValueSome(Error error) ->
-            error.Throw()
-            Unchecked.defaultof<_>
-        | ValueNone -> failwith "The start thread ended without a result"
-
 /// The start function of a cold builder. Calling it is a start from user code. A builder bind finds it
 /// with a type test and calls StartNested. Because ColdTask and CancellableTask are function aliases,
 /// the type is the only way to tell the two starts apart. A builder's Run derives from it with an object
@@ -275,25 +231,20 @@ type TrampolinedStart<'Arg, 'Result>() =
 
     /// A start from user code. The caller can block on the result, so the start must not leave work in an
     /// enclosing trampoline: it owns the trampoline, or a fresh one, and drains it before it returns.
+    /// This start stays on the current thread and stack, so recursion through it can overflow the stack.
     override this.Invoke(arg) =
-        if
-            not (Trampoline.hasSufficientStack ())
-            && Trampoline.canLeaveStack ()
-        then
-            Trampoline.runOnNewThread (fun () -> this.Invoke arg)
+        let trampoline = Trampoline.current ()
+
+        if not trampoline.Running then
+            this.RunAsOwner(trampoline, arg, false)
         else
-            let trampoline = Trampoline.current ()
+            let isolated = Trampoline(StartOwned)
+            Trampoline.Install isolated
 
-            if not trampoline.Running then
-                this.RunAsOwner(trampoline, arg, false)
-            else
-                let isolated = Trampoline(StartOwned)
-                Trampoline.Install isolated
-
-                try
-                    this.RunAsOwner(isolated, arg, false)
-                finally
-                    Trampoline.Install trampoline
+            try
+                this.RunAsOwner(isolated, arg, false)
+            finally
+                Trampoline.Install trampoline
 
     /// A start from a builder bind. The binder awaits the result, so the start may bounce.
     member this.StartNested(arg: 'Arg) : 'Result =
@@ -352,7 +303,9 @@ type TrampolinedResumptionInfo<'Data>(initial: ResumptionFunc<'Data>) =
 
         match error with
         | null -> this.SetResult(&sm)
-        | error -> this.SetException(&sm, error)
+        | error ->
+            ExceptionCache.trim error (not bounceAllowed)
+            this.SetException(&sm, error)
 
         Trampoline.clearTrust ()
 
@@ -523,6 +476,7 @@ module TrampolinedCode =
                         || yieldOnCompletionLimit(awaitTrampoline ()).Invoke(&sm)
 
                     if __stack_go2 then
+                        ExceptionCache.trim sm.Data.Error sm.Data.NoBounce
                         Trampoline.trust ()
                         MethodBuilder.SetException(&sm.Data.MethodBuilder, sm.Data.Error)
                         Trampoline.clearTrust ()
