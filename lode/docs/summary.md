@@ -10,7 +10,7 @@ The docs domain covers `docsSrc/`, `generate-sdk-references.fsx`, and `examples/
 |---|---|---|
 | `docsSrc/Tutorials/` | 1 | one `.fsx` tutorial |
 | `docsSrc/How-To-Guides/` | 2 | eleven `.fsx` guides |
-| `docsSrc/Explanations/` | 3 | five `.md` explanations |
+| `docsSrc/Explanations/` | 3 | six `.md` explanations |
 
 `docsSrc/index.md` is the landing page. `docsSrc/_template.html` and `docsSrc/content/fsdocs-theme.css` are the custom template and theme.
 

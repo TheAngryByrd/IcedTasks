@@ -22,6 +22,7 @@ module ExpectoTemplate =
 - Many timer-based tests use `ManualTimeProvider`. Some tests still use real delays, for example `CancelAfter(100)` in `AsyncExTests.fs`. See [test helpers](expect-helpers.md).
 - Each file that tests a cold or cancellable builder defines test builders whose `Run` calls `RunDynamic`. These test the dynamic path in Release.
 - The `*DynamicTests.fs` files test the hot builders on the dynamic path. Their test builders call `base.Run` from a `NoInlining` member, and the file has `#nowarn "3511"`.
+- `SyncOverAsyncTests.fs` (root `"IcedTasks.SyncOverAsync"`) checks that recursion which blocks on its own tasks does not deadlock. `runGuarded` runs each case on its own thread and fails after a timeout. See [recursion and tail calls](../plans/recursion-and-tail-calls.md).
 - `ColdTaskTests.fs` explains why the cold test builders call `RunDynamic` directly: a `#nowarn "3511"` would hide static compilation failures of the other tests in the file.
 - The build measures no code coverage. Commit bd902a0 removed it: "all this stuff is inlined and can't generate sane coverage reports".
 

@@ -7,6 +7,8 @@ The builders domain is the library in `src/IcedTasks`. It defines the computatio
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Nullness.fs" />
     <Compile Include="TaskLike.fs" />
+    <Compile Include="ExceptionCache.fs" />
+    <Compile Include="Trampoline.fs" />
     <Compile Include="TaskBuilderBase.fs" />
     <Compile Include="ValueTask.fs" />
     <Compile Include="PoolingValueTask.fs" />

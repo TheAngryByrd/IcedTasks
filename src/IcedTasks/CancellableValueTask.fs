@@ -56,47 +56,17 @@ module CancellableValueTasks =
             let initialResumptionFunc =
                 CancellableTaskBaseResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm))
 
-            let newResumptionInfo () =
-                { new CancellableTaskBaseResumptionDynamicInfo<'T, _>(initialResumptionFunc) with
-                    member info.MoveNext(sm) =
-                        let mutable savedExn = null
-
-                        try
-                            sm.ResumptionDynamicInfo.ResumptionData <- null
-                            let step = info.ResumptionFunc.Invoke(&sm)
-
-                            if step then
-                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
-                            else
-                                match sm.ResumptionDynamicInfo.ResumptionData with
-                                | :? ICriticalNotifyCompletion as awaiter ->
-                                    let mutable awaiter = awaiter
-                                    // assert not (isNull awaiter)
-                                    MethodBuilder.AwaitOnCompleted(
-                                        &sm.Data.MethodBuilder,
-                                        &awaiter,
-                                        &sm
-                                    )
-                                | awaiter -> assert not (isNull awaiter)
-
-                        with exn ->
-                            savedExn <- exn
-                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
-                        match savedExn with
-                        | null -> ()
-                        | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
-
-                    member _.SetStateMachine(sm, state) =
-                        MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
-                }
-
-            fun (ct) ->
+            TrampolinedStart.create
+            <| fun (ct) ->
                 if ct.IsCancellationRequested then
                     ValueTask.FromCanceled<_>(ct)
                 else
                     let mutable sm = CancellableTaskBaseStateMachine<'T, _>()
-                    sm.Data.CancellationToken <- ct
-                    sm.ResumptionDynamicInfo <- newResumptionInfo ()
+                    sm.Data.Context <- ct
+
+                    sm.ResumptionDynamicInfo <-
+                        TrampolinedCode.newResumptionInfo initialResumptionFunc
+
                     sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
                     sm.Data.MethodBuilder.Start(&sm)
                     sm.Data.MethodBuilder.Task
@@ -106,22 +76,11 @@ module CancellableValueTasks =
             if __useResumableCode then
                 __stateMachine<CancellableTaskBaseStateMachineData<'T, _>, CancellableValueTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
-                        //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
-                        let mutable __stack_exn = null
+                        let __stack_fin = TrampolinedCode.moveNext(code).Invoke(&sm)
 
-                        try
-                            let __stack_code_fin = code.Invoke(&sm)
-
-                            if __stack_code_fin then
-                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
-                        with exn ->
-                            __stack_exn <- exn
-                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
-                        match __stack_exn with
-                        | null -> ()
-                        | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
-                    //-- RESUMABLE CODE END
+                        __stack_fin
+                        |> ignore
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
@@ -129,15 +88,18 @@ module CancellableValueTasks =
                     (AfterCode<_, _>(fun sm ->
                         let sm = sm
 
-                        fun (ct) ->
+                        TrampolinedStart.create (fun ct ->
                             if ct.IsCancellationRequested then
                                 ValueTask.FromCanceled<_>(ct)
                             else
                                 let mutable sm = sm
-                                sm.Data.CancellationToken <- ct
+                                sm.Data.Context <- ct
+
                                 sm.Data.MethodBuilder <- AsyncValueTaskMethodBuilder<'T>.Create()
+
                                 sm.Data.MethodBuilder.Start(&sm)
                                 sm.Data.MethodBuilder.Task
+                        )
                     ))
             else
                 CancellableValueTaskBuilder.RunDynamic(code)
@@ -148,7 +110,7 @@ module CancellableValueTasks =
             ([<InlineIfLambda>] x: CancellationToken -> ValueTask<_>)
             : CancellationToken -> Awaiter<ValueTaskAwaiter<_>, _> =
             fun ct ->
-                (x ct)
+                TrampolinedStart.bind x ct
                 |> Awaitable.GetAwaiter
 
         [<NoEagerConstraintApplication>]

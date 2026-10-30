@@ -28,6 +28,9 @@ The repository has no glossary file. The terms below come from the code and from
 - companion module - the module with the same name as a type alias, such as `CancellableTask.map`.
 - TFM - target framework moniker, such as `netstandard2.0`.
 - NS20 / NS21 - the test projects that test the `netstandard2.0` and `netstandard2.1` builds of the library.
+- immediate start / nested start - a call of a cold value from user code, or a start from a builder bind (`TrampolinedStart.bind`). Only a nested start can bounce.
+- bounce - a nested start that yields to the running trampoline because the stack is low; the trampoline's owner runs it again on a shallow stack (see [recursion and tail calls](plans/recursion-and-tail-calls.md))
+- trusted resumption - a state machine resumption that IcedTasks causes (a drained bounce, or a cold builder's completion); any other resumption while a trampoline runs owns a fresh trampoline until its MoveNext returns
 
 ```fsharp
 // src/IcedTasks/CancellableTask.fs
