@@ -445,7 +445,9 @@ module ExceptionCache =
     let private store = ConditionalWeakTable<exn, ExceptionDispatchInfo>()
 
     let private capture =
-        ConditionalWeakTable<exn, ExceptionDispatchInfo>.CreateValueCallback(fun error -> ExceptionDispatchInfo.Capture error)
+        ConditionalWeakTable<exn, ExceptionDispatchInfo>.CreateValueCallback(fun error ->
+            ExceptionDispatchInfo.Capture error
+        )
 
     /// Rethrows `error` with the dispatch info captured the first time it was seen, so a failure
     /// propagating through many frames does not grow its stack trace at every frame.
