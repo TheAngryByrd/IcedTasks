@@ -35,13 +35,7 @@ module ColdTasks =
     type ColdTask = unit -> Task
 
     /// The extra data stored in ResumableStateMachine for tasks
-    [<Struct; NoComparison; NoEquality>]
-    type ColdTaskStateMachineData<'T> =
-        [<DefaultValue(false)>]
-        val mutable Result: 'T
-
-        [<DefaultValue(false)>]
-        val mutable MethodBuilder: AsyncTaskMethodBuilder<'T>
+    type ColdTaskStateMachineData<'T> = TrampolinedData<NoContext, 'T, AsyncTaskMethodBuilder<'T>>
 
     /// This is used by the compiler as a template for creating state machine structs
     and ColdTaskStateMachine<'TOverall> = ResumableStateMachine<ColdTaskStateMachineData<'TOverall>>
@@ -123,7 +117,7 @@ module ColdTasks =
         ///
         /// <returns>An ColdTask that behaves similarly to a while loop when run.</returns>
         member inline _.While
-            (guard: unit -> bool, body: ColdTaskCode<'TOverall, unit>)
+            ([<InlineIfLambda>] guard: unit -> bool, body: ColdTaskCode<'TOverall, unit>)
             : ColdTaskCode<'TOverall, unit> =
             ResumableCode.While(guard, body)
 
@@ -162,7 +156,7 @@ module ColdTasks =
         /// <returns>An ColdTask that executes computation and compensation afterwards or
         /// when an exception is raised.</returns>
         member inline _.TryFinally
-            (body: ColdTaskCode<'TOverall, 'T>, compensation: unit -> unit)
+            (body: ColdTaskCode<'TOverall, 'T>, [<InlineIfLambda>] compensation: unit -> unit)
             : ColdTaskCode<'TOverall, 'T> =
             ResumableCode.TryFinally(
                 body,
@@ -207,7 +201,7 @@ module ColdTasks =
         /// <returns>An ColdTask that executes computation and compensation afterwards or
         /// when an exception is raised.</returns>
         member inline internal this.TryFinallyAsync
-            (body: ColdTaskCode<'TOverall, 'T>, compensation: unit -> ValueTask)
+            (body: ColdTaskCode<'TOverall, 'T>, [<InlineIfLambda>] compensation: unit -> ValueTask)
             : ColdTaskCode<'TOverall, 'T> =
             ResumableCode.TryFinallyAsync(
                 body,
@@ -218,7 +212,8 @@ module ColdTasks =
                         let mutable awaiter = Awaitable.GetAwaiter __stack_vtask
 
                         if not (Awaiter.IsCompleted awaiter) then
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
+                            let __stack_yield_fin = TrampolinedCode.yieldForAwait().Invoke(&sm)
+
                             __stack_condition_fin <- __stack_yield_fin
 
                         if __stack_condition_fin then
@@ -295,44 +290,14 @@ module ColdTasks =
         /// </summary>
         static member inline RunDynamic(code: ColdTaskCode<'T, 'T>) : ColdTask<'T> =
 
-            let initialResumptionFunc = ColdTaskResumptionFunc<'T>(fun sm -> code.Invoke(&sm))
+            let initialResumptionFunc = ColdTaskResumptionFunc<'T>(fun sm -> code.Invoke &sm)
 
-            let newResumptionInfo () =
-                { new ColdTaskResumptionDynamicInfo<'T>(initialResumptionFunc) with
-                    member info.MoveNext(sm) =
-                        let mutable savedExn = null
 
-                        try
-                            sm.ResumptionDynamicInfo.ResumptionData <- null
-                            let step = info.ResumptionFunc.Invoke(&sm)
-
-                            if step then
-                                sm.Data.MethodBuilder.SetResult(sm.Data.Result)
-                            else
-                                match sm.ResumptionDynamicInfo.ResumptionData with
-                                | :? ICriticalNotifyCompletion as awaiter ->
-                                    let mutable awaiter = awaiter
-                                    // assert not (isNull awaiter)
-                                    MethodBuilder.AwaitOnCompleted(
-                                        &sm.Data.MethodBuilder,
-                                        &awaiter,
-                                        &sm
-                                    )
-                                | awaiter -> assert not (isNull awaiter)
-                        with exn ->
-                            savedExn <- exn
-                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
-                        match savedExn with
-                        | null -> ()
-                        | exn -> sm.Data.MethodBuilder.SetException exn
-
-                    member _.SetStateMachine(sm, state) =
-                        sm.Data.MethodBuilder.SetStateMachine(state)
-                }
-
-            fun () ->
+            TrampolinedStart.create
+            <| fun () ->
                 let mutable sm = ColdTaskStateMachine<'T>()
-                sm.ResumptionDynamicInfo <- newResumptionInfo ()
+
+                sm.ResumptionDynamicInfo <- TrampolinedCode.newResumptionInfo initialResumptionFunc
                 sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                 sm.Data.MethodBuilder.Start(&sm)
                 sm.Data.MethodBuilder.Task
@@ -342,22 +307,11 @@ module ColdTasks =
             if __useResumableCode then
                 __stateMachine<ColdTaskStateMachineData<'T>, ColdTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
-                        //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
-                        let mutable __stack_exn = null
+                        let __stack_fin = TrampolinedCode.moveNext(code).Invoke(&sm)
 
-                        try
-                            let __stack_code_fin = code.Invoke(&sm)
-
-                            if __stack_code_fin then
-                                sm.Data.MethodBuilder.SetResult(sm.Data.Result)
-                        with exn ->
-                            __stack_exn <- exn
-                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
-                        match __stack_exn with
-                        | null -> ()
-                        | exn -> sm.Data.MethodBuilder.SetException exn
-                    //-- RESUMABLE CODE END
+                        __stack_fin
+                        |> ignore
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         sm.Data.MethodBuilder.SetStateMachine(state)
@@ -365,11 +319,12 @@ module ColdTasks =
                     (AfterCode<_, _>(fun sm ->
                         let sm = sm
 
-                        fun () ->
+                        TrampolinedStart.create (fun () ->
                             let mutable sm = sm
                             sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                             sm.Data.MethodBuilder.Start(&sm)
                             sm.Data.MethodBuilder.Task
+                        )
                     ))
             else
                 ColdTaskBuilder.RunDynamic(code)
@@ -392,7 +347,8 @@ module ColdTasks =
                 ColdTaskBuilder.RunDynamic(code)
             else
 
-                fun () -> Task.Run<'T>(fun () -> ColdTaskBuilder.RunDynamic (code) ())
+                TrampolinedStart.create
+                <| fun () -> Task.Run<'T>(fun () -> ColdTaskBuilder.RunDynamic (code) ())
 
         /// <summary>
         /// Hosts the task code in a state machine and starts the task, executing in the threadpool using Task.Run
@@ -401,27 +357,18 @@ module ColdTasks =
             if __useResumableCode then
                 __stateMachine<ColdTaskStateMachineData<'T>, ColdTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
-                        //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
-                        let mutable __stack_exn = null
+                        let __stack_fin = TrampolinedCode.moveNext(code).Invoke(&sm)
 
-                        try
-                            let __stack_code_fin = code.Invoke(&sm)
-
-                            if __stack_code_fin then
-                                sm.Data.MethodBuilder.SetResult(sm.Data.Result)
-                        with exn ->
-                            __stack_exn <- exn
-                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
-                        match __stack_exn with
-                        | null -> ()
-                        | exn -> sm.Data.MethodBuilder.SetException exn
-                    //-- RESUMABLE CODE END
+                        __stack_fin
+                        |> ignore
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         sm.Data.MethodBuilder.SetStateMachine(state)
                     ))
                     (AfterCode<_, ColdTask<'T>>(fun sm ->
+                        let sm = sm
+
                         // backgroundTask { .. } escapes to a background thread where necessary
                         // See spec of ConfigureAwait(false) at https://devblogs.microsoft.com/dotnet/configureawait-faq/
                         if
@@ -430,21 +377,26 @@ module ColdTasks =
                         then
                             let sm = sm // copy
 
-                            fun () ->
+                            TrampolinedStart.create (fun () ->
                                 let mutable sm = sm
+
                                 sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
+
                                 sm.Data.MethodBuilder.Start(&sm)
                                 sm.Data.MethodBuilder.Task
+                            )
                         else
-                            let sm = sm // copy
 
-                            fun () ->
+                            TrampolinedStart.create (fun () ->
                                 Task.Run<'T>(fun () ->
                                     let mutable sm = sm // host local mutable copy of contents of state machine on this thread pool thread
+
                                     sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
+
                                     sm.Data.MethodBuilder.Start(&sm)
                                     sm.Data.MethodBuilder.Task
                                 )
+                            )
                     ))
             else
                 BackgroundColdTaskBuilder.RunDynamic(code)
@@ -477,26 +429,27 @@ module ColdTasks =
                 when Awaiter<'Awaiter, 'TResult1>>
                 (
                     sm: byref<_>,
-                    getAwaiter: unit -> 'Awaiter,
+                    [<InlineIfLambda>] getAwaiter: unit -> 'Awaiter,
                     continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
                 ) : bool =
-
                 let mutable awaiter = getAwaiter ()
 
-                let cont =
-                    (ColdTaskResumptionFunc<'TOverall>(fun sm ->
-                        let result = Awaiter.GetResult awaiter
-                        (continuation result).Invoke(&sm)
-                    ))
-
-                // shortcut to continue immediately
                 if Awaiter.IsCompleted awaiter then
-                    cont.Invoke(&sm)
+                    (Awaiter.GetResult awaiter
+                     |> continuation)
+                        .Invoke(&sm)
                 else
+                    let resumptionFunc =
+                        ColdTaskResumptionFunc(fun sm ->
+                            let result = Awaiter.GetResult awaiter
+                            (continuation result).Invoke(&sm)
+                        )
+
+                    sm.ResumptionDynamicInfo.ResumptionFunc <- resumptionFunc
+
                     sm.ResumptionDynamicInfo.ResumptionData <-
                         (awaiter :> ICriticalNotifyCompletion)
 
-                    sm.ResumptionDynamicInfo.ResumptionFunc <- cont
                     false
 
 
@@ -515,29 +468,24 @@ module ColdTasks =
             member inline _.Bind<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
                 (
-                    getAwaiter: unit -> 'Awaiter,
+                    [<InlineIfLambda>] getAwaiter: unit -> 'Awaiter,
                     continuation: ('TResult1 -> ColdTaskCode<'TOverall, 'TResult2>)
                 ) : ColdTaskCode<'TOverall, 'TResult2> =
 
                 ColdTaskCode<'TOverall, _>(fun sm ->
                     if __useResumableCode then
-                        //-- RESUMABLE CODE START
                         let mutable awaiter = getAwaiter ()
 
-                        let mutable __stack_fin = true
-
-                        if not (Awaiter.IsCompleted awaiter) then
-                            // This will yield with __stack_yield_fin = false
-                            // This will resume with __stack_yield_fin = true
-                            let __stack_yield_fin = ResumableCode.Yield().Invoke(&sm)
-                            __stack_fin <- __stack_yield_fin
-
-                        if __stack_fin then
-                            let result = Awaiter.GetResult awaiter
-                            (continuation result).Invoke(&sm)
+                        if Awaiter.IsCompleted awaiter then
+                            continuation(Awaiter.GetResult awaiter).Invoke(&sm)
                         else
-                            sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
-                            false
+                            let __stack_yield_fin = TrampolinedCode.yieldForAwait().Invoke(&sm)
+
+                            if __stack_yield_fin then
+                                continuation(Awaiter.GetResult awaiter).Invoke(&sm)
+                            else
+                                sm.Data.MethodBuilder.AwaitUnsafeOnCompleted(&awaiter, &sm)
+                                false
                     else
                         ColdTaskBuilderBase.BindDynamic<'TResult1, 'TResult2, 'Awaiter, 'TOverall>(
                             &sm,
@@ -558,14 +506,14 @@ module ColdTasks =
             [<NoEagerConstraintApplication>]
             member inline this.ReturnFrom<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
-                (getAwaiter: unit -> 'Awaiter)
+                ([<InlineIfLambda>] getAwaiter: unit -> 'Awaiter)
                 : ColdTaskCode<_, _> =
                 this.Bind((fun () -> getAwaiter ()), (fun v -> this.Return v))
 
             [<NoEagerConstraintApplication>]
             member inline this.BindReturn<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
-                (getAwaiter: unit -> 'Awaiter, f)
+                ([<InlineIfLambda>] getAwaiter: unit -> 'Awaiter, f)
                 : ColdTaskCode<'TResult2, 'TResult2> =
                 this.Bind((fun () -> getAwaiter ()), (fun v -> this.Return(f v)))
 
@@ -590,7 +538,7 @@ module ColdTasks =
             [<NoEagerConstraintApplication>]
             member inline _.Source<'TResult1, 'TResult2, 'Awaiter, 'TOverall
                 when Awaiter<'Awaiter, 'TResult1>>
-                (getAwaiter: unit -> 'Awaiter)
+                ([<InlineIfLambda>] getAwaiter: unit -> 'Awaiter)
                 : unit -> 'Awaiter =
                 getAwaiter
 
@@ -714,7 +662,7 @@ module ColdTasks =
             ///
             /// <returns>unit -> 'Awaiter</returns>
             member inline _.Source([<InlineIfLambda>] task: ColdTask<'TResult1>) =
-                (fun () -> (task ()).GetAwaiter())
+                (fun () -> (TrampolinedStart.bind task ()).GetAwaiter())
 
             /// <summary>Allows the computation expression to turn other types into unit -> 'Awaiter</summary>
             ///
@@ -867,8 +815,7 @@ module ColdTasks =
         let inline toUnit ([<InlineIfLambda>] coldTask: ColdTask<_>) : ColdTask =
             fun () -> coldTask () :> Task
 
-        let inline internal getAwaiter ([<InlineIfLambda>] ctask: ColdTask<_>) =
-            fun () -> (ctask ()).GetAwaiter()
+        let inline internal getAwaiter (ctask: ColdTask<_>) = fun () -> (ctask ()).GetAwaiter()
 
     /// <exclude />
     [<AutoOpen>]

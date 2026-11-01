@@ -7,7 +7,7 @@ The open GitHub issues with the `enhancement` label are the open work. Both also
 | [#4](https://github.com/TheAngryByrd/IcedTasks/issues/4) | Implement async2 | Finish the partial FSharp.Core `async2` implementation, which uses resumable code. |
 | [#3](https://github.com/TheAngryByrd/IcedTasks/issues/3) | Tail Recursion | Add tail call support to the task builders, as `async` has. |
 
-Both issues list "Don't do it" as an alternative. Neither issue has a design.
+Both issues list "Don't do it" as an alternative. Issue #4 has no design. Issue #3 has a design in [recursion and tail calls](recursion-and-tail-calls.md) and a draft PR, TheAngryByrd/IcedTasks#54, on the branch `trampoline`.
 
 ## Related code
 

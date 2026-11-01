@@ -20,6 +20,7 @@
     <Compile Include="../IcedTasks.Tests/CancellableValueTaskTests.fs" />
     <Compile Include="../IcedTasks.Tests/ColdTaskTests.fs" />
     <Compile Include="../IcedTasks.Tests/ParallelAsyncTests.fs" />
+    <Compile Include="../IcedTasks.Tests/SyncOverAsyncTests.fs" />
     <Compile Include="../IcedTasks.Tests/Main.fs" />
   </ItemGroup>
 </Project>

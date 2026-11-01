@@ -23,6 +23,7 @@
     <Compile Include="CancellablePoolingValueTaskTests.fs" />
     <Compile Include="ColdTaskTests.fs" />
     <Compile Include="ParallelAsyncTests.fs" />
+    <Compile Include="SyncOverAsyncTests.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
 </Project>

@@ -55,47 +55,17 @@ module CancellableTasks =
             let initialResumptionFunc =
                 CancellableTaskBaseResumptionFunc<'T, _>(fun sm -> code.Invoke(&sm))
 
-            let newResumptionInfo () =
-                { new CancellableTaskBaseResumptionDynamicInfo<'T, _>(initialResumptionFunc) with
-                    member info.MoveNext(sm) =
-                        let mutable savedExn = null
-
-                        try
-                            sm.ResumptionDynamicInfo.ResumptionData <- null
-                            let step = info.ResumptionFunc.Invoke(&sm)
-
-                            if step then
-                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
-                            else
-                                match sm.ResumptionDynamicInfo.ResumptionData with
-                                | :? ICriticalNotifyCompletion as awaiter ->
-                                    let mutable awaiter = awaiter
-                                    // assert not (isNull awaiter)
-                                    MethodBuilder.AwaitOnCompleted(
-                                        &sm.Data.MethodBuilder,
-                                        &awaiter,
-                                        &sm
-                                    )
-                                | awaiter -> assert not (isNull awaiter)
-
-                        with exn ->
-                            savedExn <- exn
-                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
-                        match savedExn with
-                        | null -> ()
-                        | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
-
-                    member _.SetStateMachine(sm, state) =
-                        MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
-                }
-
-            fun (ct) ->
+            TrampolinedStart.create
+            <| fun (ct) ->
                 if ct.IsCancellationRequested then
                     Task.FromCanceled<_>(ct)
                 else
                     let mutable sm = CancellableTaskBaseStateMachine<'T, _>()
-                    sm.Data.CancellationToken <- ct
-                    sm.ResumptionDynamicInfo <- newResumptionInfo ()
+                    sm.Data.Context <- ct
+
+                    sm.ResumptionDynamicInfo <-
+                        TrampolinedCode.newResumptionInfo initialResumptionFunc
+
                     sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
                     sm.Data.MethodBuilder.Start(&sm)
                     sm.Data.MethodBuilder.Task
@@ -106,22 +76,11 @@ module CancellableTasks =
             if __useResumableCode then
                 __stateMachine<CancellableTaskBaseStateMachineData<'T, _>, CancellableTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
-                        //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
-                        let mutable __stack_exn = null
+                        let __stack_fin = TrampolinedCode.moveNext(code).Invoke(&sm)
 
-                        try
-                            let __stack_code_fin = code.Invoke(&sm)
-
-                            if __stack_code_fin then
-                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
-                        with exn ->
-                            __stack_exn <- exn
-                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
-                        match __stack_exn with
-                        | null -> ()
-                        | exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
-                    //-- RESUMABLE CODE END
+                        __stack_fin
+                        |> ignore
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
@@ -129,15 +88,18 @@ module CancellableTasks =
                     (AfterCode<_, _>(fun sm ->
                         let sm = sm
 
-                        fun (ct) ->
+                        TrampolinedStart.create (fun ct ->
                             if ct.IsCancellationRequested then
                                 Task.FromCanceled<_>(ct)
                             else
                                 let mutable sm = sm
-                                sm.Data.CancellationToken <- ct
+                                sm.Data.Context <- ct
+
                                 sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
+
                                 sm.Data.MethodBuilder.Start(&sm)
                                 sm.Data.MethodBuilder.Task
+                        )
                     ))
             else
                 CancellableTaskBuilder.RunDynamic(code)
@@ -146,7 +108,7 @@ module CancellableTasks =
         member inline _.Source
             ([<InlineIfLambda>] x: CancellationToken -> Task<_>)
             : CancellationToken -> Awaiter<TaskAwaiter<_>, _> =
-            fun ct -> Awaitable.GetTaskAwaiter(x ct)
+            fun ct -> Awaitable.GetTaskAwaiter(TrampolinedStart.bind x ct)
 
         [<NoEagerConstraintApplication>]
         member inline this.MergeSources
@@ -243,7 +205,8 @@ module CancellableTasks =
             then
                 CancellableTaskBuilder.RunDynamic(code)
             else
-                fun (ct) ->
+                TrampolinedStart.create
+                <| fun (ct) ->
                     Task.Run<'T>((fun () -> CancellableTaskBuilder.RunDynamic (code) (ct)), ct)
 
         /// <summary>
@@ -253,27 +216,18 @@ module CancellableTasks =
             if __useResumableCode then
                 __stateMachine<CancellableTaskBaseStateMachineData<'T, _>, CancellableTask<'T>>
                     (MoveNextMethodImpl<_>(fun sm ->
-                        //-- RESUMABLE CODE START
                         __resumeAt sm.ResumptionPoint
-                        let mutable __stack_exn: Exception ValueOption = ValueNone
+                        let __stack_fin = TrampolinedCode.moveNext(code).Invoke(&sm)
 
-                        try
-                            let __stack_code_fin = code.Invoke(&sm)
-
-                            if __stack_code_fin then
-                                MethodBuilder.SetResult(&sm.Data.MethodBuilder, sm.Data.Result)
-                        with exn ->
-                            __stack_exn <- ValueSome exn
-                        // Run SetException outside the stack unwind, see https://github.com/dotnet/roslyn/issues/26567
-                        match __stack_exn with
-                        | ValueNone -> ()
-                        | ValueSome exn -> MethodBuilder.SetException(&sm.Data.MethodBuilder, exn)
-                    //-- RESUMABLE CODE END
+                        __stack_fin
+                        |> ignore
                     ))
                     (SetStateMachineMethodImpl<_>(fun sm state ->
                         MethodBuilder.SetStateMachine(&sm.Data.MethodBuilder, state)
                     ))
                     (AfterCode<_, CancellableTask<'T>>(fun sm ->
+                        let sm = sm
+
                         // backgroundTask { .. } escapes to a background thread where necessary
                         // See spec of ConfigureAwait(false) at https://devblogs.microsoft.com/dotnet/configureawait-faq/
                         if
@@ -282,26 +236,28 @@ module CancellableTasks =
                         then
                             let sm = sm
 
-                            fun (ct) ->
+                            TrampolinedStart.create (fun ct ->
                                 if ct.IsCancellationRequested then
                                     Task.FromCanceled<_>(ct)
                                 else
                                     let mutable sm = sm
-                                    sm.Data.CancellationToken <- ct
+                                    sm.Data.Context <- ct
+
                                     sm.Data.MethodBuilder <- AsyncTaskMethodBuilder<'T>.Create()
+
                                     sm.Data.MethodBuilder.Start(&sm)
                                     sm.Data.MethodBuilder.Task
+                            )
                         else
-                            let sm = sm // copy contents of state machine so we can capture it
 
-                            fun (ct) ->
+                            TrampolinedStart.create (fun ct ->
                                 if ct.IsCancellationRequested then
                                     Task.FromCanceled<_>(ct)
                                 else
                                     Task.Run<'T>(
                                         (fun () ->
-                                            let mutable sm = sm // host local mutable copy of contents of state machine on this thread pool thread
-                                            sm.Data.CancellationToken <- ct
+                                            let mutable sm = sm
+                                            sm.Data.Context <- ct
 
                                             sm.Data.MethodBuilder <-
                                                 AsyncTaskMethodBuilder<'T>.Create()
@@ -311,6 +267,7 @@ module CancellableTasks =
                                         ),
                                         ct
                                     )
+                            )
                     ))
 
             else
@@ -577,3 +534,18 @@ module CancellableTasks =
         /// <returns>A non-generic CancellableTask that completes when <paramref name="ctask" /> completes.</returns>
         let inline toUnit ([<InlineIfLambda>] ctask: CancellableTask<_>) : CancellableTask =
             fun ct -> ctask ct
+
+        /// <summary>Converts a CancellableTask\&lt;_&gt; to a ColdTask\&lt;_&gt; that starts it with a given token.</summary>
+        /// <remarks>
+        /// Use this function to bind a CancellableTask in a coldTask builder. A call such as <c>ctask ct</c> starts the
+        /// task at once, and recursion through that call can overflow the stack. The value that this function returns
+        /// starts when the builder binds it, so that recursion does not overflow the stack.
+        /// </remarks>
+        /// <param name="cancellationToken">The token that the CancellableTask receives when it starts.</param>
+        /// <param name="ctask">The CancellableTask to convert.</param>
+        /// <returns>A ColdTask\&lt;_&gt; that starts <paramref name="ctask" /> with <paramref name="cancellationToken" />.</returns>
+        let inline toColdTask
+            (cancellationToken: CancellationToken)
+            (ctask: CancellableTask<'T>)
+            : unit -> Task<'T> =
+            TrampolinedStart.create (fun () -> TrampolinedStart.bind ctask cancellationToken)

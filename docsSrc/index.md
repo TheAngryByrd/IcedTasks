@@ -45,6 +45,7 @@ If you need API signatures, generated reference documentation is available under
 
 - [Understanding `and!`](Explanations/Understanding-and-bang.html)
 - [Pooling builders](Explanations/Pooling-builders.html)
+- [Recursion and stack safety](Explanations/Recursion-and-stack-safety.html)
 - [Polyfill namespaces and shadowing](Explanations/Polyfill-namespaces-and-shadowing.html)
 - [Why IcedTasks uses `Source` and specialized binds](Explanations/Why-is-there-different-binds.html)
 

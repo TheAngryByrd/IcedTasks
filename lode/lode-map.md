@@ -48,6 +48,7 @@ Read [summary](summary.md), [terminology](terminology.md), and this map at the s
 ## plans
 
 - [plans/open-enhancements.md](plans/open-enhancements.md) - open enhancement issues #3 and #4.
+- [plans/recursion-and-tail-calls.md](plans/recursion-and-tail-calls.md) - trampoline and tail-call design for issue #3 (branch `trampoline`).
 
 ## Out of scope
 
@@ -67,6 +68,7 @@ Read [summary](summary.md), [terminology](terminology.md), and this map at the s
 - [docsSrc/Explanations/Why-is-there-different-binds.md](../docsSrc/Explanations/Why-is-there-different-binds.md) - the reason for `Source`.
 - [docsSrc/Explanations/Understanding-and-bang.md](../docsSrc/Explanations/Understanding-and-bang.md) - `and!` behavior by builder.
 - [docsSrc/Explanations/Pooling-builders.md](../docsSrc/Explanations/Pooling-builders.md) - pooling builders.
+- [docsSrc/Explanations/Recursion-and-stack-safety.md](../docsSrc/Explanations/Recursion-and-stack-safety.md) - which recursive calls are stack safe.
 - [docsSrc/Explanations/Polyfill-namespaces-and-shadowing.md](../docsSrc/Explanations/Polyfill-namespaces-and-shadowing.md) - polyfill namespaces.
 
 ```gitignore
@@ -83,5 +85,5 @@ flowchart TD
     map --> tests["tests/ (3)"]
     map --> docs["docs/ (3)"]
     map --> bench["benchmarks/ (1)"]
-    map --> plans["plans/ (1)"]
+    map --> plans["plans/ (2)"]
 ```

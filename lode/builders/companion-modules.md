@@ -7,7 +7,7 @@ Some result types have a module with the same name and functional helpers. The m
 | `ValueTask` | `ValueTask.fs` | `singleton`, `bind`, `map`, `apply`, `zip`, `ofUnit`, `ofTask`, `ofTaskUnit`, `toTask`, `toTaskUnit`, `toUnit` |
 | `ValueTask` (pooling) | `PoolingValueTask.fs` | the same set, built with `poolingValueTask` |
 | `ColdTask` | `ColdTask.fs` | `singleton`, `bind`, `map`, `apply`, `zip`, `parallelZip`, `ofUnit`, `toUnit` |
-| `CancellableTask` | `CancellableTask.fs` | `getCancellationToken`, `singleton`, `bind`, `map`, `apply`, `zip`, `parallelZip`, `whenAll`, `whenAllThrottled`, `sequential`, `ofUnit`, `toUnit` |
+| `CancellableTask` | `CancellableTask.fs` | `getCancellationToken`, `singleton`, `bind`, `map`, `apply`, `zip`, `parallelZip`, `whenAll`, `whenAllThrottled`, `sequential`, `ofUnit`, `toUnit`, `toColdTask` |
 | `CancellableValueTask` | `CancellableValueTask.fs`, `CancellablePoolingValueTask.fs` | `getCancellationToken`, `singleton`, `bind`, `map`, `apply`, `zip`, `parallelZip`, `ofUnit`, `toUnit` |
 
 `task`, `taskUnit`, and `valueTaskUnit` have no companion module.
