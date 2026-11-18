@@ -10,6 +10,14 @@ open System.Collections.Generic
 
 module TaskBackgroundTests =
 
+    type BackgroundTaskUnitDynamicBuilder() =
+        inherit BackgroundTaskUnitBuilder()
+
+        member _.Run(code) =
+            BackgroundTaskUnitBuilder.RunDynamic(code)
+
+    let dBackgroundTaskUnit = BackgroundTaskUnitDynamicBuilder()
+
     let builderTests =
         testList "BackgroundTaskBuilder" [
             testList "Return" [
@@ -917,6 +925,28 @@ module TaskBackgroundTests =
                     }
 
                 )
+            AsyncDisposalOutcome.tests
+                "backgroundTaskUnit"
+                AsyncDisposalOutcome.Dynamic
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    dBackgroundTaskUnit {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+
+                )
+                (fun body cts items ->
+                    dBackgroundTaskUnit {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                    }
+
+                )
         ]
 
     [<Tests>]
@@ -924,5 +954,12 @@ module TaskBackgroundTests =
         testList "IcedTasks.Polyfill.Task.BackgroundTask" [
             builderTests
             disposalOutcomeTests
+            testList "Dynamic path" [
+                testCase "backgroundTaskUnit completes when the body completes synchronously"
+                <| fun () ->
+                    Expect.isTrue
+                        ((dBackgroundTaskUnit { () }).Wait(TimeSpan.FromSeconds 10.))
+                        "The task must complete"
+            ]
             syncContextTests
         ]

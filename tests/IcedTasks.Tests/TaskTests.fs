@@ -8,6 +8,14 @@ open IcedTasks.Polyfill.Task
 
 module TaskTests =
     open System.Collections.Generic
+    open System.Runtime.CompilerServices
+
+    type TaskUnitDynamicBuilder() =
+        inherit TaskUnitBuilder()
+
+        member _.Run(code) = TaskUnitBuilder.RunDynamic(code)
+
+    let dTaskUnit = TaskUnitDynamicBuilder()
 
     let builderTests =
         testList "TaskBuilder" [
@@ -903,6 +911,28 @@ module TaskTests =
                     }
 
                 )
+            AsyncDisposalOutcome.tests
+                "taskUnit"
+                AsyncDisposalOutcome.Dynamic
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    dTaskUnit {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+
+                )
+                (fun body cts items ->
+                    dTaskUnit {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                    }
+
+                )
         ]
 
     [<Tests>]
@@ -910,4 +940,21 @@ module TaskTests =
         testList "IcedTasks.Polyfill.Task" [
             builderTests
             disposalOutcomeTests
+            testList "Dynamic path" [
+                testCase "taskUnit completes when the body completes synchronously"
+                <| fun () ->
+                    Expect.isTrue
+                        ((dTaskUnit { () }).Wait(TimeSpan.FromSeconds 10.))
+                        "The task must complete"
+            ]
+            testList "MethodBuilder" [
+                testCase "SetResult completes a non-generic AsyncTaskMethodBuilder"
+                <| fun () ->
+                    let mutable builder = AsyncTaskMethodBuilder.Create()
+                    TaskLike.MethodBuilder.SetResult(&builder)
+
+                    Expect.isTrue
+                        builder.Task.IsCompletedSuccessfully
+                        "SetResult must complete the builder, not a copy of it"
+            ]
         ]

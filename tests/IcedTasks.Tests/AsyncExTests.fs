@@ -880,7 +880,7 @@ module AsyncExTests =
 
     let disposalOutcomeTests =
         testList "DisposeAsync outcome" [
-            AsyncDisposalOutcome.testsWithKnownDefects
+            AsyncDisposalOutcome.tests
                 "asyncEx"
                 AsyncDisposalOutcome.Static
                 [
@@ -888,18 +888,6 @@ module AsyncExTests =
                     AsyncDisposalOutcome.BodyThrows
                 ]
                 AsyncDisposalOutcome.asyncExpectation
-                (fun case ->
-                    match case with
-                    | {
-                          AsyncDisposalOutcome.Site = AsyncDisposalOutcome.Use
-                          Body = AsyncDisposalOutcome.BodyThrows
-                      } -> Some "Using does not dispose when the body throws before its first bind"
-                    | {
-                          AsyncDisposalOutcome.Outcome = AsyncDisposalOutcome.DisposalSucceeds
-                          Completion = AsyncDisposalOutcome.CompletedDisposal
-                      } -> Some "AwaitValueTask does not call GetResult on a completed ValueTask"
-                    | _ -> None
-                )
                 (fun body cts resource ->
                     asyncEx {
                         use _ = resource
@@ -914,6 +902,62 @@ module AsyncExTests =
                     }
                     |> fun a -> Async.StartImmediateAsTask(a, cts.Token) :> Task
                 )
+            testCaseAsync "use disposes the resource when the body throws before its first bind"
+            <| async {
+                let disposeCalls = ref 0
+
+                let resource =
+                    TestHelpers.makeAsyncDisposable (fun () ->
+                        disposeCalls.Value <-
+                            disposeCalls.Value
+                            + 1
+
+                        ValueTask.CompletedTask
+                    )
+
+                let! result =
+                    asyncEx {
+                        use _ = resource
+                        raise (ArgumentException "body")
+                    }
+                    |> Async.Catch
+
+                Expect.isChoice2Of2 result "The body exception must fail the computation"
+                Expect.equal disposeCalls.Value 1 "use must dispose the resource"
+            }
+            testCaseAsync "use! disposes the resource when the body throws before its first bind"
+            <| async {
+                let disposeCalls = ref 0
+
+                let resource =
+                    TestHelpers.makeAsyncDisposable (fun () ->
+                        disposeCalls.Value <-
+                            disposeCalls.Value
+                            + 1
+
+                        ValueTask.CompletedTask
+                    )
+
+                let! result =
+                    asyncEx {
+                        use! resource = async.Return resource
+                        raise (ArgumentException "body")
+                    }
+                    |> Async.Catch
+
+                Expect.isChoice2Of2 result "The body exception must fail the computation"
+                Expect.equal disposeCalls.Value 1 "use! must dispose the resource"
+            }
+            testCaseAsync
+                "do! of a completed IValueTaskSource ValueTask reads GetResult exactly once"
+            <| async {
+                let source = AsyncDisposalOutcome.ObservedDisposalSource()
+                source.Complete AsyncDisposalOutcome.DisposalSucceeds
+
+                do! asyncEx { do! source.ValueTask() }
+
+                Expect.equal source.GetResultCalls 1 "AwaitValueTask must read the result once"
+            }
         ]
 
     [<Tests>]

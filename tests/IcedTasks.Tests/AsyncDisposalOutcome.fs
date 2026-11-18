@@ -120,17 +120,6 @@ module AsyncDisposalOutcome =
                 |> List.ofSeq
                 |> Faulted
 
-    type DisposalSite =
-        | Use
-        | For
-
-    type DisposalCase = {
-        Site: DisposalSite
-        Outcome: DisposalOutcome
-        Completion: DisposalCompletion
-        Body: DisposalBody
-    }
-
     let taskExpectation outcome body =
         match outcome, body with
         | DisposalFaults, _ -> Faulted [ "InvalidOperationException: dispose" ]
@@ -162,29 +151,29 @@ module AsyncDisposalOutcome =
                 failtest failure
         }
 
-    let noKnownDefect (_: DisposalCase) : string option = None
-
     let private assertOutcome
         expected
-        case
+        outcome
+        completion
+        body
         (start: DisposalBody -> CancellationTokenSource -> (unit -> ValueTask) -> Task)
         =
         task {
             let source = ObservedDisposalSource()
             use cts = new CancellationTokenSource()
 
-            if case.Completion = CompletedDisposal then
-                source.Complete case.Outcome
+            if completion = CompletedDisposal then
+                source.Complete outcome
 
-            let resultTask = start case.Body cts source.ValueTask
+            let resultTask = start body cts source.ValueTask
 
-            if case.Completion = PendingDisposal then
+            if completion = PendingDisposal then
                 do!
                     waitFor
                         source.ContinuationRegistered
                         "The builder did not await the pending DisposeAsync result"
 
-                source.Complete case.Outcome
+                source.Complete outcome
 
             do!
                 waitFor
@@ -193,7 +182,7 @@ module AsyncDisposalOutcome =
 
             Expect.equal
                 (observe resultTask)
-                (expected case.Outcome case.Body)
+                (expected outcome body)
                 "The DisposeAsync outcome must decide the result when it faults or cancels"
 
             Expect.equal
@@ -202,7 +191,7 @@ module AsyncDisposalOutcome =
                 "The builder must read the DisposeAsync result exactly once"
         }
 
-    let private cases builder execution site bodies expected knownDefect start = [
+    let private cases builder execution site bodies expected start = [
         for outcome in
             [
                 DisposalSucceeds
@@ -215,42 +204,23 @@ module AsyncDisposalOutcome =
                     PendingDisposal
                 ] do
                 for body in bodies do
-                    let case = {
-                        Site = site
-                        Outcome = outcome
-                        Completion = completion
-                        Body = body
-                    }
-
-                    let siteName =
-                        match site with
-                        | Use -> "use"
-                        | For -> "for"
-
                     let completionName =
                         match completion with
                         | CompletedDisposal -> "completed disposal"
                         | PendingDisposal -> "pending disposal"
 
-                    let name =
-                        $"%s{builder}, %A{execution}, %s{siteName}, %A{outcome}, %s{completionName}, %A{body}"
-
-                    match knownDefect case with
-                    | None -> testCaseTask name (fun () -> assertOutcome expected case start)
-                    | Some defect ->
-                        ptestCaseTask
-                            $"%s{name}, pending: %s{defect}"
-                            (fun () -> assertOutcome expected case start)
+                    testCaseTask
+                        $"%s{builder}, %A{execution}, %s{site}, %A{outcome}, %s{completionName}, %A{body}"
+                        (fun () -> assertOutcome expected outcome completion body start)
     ]
 
-    let private useCases builder execution bodies expected knownDefect useResource =
+    let private useCases builder execution bodies expected useResource =
         cases
             builder
             execution
-            Use
+            "use"
             bodies
             expected
-            knownDefect
             (fun body cts disposeAsync ->
                 useResource body cts (TestHelpers.makeAsyncDisposable disposeAsync)
             )
@@ -264,31 +234,26 @@ module AsyncDisposalOutcome =
         =
         testList
             $"%s{builder} %A{execution}"
-            (useCases builder execution bodies expected noKnownDefect useResource)
+            (useCases builder execution bodies expected useResource)
 
-    let testsWithKnownDefects
+    let tests
         (builder: string)
         (execution: Execution)
         (bodies: DisposalBody list)
         (expected: DisposalOutcome -> DisposalBody -> ObservedResult)
-        (knownDefect: DisposalCase -> string option)
         (useResource: DisposalBody -> CancellationTokenSource -> IAsyncDisposable -> Task)
         (forItems: DisposalBody -> CancellationTokenSource -> IAsyncEnumerable<int> -> Task)
         =
         testList $"%s{builder} %A{execution}" [
-            yield! useCases builder execution bodies expected knownDefect useResource
+            yield! useCases builder execution bodies expected useResource
             yield!
                 cases
                     builder
                     execution
-                    For
+                    "for"
                     bodies
                     expected
-                    knownDefect
                     (fun body cts disposeAsync ->
                         forItems body cts (singleItemAsyncEnumerable disposeAsync)
                     )
         ]
-
-    let tests builder execution bodies expected useResource forItems =
-        testsWithKnownDefects builder execution bodies expected noKnownDefect useResource forItems

@@ -9,6 +9,13 @@ open IcedTasks
 module ValueTaskTests =
     open System.Collections.Generic
 
+    type ValueTaskUnitDynamicBuilder() =
+        inherit ValueTaskUnitBuilder()
+
+        member _.Run(code) = ValueTaskUnitBuilder.RunDynamic(code)
+
+    let dValueTaskUnit = ValueTaskUnitDynamicBuilder()
+
     let builderTests =
         testList "ValueTaskBuilder" [
             testList "Return" [
@@ -935,6 +942,35 @@ module ValueTaskTests =
 
                     Expect.equal () someTask ""
                 }
+                testCaseAsync
+                    "reads GetResult of a completed IValueTaskSource ValueTask exactly once"
+                <| async {
+                    let source = AsyncDisposalOutcome.ObservedDisposalSource()
+                    source.Complete AsyncDisposalOutcome.DisposalSucceeds
+
+                    do!
+                        source.ValueTask()
+                        |> IcedTasks.ValueTasks.ValueTasks.ValueTask.ofUnit
+                        |> Async.AwaitValueTask
+
+                    Expect.equal source.GetResultCalls 1 "ofUnit must read the result once"
+                }
+            ]
+
+            testList "Async.AwaitValueTask" [
+                testCaseAsync
+                    "reads GetResult of a completed IValueTaskSource ValueTask exactly once"
+                <| async {
+                    let source = AsyncDisposalOutcome.ObservedDisposalSource()
+                    source.Complete AsyncDisposalOutcome.DisposalSucceeds
+
+                    do! Async.AwaitValueTask(source.ValueTask())
+
+                    Expect.equal
+                        source.GetResultCalls
+                        1
+                        "Async.AwaitValueTask must read the result once"
+                }
             ]
 
 
@@ -1001,6 +1037,28 @@ module ValueTaskTests =
                     }
                     |> fun t -> t.AsTask()
                 )
+            AsyncDisposalOutcome.tests
+                "valueTaskUnit"
+                AsyncDisposalOutcome.Dynamic
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    dValueTaskUnit {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t.AsTask()
+                )
+                (fun body cts items ->
+                    dValueTaskUnit {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t.AsTask()
+                )
         ]
 
     [<Tests>]
@@ -1008,5 +1066,12 @@ module ValueTaskTests =
         testList "IcedTasks.ValueTask" [
             builderTests
             disposalOutcomeTests
+            testList "Dynamic path" [
+                testCase "valueTaskUnit completes when the body completes synchronously"
+                <| fun () ->
+                    Expect.isTrue
+                        ((dValueTaskUnit { () }).AsTask().Wait(TimeSpan.FromSeconds 10.))
+                        "The task must complete"
+            ]
             functionTests
         ]

@@ -933,6 +933,19 @@ module PoolingValueTaskTests =
 
                     Expect.equal () someTask ""
                 }
+                testCaseAsync
+                    "reads GetResult of a completed IValueTaskSource ValueTask exactly once"
+                <| async {
+                    let source = AsyncDisposalOutcome.ObservedDisposalSource()
+                    source.Complete AsyncDisposalOutcome.DisposalSucceeds
+
+                    do!
+                        source.ValueTask()
+                        |> ValueTask.ofUnit
+                        |> Async.AwaitValueTask
+
+                    Expect.equal source.GetResultCalls 1 "ofUnit must read the result once"
+                }
             ]
 
 
