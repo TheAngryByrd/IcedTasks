@@ -68,11 +68,12 @@ type Awaitable =
 type MethodBuilder =
 
     /// <summary>Marks the task as successfully completed.</summary>
-    static member inline SetResult<'Builder, 'TResult
-        when 'Builder: (member SetResult: unit -> unit)>
-        (builder: byref<'Builder>)
+    static member inline SetResult< ^Builder, 'TResult
+        when ^Builder: (member SetResult: unit -> unit)>
+        (builder: byref< ^Builder >)
         =
-        builder.SetResult()
+        // An unoptimized builder.SetResult() call completes a copy of a struct builder.
+        (^Builder: (member SetResult: unit -> unit) builder)
 
 
     /// <summary>Marks the task as successfully completed.</summary>
