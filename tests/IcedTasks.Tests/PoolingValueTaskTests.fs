@@ -953,9 +953,36 @@ module PoolingValueTaskTests =
         ]
 
 
+    let disposalOutcomeTests =
+        testList "DisposeAsync outcome" [
+            AsyncDisposalOutcome.tests
+                "poolingValueTask"
+                AsyncDisposalOutcome.Static
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    poolingValueTask {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t.AsTask() :> Task
+                )
+                (fun body cts items ->
+                    poolingValueTask {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t.AsTask() :> Task
+                )
+        ]
+
     [<Tests>]
     let tests =
         testList "IcedTasks.PoolingValueTask" [
             builderTests
+            disposalOutcomeTests
             functionTests
         ]

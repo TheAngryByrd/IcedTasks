@@ -39,5 +39,6 @@ Topics:
 
 - [Test projects and TFMs](test-projects-and-tfms.md) - the three projects, shared files, and `#if` symbols.
 - [Test helpers](expect-helpers.md) - `Expect.fs` helpers, multi-start tests, and the manual clock.
+- [DisposeAsync outcome tests](disposal-outcome-tests.md) - the `use` and `for` disposal matrix for each builder.
 
 Related: [build](../build/summary.md), [builders](../builders/summary.md).

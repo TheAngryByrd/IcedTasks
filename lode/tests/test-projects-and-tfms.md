@@ -4,7 +4,7 @@ Three test projects test the library builds. Each project targets `net10.0;net9.
 
 | Project | Library TFM | Defines | Source files |
 |---|---|---|---|
-| `tests/IcedTasks.Tests` | default reference | `TEST_NET6_0_OR_GREATER` | its own 15 files |
+| `tests/IcedTasks.Tests` | default reference | `TEST_NET6_0_OR_GREATER` | its own 16 files |
 | `tests/IcedTasks.Tests.NS20` | `netstandard2.0` | `NETSTANDARD2_0;TEST_NETSTANDARD2_0` | links `../IcedTasks.Tests/*.fs`, no Pooling test files |
 | `tests/IcedTasks.Tests.NS21` | `netstandard2.1` | `NETSTANDARD2_1;TEST_NETSTANDARD2_1` | links `../IcedTasks.Tests/*.fs`, no Pooling test files |
 

@@ -878,8 +878,50 @@ module AsyncExTests =
         ]
 
 
+    let disposalOutcomeTests =
+        testList "DisposeAsync outcome" [
+            AsyncDisposalOutcome.testsWithKnownDefects
+                "asyncEx"
+                AsyncDisposalOutcome.Static
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                ]
+                AsyncDisposalOutcome.asyncExpectation
+                (fun case ->
+                    match case with
+                    | {
+                          AsyncDisposalOutcome.Site = AsyncDisposalOutcome.Use
+                          Body = AsyncDisposalOutcome.BodyThrows
+                      } -> Some "Using does not dispose when the body throws before its first bind"
+                    | {
+                          AsyncDisposalOutcome.Outcome = AsyncDisposalOutcome.DisposalSucceeds
+                          Completion = AsyncDisposalOutcome.CompletedDisposal
+                      } -> Some "AwaitValueTask does not call GetResult on a completed ValueTask"
+                    | _ -> None
+                )
+                (fun body cts resource ->
+                    asyncEx {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun a -> Async.StartImmediateAsTask(a, cts.Token) :> Task
+                )
+                (fun body cts items ->
+                    asyncEx {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun a -> Async.StartImmediateAsTask(a, cts.Token) :> Task
+                )
+        ]
+
     [<Tests>]
-    let asyncExTests = testList "IcedTasks.AsyncEx" [ builderTests ]
+    let asyncExTests =
+        testList "IcedTasks.AsyncEx" [
+            builderTests
+            disposalOutcomeTests
+        ]
 
 module PolyfillTest =
     open IcedTasks.Polyfill.Async

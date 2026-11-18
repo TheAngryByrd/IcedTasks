@@ -857,5 +857,57 @@ module TaskTests =
         ]
 
 
+    let disposalOutcomeTests =
+        testList "DisposeAsync outcome" [
+            AsyncDisposalOutcome.tests
+                "task"
+                AsyncDisposalOutcome.Static
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    task {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t :> Task
+                )
+                (fun body cts items ->
+                    task {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t :> Task
+                )
+            AsyncDisposalOutcome.tests
+                "taskUnit"
+                AsyncDisposalOutcome.Static
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    taskUnit {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+
+                )
+                (fun body cts items ->
+                    taskUnit {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                    }
+
+                )
+        ]
+
     [<Tests>]
-    let tests = testList "IcedTasks.Polyfill.Task" [ builderTests ]
+    let tests =
+        testList "IcedTasks.Polyfill.Task" [
+            builderTests
+            disposalOutcomeTests
+        ]

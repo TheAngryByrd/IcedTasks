@@ -955,9 +955,58 @@ module ValueTaskTests =
         ]
 
 
+    let disposalOutcomeTests =
+        testList "DisposeAsync outcome" [
+            AsyncDisposalOutcome.tests
+                "valueTask"
+                AsyncDisposalOutcome.Static
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    valueTask {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t.AsTask() :> Task
+                )
+                (fun body cts items ->
+                    valueTask {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t.AsTask() :> Task
+                )
+            AsyncDisposalOutcome.tests
+                "valueTaskUnit"
+                AsyncDisposalOutcome.Static
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    valueTaskUnit {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t.AsTask()
+                )
+                (fun body cts items ->
+                    valueTaskUnit {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t.AsTask()
+                )
+        ]
+
     [<Tests>]
     let tests =
         testList "IcedTasks.ValueTask" [
             builderTests
+            disposalOutcomeTests
             functionTests
         ]

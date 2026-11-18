@@ -29,6 +29,12 @@ A cancelled task goes to the error continuation, not the cancel continuation. Th
 
 The `AsyncEx` type also has `AwaitAwaiter`, `AwaitAwaitable`, `AwaitTask`, and `AwaitValueTask`.
 
+Known defects, with pending tests in [DisposeAsync outcome tests](../tests/disposal-outcome-tests.md):
+
+- `Using` receives `binder resource` already evaluated. A `use` or `use!` body that throws before its first bind does not dispose the resource.
+- The non-generic `AwaitValueTask` does not call `GetResult` on a ValueTask that completed successfully. This applies to `do!` of a `ValueTask` and to `DisposeAsync`.
+- The XML doc of `Async.TryFinallyAsync` says that the compensation exception replaces the original exception. The code gives one `AggregateException` with both.
+
 ## ParallelAsync
 
 `parallelAsync` adds `and!` for `Async` values. `parallelAsync` is `parallelAsyncUsingStartImmediateAsTask`. `parallelAsyncUsingStartChild` uses `Async.StartChild`.

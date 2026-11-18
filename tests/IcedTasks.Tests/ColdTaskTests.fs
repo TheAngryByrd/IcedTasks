@@ -1209,10 +1209,75 @@ module ColdTaskTests =
         ]
 
 
+    let disposalOutcomeTests =
+        testList "DisposeAsync outcome" [
+            AsyncDisposalOutcome.useTests
+                "coldTask"
+                AsyncDisposalOutcome.Static
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    coldTask {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t () :> Task
+                )
+            AsyncDisposalOutcome.useTests
+                "coldTask"
+                AsyncDisposalOutcome.Dynamic
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    dColdTask {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t () :> Task
+                )
+            AsyncDisposalOutcome.useTests
+                "backgroundColdTask"
+                AsyncDisposalOutcome.Static
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    backgroundColdTask {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t () :> Task
+                )
+            AsyncDisposalOutcome.useTests
+                "backgroundColdTask"
+                AsyncDisposalOutcome.Dynamic
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    dBackgroundColdTask {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t () :> Task
+                )
+        ]
+
     [<Tests>]
     let coldTaskTests =
         testList "IcedTasks.ColdTask" [
             builderTests
+            disposalOutcomeTests
             asyncBuilderTests
             asyncExBuilderTests
             taskBuilderTests

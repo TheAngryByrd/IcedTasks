@@ -10,6 +10,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="../IcedTasks.Tests/Expect.fs" />
+    <Compile Include="../IcedTasks.Tests/AsyncDisposalOutcome.fs" />
     <Compile Include="../IcedTasks.Tests/AsyncExTests.fs" />
     <Compile Include="../IcedTasks.Tests/TaskTests.fs" />
     <Compile Include="../IcedTasks.Tests/TaskBackgroundTests.fs" />
