@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- [Dispose the resource of `use` and `use!` in `asyncEx` when the body throws before its first bind](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+- [Read `GetResult` of a completed non-generic `ValueTask` in `AsyncEx.AwaitValueTask`, `Async.AwaitValueTask`, `ValueTask.ofUnit`, and `PoolingValueTask.ofUnit`](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+- [Complete `taskUnit`, `backgroundTaskUnit`, and `valueTaskUnit` on the dynamic path, and make `MethodBuilder.SetResult` and `MethodBuilder.get_Task` act on the builder, not a copy](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+
+### Changed
+- [Test on net10.0 and net11.0 with the .NET 11 SDK, and test the net6.0 library build](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+
+### Added
+- [Tests for the DisposeAsync outcome of `use` and `for` in each builder](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+
 ## [0.11.10-beta001] - 2026-10-02
 
 ### Fixed
