@@ -50,6 +50,7 @@ module ValueTaskExtensions =
         static member inline AwaitValueTask(vTask: ValueTask) : Async<unit> =
             // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
             if vTask.IsCompletedSuccessfully then
+                vTask.GetAwaiter().GetResult()
                 async.Return()
             else
                 Async.AwaitTask(vTask.AsTask())
@@ -276,6 +277,7 @@ module ValueTasks =
             // this implementation follows Stephen Toub's advice, see:
             // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
             if vtask.IsCompletedSuccessfully then
+                vtask.GetAwaiter().GetResult()
                 ValueTask<unit>()
             else
                 valueTask { return! vtask }

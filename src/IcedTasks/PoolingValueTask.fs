@@ -220,6 +220,7 @@ module PoolingValueTasks =
                 // this implementation follows Stephen Toub's advice, see:
                 // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
                 if vtask.IsCompletedSuccessfully then
+                    vtask.GetAwaiter().GetResult()
                     ValueTask<unit>()
                 else
                     poolingValueTask { return! vtask }

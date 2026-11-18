@@ -116,6 +116,7 @@ type AsyncEx =
     static member inline AwaitValueTask(vTask: ValueTask) : Async<unit> =
         // https://github.com/dotnet/runtime/issues/31503#issuecomment-554415966
         if vTask.IsCompletedSuccessfully then
+            vTask.GetAwaiter().GetResult()
             async.Return()
         else
             AsyncEx.AwaitTask(vTask.AsTask())
