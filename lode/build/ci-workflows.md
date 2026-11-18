@@ -11,7 +11,7 @@ Three workflows are in `.github/workflows/`.
 ## build.yml
 
 - The matrix is Debug and Release on ubuntu, windows, and macOS, with `fail-fast: false` and a 30-minute timeout.
-- `actions/setup-dotnet` uses `global.json` and the 9.x, 10.x, and 11.x SDKs.
+- `actions/setup-dotnet` uses `global.json` and the 10.x and 11.x SDKs.
 - The job sets `CONFIGURATION` from the matrix and `CI: true`.
 - `dorny/test-reporter` reads `**/TestResults/testResults*.trx`.
 - A `build-devcontainer` job runs `./build.sh` in `devcontainers/ci`.

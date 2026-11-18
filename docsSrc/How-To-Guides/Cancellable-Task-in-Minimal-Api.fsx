@@ -17,7 +17,7 @@ To use a cancellableTask with Minimal APIs, we'll need to get the [RequestAborte
 We'll start off with a slightly longer version but then make a helper for this.
 
 *)
-#load "../../runtime-scripts/Microsoft.AspNetCore.App-latest-8.fsx"
+#load "../../runtime-scripts/Microsoft.AspNetCore.App-latest-10.fsx"
 #r "../../src/IcedTasks/bin/Release/net9.0/IcedTasks.dll"
 
 

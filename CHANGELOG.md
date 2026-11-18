@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Complete `taskUnit`, `backgroundTaskUnit`, and `valueTaskUnit` on the dynamic path, and make `MethodBuilder.SetResult` and `MethodBuilder.get_Task` act on the builder, not a copy](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
 
 ### Changed
-- [Test on net10.0 and net11.0 with the .NET 11 SDK, and test the net6.0 library build](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+- [Test on net10.0 and net11.0 with the .NET 11 SDK, test the net6.0 library build, and run the build and the docs on .NET 10 instead of .NET 8 and 9](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
 
 ### Added
 - [Tests for the DisposeAsync outcome of `use` and `for` in each builder](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
