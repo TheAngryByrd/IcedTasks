@@ -35,21 +35,18 @@ Each case is one combination of site, outcome, completion, and body:
                 )
 ```
 
-The hot builders without a dynamic test builder (`backgroundTask`, `taskUnit`, `backgroundTaskUnit`, `valueTaskUnit`) have only `Static` cases. The `Static` cases take the static path only in Release. See [run and start paths](../builders/run-and-start-paths.md).
+`backgroundTask` has no dynamic test builder, so it has only `Static` cases. `TaskTests.fs`, `TaskBackgroundTests.fs`, and `ValueTaskTests.fs` define `RunDynamic` test builders for `taskUnit`, `backgroundTaskUnit`, and `valueTaskUnit`. The `Static` cases take the static path only in Release. See [run and start paths](../builders/run-and-start-paths.md).
 
 ## Expected results
 
 - `taskExpectation` is the contract above, for all resumable builders.
 - `asyncExpectation` is the `asyncEx` result. A dispose `OperationCanceledException` faults the result. A body exception and a dispose exception give one `AggregateException`. See [AsyncEx](../builders/asyncex-and-parallelasync.md).
 
-## Known asyncEx defects
+## Regression tests next to the matrix
 
-`testsWithKnownDefects` takes a predicate that marks a case as pending (`ptestCaseTask`) with the defect in the test name. The `asyncEx` matrix has 9 pending cases of 24:
-
-- `AsyncExBuilder.Using` evaluates `binder resource` before `TryFinallyAsync` starts. A `use` body that throws before its first bind does not dispose the resource.
-- `AsyncEx.AwaitValueTask(ValueTask)` returns on `IsCompletedSuccessfully` and does not call `GetResult`.
-
-When a fix lands, remove the matching branch of the predicate in `AsyncExTests.fs`.
+- `AsyncExTests.fs`: `use` and `use!` dispose the resource when the body throws before its first bind. `do!` of a completed `IValueTaskSource` ValueTask reads `GetResult` once.
+- `ValueTaskTests.fs` and `PoolingValueTaskTests.fs`: `Async.AwaitValueTask` and `ofUnit` read `GetResult` of a completed non-generic ValueTask once.
+- `TaskTests.fs`, `TaskBackgroundTests.fs`, `ValueTaskTests.fs`: each unit builder completes on the dynamic path when its body completes synchronously. `MethodBuilder.SetResult` completes a non-generic builder. These tests can fail only in Debug, because the copy that they detect happens only in unoptimized code. See [practices](../practices.md).
 
 ```mermaid
 flowchart LR

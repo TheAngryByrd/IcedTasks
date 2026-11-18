@@ -128,12 +128,14 @@ module AsyncExtensions =
 
     type Microsoft.FSharp.Control.Async with
 
-        /// <summary>Creates an Async that runs computation. The action compensation is executed
-        /// after computation completes, whether computation exits normally or by an exception. If compensation raises an exception itself
-        /// the original exception is discarded and the new exception becomes the overall result of the computation.</summary>
+        /// <summary>Creates an Async that runs computation, and then runs compensation.
+        /// The compensation runs when computation succeeds, fails, or is canceled.
+        /// If only compensation fails, the result fails with the compensation exception.
+        /// If computation and compensation both fail, the result fails with an
+        /// <see cref="T:System.AggregateException"/> that contains both exceptions.
+        /// An <see cref="T:System.OperationCanceledException"/> from compensation fails the result. It does not cancel the result.</summary>
         /// <param name="computation">The input computation.</param>
-        /// <param name="compensation">The action to be run after computation completes or raises an
-        /// exception (including cancellation).</param>
+        /// <param name="compensation">The computation to run after computation completes, fails, or is canceled.</param>
         /// <remarks> <see href="http://www.fssnip.net/ru/title/Async-workflow-with-asynchronous-finally-clause">See this F# gist</see></remarks>
         /// <returns>An async with the result of the computation.</returns>
         static member inline TryFinallyAsync

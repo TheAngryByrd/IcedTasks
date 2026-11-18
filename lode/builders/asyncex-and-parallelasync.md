@@ -29,11 +29,17 @@ A cancelled task goes to the error continuation, not the cancel continuation. Th
 
 The `AsyncEx` type also has `AwaitAwaiter`, `AwaitAwaitable`, `AwaitTask`, and `AwaitValueTask`.
 
-Known defects, with pending tests in [DisposeAsync outcome tests](../tests/disposal-outcome-tests.md):
+Disposal and ValueTask contracts, tested in [DisposeAsync outcome tests](../tests/disposal-outcome-tests.md):
 
-- `Using` receives `binder resource` already evaluated. A `use` or `use!` body that throws before its first bind does not dispose the resource.
-- The non-generic `AwaitValueTask` does not call `GetResult` on a ValueTask that completed successfully. This applies to `do!` of a `ValueTask` and to `DisposeAsync`.
-- The XML doc of `Async.TryFinallyAsync` says that the compensation exception replaces the original exception. The code gives one `AggregateException` with both.
+- `Using` wraps `binder resource` in `Delay`, so a `use` or `use!` body that throws before its first bind still runs `DisposeAsync`.
+- `AwaitValueTask` reads `GetResult` once, also when the ValueTask completed successfully before the await. A pooled `IValueTaskSource` needs that call to release the source.
+- `Async.TryFinallyAsync` faults the result when compensation fails. A body exception and a compensation exception give one `AggregateException`. An `OperationCanceledException` from compensation faults the result. It does not cancel it.
+
+```fsharp
+// src/IcedTasks/AsyncEx.fs (AsyncExBuilder.Using)
+        this.TryFinallyAsync(
+            this.Delay(fun () -> binder resource),
+```
 
 ## ParallelAsync
 
