@@ -37,8 +37,8 @@ flowchart LR
 ## Invariants
 
 - Each member is `inline` and has `NoDynamicInvocation`. Without it, a Debug consumer on `LangVersion` 11.0 compiles and returns wrong values. See [ADR 0013](../../adr/0013-runtime-async-task-builders.md).
-- `Source` starts the operation. `MergeSources` returns a `Started` that awaits left, then right, so `and!` operands run concurrently.
-- `Using` awaits `DisposeAsync` in a `finally`. The compiler moves the suspension out of the `finally` region.
+- `Source` starts a task, an `Async`, or a cold task. It only captures an awaiter, so an awaiter that starts its work in `UnsafeOnCompleted` starts when the builder awaits it. `MergeSources` returns a `Started` that awaits left, then right. A left fault skips the right await, and the result has the left exception.
+- `Using` captures a body exception with `ExceptionDispatchInfo`, awaits `DisposeAsync` outside the `try`, and then rethrows. A suspension in a `finally` loses the stack trace on rethrow (dotnet/fsharp#20869). A `DisposeAsync` exception replaces the body exception.
 - `backgroundTask` uses `Task.Run(fun () -> __runtimeAsyncReturn (code ()))` when a `SynchronizationContext` or non-default scheduler is present.
 
 ## Lessons
@@ -46,6 +46,6 @@ flowchart LR
 - A consumer needs `net11.0` and `LangVersion` `preview`. Error FS3350 reports a missing `preview`.
 - In Release, the optimizer can inline a small function that uses the builder into its caller, so its name is missing from stack traces. Tests that assert frame names put `MethodImplOptions.NoInlining` on the functions.
 - The SDK 11.0.100 compiler names the generated method after a nearby binding. A local function inside a large expression gets names such as `task@319` or `computation@405`.
-- Test: `tests/IcedTasks.Tests/RuntimeTaskTests.fs`. It checks `MethodImplAttributes.Async` on the method that runs the body.
+- Test: `tests/IcedTasks.Tests/RuntimeTaskTests.fs`. It checks `MethodImplAttributes.Async` on the method that runs the body, the start order of `and!` operands with a deadline, and the `AsyncDisposalOutcome` matrix for `use` and `for`.
 
 Related: [namespaces and TFMs](namespaces-and-tfms.md), [source overload priority](source-overload-priority.md), [builder catalog](builder-catalog.md).

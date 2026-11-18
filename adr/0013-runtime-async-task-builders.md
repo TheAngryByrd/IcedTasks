@@ -11,7 +11,7 @@ A prototype of #62 used a private compiler build and an unsafe IL cast. The F# 1
 
 We add `task`, `backgroundTask`, and `valueTask` builders in `IcedTasks.Polyfill.RuntimeTask` (`src/IcedTasks/RuntimeTask.fs`).
 
-- The file compiles only under `#if NET11_0_OR_GREATER`. The library adds a `net11.0` target with `LangVersion` `preview` and FSharp.Core 11.0.101.
+- The file compiles only under `#if NET11_0_OR_GREATER`. The library adds a `net11.0` target with `LangVersion` `preview`, `Nullable`, and FSharp.Core 11.0.101. `LangVersion` `preview` applies to each F# project on a TFM compatible with `net11.0`, because the tests also use the builders.
 - The namespace is not auto-opened. It shadows `task`, `backgroundTask`, and `valueTask`, as the other polyfills do ([0009](0009-opt-in-polyfill-namespaces.md)).
 - The builder shape follows the sample `RuntimeTaskBuilder` in the dotnet/fsharp component tests: the body returns `'T` directly, `Source` gives a `Started<'T>` delegate, and `Run` applies the return marker.
 - Each member has `NoDynamicInvocation`.

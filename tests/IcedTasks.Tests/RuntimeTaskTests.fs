@@ -113,6 +113,34 @@ module RuntimeTaskTests =
             return! func2Sync y
         }
 
+    [<MethodImpl(MethodImplOptions.NoInlining)>]
+    let func1Use (x: int) : Task<int> =
+        task {
+            do! Task.Yield()
+            failwith "boom"
+            return x
+        }
+
+    [<MethodImpl(MethodImplOptions.NoInlining)>]
+    let func2Use (x: int) : Task<int> =
+        task {
+            use _ =
+                TestHelpers.makeAsyncDisposable (fun () ->
+                    task { do! Task.Yield() }
+                    |> ValueTask
+                )
+
+            do! Task.Yield()
+            return! func1Use x
+        }
+
+    [<MethodImpl(MethodImplOptions.NoInlining)>]
+    let func3Use (x: int) : Task<int> =
+        task {
+            do! Task.Yield()
+            return! func2Use x
+        }
+
     let expectStackTrace (start: unit -> Task<int>) =
         async {
             let data = 42
@@ -374,6 +402,27 @@ module RuntimeTaskTests =
 
                     testCaseAsync "sync"
                     <| expectStackTrace (fun () -> func3Sync 3)
+
+                    testCaseAsync "through use of an IAsyncDisposable"
+                    <| async {
+                        let! frames =
+                            task {
+                                try
+                                    let! _ = func3Use 3
+                                    return ""
+                                with e ->
+                                    return string e.StackTrace
+                            }
+                            |> Async.AwaitTask
+
+                        Expect.stringContains
+                            frames
+                            "func1Use"
+                            "The throw site should stay in the stack trace"
+
+                        Expect.stringContains frames "func2Use" ""
+                        Expect.stringContains frames "func3Use" ""
+                    }
                 ]
             ]
 
@@ -398,6 +447,32 @@ module RuntimeTaskTests =
                         |> Async.AwaitTask
 
                     Expect.equal actual data "TryFinally should work"
+                    Expect.isTrue wasFinalized "Finally block should have run"
+                }
+
+                testCaseAsync "try finally when the body throws after a suspension"
+                <| async {
+                    let mutable wasFinalized = false
+
+                    let! message =
+                        task {
+                            try
+                                do!
+                                    task {
+                                        try
+                                            do! Task.Yield()
+                                            failwith "body"
+                                        finally
+                                            wasFinalized <- true
+                                    }
+
+                                return None
+                            with e ->
+                                return Some e.Message
+                        }
+                        |> Async.AwaitTask
+
+                    Expect.equal message (Some "body") "The body exception should reach the caller"
                     Expect.isTrue wasFinalized "Finally block should have run"
                 }
             ]
@@ -494,16 +569,25 @@ module RuntimeTaskTests =
                         }
                         |> ValueTask
 
-                    do!
-                        Expect.throwsTask<Exception>
-                            (fun () ->
-                                task {
-                                    use d = TestHelpers.makeAsyncDisposable (doDispose)
-                                    return ()
-                                }
-                            )
-                            ""
+                    let! message =
+                        task {
+                            try
+                                do!
+                                    task {
+                                        use d = TestHelpers.makeAsyncDisposable (doDispose)
+                                        return ()
+                                    }
+
+                                return None
+                            with e ->
+                                return Some e.Message
+                        }
                         |> Async.AwaitTask
+
+                    Expect.equal
+                        message
+                        (Some "boom")
+                        "The DisposeAsync exception should reach the caller"
                 }
 
 
@@ -647,14 +731,14 @@ module RuntimeTaskTests =
 
                             let! actual =
                                 task {
-                                    for i in [ 1..10 ] do
-                                        index <- i + i
+                                    for _ in [ 1..loops ] do
+                                        index <- index + 1
 
                                     return index
                                 }
                                 |> Async.AwaitTask
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual loops "Should run the body once for each item"
                         }
                     )
 
@@ -672,14 +756,14 @@ module RuntimeTaskTests =
 
                             let! actual =
                                 task {
-                                    for i = 1 to loops do
-                                        index <- i + i
+                                    for _ = 1 to loops do
+                                        index <- index + 1
 
                                     return index
                                 }
                                 |> Async.AwaitTask
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual loops "Should run the body once for each item"
                         }
                     )
 
@@ -696,15 +780,15 @@ module RuntimeTaskTests =
 
                             let! actual =
                                 task {
-                                    for i in [ 1..10 ] do
+                                    for _ in [ 1..loops ] do
                                         do! Task.Yield()
-                                        index <- i + i
+                                        index <- index + 1
 
                                     return index
                                 }
                                 |> Async.AwaitTask
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual loops "Should run the body once for each item"
                         }
                     )
 
@@ -722,15 +806,15 @@ module RuntimeTaskTests =
 
                             let! actual =
                                 task {
-                                    for i = 1 to loops do
+                                    for _ = 1 to loops do
                                         do! Task.Yield()
-                                        index <- i + i
+                                        index <- index + 1
 
                                     return index
                                 }
                                 |> Async.AwaitTask
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual loops "Should run the body once for each item"
                         }
                     )
                 yield!
@@ -746,21 +830,21 @@ module RuntimeTaskTests =
 
                             let asyncSeq: IAsyncEnumerable<_> =
                                 AsyncEnumerable.forXtoY
-                                    0
+                                    1
                                     loops
                                     (cancellableValueTask { do! Task.Yield() })
 
                             let! actual =
                                 task {
-                                    for (i: int) in asyncSeq do
+                                    for (_: int) in asyncSeq do
                                         do! Task.Yield()
-                                        index <- i + i
+                                        index <- index + 1
 
                                     return index
                                 }
                                 |> Async.AwaitTask
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual loops "Should run the body once for each item"
                         }
                     )
 
@@ -831,120 +915,6 @@ module RuntimeTaskTests =
                     Expect.equal actual 6 ""
                 }
 
-            ]
-
-            testSequencedGroup "MergeSourcesParallel - task"
-            <| testList "MergeSourcesParallel" [
-                testPropertyWithConfig Expecto.fsCheckConfig "parallelism"
-                <| fun () ->
-                    asyncEx {
-                        let! ct = Async.CancellationToken
-                        let sequencedList = ResizeArray<_>()
-                        let parallelList = ResizeArray<_>()
-
-
-                        let fakeWork id yieldTimes (l: ResizeArray<_>) =
-                            Task.Run<DateTimeOffset>(fun () ->
-                                task {
-                                    lock l (fun () -> l.Add(id))
-                                    do! Task.yieldMany yieldTimes
-                                    let dt = DateTimeOffset.UtcNow
-                                    lock l (fun () -> l.Add(id))
-                                    return dt
-                                }
-                            )
-
-                        // Have earlier tasks take longer to complete
-                        // so we can see if they are sequenced or not
-                        let fakeWork1 = fakeWork 1 10000
-                        let fakeWork2 = fakeWork 2 750
-                        let fakeWork3 = fakeWork 3 500
-                        let fakeWork4 = fakeWork 4 250
-                        let fakeWork5 = fakeWork 5 100
-                        let fakeWork6 = fakeWork 6 1
-
-                        let! sequenced =
-                            task {
-                                let! a = fakeWork1 sequencedList
-                                let! b = fakeWork2 sequencedList
-                                let! c = fakeWork3 sequencedList
-                                let! d = fakeWork4 sequencedList
-                                let! e = fakeWork5 sequencedList
-                                let! f = fakeWork6 sequencedList
-
-                                return [
-                                    a
-                                    b
-                                    c
-                                    d
-                                    e
-                                    f
-                                ]
-                            }
-
-                        let executeParallel () =
-                            task {
-                                parallelList.Clear()
-                                let! a = fakeWork1 parallelList
-                                and! b = fakeWork2 parallelList
-                                and! c = fakeWork3 parallelList
-                                and! d = fakeWork4 parallelList
-                                and! e = fakeWork5 parallelList
-                                and! f = fakeWork6 parallelList
-
-                                return [
-                                    a
-                                    b
-                                    c
-                                    d
-                                    e
-                                    f
-                                ]
-                            }
-
-                        let sequencedEntrances =
-                            sequencedList
-                            |> Seq.toList
-
-                        let parallelEntrances () =
-                            parallelList
-                            |> Seq.toList
-
-                        let sequencedAlwaysOrdered =
-                            sequencedEntrances = [
-                                    1
-                                    1
-                                    2
-                                    2
-                                    3
-                                    3
-                                    4
-                                    4
-                                    5
-                                    5
-                                    6
-                                    6
-                                ]
-
-                        let! parallelNotSequenced =
-                            task {
-                                let mutable result = false
-
-                                while not result do
-                                    let! _ = executeParallel ()
-
-                                    result <-
-                                        parallelEntrances ()
-                                        <> sequencedEntrances
-
-                                return result
-                            }
-
-                        return
-                            sequencedAlwaysOrdered
-                            && parallelNotSequenced
-                    }
-                    |> Async.RunSynchronously
             ]
         ]
 
@@ -1170,6 +1140,339 @@ module RuntimeTaskTests =
                     "Should start synchronously on the caller thread"
         ]
 
+    let startOrderTests =
+        testList "Start order" [
+            testCaseTask "and! starts Async operands before it awaits them"
+            <| fun () ->
+                task {
+                    let rightStarted =
+                        TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
+
+                    let left =
+                        async {
+                            do!
+                                rightStarted.Task
+                                |> Async.AwaitTask
+
+                            return 1
+                        }
+
+                    let right =
+                        async {
+                            rightStarted.SetResult()
+                            return 2
+                        }
+
+                    let result =
+                        task {
+                            let! a = left
+                            and! b = right
+                            return a + b
+                        }
+
+                    let! actual = result.WaitAsync(TimeSpan.FromSeconds 10.)
+
+                    Expect.equal
+                        actual
+                        3
+                        "The right operand must start before the left one completes"
+                }
+
+            testCaseTask "and! starts cold task operands before it awaits them"
+            <| fun () ->
+                task {
+                    let rightStarted =
+                        TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
+
+                    let left () =
+                        task {
+                            do! rightStarted.Task
+                            return 1
+                        }
+
+                    let right () =
+                        task {
+                            rightStarted.SetResult()
+                            return 2
+                        }
+
+                    let result =
+                        task {
+                            let! a = left
+                            and! b = right
+                            return a + b
+                        }
+
+                    let! actual = result.WaitAsync(TimeSpan.FromSeconds 10.)
+
+                    Expect.equal
+                        actual
+                        3
+                        "The right operand must start before the left one completes"
+                }
+
+            testCaseTask "and! gives the left exception when both operands fail"
+            <| fun () ->
+                task {
+                    let result =
+                        task {
+                            let! a = Task.FromException<int>(ArgumentException "left")
+                            and! b = Task.FromException<int>(InvalidOperationException "right")
+                            return a + b
+                        }
+
+                    let! message =
+                        task {
+                            try
+                                let! _ = result
+                                return None
+                            with e ->
+                                return Some e.Message
+                        }
+
+                    Expect.equal message (Some "left") "The left operand is awaited first"
+                }
+
+            testCase "a completed awaitable does not suspend the body"
+            <| fun () ->
+                let result =
+                    task {
+                        let! a = (Task.FromResult 1).ConfigureAwait(false)
+                        let! b = ValueTask<int>(2)
+                        return a + b
+                    }
+
+                Expect.isTrue
+                    result.IsCompleted
+                    "The body must run to the end on the caller thread when each bound value is complete"
+
+                Expect.equal result.Result 3 "Should return the sum"
+        ]
+
+    let disposalOutcomeTests =
+        let bodies = [
+            AsyncDisposalOutcome.BodyCompletes
+            AsyncDisposalOutcome.BodyThrows
+        ]
+
+        testList "DisposeAsync outcome" [
+            AsyncDisposalOutcome.tests
+                "runtime task"
+                AsyncDisposalOutcome.Static
+                bodies
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    task {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+                    :> Task
+                )
+                (fun body cts items ->
+                    task {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                    }
+                    :> Task
+                )
+            AsyncDisposalOutcome.tests
+                "runtime backgroundTask"
+                AsyncDisposalOutcome.Static
+                bodies
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    backgroundTask {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+                    :> Task
+                )
+                (fun body cts items ->
+                    backgroundTask {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                    }
+                    :> Task
+                )
+            AsyncDisposalOutcome.tests
+                "runtime valueTask"
+                AsyncDisposalOutcome.Static
+                bodies
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    valueTask {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun vtask -> vtask.AsTask() :> Task
+                )
+                (fun body cts items ->
+                    valueTask {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun vtask -> vtask.AsTask() :> Task
+                )
+        ]
+
+    let moreBuilderTests =
+        testList "More builder cases" [
+            testCase
+                "task resumes on the caller SynchronizationContext after it awaits an incomplete Task"
+            <| fun () ->
+                let mutable posted = 0
+
+                let syncContext =
+                    { new SynchronizationContext() with
+                        member _.Post(d, state) =
+                            Interlocked.Increment(&posted)
+                            |> ignore
+
+                            d.Invoke(state)
+                    }
+
+                let release = TaskCompletionSource<int>()
+
+                let t =
+                    use _sync = TestHelpers.setSyncContext syncContext
+
+                    task {
+                        let! value = release.Task
+                        return value
+                    }
+
+                Task.Run(fun () -> release.SetResult 1)
+                |> fun releaseTask -> releaseTask.Wait()
+
+                let value = t.Result
+                Expect.equal value 1 "Should return the awaited value"
+                Expect.equal posted 1 "Should post the continuation to the caller context once"
+
+            testCaseTask
+                "backgroundTask gives a fault to its task when it escapes the caller context"
+            <| fun () ->
+                task {
+                    let syncContext =
+                        { new SynchronizationContext() with
+                            member _.Post(d, state) = d.Invoke(state)
+                        }
+
+                    let result =
+                        use _sync = TestHelpers.setSyncContext syncContext
+
+                        backgroundTask {
+                            do! Task.Yield()
+                            failwith "background"
+                            return 1
+                        }
+
+                    let! message =
+                        task {
+                            try
+                                let! _ = result
+                                return None
+                            with e ->
+                                return Some e.Message
+                        }
+
+                    Expect.equal
+                        message
+                        (Some "background")
+                        "The fault should reach the returned task"
+                }
+
+            testCaseTask "backgroundTask escapes a task scheduler that is not the default"
+            <| fun () ->
+                task {
+                    let scheduler = ConcurrentExclusiveSchedulerPair().ExclusiveScheduler
+
+                    let! scheduledOn =
+                        Task.Factory
+                            .StartNew(
+                                (fun () ->
+                                    backgroundTask {
+                                        do! Task.Yield()
+                                        return TaskScheduler.Current
+                                    }
+                                ),
+                                CancellationToken.None,
+                                TaskCreationOptions.None,
+                                scheduler
+                            )
+                            .Unwrap()
+
+                    Expect.equal
+                        scheduledOn
+                        TaskScheduler.Default
+                        "The body should run on the default scheduler"
+                }
+
+            testCaseTask "backgroundTask and valueTask infer Task<'T> and ValueTask<'T> sources"
+            <| fun () ->
+                task {
+                    let fromTask t = backgroundTask { return! t }
+                    let fromValueTask t = valueTask { return! t }
+                    let! a = fromTask (Task.FromResult 1)
+                    let! b = fromValueTask (ValueTask<int>(2))
+                    Expect.equal (a + b) 3 "Should infer the source type from the builder"
+                }
+
+            testCaseTask "binds a non-generic cold task and an awaiter"
+            <| fun () ->
+                task {
+                    let mutable ran = false
+
+                    let cold () =
+                        task {
+                            do! Task.Yield()
+                            ran <- true
+                        }
+                        :> Task
+
+                    let! value =
+                        task {
+                            do! cold
+                            let! x = (Task.FromResult 2).GetAwaiter()
+                            return x
+                        }
+
+                    Expect.isTrue ran "Should run the cold task"
+                    Expect.equal value 2 "Should read the awaiter result"
+                }
+
+            testCaseTask
+                "and! starts a non-generic cold task operand before it awaits the left operand"
+            <| fun () ->
+                task {
+                    let rightStarted =
+                        TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
+
+                    let left () =
+                        task {
+                            do! rightStarted.Task
+                            return 1
+                        }
+
+                    let right () =
+                        rightStarted.SetResult()
+                        Task.CompletedTask
+
+                    let result =
+                        task {
+                            let! a = left
+                            and! () = right
+                            return a
+                        }
+
+                    let! actual = result.WaitAsync(TimeSpan.FromSeconds 10.)
+
+                    Expect.equal
+                        actual
+                        1
+                        "The right operand must start before the left one completes"
+                }
+        ]
+
     [<Tests>]
     let tests =
         testList "IcedTasks.Polyfill.RuntimeTask" [
@@ -1177,5 +1480,8 @@ module RuntimeTaskTests =
             runtimeAsyncTests
             valueTaskTests
             syncContextTests
+            startOrderTests
+            disposalOutcomeTests
+            moreBuilderTests
         ]
 #endif

@@ -13,6 +13,7 @@ module RuntimeTaskBase =
     open System
     open System.Collections.Generic
     open System.Runtime.CompilerServices
+    open System.Runtime.ExceptionServices
     open System.Threading
     open System.Threading.Tasks
     open Microsoft.FSharp.Core.CompilerServices
@@ -97,16 +98,33 @@ module RuntimeTaskBase =
                 compensation ()
 
         /// <summary>Runs the body with the resource, and then awaits <c>DisposeAsync</c> on the resource.</summary>
-        /// <remarks>The builder does not dispose a null resource.</remarks>
+        /// <remarks>
+        /// The builder does not dispose a null resource.
+        /// If the body throws, the builder awaits <c>DisposeAsync</c> and then throws the body exception with its original stack trace.
+        /// If <c>DisposeAsync</c> throws, its exception replaces the body exception.
+        /// </remarks>
         [<NoDynamicInvocation>]
         member inline _.Using
             (resource: #IAsyncDisposableNull, [<InlineIfLambda>] body: #IAsyncDisposableNull -> 'T)
             =
-            try
-                body resource
-            finally
-                if not (isNull (box resource)) then
-                    AsyncHelpers.Await(resource.DisposeAsync())
+            let mutable failure: ExceptionDispatchInfo | null = null
+
+            let result =
+                try
+                    body resource
+                with ex ->
+                    failure <- ExceptionDispatchInfo.Capture ex
+                    Unchecked.defaultof<'T>
+
+            // A rethrow after a suspending finally loses the stack trace: https://github.com/dotnet/fsharp/issues/20869
+            if not (isNull (box resource)) then
+                AsyncHelpers.Await(resource.DisposeAsync())
+
+            match failure with
+            | null -> result
+            | failure ->
+                failure.Throw()
+                result
 
         /// <summary>Runs the body for each element of the sequence.</summary>
         [<NoDynamicInvocation>]
@@ -278,7 +296,11 @@ module RuntimeTasks =
     type RuntimeBackgroundTaskBuilder() =
         inherit RuntimeTaskBuilderBase()
 
-        /// <summary>Runs the computation as a runtime-async method on the thread pool, and returns its task.</summary>
+        /// <summary>Runs the computation as a runtime-async method, and returns its task.</summary>
+        /// <remarks>
+        /// If the caller has a <c>SynchronizationContext</c> or a task scheduler that is not the default, the computation starts on the thread pool.
+        /// Otherwise, the computation starts on the caller thread.
+        /// </remarks>
         [<NoDynamicInvocation>]
         member inline _.Run([<InlineIfLambda>] code: unit -> 'T) : Task<'T> =
             if

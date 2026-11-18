@@ -29,6 +29,10 @@ A project that uses these builders must:
 
 If `LangVersion` is not `preview`, the compiler stops with error `FS3350: Feature 'runtime async' is not available in F# 11.0`.
 
+Runtime async is a preview feature of F# 11. A later F# compiler can change the requirements or the behavior.
+
+Each `net11.0` project that references IcedTasks gets the `net11.0` build, also when it does not use these builders. That build depends on FSharp.Core 11.0.101 or later.
+
 The namespace contains the builders only in the `net11.0` build of IcedTasks. In the builds for older target frameworks, the namespace is empty. Thus, in a project that targets `net10.0`, `task` gives the FSharp.Core builder, also when the project opens the namespace.
 
 ## Use the builders
@@ -78,18 +82,20 @@ The builders support:
 
 The builder awaits `Task` and `ValueTask` values with `AsyncHelpers.Await`, and other awaiters with `AsyncHelpers.UnsafeAwaitAwaiter`.
 
-`and!` starts all of its operands before it awaits the first operand.
+The builder evaluates all `and!` operands before it awaits the first operand. A task, an `Async`, and a cold task start when the builder evaluates them. An awaiter or an awaitable that starts its work only when the builder registers a continuation does not start until the builder awaits it.
+
+The builder awaits the `and!` operands from left to right. If an operand fails, the builder does not await the operands to its right, and the result has the exception of that operand. The operands to its right can continue to run.
 
 ## Differences from the state-machine builders
 
-- The F# compiler must inline all of the builder members into the method that uses the builder. Thus, you cannot use a builder as a first-class value, and you cannot call its members through reflection. Each member has `NoDynamicInvocation`.
+- The F# compiler must inline all of the builder members into the method that contains the computation expression. Each member has `NoDynamicInvocation`, so a call to a member through reflection throws `NotSupportedException`.
 - The body of a runtime-async method is small, so the F# optimizer can inline a small function that uses the builder into its caller. If you must see the function name in stack traces, put `[<MethodImpl(MethodImplOptions.NoInlining)>]` on the function.
 - The F# compiler gives generated names to the methods that contain the body, such as `func1@12.Invoke`. Stack traces show these names.
-- The F# compiler issue [dotnet/fsharp#20869](https://github.com/dotnet/fsharp/issues/20869) is open. It reports that a rethrow after a suspending `with` handler or `finally` block can lose the stack trace.
+- The F# compiler issue [dotnet/fsharp#20869](https://github.com/dotnet/fsharp/issues/20869) is open. It reports that a rethrow after a suspending `with` handler or `finally` block can lose the stack trace. `use` and `for` over an `IAsyncEnumerable<'T>` await `DisposeAsync` outside the protected region, so they keep the stack trace. A `with` handler in your own code that suspends and then rethrows can lose it.
 
 ## Builders that have no runtime-async version
 
-`taskUnit`, `valueTaskUnit`, `coldTask`, `cancellableTask`, `cancellableValueTask`, and the pooling builders have no runtime-async version.
+`taskUnit`, `backgroundTaskUnit`, `valueTaskUnit`, `coldTask`, `backgroundColdTask`, `cancellableTask`, `backgroundCancellableTask`, `cancellableValueTask`, and the pooling builders have no runtime-async version. The `vTask` alias continues to give the state-machine `valueTask` builder.
 
 Related:
 

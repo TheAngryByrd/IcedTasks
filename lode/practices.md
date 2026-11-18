@@ -3,7 +3,7 @@
 ## Code conventions
 
 - `Directory.Build.props` sets `TreatWarningsAsErrors`. A new warning fails the build.
-- `Directory.Build.props` sets `LangVersion` 8.0, 9.0 with `Nullable` enabled for `net9.0` ([ADR 0011](../adr/0011-fsharp-core-per-target-framework.md)), and `preview` with `Nullable` enabled for `net11.0` ([ADR 0013](../adr/0013-runtime-async-task-builders.md)). The `net11.0` settings also apply to the test projects. Use `IcedTasks.Nullness` types (`ExceptionNull`, `IDisposableNull`, `IAsyncDisposableNull`) for values that can be null. The comment in `src/IcedTasks/Nullness.fs` says that nullness works only for FSharp.Core 9 and later.
+- `Directory.Build.props` sets `LangVersion` 8.0, 9.0 with `Nullable` enabled for `net9.0` ([ADR 0011](../adr/0011-fsharp-core-per-target-framework.md)), and `preview` for TFMs compatible with `net11.0` ([ADR 0013](../adr/0013-runtime-async-task-builders.md)). `preview` also applies to the test projects. `IcedTasks.fsproj` enables `Nullable` for its `net11.0` build. Use `IcedTasks.Nullness` types (`ExceptionNull`, `IDisposableNull`, `IAsyncDisposableNull`) for values that can be null. The comment in `src/IcedTasks/Nullness.fs` says that nullness works only for FSharp.Core 9 and later.
 - Fantomas formats all F# code. A plain `dotnet build` runs Fantomas on F# projects outside `src/`. See [formatting and analyzers](build/formatting-and-analyzers.md).
 - `.editorconfig` sets LF, 4-space indent, `max_line_length=100`, and `fsharp_multiline_bracket_style = stroustrup`.
 - Central package management is on (`Directory.Packages.props`). Put versions there, not in a project file.

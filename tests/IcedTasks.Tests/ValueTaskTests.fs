@@ -967,12 +967,7 @@ module ValueTaskTests =
                     Expect.isTrue converted.IsFaulted "The result must be faulted"
 
                     Expect.isTrue
-                        (obj.ReferenceEquals(
-                            (match converted.Exception with
-                             | null -> null
-                             | aggregate -> aggregate.InnerException),
-                            input
-                        ))
+                        (obj.ReferenceEquals(converted.Exception.InnerException, input))
                         "The result must keep the input exception"
                 testCase
                     "a canceled ValueTask gives a canceled result and does not throw at the call"
