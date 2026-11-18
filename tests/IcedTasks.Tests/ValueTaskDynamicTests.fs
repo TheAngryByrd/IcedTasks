@@ -755,5 +755,35 @@ module ValueTaskDynamicTests =
         ]
 
 
+    let disposalOutcomeTests =
+        testList "DisposeAsync outcome" [
+            AsyncDisposalOutcome.tests
+                "valueTask"
+                AsyncDisposalOutcome.Dynamic
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    dValueTask {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t.AsTask() :> Task
+                )
+                (fun body cts items ->
+                    dValueTask {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t.AsTask() :> Task
+                )
+        ]
+
     [<Tests>]
-    let tests = testList "IcedTasks.ValueTask" [ builderTests ]
+    let tests =
+        testList "IcedTasks.ValueTask" [
+            builderTests
+            disposalOutcomeTests
+        ]

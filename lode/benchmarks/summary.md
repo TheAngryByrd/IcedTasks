@@ -18,7 +18,7 @@ Most classes compare a C# baseline with F# `async`, Ply, `task`, `valueTask`, `c
 
 ```powershell
 # benchmarks/FSharpBenchmarks/asyncCompletion.ps1
-dotnet run -c Release -f net8.0 -- --filter "*IcedTasks.Benchmarks.AsyncCompletionBenchmarks*"
+dotnet run -c Release -f net10.0 -- --filter "*IcedTasks.Benchmarks.AsyncCompletionBenchmarks*"
 ```
 
 `fileWriting.ps1` and `syncCompletion.ps1` run the other classes the same way.

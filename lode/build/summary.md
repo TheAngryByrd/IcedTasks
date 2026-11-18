@@ -2,7 +2,7 @@
 
 The build domain covers `build/`, `build.cmd`, `build.sh`, `global.json`, the root `Directory.Build.props`, `Directory.Build.targets`, `Directory.Packages.props`, `.config/dotnet-tools.json`, `.devcontainer/`, and `.github/workflows/`.
 
-The build is a FAKE 6 console app. `build/build.fsproj` targets `net9.0` and compiles `FsDocs.fs`, `Changelog.fs`, and `build.fs`. The scripts pass their arguments to it:
+The build is a FAKE 6 console app. `build/build.fsproj` targets `net10.0` and compiles `FsDocs.fs`, `Changelog.fs`, and `build.fs`. The scripts pass their arguments to it:
 
 ```sh
 # build.sh
@@ -29,9 +29,9 @@ flowchart LR
 - `global.json` sets the SDK version to `<major>.0.100`, for example `8.0.100`, `9.0.100`, and `10.0.100`. A `.100` SDK is the first stable release of a major version.
 - `"rollForward": "latestMinor"` selects the newest installed SDK with the same major version. SDKs in one major version rarely have breaking changes. `latestMajor` is not used, because a new major version, such as 10 to 11, can have breaking changes.
 - Other docs name `global.json` and do not copy its version.
-- CI installs the 8.x, 9.x, and 10.x SDKs, because the tests target `net10.0;net9.0;net8.0`.
+- CI installs the 10.x and 11.x SDKs. The tests target `net10.0;net11.0`, and the FAKE build app targets `net10.0`. A `net11.0` target needs SDK 11, so `global.json` names an SDK 11 version.
 - `.config/dotnet-tools.json` pins `fantomas`, `fsdocs-tool`, and `fsharp-analyzers`. The root `Directory.Build.targets` runs `dotnet tool restore` before a restore when the tool manifest changed. `src/Directory.Build.targets` does not import the root file, so a restore of `src/IcedTasks` alone does not restore the tools.
-- `.devcontainer/devcontainer.json` installs .NET 10.0, 9.0, and 8.0 and runs `dotnet tool restore && dotnet restore`.
+- `.devcontainer/devcontainer.json` installs .NET 11.0 and 10.0 and runs `dotnet tool restore && dotnet restore`.
 
 ## Environment variables
 

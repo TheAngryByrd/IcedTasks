@@ -10,6 +10,8 @@
 - A builder member that a builder needs for type inference goes on the builder type, not in an extension module. The code comment says "on the real type to allow type inference to work" (`src/IcedTasks/CancellableTask.fs`).
 - Each resumable builder has a static path and a dynamic path. A change to one path needs the same change to the other. See [run and start paths](builders/run-and-start-paths.md).
 - Do not put `[<InlineIfLambda>]` on resumable code parameters, such as `task1` and `task2` in `Combine` and `computation` in `TryWith`. Plain lambda parameters, such as `guard` and `compensation`, have it. Commit d89d479 removed it from resumable code: "This was causing excessive compile times without any performance benefits".
+- Complete a struct method builder in place. In unoptimized code, an SRTP call `builder.SetResult()` on a `byref<'Builder>` completes a copy of the builder, so the task never completes when the body finishes before its first await. `MethodBuilder.SetResult` and `MethodBuilder.get_Task` in `TaskLike.fs` use explicit trait calls, such as `(^Builder: (member SetResult: unit -> unit) builder)`, which act on the builder in place. The calls with an argument, such as `SetResult(&builder, result)`, do not copy.
+- Read `GetResult` of a completed non-generic `ValueTask` (`vtask.GetAwaiter().GetResult()`). `AsyncEx.AwaitValueTask`, `Async.AwaitValueTask`, and both `ofUnit` functions do this.
 - Call `SetException` outside the `try ... with` unwind. The code links roslyn issue 26567 for this rule.
 
 ```fsharp

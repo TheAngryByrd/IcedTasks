@@ -1666,10 +1666,65 @@ module CancellableValueTaskTests =
             ]
         ]
 
+    let disposalOutcomeTests =
+        testList "DisposeAsync outcome" [
+            AsyncDisposalOutcome.tests
+                "cancellableValueTask"
+                AsyncDisposalOutcome.Static
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                    AsyncDisposalOutcome.BodyCancels
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    cancellableValueTask {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                        do! Task.CompletedTask
+                    }
+                    |> fun t -> (t cts.Token).AsTask() :> Task
+                )
+                (fun body cts items ->
+                    cancellableValueTask {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                            do! Task.CompletedTask
+                    }
+                    |> fun t -> (t cts.Token).AsTask() :> Task
+                )
+            AsyncDisposalOutcome.tests
+                "cancellableValueTask"
+                AsyncDisposalOutcome.Dynamic
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                    AsyncDisposalOutcome.BodyCancels
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    dCancellableValueTask {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                        do! Task.CompletedTask
+                    }
+                    |> fun t -> (t cts.Token).AsTask() :> Task
+                )
+                (fun body cts items ->
+                    dCancellableValueTask {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                            do! Task.CompletedTask
+                    }
+                    |> fun t -> (t cts.Token).AsTask() :> Task
+                )
+        ]
+
     [<Tests>]
     let cancellationTaskTests =
         testList "IcedTasks.CancellableValueTask" [
             builderTests
+            disposalOutcomeTests
             asyncBuilderTests
             asyncExBuilderTests
             functionTests

@@ -28,7 +28,7 @@ The `BuildDocs` target makes the site in `docs/`. It depends on `DotnetBuild` an
 
 ```fsharp
 // docsSrc/How-To-Guides/Cancellable-Task-In-Giraffe.fsx
-#load "../../runtime-scripts/Microsoft.AspNetCore.App-latest-8.fsx"
+#load "../../runtime-scripts/Microsoft.AspNetCore.App-latest-10.fsx"
 #r "nuget: Giraffe"
 #r "../../src/IcedTasks/bin/Release/net9.0/IcedTasks.dll"
 ```

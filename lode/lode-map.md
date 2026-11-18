@@ -34,6 +34,7 @@ Read [summary](summary.md), [terminology](terminology.md), and this map at the s
 - [tests/summary.md](tests/summary.md) - Expecto setup and conventions.
 - [tests/test-projects-and-tfms.md](tests/test-projects-and-tfms.md) - the three projects and `#if` symbols.
 - [tests/expect-helpers.md](tests/expect-helpers.md) - shared helpers, multi-start tests, manual clock.
+- [tests/disposal-outcome-tests.md](tests/disposal-outcome-tests.md) - the DisposeAsync outcome matrix and its regression tests.
 
 ## docs - `docsSrc/`, `examples/`, `generate-sdk-references.fsx`
 
@@ -80,7 +81,7 @@ flowchart TD
     map["lode-map.md"] --> root["summary, terminology, practices"]
     map --> builders["builders/ (10)"]
     map --> build["build/ (5)"]
-    map --> tests["tests/ (3)"]
+    map --> tests["tests/ (4)"]
     map --> docs["docs/ (3)"]
     map --> bench["benchmarks/ (1)"]
     map --> plans["plans/ (1)"]

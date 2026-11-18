@@ -878,8 +878,138 @@ module AsyncExTests =
         ]
 
 
+    let disposalOutcomeTests =
+        testList "DisposeAsync outcome" [
+            AsyncDisposalOutcome.tests
+                "asyncEx"
+                AsyncDisposalOutcome.AsyncWorkflow
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                ]
+                AsyncDisposalOutcome.asyncExpectation
+                (fun body cts resource ->
+                    asyncEx {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun a -> Async.StartImmediateAsTask(a, cts.Token) :> Task
+                )
+                (fun body cts items ->
+                    asyncEx {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun a -> Async.StartImmediateAsTask(a, cts.Token) :> Task
+                )
+            testCaseAsync "use disposes the resource when the body throws before its first bind"
+            <| async {
+                let disposeCalls = ref 0
+                let bodyError = ArgumentException "body"
+
+                let resource =
+                    TestHelpers.makeAsyncDisposable (fun () ->
+                        disposeCalls.Value <-
+                            disposeCalls.Value
+                            + 1
+
+                        ValueTask.CompletedTask
+                    )
+
+                let! result =
+                    asyncEx {
+                        use _ = resource
+                        raise bodyError
+                    }
+                    |> Async.Catch
+
+                match result with
+                | Choice2Of2 error ->
+                    Expect.isTrue
+                        (obj.ReferenceEquals(error, bodyError))
+                        "The body exception must be the result"
+                | Choice1Of2() -> failtest "The body exception must fail the computation"
+
+                Expect.equal disposeCalls.Value 1 "use must dispose the resource"
+            }
+            testCaseAsync "use! disposes the resource when the body throws before its first bind"
+            <| async {
+                let disposeCalls = ref 0
+                let bodyError = ArgumentException "body"
+
+                let resource =
+                    TestHelpers.makeAsyncDisposable (fun () ->
+                        disposeCalls.Value <-
+                            disposeCalls.Value
+                            + 1
+
+                        ValueTask.CompletedTask
+                    )
+
+                let! result =
+                    asyncEx {
+                        use! resource = async.Return resource
+                        raise bodyError
+                    }
+                    |> Async.Catch
+
+                match result with
+                | Choice2Of2 error ->
+                    Expect.isTrue
+                        (obj.ReferenceEquals(error, bodyError))
+                        "The body exception must be the result"
+                | Choice1Of2() -> failtest "The body exception must fail the computation"
+
+                Expect.equal disposeCalls.Value 1 "use! must dispose the resource"
+            }
+            testCaseAsync
+                "do! of a completed IValueTaskSource ValueTask reads GetResult exactly once"
+            <| async {
+                let source = AsyncDisposalOutcome.ObservedDisposalSource()
+                source.Complete AsyncDisposalOutcome.DisposalSucceeds
+
+                do! asyncEx { do! source.ValueTask() }
+
+                Expect.equal source.GetResultCalls 1 "AwaitValueTask must read the result once"
+            }
+            testCaseAsync
+                "a faulted ValueTask fails with the input exception and does not throw at the call"
+            <| async {
+                let input = ArgumentException "input"
+                let awaited = AsyncEx.AwaitValueTask(ValueTask(Task.FromException input))
+                let! result = Async.Catch awaited
+
+                match result with
+                | Choice2Of2(:? AggregateException as error) ->
+                    Expect.isTrue
+                        (obj.ReferenceEquals(error.InnerException, input))
+                        "The result must keep the input exception"
+                | Choice2Of2 error ->
+                    Expect.isTrue
+                        (obj.ReferenceEquals(error, input))
+                        "The result must keep the input exception"
+                | Choice1Of2() -> failtest "The input exception must fail the result"
+            }
+            testCaseAsync
+                "a canceled ValueTask fails with a cancellation and does not throw at the call"
+            <| async {
+                let awaited =
+                    AsyncEx.AwaitValueTask(ValueTask(Task.FromCanceled(CancellationToken(true))))
+
+                let! result = Async.Catch awaited
+
+                match result with
+                | Choice2Of2(:? OperationCanceledException) -> ()
+                | other -> failtestf "Expected an OperationCanceledException, got %A" other
+            }
+        ]
+
     [<Tests>]
-    let asyncExTests = testList "IcedTasks.AsyncEx" [ builderTests ]
+    let asyncExTests =
+        testList "IcedTasks.AsyncEx" [
+            builderTests
+            disposalOutcomeTests
+        ]
 
 module PolyfillTest =
     open IcedTasks.Polyfill.Async

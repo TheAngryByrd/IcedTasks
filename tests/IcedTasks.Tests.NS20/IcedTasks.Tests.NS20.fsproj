@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>net10.0;net9.0;net8.0</TargetFrameworks>
+    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
     <GenerateProgramFile>false</GenerateProgramFile>
     <DefineConstants>$(DefineConstants);NETSTANDARD2_0;TEST_NETSTANDARD2_0</DefineConstants>
   </PropertyGroup>
@@ -10,6 +10,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="../IcedTasks.Tests/Expect.fs" />
+    <Compile Include="../IcedTasks.Tests/AsyncDisposalOutcome.fs" />
     <Compile Include="../IcedTasks.Tests/AsyncExTests.fs" />
     <Compile Include="../IcedTasks.Tests/TaskTests.fs" />
     <Compile Include="../IcedTasks.Tests/TaskBackgroundTests.fs" />

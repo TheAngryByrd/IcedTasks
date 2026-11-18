@@ -54,7 +54,9 @@ let answer = Async.RunSynchronously bindDotnetAsyncShapes
 (**
 ## Dispose `IAsyncDisposable` values
 
-Use `use` for resources that implement `IAsyncDisposable`. Disposal runs when the workflow completes, raises, or is cancelled.
+Use `use` for resources that implement `IAsyncDisposable`. Disposal runs when the workflow completes, raises, or is cancelled. Disposal also runs when the body raises before its first asynchronous step. Disposal does not run when the workflow is cancelled after the resource is made and before the body starts.
+
+If `DisposeAsync` fails, the workflow fails with the `DisposeAsync` exception. If the `ValueTask` from `DisposeAsync` fails with an `AggregateException` that has one inner exception, the workflow fails with the inner exception. If the body and `DisposeAsync` both fail, the workflow fails with an `AggregateException` that contains both exceptions.
 
 *)
 

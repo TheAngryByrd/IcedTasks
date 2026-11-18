@@ -1,10 +1,10 @@
 # Test projects and TFMs
 
-Three test projects test the library builds. Each project targets `net10.0;net9.0;net8.0`, so `dotnet test` runs each project three times.
+Three test projects test the library builds. Each project targets `net10.0;net11.0`, so `dotnet test` runs each project two times.
 
 | Project | Library TFM | Defines | Source files |
 |---|---|---|---|
-| `tests/IcedTasks.Tests` | default reference | `TEST_NET6_0_OR_GREATER` | its own 15 files |
+| `tests/IcedTasks.Tests` | `net6.0` on the `net10.0` run, `net9.0` on the `net11.0` run | `TEST_NET6_0_OR_GREATER` | its own 16 files |
 | `tests/IcedTasks.Tests.NS20` | `netstandard2.0` | `NETSTANDARD2_0;TEST_NETSTANDARD2_0` | links `../IcedTasks.Tests/*.fs`, no Pooling test files |
 | `tests/IcedTasks.Tests.NS21` | `netstandard2.1` | `NETSTANDARD2_1;TEST_NETSTANDARD2_1` | links `../IcedTasks.Tests/*.fs`, no Pooling test files |
 
@@ -12,13 +12,15 @@ The NS projects select the library TFM with `AdditionalProperties`:
 
 ```xml
 <!-- tests/IcedTasks.Tests.NS20/IcedTasks.Tests.NS20.fsproj -->
-    <TargetFrameworks>net10.0;net9.0;net8.0</TargetFrameworks>
+    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
     <GenerateProgramFile>false</GenerateProgramFile>
     <DefineConstants>$(DefineConstants);NETSTANDARD2_0;TEST_NETSTANDARD2_0</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" AdditionalProperties="TargetFramework=netstandard2.0" />
 ```
+
+Each shipped library build needs one test run. A test TFM selects the nearest library TFM, so `IcedTasks.Tests` sets `AdditionalProperties="TargetFramework=net6.0"` for its `net10.0` run. Without it, both runs load the `net9.0` build. The restore still uses the `net9.0` dependency graph, so the `net10.0` run loads FSharp.Core 9.0.300, not the 6.0.4 floor of the `net6.0` build. Expecto needs FSharp.Core 7.0.200 or later, so a test run cannot use 6.0.4.
 
 ## Rules for new tests
 
@@ -32,7 +34,8 @@ flowchart TD
     file -->|"Compile Include link"| ns20["NS20"]
     file -->|"Compile Include link"| ns21["NS21"]
     pool["Pooling*Tests.fs"] --> main
-    main --> lib6["lib net9.0 or net6.0 build, nearest TFM"]
+    main -->|"net10.0 run"| lib6["lib net6.0 build, AdditionalProperties"]
+    main -->|"net11.0 run"| lib9["lib net9.0 build, nearest TFM"]
     ns20 --> lib20["lib netstandard2.0 build"]
     ns21 --> lib21["lib netstandard2.1 build"]
 ```

@@ -1772,10 +1772,115 @@ module CancellableTaskTests =
 
         ]
 
+    let disposalOutcomeTests =
+        testList "DisposeAsync outcome" [
+            AsyncDisposalOutcome.tests
+                "cancellableTask"
+                AsyncDisposalOutcome.Static
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                    AsyncDisposalOutcome.BodyCancels
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    cancellableTask {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                        do! Task.CompletedTask
+                    }
+                    |> fun t -> t cts.Token :> Task
+                )
+                (fun body cts items ->
+                    cancellableTask {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                            do! Task.CompletedTask
+                    }
+                    |> fun t -> t cts.Token :> Task
+                )
+            AsyncDisposalOutcome.tests
+                "cancellableTask"
+                AsyncDisposalOutcome.Dynamic
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                    AsyncDisposalOutcome.BodyCancels
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    dCancellableTask {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                        do! Task.CompletedTask
+                    }
+                    |> fun t -> t cts.Token :> Task
+                )
+                (fun body cts items ->
+                    dCancellableTask {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                            do! Task.CompletedTask
+                    }
+                    |> fun t -> t cts.Token :> Task
+                )
+            AsyncDisposalOutcome.tests
+                "backgroundCancellableTask"
+                AsyncDisposalOutcome.Static
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                    AsyncDisposalOutcome.BodyCancels
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    backgroundCancellableTask {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                        do! Task.CompletedTask
+                    }
+                    |> fun t -> t cts.Token :> Task
+                )
+                (fun body cts items ->
+                    backgroundCancellableTask {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                            do! Task.CompletedTask
+                    }
+                    |> fun t -> t cts.Token :> Task
+                )
+            AsyncDisposalOutcome.tests
+                "backgroundCancellableTask"
+                AsyncDisposalOutcome.Dynamic
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                    AsyncDisposalOutcome.BodyCancels
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    dBackgroundCancellableTask {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                        do! Task.CompletedTask
+                    }
+                    |> fun t -> t cts.Token :> Task
+                )
+                (fun body cts items ->
+                    dBackgroundCancellableTask {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                            do! Task.CompletedTask
+                    }
+                    |> fun t -> t cts.Token :> Task
+                )
+        ]
+
     [<Tests>]
     let cancellationTaskTests =
         testList "IcedTasks.CancellableTask" [
             builderTests
+            disposalOutcomeTests
             asyncBuilderTests
             asyncExBuilderTests
             functionTests

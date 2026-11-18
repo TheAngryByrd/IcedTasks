@@ -8,6 +8,14 @@ open IcedTasks.Polyfill.Task
 
 module TaskTests =
     open System.Collections.Generic
+    open System.Runtime.CompilerServices
+
+    type TaskUnitDynamicBuilder() =
+        inherit TaskUnitBuilder()
+
+        member _.Run(code) = TaskUnitBuilder.RunDynamic(code)
+
+    let dTaskUnit = TaskUnitDynamicBuilder()
 
     let builderTests =
         testList "TaskBuilder" [
@@ -857,5 +865,110 @@ module TaskTests =
         ]
 
 
+    let disposalOutcomeTests =
+        testList "DisposeAsync outcome" [
+            AsyncDisposalOutcome.tests
+                "task"
+                AsyncDisposalOutcome.Static
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    task {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t :> Task
+                )
+                (fun body cts items ->
+                    task {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t :> Task
+                )
+            AsyncDisposalOutcome.tests
+                "taskUnit"
+                AsyncDisposalOutcome.Static
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    taskUnit {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+
+                )
+                (fun body cts items ->
+                    taskUnit {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                    }
+
+                )
+            AsyncDisposalOutcome.tests
+                "taskUnit"
+                AsyncDisposalOutcome.Dynamic
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    dTaskUnit {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+
+                )
+                (fun body cts items ->
+                    dTaskUnit {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                    }
+
+                )
+        ]
+
     [<Tests>]
-    let tests = testList "IcedTasks.Polyfill.Task" [ builderTests ]
+    let tests =
+        testList "IcedTasks.Polyfill.Task" [
+            builderTests
+            disposalOutcomeTests
+            testList "Dynamic path" [
+                testCase "taskUnit completes when the body completes synchronously"
+                <| fun () ->
+                    Expect.isTrue
+                        (Task.Run(fun () -> dTaskUnit { () }).Wait(TimeSpan.FromSeconds 10.))
+                        "The task must complete"
+            ]
+            testList "MethodBuilder" [
+                testCase "SetResult completes a non-generic AsyncTaskMethodBuilder"
+                <| fun () ->
+                    let mutable builder = AsyncTaskMethodBuilder.Create()
+                    TaskLike.MethodBuilder.SetResult(&builder)
+
+                    Expect.isTrue
+                        builder.Task.IsCompletedSuccessfully
+                        "SetResult must complete the builder, not a copy of it"
+                testCase "get_Task before SetResult returns the task that SetResult completes"
+                <| fun () ->
+                    let mutable builder = AsyncTaskMethodBuilder.Create()
+                    let exported: Task = TaskLike.MethodBuilder.get_Task (&builder)
+                    Expect.isFalse exported.IsCompleted "The task must be pending before SetResult"
+                    TaskLike.MethodBuilder.SetResult(&builder)
+
+                    Expect.isTrue
+                        (obj.ReferenceEquals(exported, builder.Task))
+                        "get_Task must return the task of the builder, not of a copy"
+
+                    Expect.isTrue
+                        exported.IsCompletedSuccessfully
+                        "SetResult must complete the exported task"
+            ]
+        ]

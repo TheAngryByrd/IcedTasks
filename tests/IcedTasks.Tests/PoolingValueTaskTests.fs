@@ -933,6 +933,42 @@ module PoolingValueTaskTests =
 
                     Expect.equal () someTask ""
                 }
+                testCaseAsync
+                    "reads GetResult of a completed IValueTaskSource ValueTask exactly once"
+                <| async {
+                    let source = AsyncDisposalOutcome.ObservedDisposalSource()
+                    source.Complete AsyncDisposalOutcome.DisposalSucceeds
+
+                    do!
+                        source.ValueTask()
+                        |> ValueTask.ofUnit
+                        |> Async.AwaitValueTask
+
+                    Expect.equal source.GetResultCalls 1 "ofUnit must read the result once"
+                }
+                testCase "a faulted ValueTask gives a faulted result and does not throw at the call"
+                <| fun () ->
+                    let input = ArgumentException "input"
+
+                    let converted =
+                        ValueTask(Task.FromException input)
+                        |> ValueTask.ofUnit
+                        |> fun vtask -> vtask.AsTask()
+
+                    Expect.isTrue converted.IsFaulted "The result must be faulted"
+
+                    Expect.isTrue
+                        (obj.ReferenceEquals(converted.Exception.InnerException, input))
+                        "The result must keep the input exception"
+                testCase
+                    "a canceled ValueTask gives a canceled result and does not throw at the call"
+                <| fun () ->
+                    let converted =
+                        ValueTask(Task.FromCanceled(CancellationToken(true)))
+                        |> ValueTask.ofUnit
+                        |> fun vtask -> vtask.AsTask()
+
+                    Expect.isTrue converted.IsCanceled "The result must be canceled"
             ]
 
 
@@ -953,9 +989,36 @@ module PoolingValueTaskTests =
         ]
 
 
+    let disposalOutcomeTests =
+        testList "DisposeAsync outcome" [
+            AsyncDisposalOutcome.tests
+                "poolingValueTask"
+                AsyncDisposalOutcome.Static
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    poolingValueTask {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t.AsTask() :> Task
+                )
+                (fun body cts items ->
+                    poolingValueTask {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+                    }
+                    |> fun t -> t.AsTask() :> Task
+                )
+        ]
+
     [<Tests>]
     let tests =
         testList "IcedTasks.PoolingValueTask" [
             builderTests
+            disposalOutcomeTests
             functionTests
         ]

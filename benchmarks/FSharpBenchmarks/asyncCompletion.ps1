@@ -1,1 +1,1 @@
-dotnet run -c Release -f net8.0 -- --filter "*IcedTasks.Benchmarks.AsyncCompletionBenchmarks*"
+dotnet run -c Release -f net10.0 -- --filter "*IcedTasks.Benchmarks.AsyncCompletionBenchmarks*"

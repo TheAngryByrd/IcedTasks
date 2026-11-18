@@ -30,7 +30,7 @@ flowchart LR
     sln["dotnet test IcedTasks.sln"] --> t["IcedTasks.Tests<br/>lib default TFM"]
     sln --> n20["IcedTasks.Tests.NS20<br/>lib netstandard2.0"]
     sln --> n21["IcedTasks.Tests.NS21<br/>lib netstandard2.1"]
-    t --> r["net10.0, net9.0, net8.0 runs"]
+    t --> r["net10.0, net11.0 runs"]
     n20 --> r
     n21 --> r
 ```
@@ -39,5 +39,6 @@ Topics:
 
 - [Test projects and TFMs](test-projects-and-tfms.md) - the three projects, shared files, and `#if` symbols.
 - [Test helpers](expect-helpers.md) - `Expect.fs` helpers, multi-start tests, and the manual clock.
+- [DisposeAsync outcome tests](disposal-outcome-tests.md) - the `use` and `for` disposal matrix for each builder.
 
 Related: [build](../build/summary.md), [builders](../builders/summary.md).
