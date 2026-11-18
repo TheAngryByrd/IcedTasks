@@ -174,9 +174,7 @@ module AsyncDisposalOutcome =
 
                 source.ValueTask()
 
-            let starting = Task.Factory.StartNew(fun () -> start body cts disposeAsync)
-            do! waitFor starting "The builder start did not return"
-            let resultTask = starting.Result
+            let resultTask = start body cts disposeAsync
 
             if completion = PendingDisposal then
                 do!

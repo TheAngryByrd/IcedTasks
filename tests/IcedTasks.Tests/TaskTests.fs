@@ -960,10 +960,15 @@ module TaskTests =
                 <| fun () ->
                     let mutable builder = AsyncTaskMethodBuilder.Create()
                     let exported: Task = TaskLike.MethodBuilder.get_Task (&builder)
+                    Expect.isFalse exported.IsCompleted "The task must be pending before SetResult"
                     TaskLike.MethodBuilder.SetResult(&builder)
 
                     Expect.isTrue
-                        exported.IsCompletedSuccessfully
+                        (obj.ReferenceEquals(exported, builder.Task))
                         "get_Task must return the task of the builder, not of a copy"
+
+                    Expect.isTrue
+                        exported.IsCompletedSuccessfully
+                        "SetResult must complete the exported task"
             ]
         ]

@@ -20,7 +20,7 @@ The NS projects select the library TFM with `AdditionalProperties`:
     <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" AdditionalProperties="TargetFramework=netstandard2.0" />
 ```
 
-Each shipped library build needs one test run. A test TFM selects the nearest library TFM, so `IcedTasks.Tests` sets `AdditionalProperties="TargetFramework=net6.0"` for its `net10.0` run. Without it, both runs load the `net9.0` build.
+Each shipped library build needs one test run. A test TFM selects the nearest library TFM, so `IcedTasks.Tests` sets `AdditionalProperties="TargetFramework=net6.0"` for its `net10.0` run. Without it, both runs load the `net9.0` build. The restore still uses the `net9.0` dependency graph, so the `net10.0` run loads FSharp.Core 9.0.300, not the 6.0.4 floor of the `net6.0` build. Expecto needs FSharp.Core 7.0.200 or later, so a test run cannot use 6.0.4.
 
 ## Rules for new tests
 

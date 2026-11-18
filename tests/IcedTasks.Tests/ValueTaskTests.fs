@@ -955,19 +955,29 @@ module ValueTaskTests =
 
                     Expect.equal source.GetResultCalls 1 "ofUnit must read the result once"
                 }
-                testCaseAsync "a faulted ValueTask fails the result and does not throw at the call"
-                <| async {
+                testCase "a faulted ValueTask gives a faulted result and does not throw at the call"
+                <| fun () ->
+                    let input = ArgumentException "input"
+
                     let converted =
-                        ValueTask(Task.FromException(ArgumentException "input"))
+                        ValueTask(Task.FromException input)
                         |> IcedTasks.ValueTasks.ValueTasks.ValueTask.ofUnit
+                        |> fun vtask -> vtask.AsTask()
 
-                    let! result =
-                        converted
-                        |> Async.AwaitValueTask
-                        |> Async.Catch
+                    Expect.isTrue converted.IsFaulted "The result must be faulted"
 
-                    Expect.isChoice2Of2 result "The input exception must fail the result"
-                }
+                    Expect.isTrue
+                        (obj.ReferenceEquals(converted.Exception.InnerException, input))
+                        "The result must keep the input exception"
+                testCase
+                    "a canceled ValueTask gives a canceled result and does not throw at the call"
+                <| fun () ->
+                    let converted =
+                        ValueTask(Task.FromCanceled(CancellationToken(true)))
+                        |> IcedTasks.ValueTasks.ValueTasks.ValueTask.ofUnit
+                        |> fun vtask -> vtask.AsTask()
+
+                    Expect.isTrue converted.IsCanceled "The result must be canceled"
             ]
 
             testList "Async.AwaitValueTask" [
@@ -984,15 +994,35 @@ module ValueTaskTests =
                         1
                         "Async.AwaitValueTask must read the result once"
                 }
-                testCaseAsync "a faulted ValueTask fails the result and does not throw at the call"
+                testCaseAsync
+                    "a faulted ValueTask fails with the input exception and does not throw at the call"
+                <| async {
+                    let input = ArgumentException "input"
+                    let awaited = Async.AwaitValueTask(ValueTask(Task.FromException input))
+                    let! result = Async.Catch awaited
+
+                    match result with
+                    | Choice2Of2(:? AggregateException as error) ->
+                        Expect.isTrue
+                            (obj.ReferenceEquals(error.InnerException, input))
+                            "The result must keep the input exception"
+                    | Choice2Of2 error ->
+                        Expect.isTrue
+                            (obj.ReferenceEquals(error, input))
+                            "The result must keep the input exception"
+                    | Choice1Of2() -> failtest "The input exception must fail the result"
+                }
+                testCaseAsync
+                    "a canceled ValueTask fails with a cancellation and does not throw at the call"
                 <| async {
                     let awaited =
-                        Async.AwaitValueTask(
-                            ValueTask(Task.FromException(ArgumentException "input"))
-                        )
+                        Async.AwaitValueTask(ValueTask(Task.FromCanceled(CancellationToken(true))))
 
                     let! result = Async.Catch awaited
-                    Expect.isChoice2Of2 result "The input exception must fail the result"
+
+                    match result with
+                    | Choice2Of2(:? OperationCanceledException) -> ()
+                    | other -> failtestf "Expected an OperationCanceledException, got %A" other
                 }
             ]
 

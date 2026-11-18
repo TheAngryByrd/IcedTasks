@@ -946,19 +946,29 @@ module PoolingValueTaskTests =
 
                     Expect.equal source.GetResultCalls 1 "ofUnit must read the result once"
                 }
-                testCaseAsync "a faulted ValueTask fails the result and does not throw at the call"
-                <| async {
+                testCase "a faulted ValueTask gives a faulted result and does not throw at the call"
+                <| fun () ->
+                    let input = ArgumentException "input"
+
                     let converted =
-                        ValueTask(Task.FromException(ArgumentException "input"))
+                        ValueTask(Task.FromException input)
                         |> ValueTask.ofUnit
+                        |> fun vtask -> vtask.AsTask()
 
-                    let! result =
-                        converted
-                        |> Async.AwaitValueTask
-                        |> Async.Catch
+                    Expect.isTrue converted.IsFaulted "The result must be faulted"
 
-                    Expect.isChoice2Of2 result "The input exception must fail the result"
-                }
+                    Expect.isTrue
+                        (obj.ReferenceEquals(converted.Exception.InnerException, input))
+                        "The result must keep the input exception"
+                testCase
+                    "a canceled ValueTask gives a canceled result and does not throw at the call"
+                <| fun () ->
+                    let converted =
+                        ValueTask(Task.FromCanceled(CancellationToken(true)))
+                        |> ValueTask.ofUnit
+                        |> fun vtask -> vtask.AsTask()
+
+                    Expect.isTrue converted.IsCanceled "The result must be canceled"
             ]
 
 
