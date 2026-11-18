@@ -31,7 +31,7 @@ flowchart LR
 - Other docs name `global.json` and do not copy its version.
 - CI installs the 9.x, 10.x, and 11.x SDKs. The tests target `net10.0;net11.0`, and the FAKE build app targets `net9.0`. A `net11.0` target needs SDK 11, so `global.json` names an SDK 11 version.
 - `.config/dotnet-tools.json` pins `fantomas`, `fsdocs-tool`, and `fsharp-analyzers`. The root `Directory.Build.targets` runs `dotnet tool restore` before a restore when the tool manifest changed. `src/Directory.Build.targets` does not import the root file, so a restore of `src/IcedTasks` alone does not restore the tools.
-- `.devcontainer/devcontainer.json` installs .NET 11.0, 10.0, and 9.0 and runs `dotnet tool restore && dotnet restore`.
+- `.devcontainer/devcontainer.json` installs .NET 11.0, 10.0, 9.0, and 8.0 (the benchmark scripts run on `net8.0`) and runs `dotnet tool restore && dotnet restore`.
 
 ## Environment variables
 

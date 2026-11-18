@@ -26,6 +26,7 @@ module AsyncDisposalOutcome =
     type Execution =
         | Static
         | Dynamic
+        | AsyncWorkflow
 
     type ObservedResult =
         | Completed
@@ -74,9 +75,8 @@ module AsyncDisposalOutcome =
                 |> ignore
 
             member _.GetResult(token) =
-                getResultCalls <-
-                    getResultCalls
-                    + 1
+                Interlocked.Increment(&getResultCalls)
+                |> ignore
 
                 core.GetResult(token)
 
@@ -130,15 +130,16 @@ module AsyncDisposalOutcome =
 
     let asyncExpectation outcome body =
         match outcome, body with
+        | _, BodyCancels -> invalidArg (nameof body) "The asyncEx matrix has no BodyCancels case"
         | DisposalSucceeds, BodyCompletes -> Completed
-        | DisposalSucceeds, _ -> Faulted [ "ArgumentException: body" ]
+        | DisposalSucceeds, BodyThrows -> Faulted [ "ArgumentException: body" ]
         | DisposalFaults, BodyCompletes -> Faulted [ "InvalidOperationException: dispose" ]
-        | DisposalFaults, _ ->
+        | DisposalFaults, BodyThrows ->
             Faulted [
                 "AggregateException [ArgumentException: body; InvalidOperationException: dispose]"
             ]
         | DisposalCancels, BodyCompletes -> Faulted [ "OperationCanceledException: dispose" ]
-        | DisposalCancels, _ ->
+        | DisposalCancels, BodyThrows ->
             Faulted [
                 "AggregateException [ArgumentException: body; OperationCanceledException: dispose]"
             ]
@@ -165,13 +166,27 @@ module AsyncDisposalOutcome =
             if completion = CompletedDisposal then
                 source.Complete outcome
 
-            let resultTask = start body cts source.ValueTask
+            let disposeCalls = ref 0
+
+            let disposeAsync () =
+                Interlocked.Increment(&disposeCalls.contents)
+                |> ignore
+
+                source.ValueTask()
+
+            let starting = Task.Factory.StartNew(fun () -> start body cts disposeAsync)
+            do! waitFor starting "The builder start did not return"
+            let resultTask = starting.Result
 
             if completion = PendingDisposal then
                 do!
                     waitFor
                         source.ContinuationRegistered
                         "The builder did not await the pending DisposeAsync result"
+
+                Expect.isFalse
+                    resultTask.IsCompleted
+                    "The builder must not complete before the pending DisposeAsync result"
 
                 source.Complete outcome
 
@@ -184,6 +199,8 @@ module AsyncDisposalOutcome =
                 (observe resultTask)
                 (expected outcome body)
                 "The DisposeAsync outcome must decide the result when it faults or cancels"
+
+            Expect.equal disposeCalls.Value 1 "The builder must call DisposeAsync exactly once"
 
             Expect.equal
                 source.GetResultCalls

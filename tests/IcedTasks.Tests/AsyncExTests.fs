@@ -882,7 +882,7 @@ module AsyncExTests =
         testList "DisposeAsync outcome" [
             AsyncDisposalOutcome.tests
                 "asyncEx"
-                AsyncDisposalOutcome.Static
+                AsyncDisposalOutcome.AsyncWorkflow
                 [
                     AsyncDisposalOutcome.BodyCompletes
                     AsyncDisposalOutcome.BodyThrows
@@ -905,6 +905,7 @@ module AsyncExTests =
             testCaseAsync "use disposes the resource when the body throws before its first bind"
             <| async {
                 let disposeCalls = ref 0
+                let bodyError = ArgumentException "body"
 
                 let resource =
                     TestHelpers.makeAsyncDisposable (fun () ->
@@ -918,16 +919,23 @@ module AsyncExTests =
                 let! result =
                     asyncEx {
                         use _ = resource
-                        raise (ArgumentException "body")
+                        raise bodyError
                     }
                     |> Async.Catch
 
-                Expect.isChoice2Of2 result "The body exception must fail the computation"
+                match result with
+                | Choice2Of2 error ->
+                    Expect.isTrue
+                        (obj.ReferenceEquals(error, bodyError))
+                        "The body exception must be the result"
+                | Choice1Of2() -> failtest "The body exception must fail the computation"
+
                 Expect.equal disposeCalls.Value 1 "use must dispose the resource"
             }
             testCaseAsync "use! disposes the resource when the body throws before its first bind"
             <| async {
                 let disposeCalls = ref 0
+                let bodyError = ArgumentException "body"
 
                 let resource =
                     TestHelpers.makeAsyncDisposable (fun () ->
@@ -941,11 +949,17 @@ module AsyncExTests =
                 let! result =
                     asyncEx {
                         use! resource = async.Return resource
-                        raise (ArgumentException "body")
+                        raise bodyError
                     }
                     |> Async.Catch
 
-                Expect.isChoice2Of2 result "The body exception must fail the computation"
+                match result with
+                | Choice2Of2 error ->
+                    Expect.isTrue
+                        (obj.ReferenceEquals(error, bodyError))
+                        "The body exception must be the result"
+                | Choice1Of2() -> failtest "The body exception must fail the computation"
+
                 Expect.equal disposeCalls.Value 1 "use! must dispose the resource"
             }
             testCaseAsync
@@ -957,6 +971,15 @@ module AsyncExTests =
                 do! asyncEx { do! source.ValueTask() }
 
                 Expect.equal source.GetResultCalls 1 "AwaitValueTask must read the result once"
+            }
+            testCaseAsync
+                "a faulted non-generic ValueTask fails the result and does not throw at the call"
+            <| async {
+                let awaited =
+                    AsyncEx.AwaitValueTask(ValueTask(Task.FromException(ArgumentException "input")))
+
+                let! result = Async.Catch awaited
+                Expect.isChoice2Of2 result "The input exception must fail the result"
             }
         ]
 

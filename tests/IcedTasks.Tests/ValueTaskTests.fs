@@ -955,6 +955,19 @@ module ValueTaskTests =
 
                     Expect.equal source.GetResultCalls 1 "ofUnit must read the result once"
                 }
+                testCaseAsync "a faulted ValueTask fails the result and does not throw at the call"
+                <| async {
+                    let converted =
+                        ValueTask(Task.FromException(ArgumentException "input"))
+                        |> IcedTasks.ValueTasks.ValueTasks.ValueTask.ofUnit
+
+                    let! result =
+                        converted
+                        |> Async.AwaitValueTask
+                        |> Async.Catch
+
+                    Expect.isChoice2Of2 result "The input exception must fail the result"
+                }
             ]
 
             testList "Async.AwaitValueTask" [
@@ -970,6 +983,16 @@ module ValueTaskTests =
                         source.GetResultCalls
                         1
                         "Async.AwaitValueTask must read the result once"
+                }
+                testCaseAsync "a faulted ValueTask fails the result and does not throw at the call"
+                <| async {
+                    let awaited =
+                        Async.AwaitValueTask(
+                            ValueTask(Task.FromException(ArgumentException "input"))
+                        )
+
+                    let! result = Async.Catch awaited
+                    Expect.isChoice2Of2 result "The input exception must fail the result"
                 }
             ]
 
@@ -1070,7 +1093,9 @@ module ValueTaskTests =
                 testCase "valueTaskUnit completes when the body completes synchronously"
                 <| fun () ->
                     Expect.isTrue
-                        ((dValueTaskUnit { () }).AsTask().Wait(TimeSpan.FromSeconds 10.))
+                        (Task
+                            .Run(fun () -> (dValueTaskUnit { () }).AsTask())
+                            .Wait(TimeSpan.FromSeconds 10.))
                         "The task must complete"
             ]
             functionTests

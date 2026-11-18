@@ -4,7 +4,7 @@ Three test projects test the library builds. Each project targets `net10.0;net11
 
 | Project | Library TFM | Defines | Source files |
 |---|---|---|---|
-| `tests/IcedTasks.Tests` | default reference | `TEST_NET6_0_OR_GREATER` | its own 16 files |
+| `tests/IcedTasks.Tests` | `net6.0` on the `net10.0` run, `net9.0` on the `net11.0` run | `TEST_NET6_0_OR_GREATER` | its own 16 files |
 | `tests/IcedTasks.Tests.NS20` | `netstandard2.0` | `NETSTANDARD2_0;TEST_NETSTANDARD2_0` | links `../IcedTasks.Tests/*.fs`, no Pooling test files |
 | `tests/IcedTasks.Tests.NS21` | `netstandard2.1` | `NETSTANDARD2_1;TEST_NETSTANDARD2_1` | links `../IcedTasks.Tests/*.fs`, no Pooling test files |
 
@@ -20,6 +20,8 @@ The NS projects select the library TFM with `AdditionalProperties`:
     <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" AdditionalProperties="TargetFramework=netstandard2.0" />
 ```
 
+Each shipped library build needs one test run. A test TFM selects the nearest library TFM, so `IcedTasks.Tests` sets `AdditionalProperties="TargetFramework=net6.0"` for its `net10.0` run. Without it, both runs load the `net9.0` build.
+
 ## Rules for new tests
 
 - Put a new test file in `tests/IcedTasks.Tests` and add it to the compile list of that project.
@@ -32,7 +34,8 @@ flowchart TD
     file -->|"Compile Include link"| ns20["NS20"]
     file -->|"Compile Include link"| ns21["NS21"]
     pool["Pooling*Tests.fs"] --> main
-    main --> lib6["lib net9.0 or net6.0 build, nearest TFM"]
+    main -->|"net10.0 run"| lib6["lib net6.0 build, AdditionalProperties"]
+    main -->|"net11.0 run"| lib9["lib net9.0 build, nearest TFM"]
     ns20 --> lib20["lib netstandard2.0 build"]
     ns21 --> lib21["lib netstandard2.1 build"]
 ```

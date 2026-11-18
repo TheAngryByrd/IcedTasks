@@ -944,7 +944,7 @@ module TaskTests =
                 testCase "taskUnit completes when the body completes synchronously"
                 <| fun () ->
                     Expect.isTrue
-                        ((dTaskUnit { () }).Wait(TimeSpan.FromSeconds 10.))
+                        (Task.Run(fun () -> dTaskUnit { () }).Wait(TimeSpan.FromSeconds 10.))
                         "The task must complete"
             ]
             testList "MethodBuilder" [
@@ -956,5 +956,14 @@ module TaskTests =
                     Expect.isTrue
                         builder.Task.IsCompletedSuccessfully
                         "SetResult must complete the builder, not a copy of it"
+                testCase "get_Task before SetResult returns the task that SetResult completes"
+                <| fun () ->
+                    let mutable builder = AsyncTaskMethodBuilder.Create()
+                    let exported: Task = TaskLike.MethodBuilder.get_Task (&builder)
+                    TaskLike.MethodBuilder.SetResult(&builder)
+
+                    Expect.isTrue
+                        exported.IsCompletedSuccessfully
+                        "get_Task must return the task of the builder, not of a copy"
             ]
         ]

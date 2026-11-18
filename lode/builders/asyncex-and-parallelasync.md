@@ -33,6 +33,7 @@ Disposal and ValueTask contracts, tested in [DisposeAsync outcome tests](../test
 
 - `Using` wraps `binder resource` in `Delay`, so a `use` or `use!` body that throws before its first bind still runs `DisposeAsync`.
 - `AwaitValueTask` reads `GetResult` once, also when the ValueTask completed successfully before the await. A pooled `IValueTaskSource` needs that call to release the source.
+- Known gap: `Async.TryFinallyAsync` starts with `let! ct = Async.CancellationToken`, which checks the token. If the token is cancelled after `use` makes the resource and before that check, the workflow cancels and `DisposeAsync` does not run. `for` has the same gap after `GetAsyncEnumerator`. FSharp.Core `async.Using` disposes in this case. A follow-up fix is planned.
 - `Async.TryFinallyAsync` faults the result when compensation fails. A body exception and a compensation exception give one `AggregateException`. An `OperationCanceledException` from compensation faults the result. It does not cancel it.
 
 ```fsharp

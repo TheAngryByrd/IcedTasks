@@ -111,11 +111,11 @@ type MethodBuilder =
 
     /// <summary>Gets the task for this builder.</summary>
     /// <returns>The task for this builder.</returns>
-    static member inline get_Task<'Builder, 'TResult
-        when 'Builder: (member get_Task: unit -> 'TResult)>
-        (builder: byref<'Builder>)
+    static member inline get_Task< ^Builder, 'TResult
+        when ^Builder: (member get_Task: unit -> 'TResult)>
+        (builder: byref< ^Builder >)
         =
-        builder.get_Task ()
+        (^Builder: (member get_Task: unit -> 'TResult) builder)
 
     /// <summary>Schedules the state machine to proceed to the next action when the specified awaiter completes.</summary>
     /// <param name="awaiter">The awaiter.</param>

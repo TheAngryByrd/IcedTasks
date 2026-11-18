@@ -958,7 +958,9 @@ module TaskBackgroundTests =
                 testCase "backgroundTaskUnit completes when the body completes synchronously"
                 <| fun () ->
                     Expect.isTrue
-                        ((dBackgroundTaskUnit { () }).Wait(TimeSpan.FromSeconds 10.))
+                        (Task
+                            .Run(fun () -> dBackgroundTaskUnit { () })
+                            .Wait(TimeSpan.FromSeconds 10.))
                         "The task must complete"
             ]
             syncContextTests
