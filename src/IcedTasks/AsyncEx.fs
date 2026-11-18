@@ -212,7 +212,7 @@ type AsyncExBuilder() =
         (resource: #IAsyncDisposableNull, [<InlineIfLambda>] (binder: 'c -> Async<'ok>))
         =
         this.TryFinallyAsync(
-            binder resource,
+            this.Delay(fun () -> binder resource),
             (fun () ->
                 if not (isNull (box resource)) then
                     resource.DisposeAsync()
