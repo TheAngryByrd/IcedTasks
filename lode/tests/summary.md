@@ -30,7 +30,7 @@ flowchart LR
     sln["dotnet test IcedTasks.sln"] --> t["IcedTasks.Tests<br/>lib default TFM"]
     sln --> n20["IcedTasks.Tests.NS20<br/>lib netstandard2.0"]
     sln --> n21["IcedTasks.Tests.NS21<br/>lib netstandard2.1"]
-    t --> r["net10.0, net9.0, net8.0 runs"]
+    t --> r["net10.0, net11.0 runs"]
     n20 --> r
     n21 --> r
 ```

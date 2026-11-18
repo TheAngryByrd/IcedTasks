@@ -256,8 +256,8 @@ IcedTasks | [![NuGet Badge](https://buildstats.info/nuget/IcedTasks)](https://ww
 
 Install one of these:
 
-- The [.NET SDK](https://dotnet.microsoft.com/download) version that `global.json` specifies. The test projects also run on .NET 8.0 and .NET 9.0, so install those SDKs or runtimes too. CI installs the 8.x, 9.x, and 10.x SDKs.
-- [VS Code Dev Containers](https://code.visualstudio.com/docs/devcontainers/containers). The dev container installs .NET 10.0, 9.0, and 8.0.
+- The [.NET SDK](https://dotnet.microsoft.com/download) version that `global.json` specifies. The test projects also run on .NET 10.0, so install that runtime too. The build project in `build/` runs on .NET 9.0, so install that runtime too. CI installs the 9.x, 10.x, and 11.x SDKs.
+- [VS Code Dev Containers](https://code.visualstudio.com/docs/devcontainers/containers). The dev container installs .NET 11.0, 10.0, and 9.0.
 
 ---
 

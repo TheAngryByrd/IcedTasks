@@ -1,6 +1,6 @@
 # Test projects and TFMs
 
-Three test projects test the library builds. Each project targets `net10.0;net9.0;net8.0`, so `dotnet test` runs each project three times.
+Three test projects test the library builds. Each project targets `net10.0;net11.0`, so `dotnet test` runs each project two times.
 
 | Project | Library TFM | Defines | Source files |
 |---|---|---|---|
@@ -12,7 +12,7 @@ The NS projects select the library TFM with `AdditionalProperties`:
 
 ```xml
 <!-- tests/IcedTasks.Tests.NS20/IcedTasks.Tests.NS20.fsproj -->
-    <TargetFrameworks>net10.0;net9.0;net8.0</TargetFrameworks>
+    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
     <GenerateProgramFile>false</GenerateProgramFile>
     <DefineConstants>$(DefineConstants);NETSTANDARD2_0;TEST_NETSTANDARD2_0</DefineConstants>
   </PropertyGroup>
