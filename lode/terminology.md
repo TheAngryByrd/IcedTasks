@@ -23,7 +23,10 @@ The repository has no glossary file. The terms below come from the code and from
 - background builder - a builder variant that runs on the thread pool when a `SynchronizationContext` or a non-default `TaskScheduler` is present.
 - unit builder - `taskUnit`, `backgroundTaskUnit`, `valueTaskUnit`. They return non-generic `Task` or `ValueTask`.
 - pooling builder - `poolingValueTask` and `cancellablePoolingValueTask`. They use `PoolingAsyncValueTaskMethodBuilder` and exist only on `net6.0` and later.
-- polyfill namespace - `IcedTasks.Polyfill.Task` or `IcedTasks.Polyfill.Async`. Opening one shadows the FSharp.Core `task`, `backgroundTask`, or `async` builder.
+- runtime async - the .NET 11 feature where the runtime suspends a method that has `MethodImplOptions.Async`. The builders in `IcedTasks.Polyfill.RuntimeTask` use it.
+- return marker - `__runtimeAsyncReturn` or `__runtimeAsyncReturnValueTask`. The F# compiler makes the method that contains it runtime async.
+- Started - the `Started<'T>` delegate that a runtime-async `Source` returns. `Bind` invokes it to await the operation.
+- polyfill namespace - `IcedTasks.Polyfill.Task`, `IcedTasks.Polyfill.Async`, or `IcedTasks.Polyfill.RuntimeTask`. Opening one shadows the FSharp.Core `task`, `backgroundTask`, or `async` builder.
 - AsyncEx - the `asyncEx` builder. It keeps F# `Async` semantics and adds task interop.
 - companion module - the module with the same name as a type alias, such as `CancellableTask.map`.
 - TFM - target framework moniker, such as `netstandard2.0`.

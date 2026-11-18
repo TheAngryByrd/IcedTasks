@@ -17,6 +17,7 @@ Read [summary](summary.md), [terminology](terminology.md), and this map at the s
 - [builders/cancellation-flow.md](builders/cancellation-flow.md) - the ambient token and cancellation checks.
 - [builders/and-bang-merge-sources.md](builders/and-bang-merge-sources.md) - `and!` and concurrent start.
 - [builders/background-builders.md](builders/background-builders.md) - thread pool escape.
+- [builders/runtime-task.md](builders/runtime-task.md) - the runtime-async `task`, `backgroundTask`, and `valueTask` builders on `net11.0`.
 - [builders/namespaces-and-tfms.md](builders/namespaces-and-tfms.md) - AutoOpen, polyfill namespaces, TFM guards.
 - [builders/asyncex-and-parallelasync.md](builders/asyncex-and-parallelasync.md) - the `Async` builders.
 - [builders/companion-modules.md](builders/companion-modules.md) - module functions and conversions.
@@ -79,7 +80,7 @@ lode/tmp/
 ```mermaid
 flowchart TD
     map["lode-map.md"] --> root["summary, terminology, practices"]
-    map --> builders["builders/ (10)"]
+    map --> builders["builders/ (11)"]
     map --> build["build/ (5)"]
     map --> tests["tests/ (4)"]
     map --> docs["docs/ (3)"]

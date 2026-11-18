@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net9.0;net6.0;netstandard2.1;netstandard2.0;</TargetFrameworks>
+    <TargetFrameworks>net11.0;net9.0;net6.0;netstandard2.1;netstandard2.0;</TargetFrameworks>
     <NoWarn>$(NoWarn);FS3513</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
@@ -17,6 +17,7 @@
     <Compile Include="ValueTaskUnit.fs" />
     <Compile Include="TaskUnit.fs" />
     <Compile Include="Task.fs" />
+    <Compile Include="RuntimeTask.fs" />
     <Compile Include="AsyncEx.fs" />
     <Compile Include="ParallelAsync.fs" />
     <Compile Include="ColdTask.fs" />
@@ -31,6 +32,11 @@
     <PackageReference Condition="'$(TargetFramework)' == 'netstandard2.0'" Include="Microsoft.Bcl.AsyncInterfaces" />
   </ItemGroup>
   <Choose>
+    <When Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)','net11.0'))">
+      <ItemGroup>
+      <PackageReference Include="FSharp.Core" VersionOverride="11.0.101" />
+      </ItemGroup>
+    </When>
     <When Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)','net9.0'))">
       <ItemGroup>
       <PackageReference Include="FSharp.Core" VersionOverride="9.0.300" />

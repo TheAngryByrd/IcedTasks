@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- [Add the runtime-async `task`, `backgroundTask`, and `valueTask` builders in `IcedTasks.Polyfill.RuntimeTask` for `net11.0` with F# 11 preview](https://github.com/TheAngryByrd/IcedTasks/pull/62) - Credits @TheAngryByrd
+
+### Changed
+- [Add a `net11.0` library build that depends on FSharp.Core 11.0.101, and test it on `net11.0` instead of the `net6.0` build](https://github.com/TheAngryByrd/IcedTasks/pull/62) - Credits @TheAngryByrd
+
 ## [0.11.10-beta002] - 2026-11-18
 
 ### Fixed

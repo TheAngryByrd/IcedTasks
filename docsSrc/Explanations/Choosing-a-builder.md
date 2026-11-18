@@ -21,6 +21,7 @@ Related guides:
 - [Use unit builders for non-generic task APIs](../How-To-Guides/Use-unit-builders-for-non-generic-task-apis.html)
 - [Pooling builders](Pooling-builders.html)
 - [Polyfill namespaces and shadowing](Polyfill-namespaces-and-shadowing.html)
+- [Runtime-async task builders](Runtime-async-task-builders.html)
 
 ## Builder comparison
 
@@ -36,6 +37,9 @@ Related guides:
 | `taskUnit` | `Task` | netstandard2.0 | Hot | Multiple | Once-start | Explicit | Explicit | Yes | Yes | Yes |
 | `backgroundTaskUnit` | `Task` | netstandard2.0 | Hot | Multiple | Once-start | Explicit | Explicit | Yes | Yes | Yes |
 | `valueTask` | `ValueTask<'T>` | netstandard2.0 | Hot | Once | Once-start | Explicit | Explicit | Yes | Yes | Yes |
+| `IcedTasks.Polyfill.RuntimeTask.task` | `Task<'T>` | net11.0+ | Hot | Multiple | Once-start | Explicit | Explicit | Yes | Yes | Yes |
+| `IcedTasks.Polyfill.RuntimeTask.backgroundTask` | `Task<'T>` | net11.0+ | Hot | Multiple | Once-start | Explicit | Explicit | Yes | Yes | Yes |
+| `IcedTasks.Polyfill.RuntimeTask.valueTask` | `ValueTask<'T>` | net11.0+ | Hot | Once | Once-start | Explicit | Explicit | Yes | Yes | Yes |
 | `vTask` | `ValueTask<'T>` | netstandard2.0 | Hot | Once | Once-start | Explicit | Explicit | Yes | Yes | Yes |
 | `valueTaskUnit` | `ValueTask` | netstandard2.0 | Hot | Once | Once-start | Explicit | Explicit | Yes | Yes | Yes |
 | `vTaskUnit` | `ValueTask` | netstandard2.0 | Hot | Once | Once-start | Explicit | Explicit | Yes | Yes | Yes |

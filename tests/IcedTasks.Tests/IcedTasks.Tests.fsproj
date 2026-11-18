@@ -6,9 +6,7 @@
     <DefineConstants>$(DefineConstants);TEST_NET6_0_OR_GREATER</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Each shipped .NET library build (net6.0, net9.0) needs one test run. -->
-    <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" Condition="'$(TargetFramework)' == 'net10.0'" AdditionalProperties="TargetFramework=net6.0" />
-    <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" Condition="'$(TargetFramework)' != 'net10.0'" />
+    <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Expect.fs" />
@@ -16,6 +14,7 @@
     <Compile Include="AsyncExTests.fs" />
     <Compile Include="TaskTests.fs" />
     <Compile Include="TaskBackgroundTests.fs" />
+    <Compile Include="RuntimeTaskTests.fs" />
     <Compile Include="TaskDynamicTests.fs" />
     <Compile Include="ValueTaskTests.fs" />
     <Compile Include="ValueTaskDynamicTests.fs" />

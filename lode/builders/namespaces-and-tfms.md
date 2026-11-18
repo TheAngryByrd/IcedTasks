@@ -26,6 +26,7 @@ These namespaces are not auto-opened:
 
 - `IcedTasks.Polyfill.Task` (`Task.fs`) - shadows FSharp.Core `task` and `backgroundTask`.
 - `IcedTasks.Polyfill.Async` (`AsyncEx.fs`) - defines `let async = asyncEx` and shadows FSharp.Core `async`.
+- `IcedTasks.Polyfill.RuntimeTask` (`RuntimeTask.fs`) - runtime-async `task`, `backgroundTask`, and `valueTask`. Empty before `net11.0`.
 - `IcedTasks.Nullness` (`Nullness.fs`).
 
 A new builder namespace must get a line in `AutoOpens.fs`. `AutoOpens.fs` is the last file in the compile order.
@@ -41,14 +42,17 @@ flowchart LR
 
 ## Target frameworks
 
-`IcedTasks.fsproj` targets `net9.0;net6.0;netstandard2.1;netstandard2.0`.
+`IcedTasks.fsproj` targets `net11.0;net9.0;net6.0;netstandard2.1;netstandard2.0`.
 
 | Item | Condition | Source |
 |---|---|---|
 | `Microsoft.Bcl.AsyncInterfaces` | `netstandard2.0` only | `IcedTasks.fsproj` |
-| FSharp.Core 9.0.300 | TFM compatible with `net9.0` | `IcedTasks.fsproj` |
+| FSharp.Core 11.0.101 | TFM compatible with `net11.0` | `IcedTasks.fsproj` |
+| FSharp.Core 9.0.300 | TFM compatible with `net9.0`, before `net11.0` | `IcedTasks.fsproj` |
 | FSharp.Core 6.0.4 | other TFMs | `IcedTasks.fsproj` |
 | `LangVersion` 9.0 and `Nullable` | `net9.0` | `Directory.Build.props` |
+| `LangVersion` `preview` and `Nullable` | `net11.0`, also for test projects | `Directory.Build.props` |
+| Runtime-async builders | `#if NET11_0_OR_GREATER` | `RuntimeTask.fs` |
 | Pooling builders | `#if NET6_0_OR_GREATER` | `PoolingValueTask.fs`, `CancellablePoolingValueTask.fs` |
 | Nullness unions | `#if NULLABLE` | `Nullness.fs` |
 
@@ -66,5 +70,6 @@ Decisions:
 - [ADR 0010, Microsoft.Bcl.AsyncInterfaces on netstandard2.0](../../adr/0010-bcl-asyncinterfaces-on-netstandard2-0.md)
 - [ADR 0011, FSharp.Core per target framework](../../adr/0011-fsharp-core-per-target-framework.md)
 - [ADR 0012, one namespace for each builder file](../../adr/0012-namespace-per-builder-file.md)
+- [ADR 0013, runtime-async task builders](../../adr/0013-runtime-async-task-builders.md)
 
 Related: [builder catalog](builder-catalog.md), [test projects and TFMs](../tests/test-projects-and-tfms.md).

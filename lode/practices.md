@@ -3,7 +3,7 @@
 ## Code conventions
 
 - `Directory.Build.props` sets `TreatWarningsAsErrors`. A new warning fails the build.
-- `Directory.Build.props` sets `LangVersion` 8.0, and 9.0 with `Nullable` enabled for `net9.0` ([ADR 0011](../adr/0011-fsharp-core-per-target-framework.md)). Use `IcedTasks.Nullness` types (`ExceptionNull`, `IDisposableNull`, `IAsyncDisposableNull`) for values that can be null. The comment in `src/IcedTasks/Nullness.fs` says that nullness works only for FSharp.Core 9 and later.
+- `Directory.Build.props` sets `LangVersion` 8.0, 9.0 with `Nullable` enabled for `net9.0` ([ADR 0011](../adr/0011-fsharp-core-per-target-framework.md)), and `preview` with `Nullable` enabled for `net11.0` ([ADR 0013](../adr/0013-runtime-async-task-builders.md)). The `net11.0` settings also apply to the test projects. Use `IcedTasks.Nullness` types (`ExceptionNull`, `IDisposableNull`, `IAsyncDisposableNull`) for values that can be null. The comment in `src/IcedTasks/Nullness.fs` says that nullness works only for FSharp.Core 9 and later.
 - Fantomas formats all F# code. A plain `dotnet build` runs Fantomas on F# projects outside `src/`. See [formatting and analyzers](build/formatting-and-analyzers.md).
 - `.editorconfig` sets LF, 4-space indent, `max_line_length=100`, and `fsharp_multiline_bracket_style = stroustrup`.
 - Central package management is on (`Directory.Packages.props`). Put versions there, not in a project file.
@@ -29,6 +29,7 @@
 - With .NET SDK 10.0.400 and later, Debug builds take the dynamic path for every resumable builder. Test both Debug and Release.
 - `./build.sh` uses Debug unless the `Publish` target runs or `CONFIGURATION` is set (`build/build.fs`).
 - The docs pages reference `src/IcedTasks/bin/Release/net9.0/IcedTasks.dll`. Build Release before `BuildDocs`. See [fsdocs build](docs/fsdocs-build.md).
+- Each member of a runtime-async builder must be `inline` and have `NoDynamicInvocation`. See [runtime-async task builders](builders/runtime-task.md).
 - The pooling builders exist only under `NET6_0_OR_GREATER`. Code that uses them must also compile for `netstandard2.0` and `netstandard2.1`, or sit under the same guard.
 - `dotnet build IcedTasks.sln` also builds `build/`, the benchmarks, and `examples/ILSpySamples` (`IcedTasks.sln`).
 - Untracked `.claude/worktrees/` copies of the repository can exist. Exclude them from searches.

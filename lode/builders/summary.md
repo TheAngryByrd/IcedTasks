@@ -13,6 +13,7 @@ The builders domain is the library in `src/IcedTasks`. It defines the computatio
     <Compile Include="ValueTaskUnit.fs" />
     <Compile Include="TaskUnit.fs" />
     <Compile Include="Task.fs" />
+    <Compile Include="RuntimeTask.fs" />
     <Compile Include="AsyncEx.fs" />
     <Compile Include="ParallelAsync.fs" />
     <Compile Include="ColdTask.fs" />
@@ -33,6 +34,7 @@ flowchart TD
     CTB --> cold["coldTask, backgroundColdTask"]
     asyncB["FSharp.Core async"] --> ax["asyncEx"]
     asyncB --> pa["parallelAsync"]
+    rt["RuntimeTaskBuilderBase<br/>net11.0, no state machine"] --> rtb["RuntimeTask: task, backgroundTask, valueTask"]
 ```
 
 Topics:
@@ -43,6 +45,7 @@ Topics:
 - [Cancellation flow](cancellation-flow.md) - the ambient token and the cancellation checks.
 - [and! and MergeSources](and-bang-merge-sources.md) - concurrent start of `and!` operands.
 - [Background builders](background-builders.md) - thread pool escape.
+- [Runtime-async task builders](runtime-task.md) - the `net11.0` builders that the .NET runtime suspends.
 - [Namespaces and TFMs](namespaces-and-tfms.md) - AutoOpen, polyfill namespaces, and `#if` guards.
 - [AsyncEx and ParallelAsync](asyncex-and-parallelasync.md) - the `Async` builders.
 - [Companion modules](companion-modules.md) - `map`, `bind`, `zip`, and other functions.
