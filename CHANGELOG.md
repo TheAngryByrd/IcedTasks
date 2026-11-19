@@ -10,12 +10,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - [Add runtime-async versions of `task`, `backgroundTask`, `valueTask`, `coldTask`, `backgroundColdTask`, `cancellableTask`, `backgroundCancellableTask`, and `cancellableValueTask` in `IcedTasks.Polyfill.RuntimeTask` for `net11.0` with F# 11 preview](https://github.com/TheAngryByrd/IcedTasks/pull/62) - Credits @TheAngryByrd
 
+### Changed
+- [Add a `net11.0` library build that depends on FSharp.Core 11.0.101. The `net10.0` test run of `IcedTasks.Tests` loads the `net9.0` build instead of the `net6.0` build, and its `net11.0` test run loads the `net11.0` build. A metadata test checks the public API of each build that `IcedTasks.fsproj` ships](https://github.com/TheAngryByrd/IcedTasks/pull/62) - Credits @TheAngryByrd
+
+## [0.11.10] - 2026-11-19
+
+### Fixed
+- [Remove the assembly-level `AutoOpen` attributes of 0.11.10-beta001, beta002, and beta003, which opened the IcedTasks namespaces in every file of each referencing project. Restore the 0.11.9 namespaces, modules, and public type names](https://github.com/TheAngryByrd/IcedTasks/pull/78) - Credits @TheAngryByrd
+- [Dispose in asyncEx when the token is cancelled before the use body starts](https://github.com/TheAngryByrd/IcedTasks/pull/75) - Credits @TheAngryByrd. `Async.TryFinallyAsync` now starts the compensation in this case. It is no longer `inline`, so code compiled against an earlier version must be compiled again to get the fix.
+- [Dispose the resource of `use` and `use!` in `asyncEx` when the body throws before its first bind](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+- [Read `GetResult` of a completed non-generic `ValueTask` in `AsyncEx.AwaitValueTask`, `Async.AwaitValueTask`, `ValueTask.ofUnit`, and `PoolingValueTask.ofUnit`](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+- [Complete `taskUnit`, `backgroundTaskUnit`, and `valueTaskUnit` on the dynamic path, and make `MethodBuilder.SetResult` and `MethodBuilder.get_Task` act on the builder, not a copy](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+- [Fix multi-start of cold and cancellable tasks on the dynamic path](https://github.com/TheAngryByrd/IcedTasks/pull/67) - Credits @xperiandri
+- [Align the background cold builder exception path](https://github.com/TheAngryByrd/IcedTasks/pull/66) - Credits @TheAngryByrd
+
+### Changed
+- [Remove the names that only 0.11.10-beta001, beta002, and beta003 had: the namespaces `IcedTasks.TaskLike`, `IcedTasks.Nullness`, `IcedTasks.AsyncEx`, `IcedTasks.ParallelAsync`, and paths that repeat a module name, such as `IcedTasks.ColdTasks.ColdTasks.ColdTaskBuilder`. Use `open IcedTasks` or the 0.11.9 names. A file that used IcedTasks names with no `open` on a beta needs `open IcedTasks`. Compile again each assembly that was compiled against a beta, including libraries that depend on IcedTasks: the public type names outside `IcedTasks.Polyfill` change back to the 0.11.9 names, and a beta-compiled assembly that uses one of them fails with `TypeLoadException`. After `open IcedTasks`, the `ValueTask` and `CancellableValueTask` module functions, for example `ValueTask.map`, are again the non-pooling functions of 0.11.9. On the betas, they were the pooling functions. To keep a pooling function, write its full name, for example `IcedTasks.PoolingValueTasks.ValueTaskBuilder.ValueTask.map`](https://github.com/TheAngryByrd/IcedTasks/pull/78) - Credits @TheAngryByrd
+- [Test on net10.0 and net11.0 with the .NET 11 SDK, test the net6.0 library build, and run the build and the docs on .NET 10 instead of .NET 8 and 9](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+- [Use NuGet trusted publishing in the publish workflow](https://github.com/TheAngryByrd/IcedTasks/pull/68) - Credits @TheAngryByrd
+
+### Added
+- [Tests for the DisposeAsync outcome of `use` and `for` in each builder](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+
+## [0.11.10-beta004] - 2026-11-19
+
 ### Fixed
 - [Remove the assembly-level `AutoOpen` attributes of 0.11.10-beta001, beta002, and beta003, which opened the IcedTasks namespaces in every file of each referencing project. Restore the 0.11.9 namespaces, modules, and public type names](https://github.com/TheAngryByrd/IcedTasks/pull/78) - Credits @TheAngryByrd
 
+- [Dispose in asyncEx when the token is cancelled before the use body starts](https://github.com/TheAngryByrd/IcedTasks/pull/75) - Credits @TheAngryByrd. `Async.TryFinallyAsync` now starts the compensation in this case. It is no longer `inline`, so code compiled against an earlier version must be compiled again to get the fix.
+- [Dispose the resource of `use` and `use!` in `asyncEx` when the body throws before its first bind](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+- [Read `GetResult` of a completed non-generic `ValueTask` in `AsyncEx.AwaitValueTask`, `Async.AwaitValueTask`, `ValueTask.ofUnit`, and `PoolingValueTask.ofUnit`](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+- [Complete `taskUnit`, `backgroundTaskUnit`, and `valueTaskUnit` on the dynamic path, and make `MethodBuilder.SetResult` and `MethodBuilder.get_Task` act on the builder, not a copy](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+- [Fix multi-start of cold and cancellable tasks on the dynamic path](https://github.com/TheAngryByrd/IcedTasks/pull/67) - Credits @xperiandri
+- [Align the background cold builder exception path](https://github.com/TheAngryByrd/IcedTasks/pull/66) - Credits @TheAngryByrd
+
 ### Changed
-- [Add a `net11.0` library build that depends on FSharp.Core 11.0.101. The `net10.0` test run of `IcedTasks.Tests` loads the `net9.0` build instead of the `net6.0` build, and its `net11.0` test run loads the `net11.0` build. A metadata test checks the public API of each build that `IcedTasks.fsproj` ships](https://github.com/TheAngryByrd/IcedTasks/pull/62) - Credits @TheAngryByrd
 - [Remove the names that only 0.11.10-beta001, beta002, and beta003 had: the namespaces `IcedTasks.TaskLike`, `IcedTasks.Nullness`, `IcedTasks.AsyncEx`, `IcedTasks.ParallelAsync`, and paths that repeat a module name, such as `IcedTasks.ColdTasks.ColdTasks.ColdTaskBuilder`. Use `open IcedTasks` or the 0.11.9 names. A file that used IcedTasks names with no `open` on a beta needs `open IcedTasks`. Compile again each assembly that was compiled against a beta, including libraries that depend on IcedTasks: the public type names outside `IcedTasks.Polyfill` change back to the 0.11.9 names, and a beta-compiled assembly that uses one of them fails with `TypeLoadException`. After `open IcedTasks`, the `ValueTask` and `CancellableValueTask` module functions, for example `ValueTask.map`, are again the non-pooling functions of 0.11.9. On the betas, they were the pooling functions. To keep a pooling function, write its full name, for example `IcedTasks.PoolingValueTasks.ValueTaskBuilder.ValueTask.map`](https://github.com/TheAngryByrd/IcedTasks/pull/78) - Credits @TheAngryByrd
+
+- [Test on net10.0 and net11.0 with the .NET 11 SDK, test the net6.0 library build, and run the build and the docs on .NET 10 instead of .NET 8 and 9](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+- [Use NuGet trusted publishing in the publish workflow](https://github.com/TheAngryByrd/IcedTasks/pull/68) - Credits @TheAngryByrd
+
+### Added
+- [Tests for the DisposeAsync outcome of `use` and `for` in each builder](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
 
 ## [0.11.10-beta003] - 2026-11-18
 
@@ -28,6 +64,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Fix multi-start of cold and cancellable tasks on the dynamic path](https://github.com/TheAngryByrd/IcedTasks/pull/67) - Credits @xperiandri
 - [Align the background cold builder exception path](https://github.com/TheAngryByrd/IcedTasks/pull/66) - Credits @TheAngryByrd
 
+### Changed
+- [Test on net10.0 and net11.0 with the .NET 11 SDK, test the net6.0 library build, and run the build and the docs on .NET 10 instead of .NET 8 and 9](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+- [Use NuGet trusted publishing in the publish workflow](https://github.com/TheAngryByrd/IcedTasks/pull/68) - Credits @TheAngryByrd
+
+### Added
+- [Tests for the DisposeAsync outcome of `use` and `for` in each builder](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
 
 ## [0.11.10-beta002] - 2026-11-18
 
@@ -385,7 +427,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Increased soeed and lowered memory usage of ColdTask and CancellableTask
 - Build for netstandard2.0 and netstandard2.1
 
-[Unreleased]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.10-beta003...HEAD
+[Unreleased]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.10...HEAD
+[0.11.10]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.9...v0.11.10
+[0.11.10-beta004]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.9...v0.11.10-beta004
 [0.11.10-beta003]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.9...v0.11.10-beta003
 [0.11.10-beta002]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.9...v0.11.10-beta002
 [0.11.10-beta001]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.9...v0.11.10-beta001
