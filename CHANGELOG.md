@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- [Dispose in asyncEx when the token is cancelled before the use body starts](https://github.com/TheAngryByrd/IcedTasks/pull/75) - Credits @TheAngryByrd. `Async.TryFinallyAsync` now starts the compensation in this case. It is no longer `inline`, so code compiled against an earlier version must be compiled again to get the fix.
+
 ## [0.11.10-beta002] - 2026-11-18
 
 ### Fixed

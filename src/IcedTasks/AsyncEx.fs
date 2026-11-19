@@ -125,22 +125,39 @@ type AsyncEx =
 /// <exclude/>
 [<AutoOpen>]
 module AsyncExtensions =
+    open System.Runtime.CompilerServices
+
+    let private compensatedCancellations =
+        ConditionalWeakTable<OperationCanceledException, obj>()
+
+    let private compensated = obj ()
+
+    let private isCompensated (cancellation: OperationCanceledException) =
+        obj.ReferenceEquals(cancellation, null)
+        || fst (compensatedCancellations.TryGetValue cancellation)
+
+    let private markCompensated (cancellation: OperationCanceledException) =
+        if not (obj.ReferenceEquals(cancellation, null)) then
+            compensatedCancellations.GetValue(cancellation, (fun _ -> compensated))
+            |> ignore
 
     type Microsoft.FSharp.Control.Async with
 
         /// <summary>Creates an Async that runs computation, and then runs compensation.
-        /// After computation starts, the compensation runs when computation succeeds, fails, or is canceled.
-        /// If the workflow is canceled before computation starts, computation and compensation do not run.
+        /// The compensation runs when computation succeeds, fails, or is canceled.
         /// If compensation fails, the result fails with the compensation exception.
         /// If computation and compensation both fail, the result fails with an
         /// <see cref="T:System.AggregateException"/> that contains both exceptions.
         /// An <see cref="T:System.OperationCanceledException"/> from compensation fails the result. It does not cancel the result.
-        /// If compensation is canceled, the result fails with an exception whose inner exception is the cancellation exception.</summary>
+        /// If compensation is canceled, the result fails with an exception whose inner exception is the cancellation exception.
+        /// If the workflow is canceled before computation starts, computation does not run, and compensation starts
+        /// with no cancellation token. The result is canceled when the synchronous part of compensation returns.
+        /// Nothing waits for the rest of that compensation, and its exception is discarded.</summary>
         /// <param name="computation">The input computation.</param>
-        /// <param name="compensation">The computation to run after computation completes, fails, or is canceled.</param>
+        /// <param name="compensation">The computation to run after computation completes, fails, or is canceled, or when the workflow is canceled before computation starts.</param>
         /// <remarks> <see href="http://www.fssnip.net/ru/title/Async-workflow-with-asynchronous-finally-clause">See this F# gist</see></remarks>
         /// <returns>An async with the result of the computation.</returns>
-        static member inline TryFinallyAsync
+        static member TryFinallyAsync
             (computation: Async<'T>, compensation: Async<unit>)
             : Async<'T> =
 
@@ -148,7 +165,9 @@ module AsyncExtensions =
                 match (compResult, deferredResult) with
                 | (Choice1Of3 x, Choice1Of3()) -> onNext x
                 | (Choice2Of3 compExn, Choice1Of3()) -> onError compExn
-                | (Choice3Of3 compExn, Choice1Of3()) -> onCancel compExn
+                | (Choice3Of3 compExn, Choice1Of3()) ->
+                    markCompensated compExn
+                    onCancel compExn
                 | (Choice1Of3 _, Choice2Of3 deferredExn) -> onError deferredExn
                 | (Choice2Of3 compExn, Choice2Of3 deferredExn) ->
                     onError
@@ -175,10 +194,24 @@ module AsyncExtensions =
                     ct
                 )
 
-            async {
-                let! ct = Async.CancellationToken
-                return! Async.FromContinuations(startComp ct)
-            }
+            let canceledBeforeComputation (cancellation: OperationCanceledException) =
+                if not (isCompensated cancellation) then
+                    Async.StartWithContinuations(
+                        compensation,
+                        ignore,
+                        ignore,
+                        ignore,
+                        CancellationToken.None
+                    )
+
+            // FSharp.Core checks the token before each public step that reaches startComp, but not on entry to TryCancelled.
+            Async.TryCancelled(
+                async {
+                    let! ct = Async.CancellationToken
+                    return! Async.FromContinuations(startComp ct)
+                },
+                canceledBeforeComputation
+            )
 
 
 /// <summary>Builds an asynchronous workflow using computation expression syntax.</summary>
