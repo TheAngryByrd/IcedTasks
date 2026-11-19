@@ -12,7 +12,6 @@
 namespace IcedTasks
 
 
-
 /// Contains methods to build ColdTasks using the F# computation expression syntax
 [<AutoOpen>]
 module ColdTasks =
