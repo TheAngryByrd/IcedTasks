@@ -50,9 +50,9 @@ Each case is one combination of site, outcome, completion, and body:
 
 | DisposeAsync | Body | Result |
 |---|---|---|
-| faults | any | `Faulted [ "InvalidOperationException: dispose" ]` |
+| faults | any | `Faulted [ "DisposeException: dispose" ]` |
 | cancels | any | `Canceled "OperationCanceledException: dispose"` |
-| succeeds | `BodyThrows` | `Faulted [ "ArgumentException: body" ]` |
+| succeeds | `BodyThrows` | `Faulted [ "BodyException: body" ]` |
 | succeeds | `BodyCancels` | `Canceled` with the message of `OperationCanceledException()` |
 | succeeds | `BodyAwaitsCanceledTask` | `Canceled` with the message of `TaskCanceledException()` |
 | succeeds | `BodyCompletes` | `Completed` |

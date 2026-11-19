@@ -34,8 +34,14 @@ module AsyncDisposalOutcome =
         | Canceled of awaited: string
         | Faulted of exceptions: string list
 
-    let private bodyException () = ArgumentException "body"
-    let private disposeException () = InvalidOperationException "dispose"
+    type BodyException(message: string) =
+        inherit Exception(message)
+
+    type DisposeException(message: string) =
+        inherit Exception(message)
+
+    let private bodyException () = BodyException "body"
+    let private disposeException () = DisposeException "dispose"
 
     let private timeout = TimeSpan.FromSeconds 10.
 
@@ -144,9 +150,9 @@ module AsyncDisposalOutcome =
 
     let taskExpectation outcome body =
         match outcome, body with
-        | DisposalFaults, _ -> Faulted [ "InvalidOperationException: dispose" ]
+        | DisposalFaults, _ -> Faulted [ "DisposeException: dispose" ]
         | DisposalCancels, _ -> Canceled "OperationCanceledException: dispose"
-        | DisposalSucceeds, BodyThrows -> Faulted [ "ArgumentException: body" ]
+        | DisposalSucceeds, BodyThrows -> Faulted [ "BodyException: body" ]
         | DisposalSucceeds, BodyCancels -> Canceled(describe (OperationCanceledException()))
         | DisposalSucceeds, BodyAwaitsCanceledTask -> Canceled(describe (TaskCanceledException()))
         | DisposalSucceeds, BodyCompletes -> Completed
@@ -155,21 +161,19 @@ module AsyncDisposalOutcome =
         match outcome, body with
         | _, BodyCancels -> invalidArg (nameof body) "The asyncEx matrix has no BodyCancels case"
         | DisposalSucceeds, BodyCompletes -> Completed
-        | DisposalSucceeds, BodyThrows -> Faulted [ "ArgumentException: body" ]
-        | DisposalFaults, BodyCompletes -> Faulted [ "InvalidOperationException: dispose" ]
+        | DisposalSucceeds, BodyThrows -> Faulted [ "BodyException: body" ]
+        | DisposalFaults, BodyCompletes -> Faulted [ "DisposeException: dispose" ]
         | DisposalFaults, BodyThrows ->
-            Faulted [
-                "AggregateException [ArgumentException: body; InvalidOperationException: dispose]"
-            ]
+            Faulted [ "AggregateException [BodyException: body; DisposeException: dispose]" ]
         | DisposalCancels, BodyCompletes -> Faulted [ "OperationCanceledException: dispose" ]
         | DisposalCancels, BodyThrows ->
             Faulted [
-                "AggregateException [ArgumentException: body; OperationCanceledException: dispose]"
+                "AggregateException [BodyException: body; OperationCanceledException: dispose]"
             ]
         | DisposalSucceeds, BodyAwaitsCanceledTask -> Faulted [ describe (TaskCanceledException()) ]
         | DisposalFaults, BodyAwaitsCanceledTask ->
             Faulted [
-                $"AggregateException [{describe (TaskCanceledException())}; InvalidOperationException: dispose]"
+                $"AggregateException [{describe (TaskCanceledException())}; DisposeException: dispose]"
             ]
         | DisposalCancels, BodyAwaitsCanceledTask ->
             Faulted [
