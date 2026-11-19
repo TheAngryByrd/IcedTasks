@@ -90,14 +90,14 @@ The builders support:
 
 The cancellable builders also accept a `CancellationToken -> 'Awaitable` value, for example a `CancellableTask<'T>` or a `CancellableValueTask<'T>`.
 
-The builders await `Task` and `ValueTask` values with `AsyncHelpers.Await`, and other awaiters with `AsyncHelpers.UnsafeAwaitAwaiter`.
+The builders await a `Task` or a `ValueTask` that an operand gives with `AsyncHelpers.Await`, and other awaiters with `AsyncHelpers.UnsafeAwaitAwaiter`. In the cancellable builders, a `CancellationToken -> 'Awaitable` value, a cold task, and an `Async` give an awaiter, so these builders await them with `AsyncHelpers.UnsafeAwaitAwaiter`.
 
 ## Cancellation in the cancellable builders
 
 The cancellable builders keep the `CancellationToken` that the caller gives. This token is the ambient token.
 
 - If the token is cancelled when the caller calls the function, the function returns a cancelled task, and the computation does not run.
-- The builder checks the token before each `let!`, `do!`, `return!`, and `and!`, and before each `MoveNextAsync` in `for` over an `IAsyncEnumerable<'T>`. If the token is cancelled, the builder throws `OperationCanceledException`, and the task is cancelled.
+- The builder checks the token before each `let!`, `do!`, `return!`, and `and!`, and before and after each `MoveNextAsync` call in `for` over an `IAsyncEnumerable<'T>`. If the token is cancelled, the builder throws `OperationCanceledException`, and the task is cancelled.
 - The builder gives the token to each bound `CancellationToken -> 'Awaitable` value and `Async<'T>` value, and to `GetAsyncEnumerator` in `for` over an `IAsyncEnumerable<'T>`.
 - Cancellation stops the computation only at a check or in an operation that uses the token. Code between two checks continues to run.
 - The builder does not check the token before `DisposeAsync`, `Dispose`, or a `finally` block. Thus, cleanup runs also after cancellation.
@@ -117,13 +117,15 @@ let writeAll (stream: System.IO.Stream) (chunks: byte[] list) =
 
 ## Start order of `and!` operands
 
-A task or a value task that an operand expression returns is already running when the builder gets it. The builders do not start a task or a value task. They await the task in the state that the task has. Thus, a task that was created and not started stays incomplete until other code starts it. An awaiter or an awaitable that starts its work only when the builder registers a continuation does not start until the builder awaits it.
+The builders do not start a task or a value task that an operand gives. They await the task in the state that the task has. Thus, a task that was created and not started stays incomplete until other code starts it. An awaiter or an awaitable that starts its work only when the builder registers a continuation does not start until the builder awaits it.
 
 The non-cancellable builders evaluate all `and!` operands from left to right before they await the first operand. An `Async`, a cold task, and a cold awaitable start when the builder evaluates them. If the evaluation of an operand throws, that exception is the result, and the builder does not await the operands.
 
 The cancellable builders start a cancellable operand, an `Async`, and a cold task when they bind it, with the ambient token. For `and!`, they start these operands from left to right, and then they await all operands from left to right. If the start of an operand throws, the builder does not start the operands to its right, and the exception is the result. The builders check the token before they await each operand. These rules are the same as in the state-machine cancellable builders.
 
 When the builder awaits the operands, it awaits them from left to right. If an operand fails, the builder does not await the operands to its right, and the result has the exception of that operand. The operands to its right can continue to run. The builder does not read the result of an operand to the right of a failed operand.
+
+These rules apply to each pair of operands. F# combines three or more operands from the right. Thus, `let! a = x and! b = y and! c = z` combines `x` with the pair of `y` and `z`. The builder runs the inner pair as one operation, and it starts that operation with `x`. The inner pair can read the results of `y` and `z` before `x` completes, and an exception in `y` or `z` waits until the builder awaits the inner pair. The state-machine builders behave the same way.
 
 ## Differences from the state-machine builders
 

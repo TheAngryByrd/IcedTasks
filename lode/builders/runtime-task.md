@@ -14,7 +14,7 @@ The namespace `IcedTasks.Polyfill.RuntimeTask` has eight builders that the .NET 
 | `Return`, `Zero` | `value`, `()` | `fun _ -> value`, `fun _ -> ()` |
 | Bound value | `Started<'T>` (`unit -> 'T`, awaits) | `Started<'T>` for hot values, `WithToken<'Awaiter>` (`CancellationToken -> 'Awaiter`, starts and returns the awaiter) for token-dependent and cold values |
 | `Run` | `__runtimeAsyncReturn (code ())`, or `fun () -> ...` for cold | `fun ct -> if ct.IsCancellationRequested then Task.FromCanceled ct else __runtimeAsyncReturn (code ct)` |
-| Suspension | `AsyncHelpers.Await` for `Task`/`ValueTask`, `UnsafeAwaitAwaiter` for other awaiters | same |
+| Suspension | `AsyncHelpers.Await` for `Task`/`ValueTask`, `UnsafeAwaitAwaiter` for other awaiters | `AsyncHelpers.Await` for hot `Task`/`ValueTask`, `UnsafeAwaitAwaiter` for the awaiter of a `WithToken` source and other awaiters |
 
 ```fsharp
 // src/IcedTasks/RuntimeCancellableTask.fs
@@ -46,8 +46,8 @@ flowchart LR
 ## Invariants
 
 - Each member is `inline` and has `NoDynamicInvocation`. Without it, a Debug consumer on `LangVersion` 11.0 compiles and returns wrong values. See [ADR 0013](../../adr/0013-runtime-async-task-builders.md).
-- Cancellable: `Run` returns `Task.FromCanceled` or `ValueTask.FromCanceled` for a cancelled token, as `CancellableTask.fs` does. `Bind`, `BindReturn`, and `ReturnFrom` check the token before they start a `WithToken` source or await. `For` over `IAsyncEnumerable` gives the token to `GetAsyncEnumerator` and checks it before each `MoveNextAsync`. `Return`, `Zero`, `For` over `seq`, `Using` cleanup, and `TryFinally` do not check it.
-- `and!`: non-cancellable sources start in `Source`. Each cancellable `MergeSources` returns a `WithToken` whose `Invoke` runs one `__runtimeAsyncReturnValueTask` helper: check the token, start the `WithToken` operands from left to right, then check and await each operand from left to right. A start that throws stops the later starts. A left fault skips the right await and the right `GetResult`. This matches the inner computation of `CancellableTask.fs` `MergeSources`.
+- Cancellable: `Run` returns `Task.FromCanceled` or `ValueTask.FromCanceled` for a cancelled token, as `CancellableTask.fs` does. `Bind`, `BindReturn`, and `ReturnFrom` check the token before they start a `WithToken` source or await. `For` over `IAsyncEnumerable` gives the token to `GetAsyncEnumerator`, and it checks the token before each `MoveNextAsync` call and again before it awaits the move. `Return`, `Zero`, `For` over `seq`, `Using` cleanup, and `TryFinally` do not check it.
+- `and!`: non-cancellable sources start in `Source`. Each cancellable `MergeSources` returns a `WithToken` whose `Invoke` runs one `__runtimeAsyncReturnValueTask` helper: check the token, start the `WithToken` operands from left to right, then check and await each operand from left to right. A start that throws stops the later starts. A left fault skips the right await and the right `GetResult`. This matches the inner computation of `CancellableTask.fs` `MergeSources`. F# nests three or more operands from the right, so the inner pair runs as its own helper and can read its results before the first operand completes, as in the state-machine builders.
 - A source captures a `Task`, `ValueTask`, or awaiter in its current state. It does not start a created task.
 - `Using` calls `RuntimeAwait.usingAsync`, which both bases share. It captures a body exception with `ExceptionDispatchInfo`, awaits `DisposeAsync` outside the `try`, and then rethrows. A suspension in a `finally` loses the stack trace on rethrow (dotnet/fsharp#20869). A `DisposeAsync` exception replaces the body exception.
 - Cold and cancellable `Run` return a function. Each call runs a new runtime-async closure, so multi-start runs the body again.

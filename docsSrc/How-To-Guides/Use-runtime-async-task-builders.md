@@ -56,7 +56,7 @@ In this module, the eight builder names now give the runtime-async builders. The
 
 Put the `open` in a module, not at the top of a large file. Then the reader can see which code uses runtime async.
 
-Always open the namespace. Most `Source` members of the builders are extension members in the namespace, so they work only after the `open`. If you write the full name of a builder without the `open`, only binds of `Task<'T>` work:
+Always open the namespace. Most `Source` members of the builders are extension members in the namespace, so they work only after the `open`. If you write the full name of a builder without the `open`, only the `Source` members on the builder type work. For `task`, only binds of `Task<'T>` work:
 
 ```fsharp
 open System.Threading.Tasks

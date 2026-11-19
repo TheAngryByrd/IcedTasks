@@ -131,7 +131,7 @@ module RuntimeCancellableTaskBase =
                     body item ct
 
         /// <summary>Runs the body for each element of the asynchronous sequence.</summary>
-        /// <remarks>The builder gives the ambient token to <c>GetAsyncEnumerator</c>, and it checks the token before each <c>MoveNextAsync</c>.</remarks>
+        /// <remarks>The builder gives the ambient token to <c>GetAsyncEnumerator</c>. It checks the token before each <c>MoveNextAsync</c>, and again before it awaits the move.</remarks>
         [<NoDynamicInvocation>]
         member inline this.For
             (
@@ -143,7 +143,9 @@ module RuntimeCancellableTaskBase =
                     (sequence.GetAsyncEnumerator ct,
                      fun enumerator ct ->
                          while (ct.ThrowIfCancellationRequested()
-                                AsyncHelpers.Await(enumerator.MoveNextAsync())) do
+                                let move = enumerator.MoveNextAsync()
+                                ct.ThrowIfCancellationRequested()
+                                AsyncHelpers.Await move) do
                              body enumerator.Current ct)
                     ct
 
