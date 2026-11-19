@@ -33,7 +33,7 @@ Disposal and ValueTask contracts, tested in [DisposeAsync outcome tests](../test
 
 - `Using` wraps `binder resource` in `Delay`, so a `use` or `use!` body that throws before its first bind still runs `DisposeAsync`.
 - `AwaitValueTask` reads `GetResult` once, also when the ValueTask completed successfully before the await. A pooled `IValueTaskSource` needs that call to release the source.
-- Cancellation before the computation starts: FSharp.Core checks the token before each public step that reaches the computation (`Delay`, `Bind`, `Async.FromContinuations`), but not on entry to `Async.TryCancelled`. `Async.TryFinallyAsync` wraps its entry in `Async.TryCancelled`. If the token is cancelled after `use` makes the resource and before the computation starts, the handler starts the compensation with `Async.StartWithContinuations` and `CancellationToken.None`, and the workflow is cancelled. A public `Async` step cannot wait for an asynchronous compensation in this window, because each step that could reach it checks the token first, so a pending `DisposeAsync` is not awaited and its exception is not observed. A `ConditionalWeakTable` marks each cancellation exception that already ran the compensation, so the handler does not run it a second time.
+- Cancellation before the computation starts: FSharp.Core checks the token before each public step that reaches the computation (`Delay`, `Bind`, `Async.FromContinuations`), but not on entry to `Async.TryCancelled`. `Async.TryFinallyAsync` wraps its entry in `Async.TryCancelled`. If the token is cancelled after `use` makes the resource and before the computation starts, the handler starts the compensation with `Async.StartWithContinuations` and `CancellationToken.None`, and the workflow is cancelled. A `ConditionalWeakTable` maps each cancellation exception to `Compensated` (the compensation already ran) or `StartedBeforeComputation` (a task for the early compensation). An enclosing `TryFinallyAsync` that receives that cancellation waits for the task before its own compensation, and fails with its exception. At the outermost scope nothing waits, and the exception is discarded. Decision: [ADR 0013](../../adr/0013-asyncex-compensation-before-computation-starts.md).
 - `Async.TryFinallyAsync` faults the result when compensation fails. A body exception and a compensation exception give one `AggregateException`. An `OperationCanceledException` from compensation faults the result. It does not cancel it.
 
 ```fsharp
@@ -77,5 +77,6 @@ Decisions:
 
 - [ADR 0002, start `Async` with `Async.StartImmediateAsTask`](../../adr/0002-start-async-with-startimmediateastask.md)
 - [ADR 0006, `asyncEx` task-await semantics](../../adr/0006-asyncex-task-await-semantics.md)
+- [ADR 0013, `asyncEx` compensation before the computation starts](../../adr/0013-asyncex-compensation-before-computation-starts.md)
 
 Related: [and! and MergeSources](and-bang-merge-sources.md), [namespaces and TFMs](namespaces-and-tfms.md), [builder catalog](builder-catalog.md).
