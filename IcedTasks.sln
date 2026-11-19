@@ -28,6 +28,7 @@ EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "ILSpySamples", "examples\ILSpySamples\ILSpySamples.fsproj", "{130D8BDE-DAB6-4B12-925D-A9CFEC9F8B02}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "IcedTasks.Tests.RuntimeAsync", "tests\IcedTasks.Tests.RuntimeAsync\IcedTasks.Tests.RuntimeAsync.fsproj", "{E91E978D-1276-4902-BC84-7230CF22A645}"
+EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "IcedTasks.Tests.NoOpen", "tests\IcedTasks.Tests.NoOpen\IcedTasks.Tests.NoOpen.fsproj", "{7FEB2205-88B9-49CF-BFED-445C3DA29793}"
 EndProject
 Global
