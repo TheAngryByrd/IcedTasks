@@ -40,8 +40,8 @@ flowchart LR
 ## Source priority
 
 - Builder type: `Source(Task<'T>)` on the task and cold builders, `Source(ValueTask<'T>)` on `valueTask`, `Source(CancellationToken -> Task<'T>)` or `-> ValueTask<'T>` on the cancellable builders.
-- Non-cancellable `HighPriority`: `IAsyncEnumerable`, `Task<'T>`, `Task`, `ValueTask<'T>`, `ValueTask`, `Async<'T>`, `unit -> Task<'T>`, `unit -> Task`. `LowPriority`: any awaiter, any awaitable, `unit -> 'Awaiter`, `unit -> 'Awaitable`, `IDisposable` `Using`, `seq`. `Source` calls an `Async`, a cold task, and a cold awaitable. It captures a task, a value task, or an awaiter as it is.
-- Cancellable `HighPriority`: the same hot types as `Started`, and `Async<'T>`, `CancellationToken -> Task<'T>`/`Task`/`ValueTask<'T>`/`ValueTask`, `unit -> Task<'T>`/`Task` as `WithToken`. `LowPriority`: any awaiter, any awaitable, `CancellationToken -> 'Awaitable`, `unit -> 'Awaitable`, `CancellationToken -> 'Awaiter`, `unit -> 'Awaiter`, `IDisposable` `Using`, `seq`. A `WithToken` source starts in `Bind`, after the token check.
+- Non-cancellable `HighPriority`: `IAsyncEnumerable`, `Task<'T>`, `Task`, `ValueTask<'T>`, `ValueTask`, `Async<'T>`, `unit -> Task<'T>`, `unit -> Task`. `LowPriority`: any awaiter, any awaitable, `unit -> 'Awaitable`, `IDisposable` `Using`, `seq`. `LowestPriority`: `unit -> 'Awaiter`. `Source` calls an `Async`, a cold task, and a cold awaitable. It captures a task, a value task, or an awaiter as it is.
+- Cancellable `HighPriority`: the same hot types as `Started`, and `Async<'T>`, `CancellationToken -> Task<'T>`/`Task`/`ValueTask<'T>`/`ValueTask`, `unit -> Task<'T>`/`Task` as `WithToken`. `LowPriority`: any awaiter, any awaitable, `CancellationToken -> 'Awaitable`, `unit -> 'Awaitable`, `IDisposable` `Using`, `seq`. `LowestPriority`: `CancellationToken -> 'Awaiter`, `unit -> 'Awaiter`. A function that returns a type that is both an awaitable and an awaiter binds as an awaitable, as in the state-machine builders. A `WithToken` source starts in `Bind`, after the token check.
 
 ## Invariants
 

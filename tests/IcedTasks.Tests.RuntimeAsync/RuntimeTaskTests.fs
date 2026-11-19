@@ -1392,6 +1392,37 @@ module RuntimeTaskTests =
             member _.OnCompleted(_, _, _, _) =
                 invalidOp "The source is already complete"
 
+    type DualAwaiter() =
+        member _.GetAwaiter() = (Task.FromResult 17).GetAwaiter()
+        member _.IsCompleted = true
+        member _.GetResult() = 42
+
+        interface ICriticalNotifyCompletion with
+            member _.OnCompleted(continuation) = continuation.Invoke()
+            member _.UnsafeOnCompleted(continuation) = continuation.Invoke()
+
+    module RuntimeOpenLast =
+        open IcedTasks
+        open IcedTasks.Polyfill.RuntimeTask
+
+        let builderTypes: Type list = [
+            task.GetType()
+            valueTask.GetType()
+            coldTask.GetType()
+            cancellableTask.GetType()
+        ]
+
+    module IcedTasksOpenLast =
+        open IcedTasks.Polyfill.RuntimeTask
+        open IcedTasks
+
+        let builderTypes: Type list = [
+            task.GetType()
+            valueTask.GetType()
+            coldTask.GetType()
+            cancellableTask.GetType()
+        ]
+
     let waitForCompletion (t: Task) =
         t.ContinueWith(fun (_: Task) -> ()).WaitAsync(TimeSpan.FromSeconds 10.)
 
@@ -2005,6 +2036,142 @@ module RuntimeTaskTests =
 
                     Expect.equal called 0 "No builder should call the function"
                 }
+
+            testCaseTask
+                "the cancellable builders await a pending awaiter from a function in let!, and!, and return!"
+            <| fun () ->
+                task {
+                    let left =
+                        TaskCompletionSource<int>(
+                            TaskCreationOptions.RunContinuationsAsynchronously
+                        )
+
+                    let right =
+                        TaskCompletionSource<int>(
+                            TaskCreationOptions.RunContinuationsAsynchronously
+                        )
+
+                    let fromToken (_: CancellationToken) = left.Task.GetAwaiter()
+
+                    let fromUnit () =
+                        (ValueTask<int> right.Task).GetAwaiter()
+
+                    let results: (string * Task<int>) list = [
+                        "cancellableTask",
+                        (cancellableTask {
+                            let! a = fromToken
+                            and! b = fromUnit
+                            return! fun () -> (Task.FromResult(a + b)).GetAwaiter()
+                        })
+                            CancellationToken.None
+                        "backgroundCancellableTask",
+                        (backgroundCancellableTask {
+                            let! a = fromToken
+                            and! b = fromUnit
+
+                            return!
+                                fun (_: CancellationToken) -> (Task.FromResult(a + b)).GetAwaiter()
+                        })
+                            CancellationToken.None
+                        "cancellableValueTask",
+                        ((cancellableValueTask {
+                            let! a = fromToken
+                            and! b = fromUnit
+                            return! fun () -> (Task.FromResult(a + b)).GetAwaiter()
+                        })
+                            CancellationToken.None)
+                            .AsTask()
+                    ]
+
+                    for name, result in results do
+                        Expect.isFalse result.IsCompleted $"%s{name} should wait for the awaiters"
+
+                    left.SetResult 20
+                    right.SetResult 22
+
+                    for name, result in results do
+                        let! value = result.WaitAsync(TimeSpan.FromSeconds 10.)
+                        Expect.equal value 42 $"%s{name} should await each awaiter"
+                }
+
+            testCaseTask
+                "a function that returns an awaitable that is also an awaiter binds as an awaitable"
+            <| fun () ->
+                task {
+                    let fromToken (_: CancellationToken) = DualAwaiter()
+                    let fromUnit () = DualAwaiter()
+
+                    let results: (string * Task<int>) list = [
+                        "task",
+                        task {
+                            let! x = fromUnit
+                            return x
+                        }
+                        "coldTask",
+                        (coldTask {
+                            let! x = fromUnit
+                            return x
+                        }) ()
+                        "cancellableTask token",
+                        (cancellableTask {
+                            let! x = fromToken
+                            return x
+                        })
+                            CancellationToken.None
+                        "cancellableTask unit",
+                        (cancellableTask {
+                            let! x = fromUnit
+                            return x
+                        })
+                            CancellationToken.None
+                        "backgroundCancellableTask token",
+                        (backgroundCancellableTask {
+                            let! x = fromToken
+                            return x
+                        })
+                            CancellationToken.None
+                        "cancellableValueTask unit",
+                        ((cancellableValueTask {
+                            let! x = fromUnit
+                            return x
+                        })
+                            CancellationToken.None)
+                            .AsTask()
+                        "cancellableTask return!",
+                        (cancellableTask { return! fromToken }) CancellationToken.None
+                    ]
+
+                    for name, result in results do
+                        let! value = result
+                        Expect.equal value 17 $"%s{name} should await the result of GetAwaiter"
+                }
+
+            testCase "the last open gives the builder names"
+            <| fun () ->
+                let runtime (t: Type) =
+                    t.FullName.StartsWith "IcedTasks.Polyfill.RuntimeTask."
+
+                Expect.equal
+                    (RuntimeOpenLast.builderTypes
+                     |> List.map runtime)
+                    [
+                        true
+                        true
+                        true
+                        true
+                    ]
+                    "With the runtime namespace opened last, each name gives a runtime-async builder"
+
+                Expect.equal
+                    (IcedTasksOpenLast.builderTypes
+                     |> List.map runtime)
+                    [
+                        true
+                        false
+                        false
+                        false
+                    ]
+                    "With IcedTasks opened last, only task keeps the runtime-async builder"
 
             testCase "the linked suites use the runtime-async builders"
             <| fun () ->

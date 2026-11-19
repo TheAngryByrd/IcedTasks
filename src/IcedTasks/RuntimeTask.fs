@@ -195,6 +195,19 @@ module RuntimeTaskBase =
 
     /// <exclude/>
     [<AutoOpen>]
+    module LowestPriority =
+
+        type RuntimeTaskBuilderBase with
+
+            /// <summary>Calls the function, and wraps its awaiter for the builder to await.</summary>
+            [<NoDynamicInvocation; NoEagerConstraintApplication>]
+            member inline _.Source<'Awaiter, 'TResult when Awaiter<'Awaiter, 'TResult>>
+                ([<InlineIfLambda>] getAwaiter: unit -> 'Awaiter)
+                : Started<'TResult> =
+                RuntimeAwait.started (getAwaiter ())
+
+    /// <exclude/>
+    [<AutoOpen>]
     module LowPriority =
 
         type RuntimeTaskBuilderBase with
@@ -213,13 +226,6 @@ module RuntimeTaskBase =
                 (awaitable: 'Awaitable)
                 : Started<'TResult> =
                 RuntimeAwait.started (Awaitable.GetAwaiter awaitable)
-
-            /// <summary>Calls the function, and wraps its awaiter for the builder to await.</summary>
-            [<NoDynamicInvocation; NoEagerConstraintApplication>]
-            member inline _.Source<'Awaiter, 'TResult when Awaiter<'Awaiter, 'TResult>>
-                ([<InlineIfLambda>] getAwaiter: unit -> 'Awaiter)
-                : Started<'TResult> =
-                RuntimeAwait.started (getAwaiter ())
 
             /// <summary>Calls the function, gets the awaiter of its result, and wraps it for the builder to await.</summary>
             [<NoDynamicInvocation; NoEagerConstraintApplication>]

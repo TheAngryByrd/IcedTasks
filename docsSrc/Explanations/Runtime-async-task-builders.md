@@ -98,7 +98,7 @@ The cancellable builders keep the `CancellationToken` that the caller gives. Thi
 
 - If the token is cancelled when the caller calls the function, the function returns a cancelled task, and the computation does not run.
 - The builder checks the token before each `let!`, `do!`, `return!`, and `and!`, and before each `MoveNextAsync` call and before the body in `for` over an `IAsyncEnumerable<'T>`. If the token is cancelled, the builder throws `OperationCanceledException`, and the task is cancelled.
-- The builder gives the token to each bound `CancellationToken -> 'Awaitable` value and `Async<'T>` value, and to `GetAsyncEnumerator` in `for` over an `IAsyncEnumerable<'T>`.
+- The builder gives the token to each bound `CancellationToken -> 'Awaitable` value, `CancellationToken -> 'Awaiter` function, and `Async<'T>` value, and to `GetAsyncEnumerator` in `for` over an `IAsyncEnumerable<'T>`. It calls a function after the check.
 - Cancellation stops the computation only at a check or in an operation that uses the token. Code between two checks continues to run.
 - In `for` over an `IAsyncEnumerable<'T>`, the builder always awaits a started `MoveNextAsync` before it disposes the enumerator, as C# `await foreach` does. A move that does not use the token delays the cancellation until the move completes.
 - The builder does not check the token before `DisposeAsync`, `Dispose`, or a `finally` block. Thus, cleanup runs also after cancellation.

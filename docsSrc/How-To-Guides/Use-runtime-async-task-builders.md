@@ -129,6 +129,7 @@ The builders accept these values in `let!`, `do!`, `return!`, and `and!`:
 - `Async<'T>`. The builder starts it with `Async.StartImmediateAsTask`.
 - A cold task, `unit -> Task<'T>` or `unit -> Task`. The builder starts it.
 - An awaiter or an awaitable value, for example `Task.Yield()`.
+- A function that returns an awaiter, for example `unit -> TaskAwaiter<'T>`. The cancellable builders also accept `CancellationToken -> TaskAwaiter<'T>`.
 
 `use` and `use!` dispose `IAsyncDisposable` and `IDisposable` values. `for` works with `seq<'T>` and `IAsyncEnumerable<'T>`.
 
