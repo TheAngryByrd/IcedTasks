@@ -887,12 +887,16 @@ module TaskBackgroundTests =
                 [
                     AsyncDisposalOutcome.BodyCompletes
                     AsyncDisposalOutcome.BodyThrows
+                    AsyncDisposalOutcome.BodyAwaitsCanceledTask
                 ]
                 AsyncDisposalOutcome.taskExpectation
                 (fun body cts resource ->
                     backgroundTask {
                         use _ = resource
                         AsyncDisposalOutcome.runBody body cts
+
+                        if AsyncDisposalOutcome.awaitsCanceledTask body then
+                            do! AsyncDisposalOutcome.canceledTask ()
                     }
                     |> fun t -> t :> Task
                 )
@@ -900,6 +904,9 @@ module TaskBackgroundTests =
                     backgroundTask {
                         for _ in items do
                             AsyncDisposalOutcome.runBody body cts
+
+                            if AsyncDisposalOutcome.awaitsCanceledTask body then
+                                do! AsyncDisposalOutcome.canceledTask ()
                     }
                     |> fun t -> t :> Task
                 )
@@ -909,12 +916,16 @@ module TaskBackgroundTests =
                 [
                     AsyncDisposalOutcome.BodyCompletes
                     AsyncDisposalOutcome.BodyThrows
+                    AsyncDisposalOutcome.BodyAwaitsCanceledTask
                 ]
                 AsyncDisposalOutcome.taskExpectation
                 (fun body cts resource ->
                     backgroundTaskUnit {
                         use _ = resource
                         AsyncDisposalOutcome.runBody body cts
+
+                        if AsyncDisposalOutcome.awaitsCanceledTask body then
+                            do! AsyncDisposalOutcome.canceledTask ()
                     }
 
                 )
@@ -922,6 +933,9 @@ module TaskBackgroundTests =
                     backgroundTaskUnit {
                         for _ in items do
                             AsyncDisposalOutcome.runBody body cts
+
+                            if AsyncDisposalOutcome.awaitsCanceledTask body then
+                                do! AsyncDisposalOutcome.canceledTask ()
                     }
 
                 )
@@ -931,12 +945,16 @@ module TaskBackgroundTests =
                 [
                     AsyncDisposalOutcome.BodyCompletes
                     AsyncDisposalOutcome.BodyThrows
+                    AsyncDisposalOutcome.BodyAwaitsCanceledTask
                 ]
                 AsyncDisposalOutcome.taskExpectation
                 (fun body cts resource ->
                     dBackgroundTaskUnit {
                         use _ = resource
                         AsyncDisposalOutcome.runBody body cts
+
+                        if AsyncDisposalOutcome.awaitsCanceledTask body then
+                            do! AsyncDisposalOutcome.canceledTask ()
                     }
 
                 )
@@ -944,6 +962,9 @@ module TaskBackgroundTests =
                     dBackgroundTaskUnit {
                         for _ in items do
                             AsyncDisposalOutcome.runBody body cts
+
+                            if AsyncDisposalOutcome.awaitsCanceledTask body then
+                                do! AsyncDisposalOutcome.canceledTask ()
                     }
 
                 )

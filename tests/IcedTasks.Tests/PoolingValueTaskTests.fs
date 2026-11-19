@@ -997,12 +997,16 @@ module PoolingValueTaskTests =
                 [
                     AsyncDisposalOutcome.BodyCompletes
                     AsyncDisposalOutcome.BodyThrows
+                    AsyncDisposalOutcome.BodyAwaitsCanceledTask
                 ]
                 AsyncDisposalOutcome.taskExpectation
                 (fun body cts resource ->
                     poolingValueTask {
                         use _ = resource
                         AsyncDisposalOutcome.runBody body cts
+
+                        if AsyncDisposalOutcome.awaitsCanceledTask body then
+                            do! AsyncDisposalOutcome.canceledTask ()
                     }
                     |> fun t -> t.AsTask() :> Task
                 )
@@ -1010,6 +1014,9 @@ module PoolingValueTaskTests =
                     poolingValueTask {
                         for _ in items do
                             AsyncDisposalOutcome.runBody body cts
+
+                            if AsyncDisposalOutcome.awaitsCanceledTask body then
+                                do! AsyncDisposalOutcome.canceledTask ()
                     }
                     |> fun t -> t.AsTask() :> Task
                 )
