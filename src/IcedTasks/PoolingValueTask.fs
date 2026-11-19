@@ -1,11 +1,9 @@
 namespace IcedTasks
 
-namespace IcedTasks.PoolingValueTasks
+namespace IcedTasks
 
 #if NET6_0_OR_GREATER
 
-open IcedTasks
-open IcedTasks.TaskLike
 open IcedTasks.TaskBase
 // Task builder for F# that compiles to allocation-free paths for synchronous code.
 //

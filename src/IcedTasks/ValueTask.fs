@@ -1,8 +1,7 @@
-namespace IcedTasks.ValueTasks
+namespace IcedTasks
 
 
 open System.Threading.Tasks
-open IcedTasks.TaskLike
 
 /// <summary>
 /// Module with extension methods for <see cref="T:System.Threading.Tasks.ValueTask`1"/>.
@@ -76,10 +75,8 @@ module ValueTaskExtensions =
 // To the extent possible under law, the author(s) have dedicated all copyright and related and neighboring rights
 // to this software to the public domain worldwide. This software is distributed without any warranty.
 
-namespace IcedTasks.ValueTasks
+namespace IcedTasks
 
-open IcedTasks
-open IcedTasks.TaskLike
 open IcedTasks.TaskBase
 
 /// Contains methods to build ValueTasks using the F# computation expression syntax

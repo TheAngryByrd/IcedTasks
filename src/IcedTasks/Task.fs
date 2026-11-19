@@ -28,7 +28,6 @@ module Tasks =
     open Microsoft.FSharp.Core.CompilerServices.StateMachineHelpers
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
     open IcedTasks
-    open IcedTasks.TaskLike
     open IcedTasks.TaskBase
 
     ///<summary>

@@ -9,11 +9,9 @@
 // To the extent possible under law, the author(s) have dedicated all copyright and related and neighboring rights
 // to this software to the public domain worldwide. This software is distributed without any warranty.
 
-namespace IcedTasks.CancellableValueTasks
+namespace IcedTasks
 
-open IcedTasks
 open IcedTasks.ValueTasks
-open IcedTasks.TaskLike
 open IcedTasks.CancellableTaskBase
 
 /// Contains methods to build CancellableValueTasks using the F# computation expression syntax.
@@ -246,7 +244,6 @@ module CancellableValueTasks =
     /// <exclude />
     [<AutoOpen>]
     module HighPriority =
-        open IcedTasks.AsyncEx
 
         type AsyncEx with
 
@@ -317,7 +314,6 @@ module CancellableValueTasks =
     /// </summary>
     [<AutoOpen>]
     module AsyncExtensions =
-        open IcedTasks.AsyncEx
 
         type AsyncExBuilder with
 
