@@ -32,7 +32,6 @@ open System.Runtime.CompilerServices
 open System.Threading
 open System.Threading.Tasks
 open IcedTasks
-open IcedTasks.AsyncEx
 
 (**
 ## Use `ValueTask` from `Async`

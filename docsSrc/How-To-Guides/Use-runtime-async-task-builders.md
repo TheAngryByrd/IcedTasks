@@ -54,6 +54,8 @@ module Orders =
 
 In this module, the eight builder names now give the runtime-async builders. The `open` replaces the FSharp.Core `task` and `backgroundTask` builders, and the IcedTasks builders with the same names. Code in other modules continues to use the builders that it opens.
 
+If the module also opens `IcedTasks`, put `open IcedTasks.Polyfill.RuntimeTask` after it. The last `open` gives the builder names. A later `open IcedTasks` gives the state-machine `valueTask`, cold, and cancellable builders again.
+
 Put the `open` in a module, not at the top of a large file. Then the reader can see which code uses runtime async.
 
 Always open the namespace. Most `Source` members of the builders are extension members in the namespace, so they work only after the `open`. If you write the full name of a builder without the `open`, only the `Source` members on the builder type work. For `task`, only binds of `Task<'T>` work:

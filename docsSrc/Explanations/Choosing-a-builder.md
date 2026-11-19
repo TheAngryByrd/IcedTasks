@@ -28,7 +28,7 @@ Related guides:
 | Builder | Result shape | TFM | Hot/Cold<sup>1</sup> | Multiple awaits<sup>2</sup> | Multi-start<sup>3</sup> | CancellationToken propagation<sup>4</sup> | Cancellation checks<sup>5</sup> | `and!` support<sup>6</sup> | `IAsyncDisposable`<sup>7</sup> | `IAsyncEnumerable`<sup>8</sup> |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `asyncEx` | `Async<'T>` | netstandard2.0 | Cold | Multiple | Multiple | Implicit | Implicit | No | Yes | Yes |
-| `IcedTasks.Polyfill.Async.async` | `Async<'T>` | netstandard2.0 | Cold | Multiple | Multiple | Implicit | Implicit | No | Yes | Yes |
+| `async` (`open IcedTasks.Polyfill.Async`) | `Async<'T>` | netstandard2.0 | Cold | Multiple | Multiple | Implicit | Implicit | No | Yes | Yes |
 | `parallelAsync` | `Async<'T>` | netstandard2.0 | Cold | Multiple | Multiple | Implicit | Implicit | Yes | No | No |
 | `parallelAsyncUsingStartChild` | `Async<'T>` | netstandard2.0 | Cold | Multiple | Multiple | Implicit | Implicit | Yes | No | No |
 | `parallelAsyncUsingStartImmediateAsTask` | `Async<'T>` | netstandard2.0 | Cold | Multiple | Multiple | Implicit | Implicit | Yes | No | No |

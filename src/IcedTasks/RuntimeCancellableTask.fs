@@ -17,8 +17,7 @@ module RuntimeCancellableTaskBase =
     open System.Threading.Tasks
     open Microsoft.FSharp.Core.CompilerServices
     open Microsoft.FSharp.Core.CompilerServices.StateMachineHelpers
-    open IcedTasks.Nullness
-    open IcedTasks.TaskLike
+    open IcedTasks
 
     /// <summary>A bound value that needs the ambient <c>CancellationToken</c>.</summary>
     /// <remarks>

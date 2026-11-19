@@ -1,4 +1,4 @@
-# 0013. Add runtime-async task builders in an opt-in net11.0 namespace
+# 0015. Add runtime-async task builders in an opt-in net11.0 namespace
 
 - Status: accepted
 - Date: 2026-11-18

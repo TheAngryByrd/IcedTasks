@@ -58,6 +58,6 @@ Decisions:
 
 - [ADR 0001, cold result types are function type aliases](../../adr/0001-function-type-aliases-for-cold-results.md)
 - [ADR 0008, shared builder base classes](../../adr/0008-shared-builder-base-classes.md)
-- [ADR 0013, runtime-async task builders](../../adr/0013-runtime-async-task-builders.md)
+- [ADR 0015, runtime-async task builders](../../adr/0015-runtime-async-task-builders.md)
 
 Related: [run and start paths](run-and-start-paths.md), [companion modules](companion-modules.md), [summary](summary.md).

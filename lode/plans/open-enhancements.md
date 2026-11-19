@@ -1,13 +1,14 @@
 # Open enhancements
 
-The open GitHub issues with the `enhancement` label are the open work. Both also have the `help wanted` label. No roadmap file exists.
+The open GitHub issues with the `enhancement` label are the open work. #3 and #4 also have the `help wanted` label. No roadmap file exists.
 
 | Issue | Title | Request |
 |---|---|---|
 | [#4](https://github.com/TheAngryByrd/IcedTasks/issues/4) | Implement async2 | Finish the partial FSharp.Core `async2` implementation, which uses resumable code. |
 | [#3](https://github.com/TheAngryByrd/IcedTasks/issues/3) | Tail Recursion | Add tail call support to the task builders, as `async` has. |
+| [#74](https://github.com/TheAngryByrd/IcedTasks/issues/74) | asyncEx: an enclosing use can dispose before an early inner DisposeAsync completes | Track early compensations per execution, so an enclosing `use` or `for` in `asyncEx` waits for them. See [ADR 0013](../../adr/0013-asyncex-compensation-before-computation-starts.md). |
 
-Both issues list "Don't do it" as an alternative. Neither issue has a design.
+#3 and #4 list "Don't do it" as an alternative, and neither has a design. #74 describes a possible design with ambient per-execution state.
 
 ## Related code
 

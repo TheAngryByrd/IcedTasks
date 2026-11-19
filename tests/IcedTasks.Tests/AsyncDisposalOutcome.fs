@@ -50,10 +50,14 @@ module AsyncDisposalOutcome =
         let continuationRegistered =
             TaskCompletionSource<unit>(TaskCreationOptions.RunContinuationsAsynchronously)
 
+        let resultRead =
+            TaskCompletionSource<unit>(TaskCreationOptions.RunContinuationsAsynchronously)
+
         let mutable getResultCalls = 0
         do core.RunContinuationsAsynchronously <- true
 
         member _.ContinuationRegistered = continuationRegistered.Task
+        member _.ResultRead = resultRead.Task
         member _.GetResultCalls = getResultCalls
 
         member this.ValueTask() =
@@ -78,7 +82,11 @@ module AsyncDisposalOutcome =
                 Interlocked.Increment(&getResultCalls)
                 |> ignore
 
-                core.GetResult(token)
+                try
+                    core.GetResult(token)
+                finally
+                    resultRead.TrySetResult(())
+                    |> ignore
 
     let singleItemAsyncEnumerable (disposeAsync: unit -> ValueTask) =
         { new IAsyncEnumerable<int> with

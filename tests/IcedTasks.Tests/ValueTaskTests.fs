@@ -954,7 +954,7 @@ module ValueTaskTests =
 
                     do!
                         source.ValueTask()
-                        |> IcedTasks.ValueTasks.ValueTasks.ValueTask.ofUnit
+                        |> IcedTasks.ValueTasks.ValueTask.ofUnit
                         |> Async.AwaitValueTask
 
                     Expect.equal source.GetResultCalls 1 "ofUnit must read the result once"
@@ -965,7 +965,7 @@ module ValueTaskTests =
 
                     let converted =
                         ValueTask(Task.FromException input)
-                        |> IcedTasks.ValueTasks.ValueTasks.ValueTask.ofUnit
+                        |> IcedTasks.ValueTasks.ValueTask.ofUnit
                         |> fun vtask -> vtask.AsTask()
 
                     Expect.isTrue converted.IsFaulted "The result must be faulted"
@@ -978,7 +978,7 @@ module ValueTaskTests =
                 <| fun () ->
                     let converted =
                         ValueTask(Task.FromCanceled(CancellationToken(true)))
-                        |> IcedTasks.ValueTasks.ValueTasks.ValueTask.ofUnit
+                        |> IcedTasks.ValueTasks.ValueTask.ofUnit
                         |> fun vtask -> vtask.AsTask()
 
                     Expect.isTrue converted.IsCanceled "The result must be canceled"

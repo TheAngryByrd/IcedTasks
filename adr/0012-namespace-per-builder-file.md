@@ -1,6 +1,6 @@
 # 0012. Give each builder file its own namespace and auto-open all of them
 
-- Status: accepted
+- Status: superseded by [0014](0014-restore-autoopen-modules-in-icedtasks-namespace.md)
 - Date: 2025-10-19
 - Source: https://github.com/TheAngryByrd/IcedTasks/pull/59, https://github.com/TheAngryByrd/IcedTasks/commit/2bfba41
 - Reason source: PR description, commit message

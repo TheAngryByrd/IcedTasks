@@ -1,6 +1,6 @@
 # Tests domain
 
-The tests use Expecto with `YoloDev.Expecto.TestSdk`, so `dotnet test` runs them. `tests/Directory.Build.props` adds the shared packages: Expecto, Expecto.FsCheck, `Microsoft.NET.Test.Sdk`, `TimeProviderExtensions`, `Microsoft.Bcl.TimeProvider`, and `FSharp.Control.TaskSeq`. Each project is an executable with its own entry point:
+The tests use Expecto with `YoloDev.Expecto.TestSdk`, so `dotnet test` runs them. `tests/Directory.Build.props` adds the shared packages: Expecto, Expecto.FsCheck, `Microsoft.NET.Test.Sdk`, `TimeProviderExtensions`, `Microsoft.Bcl.TimeProvider`, and `FSharp.Control.TaskSeq`. `IcedTasks.Tests`, NS20, and NS21 also reference `System.Reflection.MetadataLoadContext`. Each project is an executable with its own entry point:
 
 ```fsharp
 // tests/IcedTasks.Tests/Main.fs
@@ -31,14 +31,16 @@ flowchart LR
     sln --> n20["IcedTasks.Tests.NS20<br/>lib netstandard2.0"]
     sln --> n21["IcedTasks.Tests.NS21<br/>lib netstandard2.1"]
     sln --> rt["IcedTasks.Tests.RuntimeAsync<br/>lib net11.0, runtime-async builders"]
+    sln --> no["IcedTasks.Tests.NoOpen<br/>no IcedTasks open"]
     t --> r["net10.0, net11.0 runs"]
     n20 --> r
     n21 --> r
+    no --> r
 ```
 
 Topics:
 
-- [Test projects and TFMs](test-projects-and-tfms.md) - the four projects, shared files, and `#if` symbols.
+- [Test projects and TFMs](test-projects-and-tfms.md) - the five projects, shared files, public surface tests, and `#if` symbols.
 - [Test helpers](expect-helpers.md) - `Expect.fs` helpers, multi-start tests, and the manual clock.
 - [DisposeAsync outcome tests](disposal-outcome-tests.md) - the `use` and `for` disposal matrix for each builder.
 
