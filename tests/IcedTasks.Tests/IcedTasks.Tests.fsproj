@@ -8,6 +8,25 @@
   <ItemGroup>
     <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" />
   </ItemGroup>
+  <!-- PublicApiTests.fs reads the metadata of each build that IcedTasks.fsproj ships. No test run loads these builds. -->
+  <Target Name="AddIcedTasksPublicApiReferences" BeforeTargets="AssignProjectConfiguration">
+    <MSBuild Projects="../../src/IcedTasks/IcedTasks.fsproj" Targets="GetTargetFrameworks" RemoveProperties="TargetFramework;RuntimeIdentifier;SelfContained">
+      <Output TaskParameter="TargetOutputs" ItemName="_IcedTasksBuildInfo" />
+    </MSBuild>
+    <ItemGroup>
+      <IcedTasksShippedFramework Include="%(_IcedTasksBuildInfo.TargetFrameworks)" />
+      <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" SetTargetFramework="TargetFramework=%(IcedTasksShippedFramework.Identity)" SkipGetTargetFrameworkProperties="true" ReferenceOutputAssembly="false" OutputItemType="IcedTasksPublicApiAssembly" PublicApiFramework="%(IcedTasksShippedFramework.Identity)" />
+    </ItemGroup>
+  </Target>
+  <Target Name="CopyIcedTasksPublicApiAssemblies" AfterTargets="ResolveProjectReferences">
+    <WriteLinesToFile File="$(IntermediateOutputPath)shipped-target-frameworks.txt" Lines="@(IcedTasksShippedFramework)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <FileWrites Include="$(IntermediateOutputPath)shipped-target-frameworks.txt" />
+      <ContentWithTargetPath Include="$(IntermediateOutputPath)shipped-target-frameworks.txt" TargetPath="PublicApi/shipped-target-frameworks.txt" CopyToOutputDirectory="PreserveNewest" />
+      <ContentWithTargetPath Include="@(IcedTasksPublicApiAssembly)" TargetPath="PublicApi/%(IcedTasksPublicApiAssembly.PublicApiFramework)/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+      <ContentWithTargetPath Include="$(PkgMicrosoft_Bcl_AsyncInterfaces)/lib/netstandard2.0/Microsoft.Bcl.AsyncInterfaces.dll" TargetPath="PublicApi/netstandard2.0/Microsoft.Bcl.AsyncInterfaces.dll" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
   <ItemGroup>
     <Compile Include="Expect.fs" />
     <Compile Include="AsyncDisposalOutcome.fs" />
@@ -31,6 +50,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Reflection.MetadataLoadContext" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" GeneratePathProperty="true" ExcludeAssets="all" />
     <Content Include="PublicApi/*.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
