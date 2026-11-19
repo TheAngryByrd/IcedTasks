@@ -175,6 +175,38 @@ module RuntimeTaskTests =
     let builderTests =
         testList "TaskBuilder" [
             testList "TryWith" [
+                testCaseTask "a with handler can await in task and cancellableTask"
+                <| fun () ->
+                    task {
+                        let! fromTask =
+                            task {
+                                try
+                                    return failwith "boom"
+                                with _ ->
+                                    do! Task.Yield()
+                                    let! value = Task.FromResult 41
+                                    return value + 1
+                            }
+
+                        let! fromCancellable =
+                            (cancellableTask {
+                                try
+                                    return failwith "boom"
+                                with _ ->
+                                    do! Task.Yield()
+                                    let! value = Task.FromResult 41
+                                    return value + 1
+                            })
+                                CancellationToken.None
+
+                        Expect.equal fromTask 42 "task should await in the handler"
+
+                        Expect.equal
+                            fromCancellable
+                            42
+                            "cancellableTask should await in the handler"
+                    }
+
                 testCaseAsync "try with syntax"
                 <| async {
                     let data = 42
@@ -762,6 +794,55 @@ module RuntimeTaskTests =
                             2
                         ]
                         "The body should see each element in order"
+                }
+
+            testCaseTask "coldTask and backgroundColdTask iterate an IAsyncEnumerable in order"
+            <| fun () ->
+                task {
+                    let items () : IAsyncEnumerable<int> =
+                        AsyncEnumerable.AsyncEnumerable(
+                            [
+                                3
+                                1
+                                2
+                            ],
+                            Func<_, _>(cancellableValueTask { do! Task.Yield() })
+                        )
+
+                    let fromCold = ResizeArray<int>()
+                    let fromBackground = ResizeArray<int>()
+
+                    do!
+                        (coldTask {
+                            for item in items () do
+                                do! Task.Yield()
+                                fromCold.Add item
+                        }) ()
+
+                    do!
+                        (backgroundColdTask {
+                            for item in items () do
+                                do! Task.Yield()
+                                fromBackground.Add item
+                        }) ()
+
+                    Expect.equal
+                        (List.ofSeq fromCold)
+                        [
+                            3
+                            1
+                            2
+                        ]
+                        "coldTask should give each element in order"
+
+                    Expect.equal
+                        (List.ofSeq fromBackground)
+                        [
+                            3
+                            1
+                            2
+                        ]
+                        "backgroundColdTask should give each element in order"
                 }
 
             testCaseTask "for over an IAsyncEnumerable gives each element to the body in order"

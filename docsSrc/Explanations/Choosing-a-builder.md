@@ -67,7 +67,7 @@ Related guides:
 - <sup>7</sup> `IAsyncDisposable` support means `use` and `use!` can dispose async resources inside the computation expression.
 - <sup>8</sup> `IAsyncEnumerable` support means `for` can iterate an async enumerable inside the computation expression.
 
-`IAsyncDisposable` and `IAsyncEnumerable` support is not limited to `asyncEx`. The task, value-task, cancellable, and pooling builders support these features where the table says "Yes". `coldTask` supports `IAsyncDisposable`, but not `for` over `IAsyncEnumerable<'T>`.
+`IAsyncDisposable` and `IAsyncEnumerable` support is not limited to `asyncEx`. The task, value-task, cancellable, and pooling builders support these features where the table says "Yes". The state-machine `coldTask` supports `IAsyncDisposable`, but not `for` over `IAsyncEnumerable<'T>`. The runtime-async `coldTask` supports both.
 
 ## Use task when the work is actually async
 

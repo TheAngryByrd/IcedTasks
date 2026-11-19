@@ -170,32 +170,22 @@ let tests =
                     $"PublicApi/{targetFramework}/IcedTasks.dll must be the {targetFramework} build."
 
         testCase "each target framework of IcedTasks 0.11.9 is still shipped"
-
         <| fun () ->
-
             let released =
-
                 Directory.GetFiles(
                     Path.Combine(AppContext.BaseDirectory, "PublicApi"),
                     "IcedTasks-0.11.9-*.txt"
                 )
-
                 |> Array.map (fun path ->
                     Path.GetFileNameWithoutExtension(path).Substring("IcedTasks-0.11.9-".Length)
                 )
-
                 |> Set.ofArray
-
 
             Expect.isNonEmpty released "The 0.11.9 API lists must be in the test output."
 
-
             Expect.isEmpty
-
                 (Set.difference released (Set.ofList shippedFrameworks))
-
                 "IcedTasks.fsproj must ship each target framework of IcedTasks 0.11.9."
-
 
         testList "each shipped build keeps each IcedTasks 0.11.9 entry and adds only listed entries" [
             for targetFramework in shippedFrameworks ->
