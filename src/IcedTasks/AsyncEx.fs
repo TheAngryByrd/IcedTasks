@@ -125,12 +125,20 @@ type AsyncEx =
 /// <exclude/>
 [<AutoOpen>]
 module AsyncExtensions =
+    open System.Runtime.CompilerServices
+
+    let private compensatedCancellations =
+        ConditionalWeakTable<OperationCanceledException, obj>()
+
+    let private compensated = obj ()
 
     type Microsoft.FSharp.Control.Async with
 
         /// <summary>Creates an Async that runs computation, and then runs compensation.
-        /// After computation starts, the compensation runs when computation succeeds, fails, or is canceled.
-        /// If the workflow is canceled before computation starts, computation and compensation do not run.
+        /// The compensation runs when computation succeeds, fails, or is canceled.
+        /// If the workflow is canceled before computation starts, computation does not run.
+        /// Compensation then starts on the current thread with no cancellation token, and the result is canceled
+        /// at once: it does not wait for an asynchronous compensation, and a compensation exception is not observed.
         /// If compensation fails, the result fails with the compensation exception.
         /// If computation and compensation both fail, the result fails with an
         /// <see cref="T:System.AggregateException"/> that contains both exceptions.
@@ -140,7 +148,7 @@ module AsyncExtensions =
         /// <param name="compensation">The computation to run after computation completes, fails, or is canceled.</param>
         /// <remarks> <see href="http://www.fssnip.net/ru/title/Async-workflow-with-asynchronous-finally-clause">See this F# gist</see></remarks>
         /// <returns>An async with the result of the computation.</returns>
-        static member inline TryFinallyAsync
+        static member TryFinallyAsync
             (computation: Async<'T>, compensation: Async<unit>)
             : Async<'T> =
 
@@ -148,7 +156,11 @@ module AsyncExtensions =
                 match (compResult, deferredResult) with
                 | (Choice1Of3 x, Choice1Of3()) -> onNext x
                 | (Choice2Of3 compExn, Choice1Of3()) -> onError compExn
-                | (Choice3Of3 compExn, Choice1Of3()) -> onCancel compExn
+                | (Choice3Of3 compExn, Choice1Of3()) ->
+                    compensatedCancellations.GetValue(compExn, (fun _ -> compensated))
+                    |> ignore
+
+                    onCancel compExn
                 | (Choice1Of3 _, Choice2Of3 deferredExn) -> onError deferredExn
                 | (Choice2Of3 compExn, Choice2Of3 deferredExn) ->
                     onError
@@ -175,10 +187,26 @@ module AsyncExtensions =
                     ct
                 )
 
-            async {
-                let! ct = Async.CancellationToken
-                return! Async.FromContinuations(startComp ct)
-            }
+            let canceledBeforeComputation (cancellation: OperationCanceledException) =
+                match compensatedCancellations.TryGetValue cancellation with
+                | true, _ -> ()
+                | false, _ ->
+                    Async.StartWithContinuations(
+                        compensation,
+                        ignore,
+                        ignore,
+                        ignore,
+                        CancellationToken.None
+                    )
+
+            // FSharp.Core checks the token before each public step that reaches startComp, but not on entry to TryCancelled.
+            Async.TryCancelled(
+                async {
+                    let! ct = Async.CancellationToken
+                    return! Async.FromContinuations(startComp ct)
+                },
+                canceledBeforeComputation
+            )
 
 
 /// <summary>Builds an asynchronous workflow using computation expression syntax.</summary>

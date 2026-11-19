@@ -44,7 +44,7 @@ Each case is one combination of site, outcome, completion, and body:
 
 ## Regression tests next to the matrix
 
-- `AsyncExTests.fs`: `use` and `use!` dispose the resource when the body throws before its first bind. `do!` of a completed `IValueTaskSource` ValueTask reads `GetResult` once.
+- `AsyncExTests.fs`: `use` and `use!` dispose the resource when the body throws before its first bind. `do!` of a completed `IValueTaskSource` ValueTask reads `GetResult` once. `cancelBeforeBodyTests` ("Cancellation and disposal"): `use`, `use!`, and `for` call `DisposeAsync` once when the token is cancelled after the resource is made, and the workflow is canceled, also when `DisposeAsync` is pending. A cancellation inside the body also calls `DisposeAsync` once.
 - `ValueTaskTests.fs` and `PoolingValueTaskTests.fs`: `Async.AwaitValueTask` and `ofUnit` read `GetResult` of a completed non-generic ValueTask once. A faulted input fails the result and does not throw at the call. `AsyncExTests.fs` has the same check for `AsyncEx.AwaitValueTask`.
 - `TaskTests.fs`, `TaskBackgroundTests.fs`, `ValueTaskTests.fs`: each unit builder completes on the dynamic path when its body completes synchronously. `MethodBuilder.SetResult` completes a non-generic builder, and `MethodBuilder.get_Task` before `SetResult` returns the task that `SetResult` completes. These tests can fail only in Debug, because the copy that they detect happens only in unoptimized code. See [practices](../practices.md).
 
