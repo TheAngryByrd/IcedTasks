@@ -1343,12 +1343,16 @@ module AsyncExTests =
                 [
                     AsyncDisposalOutcome.BodyCompletes
                     AsyncDisposalOutcome.BodyThrows
+                    AsyncDisposalOutcome.BodyAwaitsCanceledTask
                 ]
                 AsyncDisposalOutcome.asyncExpectation
                 (fun body cts resource ->
                     asyncEx {
                         use _ = resource
                         AsyncDisposalOutcome.runBody body cts
+
+                        if AsyncDisposalOutcome.awaitsCanceledTask body then
+                            do! AsyncDisposalOutcome.canceledTask ()
                     }
                     |> fun a -> Async.StartImmediateAsTask(a, cts.Token) :> Task
                 )
@@ -1356,6 +1360,9 @@ module AsyncExTests =
                     asyncEx {
                         for _ in items do
                             AsyncDisposalOutcome.runBody body cts
+
+                            if AsyncDisposalOutcome.awaitsCanceledTask body then
+                                do! AsyncDisposalOutcome.canceledTask ()
                     }
                     |> fun a -> Async.StartImmediateAsTask(a, cts.Token) :> Task
                 )

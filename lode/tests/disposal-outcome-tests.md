@@ -5,8 +5,9 @@
 ## Contract that the tests pin
 
 - For the resumable builders, a `DisposeAsync` fault or cancellation decides the result of the builder value. It replaces the body result, the body exception, and the body cancellation. For `asyncEx`, see Expected results.
-- A canceled result keeps the `OperationCanceledException` that canceled it. An await of the result (`GetAwaiter().GetResult()`) rethrows that exception, so its type and message come from the source of the cancellation. The builders pass the exception to the method builder's `SetException`, which cancels the task and stores the exception when it is an `OperationCanceledException`.
+- A canceled result keeps the `OperationCanceledException` that canceled it. An await of the result (`GetAwaiter().GetResult()`) rethrows that exception, so its type and message come from the source of the cancellation. The matrix checks the type and the message, not the object identity. The builders pass the exception to the method builder's `SetException`, which cancels the task and stores the exception when it is an `OperationCanceledException`.
 - `Wait()` and `Async.AwaitTask` do not rethrow the stored exception. For each canceled task, they throw a new `TaskCanceledException`, which `Wait()` wraps in an `AggregateException`. The tests pin the await form, because only that form shows which exception the builder stored.
+- For a faulted result, the matrix checks `Task.Exception.InnerExceptions`. An await of a faulted task throws the first inner exception, so a list with one exception is also the exception that a `do!` catches.
 - The builder calls `DisposeAsync` exactly once and reads its result exactly once. `ObservedDisposalSource` counts `IValueTaskSource.GetResult` calls.
 - The builder awaits a pending `DisposeAsync`. The test checks that the result is not complete when `OnCompleted` registers a continuation, and only then completes the source.
 - A cancellable builder awaits the disposal also after the ambient token cancels. This pins `BindNoCancellation` in `CancellableTaskBuilderBase.TryFinallyAsync`.
@@ -20,10 +21,10 @@ Each case is one combination of site, outcome, completion, and body:
 | site | `use`, `for` (`for` is absent for `coldTask` and `backgroundColdTask`, which have no `IAsyncEnumerable` support) |
 | outcome | `DisposalSucceeds`, `DisposalFaults`, `DisposalCancels` |
 | completion | `CompletedDisposal` (source completes before start), `PendingDisposal` |
-| body | `BodyCompletes`, `BodyThrows`, `BodyAwaitsCanceledTask`, and `BodyCancels` for the cancellable builders. `asyncEx` has only `BodyCompletes` and `BodyThrows` |
+| body | `BodyCompletes`, `BodyThrows`, `BodyAwaitsCanceledTask`, and `BodyCancels` for the cancellable builders |
 | execution | `Static` (the builder), `Dynamic` (a test builder that takes `RunDynamic`), or `AsyncWorkflow` (`asyncEx`, which has no resumable code) |
 
-`BodyCancels` cancels the ambient token and then binds a completed task, so the cancellable `Bind` throws. `BodyAwaitsCanceledTask` binds `Task.FromCanceled` with no token cancellation, so the `Bind` of each builder throws `TaskCanceledException`. Each body binds the canceled task only in that case, so the other cases do not await at run time. The test name gives each axis, for example `cancellableTask, Dynamic, for, DisposalFaults, pending disposal, BodyCancels`.
+`BodyCancels` cancels the ambient token and then binds a completed task, so the cancellable `Bind` throws. `BodyAwaitsCanceledTask` binds a task from `Task.FromCanceled` and does not cancel the ambient token. The `Bind` of each resumable builder throws `TaskCanceledException`. Only that case runs the bind of the canceled task. The other cases skip it, and the cancellable bodies still bind `Task.CompletedTask`. The test name gives each axis, for example `cancellableTask, Dynamic, for, DisposalFaults, pending disposal, BodyCancels`.
 
 ```fsharp
 // tests/IcedTasks.Tests/CancellableTaskTests.fs
@@ -57,7 +58,7 @@ Each case is one combination of site, outcome, completion, and body:
 | succeeds | `BodyCompletes` | `Completed` |
 
 The expectation reads each default message from a new exception, because the runtime localizes it.
-- `asyncExpectation` is the `asyncEx` result. A dispose `OperationCanceledException` faults the result. A body exception and a dispose exception give one `AggregateException`. See [AsyncEx](../builders/asyncex-and-parallelasync.md).
+- `asyncExpectation` is the `asyncEx` result. A dispose `OperationCanceledException` faults the result. A body exception and a dispose exception give one `AggregateException`. `AsyncEx.AwaitAwaiter` sends a canceled task to the error continuation, so `BodyAwaitsCanceledTask` gives the same results as `BodyThrows`, with `TaskCanceledException` in place of the body exception. See [AsyncEx](../builders/asyncex-and-parallelasync.md).
 
 ## Regression tests next to the matrix
 

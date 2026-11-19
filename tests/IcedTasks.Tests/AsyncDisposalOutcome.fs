@@ -154,8 +154,6 @@ module AsyncDisposalOutcome =
     let asyncExpectation outcome body =
         match outcome, body with
         | _, BodyCancels -> invalidArg (nameof body) "The asyncEx matrix has no BodyCancels case"
-        | _, BodyAwaitsCanceledTask ->
-            invalidArg (nameof body) "The asyncEx matrix has no BodyAwaitsCanceledTask case"
         | DisposalSucceeds, BodyCompletes -> Completed
         | DisposalSucceeds, BodyThrows -> Faulted [ "ArgumentException: body" ]
         | DisposalFaults, BodyCompletes -> Faulted [ "InvalidOperationException: dispose" ]
@@ -167,6 +165,15 @@ module AsyncDisposalOutcome =
         | DisposalCancels, BodyThrows ->
             Faulted [
                 "AggregateException [ArgumentException: body; OperationCanceledException: dispose]"
+            ]
+        | DisposalSucceeds, BodyAwaitsCanceledTask -> Faulted [ describe (TaskCanceledException()) ]
+        | DisposalFaults, BodyAwaitsCanceledTask ->
+            Faulted [
+                $"AggregateException [{describe (TaskCanceledException())}; InvalidOperationException: dispose]"
+            ]
+        | DisposalCancels, BodyAwaitsCanceledTask ->
+            Faulted [
+                $"AggregateException [{describe (TaskCanceledException())}; OperationCanceledException: dispose]"
             ]
 
     let private waitFor (signal: Task) (failure: string) =
