@@ -150,6 +150,6 @@ module ValueTasksUnit =
         let valueTaskUnit = ValueTaskUnitBuilder()
 
         /// <summary>
-        /// Alias for <see cref="F:IcedTasks.ValueTasksUnit.ValueTasksUnit.ValueTaskBuilder.valueTaskUnit" />.
+        /// Alias for <see cref="F:IcedTasks.ValueTasksUnit.ValueTaskBuilder.valueTaskUnit" />.
         /// </summary>
         let vTaskUnit = valueTaskUnit

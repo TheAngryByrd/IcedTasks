@@ -148,7 +148,7 @@ module PoolingValueTasks =
         let poolingValueTask = PoolingValueTaskBuilder()
 
         /// <summary>
-        /// Alias for <see cref="F:IcedTasks.PoolingValueTasks.PoolingValueTasks.ValueTaskBuilder.poolingValueTask" />.
+        /// Alias for <see cref="F:IcedTasks.PoolingValueTasks.ValueTaskBuilder.poolingValueTask" />.
         /// </summary>
         let pvTask = poolingValueTask
 

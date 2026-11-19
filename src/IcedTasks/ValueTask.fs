@@ -208,7 +208,7 @@ module ValueTasks =
         let valueTask = ValueTaskBuilder()
 
         /// <summary>
-        /// Alias for <see cref="F:IcedTasks.ValueTasks.ValueTasks.ValueTaskBuilder.valueTask" />.
+        /// Alias for <see cref="F:IcedTasks.ValueTasks.ValueTaskBuilder.valueTask" />.
         /// </summary>
         let vTask = valueTask
 

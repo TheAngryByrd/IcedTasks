@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
+    <GenerateProgramFile>false</GenerateProgramFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" Condition="'$(TargetFramework)' == 'net10.0'" AdditionalProperties="TargetFramework=net6.0" />
+    <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" Condition="'$(TargetFramework)' != 'net10.0'" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="FSharpCoreTaskTests.fs" />
+    <Compile Include="Main.fs" />
+  </ItemGroup>
+</Project>
