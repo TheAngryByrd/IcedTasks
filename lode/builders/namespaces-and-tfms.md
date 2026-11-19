@@ -51,7 +51,7 @@ flowchart LR
 | FSharp.Core 9.0.300 | TFM compatible with `net9.0`, before `net11.0` | `IcedTasks.fsproj` |
 | FSharp.Core 6.0.4 | other TFMs | `IcedTasks.fsproj` |
 | `LangVersion` 9.0 and `Nullable` | `net9.0` | `Directory.Build.props` |
-| `LangVersion` `preview` | each F# project on a TFM compatible with `net11.0`, also the test projects | `Directory.Build.props` |
+| `LangVersion` `preview` | each `net11.0` inner build of a multi-target F# project, also the test projects | `Directory.Build.props` |
 | `Nullable` | library TFM compatible with `net11.0` | `IcedTasks.fsproj` |
 | Runtime-async builders | `#if NET11_0_OR_GREATER` | `RuntimeTask.fs` |
 | Pooling builders | `#if NET6_0_OR_GREATER` | `PoolingValueTask.fs`, `CancellablePoolingValueTask.fs` |

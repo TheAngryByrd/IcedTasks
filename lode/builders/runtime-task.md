@@ -37,7 +37,7 @@ flowchart LR
 ## Invariants
 
 - Each member is `inline` and has `NoDynamicInvocation`. Without it, a Debug consumer on `LangVersion` 11.0 compiles and returns wrong values. See [ADR 0013](../../adr/0013-runtime-async-task-builders.md).
-- `Source` starts a task, an `Async`, or a cold task. It only captures an awaiter, so an awaiter that starts its work in `UnsafeOnCompleted` starts when the builder awaits it. `MergeSources` returns a `Started` that awaits left, then right. A left fault skips the right await, and the result has the left exception.
+- `Source` starts an `Async` or a cold task. It captures a task, a value task, or an awaiter in its current state: it does not start a created task, and an awaiter that starts its work in `UnsafeOnCompleted` starts when the builder awaits it. A throw during `Source` evaluation wins over the operands. `MergeSources` returns a `Started` that awaits left, then right. A left fault skips the right await, and the result has the left exception.
 - `Using` captures a body exception with `ExceptionDispatchInfo`, awaits `DisposeAsync` outside the `try`, and then rethrows. A suspension in a `finally` loses the stack trace on rethrow (dotnet/fsharp#20869). A `DisposeAsync` exception replaces the body exception.
 - `backgroundTask` uses `Task.Run(fun () -> __runtimeAsyncReturn (code ()))` when a `SynchronizationContext` or non-default scheduler is present.
 

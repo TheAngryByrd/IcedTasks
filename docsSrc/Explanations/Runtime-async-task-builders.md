@@ -82,13 +82,15 @@ The builders support:
 
 The builder awaits `Task` and `ValueTask` values with `AsyncHelpers.Await`, and other awaiters with `AsyncHelpers.UnsafeAwaitAwaiter`.
 
-The builder evaluates all `and!` operands before it awaits the first operand. A task, an `Async`, and a cold task start when the builder evaluates them. An awaiter or an awaitable that starts its work only when the builder registers a continuation does not start until the builder awaits it.
+The builder evaluates all `and!` operands from left to right before it awaits the first operand. An `Async` and a cold task start when the builder evaluates them. The builder does not start a task or a value task. It awaits the task in the state that the task has, so a task that was created and not started stays incomplete until other code starts it. An awaiter or an awaitable that starts its work only when the builder registers a continuation does not start until the builder awaits it.
 
-The builder awaits the `and!` operands from left to right. If an operand fails, the builder does not await the operands to its right, and the result has the exception of that operand. The operands to its right can continue to run.
+If the evaluation of an operand throws, for example a cold task that throws before it returns its task, that exception is the result. The builder does not await the operands.
+
+After the evaluation, the builder awaits the operands from left to right. If an operand fails, the builder does not await the operands to its right, and the result has the exception of that operand. The operands to its right can continue to run.
 
 ## Differences from the state-machine builders
 
-- The F# compiler must inline all of the builder members into the method that contains the computation expression. Each member has `NoDynamicInvocation`, so a call to a member through reflection throws `NotSupportedException`.
+- The F# compiler must inline all of the builder members into the method that contains the computation expression. Each member has `NoDynamicInvocation`, so a call to a member through reflection throws `TargetInvocationException` with a `NotSupportedException` inside it.
 - The body of a runtime-async method is small, so the F# optimizer can inline a small function that uses the builder into its caller. If you must see the function name in stack traces, put `[<MethodImpl(MethodImplOptions.NoInlining)>]` on the function.
 - The F# compiler gives generated names to the methods that contain the body, such as `func1@12.Invoke`. Stack traces show these names.
 - The F# compiler issue [dotnet/fsharp#20869](https://github.com/dotnet/fsharp/issues/20869) is open. It reports that a rethrow after a suspending `with` handler or `finally` block can lose the stack trace. `use` and `for` over an `IAsyncEnumerable<'T>` await `DisposeAsync` outside the protected region, so they keep the stack trace. A `with` handler in your own code that suspends and then rethrows can lose it.

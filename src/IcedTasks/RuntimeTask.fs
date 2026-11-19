@@ -20,8 +20,11 @@ module RuntimeTaskBase =
     open IcedTasks.Nullness
     open IcedTasks.TaskLike
 
-    /// <summary>An operation that started before the builder binds it.</summary>
-    /// <remarks>Invoke suspends the runtime-async method until the operation completes, and then returns the result.</remarks>
+    /// <summary>A bound value that <c>Source</c> prepared for the builder to await.</summary>
+    /// <remarks>
+    /// <c>Source</c> starts an <c>Async</c> or a cold task. It keeps a task, a value task, or an awaiter in the state that it has.
+    /// Invoke suspends the runtime-async method until the operation completes, and then returns the result.
+    /// </remarks>
     type Started<'T> = delegate of unit -> 'T
 
     /// <exclude/>
@@ -37,7 +40,7 @@ module RuntimeTaskBase =
 
             Awaiter.GetResult awaiter
 
-        /// <summary>Starts an awaiter-based operation for the builder to bind.</summary>
+        /// <summary>Wraps the awaiter for the builder to await.</summary>
         [<NoDynamicInvocation>]
         let inline started<'Awaiter, 'TResult when Awaiter<'Awaiter, 'TResult>>
             (awaiter: 'Awaiter)
@@ -145,26 +148,29 @@ module RuntimeTaskBase =
                         body enumerator.Current
             )
 
-        /// <summary>Awaits the started operation, and then gives its result to the continuation.</summary>
+        /// <summary>Awaits the operation, and then gives its result to the continuation.</summary>
         [<NoDynamicInvocation>]
         member inline _.Bind
             ([<InlineIfLambda>] started: Started<'T>, [<InlineIfLambda>] continuation: 'T -> 'U)
             =
             continuation (started.Invoke())
 
-        /// <summary>Awaits the started operation, and then gives its result to the mapper.</summary>
+        /// <summary>Awaits the operation, and then gives its result to the mapper.</summary>
         [<NoDynamicInvocation>]
         member inline _.BindReturn
             ([<InlineIfLambda>] started: Started<'T>, [<InlineIfLambda>] mapper: 'T -> 'U)
             =
             mapper (started.Invoke())
 
-        /// <summary>Awaits the started operation, and returns its result as the result of the computation.</summary>
+        /// <summary>Awaits the operation, and returns its result as the result of the computation.</summary>
         [<NoDynamicInvocation>]
         member inline _.ReturnFrom([<InlineIfLambda>] started: Started<'T>) = started.Invoke()
 
-        /// <summary>Combines two started operations for <c>and!</c>.</summary>
-        /// <remarks>Both operations start before the builder awaits the left operation.</remarks>
+        /// <summary>Combines two operations for <c>and!</c>.</summary>
+        /// <remarks>
+        /// <c>Source</c> prepared both operations before this call. The builder awaits the left operation, and then the right operation.
+        /// If the left operation fails, the builder does not await the right operation.
+        /// </remarks>
         [<NoDynamicInvocation>]
         member inline _.MergeSources
             ([<InlineIfLambda>] left: Started<'T1>, [<InlineIfLambda>] right: Started<'T2>)
@@ -181,14 +187,14 @@ module RuntimeTaskBase =
 
         type RuntimeTaskBuilderBase with
 
-            /// <summary>Starts an awaiter-based operation for the builder to bind.</summary>
+            /// <summary>Wraps the awaiter for the builder to await.</summary>
             [<NoDynamicInvocation; NoEagerConstraintApplication>]
             member inline _.Source<'Awaiter, 'TResult when Awaiter<'Awaiter, 'TResult>>
                 (awaiter: 'Awaiter)
                 : Started<'TResult> =
                 RuntimeAwait.started awaiter
 
-            /// <summary>Gets the awaiter of the awaitable, and starts it for the builder to bind.</summary>
+            /// <summary>Gets the awaiter of the awaitable, and wraps it for the builder to await.</summary>
             [<NoDynamicInvocation; NoEagerConstraintApplication>]
             member inline _.Source<'Awaitable, 'Awaiter, 'TResult
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult>>

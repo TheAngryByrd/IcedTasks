@@ -1026,7 +1026,7 @@ module RuntimeTaskTests =
                 Expect.equal actual "lol" "Should be able to Return! value"
             }
 
-            testCaseAsync "and! starts both operands before it awaits them"
+            testCaseAsync "and! combines two Task operands"
             <| async {
                 let left = TaskCompletionSource<int>()
                 let right = TaskCompletionSource<int>()
@@ -1140,6 +1140,32 @@ module RuntimeTaskTests =
                     "Should start synchronously on the caller thread"
         ]
 
+    type CompletedAwaiter(value: int) =
+        let mutable registrations = 0
+        let mutable reads = 0
+        member _.Registrations = registrations
+        member _.Reads = reads
+        member _.IsCompleted = true
+
+        member _.GetResult() =
+            reads <- reads + 1
+            value
+
+        interface ICriticalNotifyCompletion with
+            member _.OnCompleted(continuation) =
+                registrations <-
+                    registrations
+                    + 1
+
+                continuation.Invoke()
+
+            member _.UnsafeOnCompleted(continuation) =
+                registrations <-
+                    registrations
+                    + 1
+
+                continuation.Invoke()
+
     let startOrderTests =
         testList "Start order" [
             testCaseTask "and! starts Async operands before it awaits them"
@@ -1233,20 +1259,147 @@ module RuntimeTaskTests =
                     Expect.equal message (Some "left") "The left operand is awaited first"
                 }
 
-            testCase "a completed awaitable does not suspend the body"
+            testCase "a completed awaiter is read without a continuation registration"
             <| fun () ->
+                let awaiter = CompletedAwaiter 2
+
                 let result =
                     task {
-                        let! a = (Task.FromResult 1).ConfigureAwait(false)
-                        let! b = ValueTask<int>(2)
-                        return a + b
+                        let! value = awaiter
+                        return value
                     }
 
-                Expect.isTrue
-                    result.IsCompleted
-                    "The body must run to the end on the caller thread when each bound value is complete"
+                Expect.equal
+                    (result.WaitAsync(TimeSpan.FromSeconds 10.).Result)
+                    2
+                    "Should return the awaiter result"
 
-                Expect.equal result.Result 3 "Should return the sum"
+                Expect.equal
+                    awaiter.Registrations
+                    0
+                    "The builder must not register a continuation on a completed awaiter"
+
+                Expect.equal awaiter.Reads 1 "The builder must read the result once"
+        ]
+
+    let disposeOnCancelAndOrderTests =
+        let canceledBody () =
+            raise (OperationCanceledException "body")
+
+        let expectCanceledAfterOneDispose (start: IAsyncDisposable -> Task) =
+            task {
+                let mutable disposeCalls = 0
+
+                let resource =
+                    TestHelpers.makeAsyncDisposable (fun () ->
+                        Interlocked.Increment(&disposeCalls)
+                        |> ignore
+
+                        ValueTask()
+                    )
+
+                let result = start resource
+
+                let! _ =
+                    result.ContinueWith(fun (_: Task) -> ()).WaitAsync(TimeSpan.FromSeconds 10.)
+
+                Expect.equal
+                    result.Status
+                    TaskStatus.Canceled
+                    "A canceled body gives a canceled task"
+
+                Expect.equal
+                    disposeCalls
+                    1
+                    "The builder must dispose once when the body is canceled"
+            }
+
+        testList "Canceled body and loop order" [
+            testCaseTask "use disposes once when the body throws OperationCanceledException"
+            <| fun () ->
+                expectCanceledAfterOneDispose (fun resource ->
+                    task {
+                        use _ = resource
+                        do! Task.Yield()
+                        canceledBody ()
+                    }
+                    :> Task
+                )
+
+            testCaseTask
+                "for over an IAsyncEnumerable disposes once when the body throws OperationCanceledException"
+            <| fun () ->
+                expectCanceledAfterOneDispose (fun resource ->
+                    let items =
+                        AsyncDisposalOutcome.singleItemAsyncEnumerable (fun () ->
+                            resource.DisposeAsync()
+                        )
+
+                    task {
+                        for _ in items do
+                            do! Task.Yield()
+                            canceledBody ()
+                    }
+                    :> Task
+                )
+
+            testCaseTask "for over a seq gives each element to the body in order"
+            <| fun () ->
+                task {
+                    let seen = ResizeArray<int>()
+
+                    do!
+                        task {
+                            for item in
+                                [
+                                    3
+                                    1
+                                    2
+                                ] do
+                                seen.Add item
+                        }
+
+                    Expect.equal
+                        (List.ofSeq seen)
+                        [
+                            3
+                            1
+                            2
+                        ]
+                        "The body should see each element in order"
+                }
+
+            testCaseTask "for over an IAsyncEnumerable gives each element to the body in order"
+            <| fun () ->
+                task {
+                    let seen = ResizeArray<int>()
+
+                    let items: IAsyncEnumerable<int> =
+                        AsyncEnumerable.AsyncEnumerable(
+                            [
+                                3
+                                1
+                                2
+                            ],
+                            Func<_, _>(cancellableValueTask { do! Task.Yield() })
+                        )
+
+                    do!
+                        task {
+                            for item in items do
+                                do! Task.Yield()
+                                seen.Add item
+                        }
+
+                    Expect.equal
+                        (List.ofSeq seen)
+                        [
+                            3
+                            1
+                            2
+                        ]
+                        "The body should see each element in order"
+                }
         ]
 
     let disposalOutcomeTests =
@@ -1318,7 +1471,7 @@ module RuntimeTaskTests =
     let moreBuilderTests =
         testList "More builder cases" [
             testCase
-                "task resumes on the caller SynchronizationContext after it awaits an incomplete Task"
+                "task posts its continuation to the caller SynchronizationContext once after it awaits an incomplete Task"
             <| fun () ->
                 let mutable posted = 0
 
@@ -1341,10 +1494,9 @@ module RuntimeTaskTests =
                         return value
                     }
 
-                Task.Run(fun () -> release.SetResult 1)
-                |> fun releaseTask -> releaseTask.Wait()
+                Task.Run(fun () -> release.SetResult 1).WaitAsync(TimeSpan.FromSeconds 10.).Wait()
 
-                let value = t.Result
+                let value = t.WaitAsync(TimeSpan.FromSeconds 10.).Result
                 Expect.equal value 1 "Should return the awaited value"
                 Expect.equal posted 1 "Should post the continuation to the caller context once"
 
@@ -1386,13 +1538,14 @@ module RuntimeTaskTests =
                 task {
                     let scheduler = ConcurrentExclusiveSchedulerPair().ExclusiveScheduler
 
-                    let! scheduledOn =
+                    let! struct (before, after) =
                         Task.Factory
                             .StartNew(
                                 (fun () ->
                                     backgroundTask {
+                                        let before = TaskScheduler.Current
                                         do! Task.Yield()
-                                        return TaskScheduler.Current
+                                        return struct (before, TaskScheduler.Current)
                                     }
                                 ),
                                 CancellationToken.None,
@@ -1402,9 +1555,14 @@ module RuntimeTaskTests =
                             .Unwrap()
 
                     Expect.equal
-                        scheduledOn
+                        before
                         TaskScheduler.Default
-                        "The body should run on the default scheduler"
+                        "The body should start on the default scheduler"
+
+                    Expect.equal
+                        after
+                        TaskScheduler.Default
+                        "The body should resume on the default scheduler"
                 }
 
             testCaseTask "backgroundTask and valueTask infer Task<'T> and ValueTask<'T> sources"
@@ -1483,5 +1641,6 @@ module RuntimeTaskTests =
             startOrderTests
             disposalOutcomeTests
             moreBuilderTests
+            disposeOnCancelAndOrderTests
         ]
 #endif
