@@ -1908,6 +1908,7 @@ module RuntimeTaskTests =
 
     type CancellingAsyncEnumerable(cts: CancellationTokenSource, move: Task<bool>) =
         let mutable disposals = 0
+        let mutable movePending = false
         member _.Disposals = disposals
 
         interface IAsyncEnumerable<int> with
@@ -1915,11 +1916,26 @@ module RuntimeTaskTests =
                 { new IAsyncEnumerator<int> with
                     member _.MoveNextAsync() =
                         cts.Cancel()
-                        ValueTask<bool>(move)
+                        movePending <- true
+
+                        ValueTask<bool>(
+                            move.ContinueWith(
+                                (fun (t: Task<bool>) ->
+                                    movePending <- false
+                                    t.Result
+                                ),
+                                TaskContinuationOptions.ExecuteSynchronously
+                            )
+                        )
 
                     member _.Current = 1
 
                     member _.DisposeAsync() =
+                        if movePending then
+                            raise (
+                                NotSupportedException "DisposeAsync during a pending MoveNextAsync"
+                            )
+
                         disposals <-
                             disposals
                             + 1
@@ -1930,7 +1946,7 @@ module RuntimeTaskTests =
     let cancellableRules2Tests =
         testList "Cancellable rules 2" [
             testCaseTask
-                "for over an IAsyncEnumerable checks the token after a move that cancels it"
+                "for over an IAsyncEnumerable awaits a move that cancels the token, then stops before the body"
             <| fun () ->
                 task {
                     use cts = new CancellationTokenSource()
@@ -1945,10 +1961,22 @@ module RuntimeTaskTests =
                         }
 
                     let result = work cts.Token
+                    Expect.isFalse result.IsCompleted "The loop should wait for the pending move"
+
+                    Expect.equal
+                        items.Disposals
+                        0
+                        "The builder should not dispose during a pending move"
+
+                    move.SetResult true
                     do! waitForCompletion result
-                    Expect.isTrue result.IsCanceled "The loop should stop without the pending move"
-                    Expect.equal visits 0 "The body should not run"
-                    Expect.equal items.Disposals 1 "The enumerator should be disposed once"
+                    Expect.isTrue result.IsCanceled "The loop should stop with a cancelled task"
+                    Expect.equal visits 0 "The body should not run after the cancel"
+
+                    Expect.equal
+                        items.Disposals
+                        1
+                        "The enumerator should be disposed once, after the move"
                 }
 
             testCaseTask
