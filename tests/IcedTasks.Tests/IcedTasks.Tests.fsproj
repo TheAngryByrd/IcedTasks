@@ -15,7 +15,7 @@
     </MSBuild>
     <ItemGroup>
       <IcedTasksShippedFramework Include="%(_IcedTasksBuildInfo.TargetFrameworks)" />
-      <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" SetTargetFramework="TargetFramework=%(IcedTasksShippedFramework.Identity)" SkipGetTargetFrameworkProperties="true" ReferenceOutputAssembly="false" OutputItemType="IcedTasksPublicApiAssembly" PublicApiFramework="%(IcedTasksShippedFramework.Identity)" />
+      <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" SetTargetFramework="TargetFramework=%(IcedTasksShippedFramework.Identity)" SkipGetTargetFrameworkProperties="true" ReferenceOutputAssembly="false" GlobalPropertiesToRemove="RuntimeIdentifier;SelfContained" OutputItemType="IcedTasksPublicApiAssembly" PublicApiFramework="%(IcedTasksShippedFramework.Identity)" />
     </ItemGroup>
   </Target>
   <Target Name="CopyIcedTasksPublicApiAssemblies" AfterTargets="ResolveProjectReferences">
@@ -23,7 +23,7 @@
     <ItemGroup>
       <FileWrites Include="$(IntermediateOutputPath)shipped-target-frameworks.txt" />
       <ContentWithTargetPath Include="$(IntermediateOutputPath)shipped-target-frameworks.txt" TargetPath="PublicApi/shipped-target-frameworks.txt" CopyToOutputDirectory="PreserveNewest" />
-      <ContentWithTargetPath Include="@(IcedTasksPublicApiAssembly)" TargetPath="PublicApi/%(IcedTasksPublicApiAssembly.PublicApiFramework)/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+      <ContentWithTargetPath Include="@(IcedTasksPublicApiAssembly)" TargetPath="PublicApi/%(IcedTasksPublicApiAssembly.PublicApiFramework)/%(Filename)%(Extension)" CopyToOutputDirectory="Always" />
       <ContentWithTargetPath Include="$(PkgMicrosoft_Bcl_AsyncInterfaces)/lib/netstandard2.0/Microsoft.Bcl.AsyncInterfaces.dll" TargetPath="PublicApi/netstandard2.0/Microsoft.Bcl.AsyncInterfaces.dll" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
   </Target>
