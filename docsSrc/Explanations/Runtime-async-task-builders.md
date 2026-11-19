@@ -125,7 +125,7 @@ The cancellable builders start a cancellable operand, an `Async`, and a cold tas
 
 When the builder awaits the operands, it awaits them from left to right. If an operand fails, the builder does not await the operands to its right, and the result has the exception of that operand. The operands to its right can continue to run. The builder does not read the result of an operand to the right of a failed operand.
 
-These rules apply to each pair of operands. F# combines three or more operands from the right. Thus, `let! a = x and! b = y and! c = z` combines `x` with the pair of `y` and `z`. The builder runs the inner pair as one operation, and it starts that operation with `x`. The inner pair can read the results of `y` and `z` before `x` completes, and an exception in `y` or `z` waits until the builder awaits the inner pair. The state-machine builders behave the same way.
+F# combines three or more operands from the right. Thus, `let! a = x and! b = y and! c = z` combines `x` with the pair of `y` and `z`. The non-cancellable runtime builders await `x`, then `y`, then `z`. The cancellable builders run the inner pair as one operation, and they start that operation with `x`. In the cancellable builders, the inner pair can read the results of `y` and `z` before `x` completes, and an exception in `y` or `z` waits until the builder awaits the inner pair. The state-machine cancellable builders behave the same way.
 
 ## Differences from the state-machine builders
 
