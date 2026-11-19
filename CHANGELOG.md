@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.12.0-beta001] - 2026-11-19
 
 ### Added
 - [Add runtime-async versions of `task`, `backgroundTask`, `valueTask`, `coldTask`, `backgroundColdTask`, `cancellableTask`, `backgroundCancellableTask`, and `cancellableValueTask` in `IcedTasks.Polyfill.RuntimeTask` for `net11.0` with F# 11 preview](https://github.com/TheAngryByrd/IcedTasks/pull/62) - Credits @TheAngryByrd
@@ -428,7 +428,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Increased soeed and lowered memory usage of ColdTask and CancellableTask
 - Build for netstandard2.0 and netstandard2.1
 
-[Unreleased]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.10...HEAD
+[Unreleased]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.12.0-beta001...HEAD
+[0.12.0-beta001]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.10...v0.12.0-beta001
 [0.11.10]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.9...v0.11.10
 [0.11.10-beta004]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.9...v0.11.10-beta004
 [0.11.10-beta003]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.9...v0.11.10-beta003
