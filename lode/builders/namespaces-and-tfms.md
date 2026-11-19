@@ -2,7 +2,7 @@
 
 ## Namespaces and AutoOpen
 
-Each library file declares `namespace IcedTasks`. `Task.fs` declares only `IcedTasks.Polyfill.Task`, and `AsyncEx.fs` also declares `IcedTasks.Polyfill.Async`. Each builder file puts its public items in `[<AutoOpen>]` modules with the 0.11.9 names. `TaskLike.fs`, `Nullness.fs`, `AsyncEx.fs` (`AsyncEx`, `AsyncExBuilder`), and `ParallelAsync.fs` (`ParallelAsync` and the builder types) also put types directly in `IcedTasks`.
+Each library file except `AssemblyInfo.fs` (`namespace System`) and `Task.fs` (`namespace IcedTasks.Polyfill.Task`) declares `namespace IcedTasks`. `AsyncEx.fs` also declares `IcedTasks.Polyfill.Async`. Each builder file puts its public items in `[<AutoOpen>]` modules with the 0.11.9 names. `TaskLike.fs`, `Nullness.fs`, `AsyncEx.fs` (`AsyncEx`, `AsyncExBuilder`), and `ParallelAsync.fs` (`ParallelAsync` and the builder types) also put types directly in `IcedTasks`.
 
 ```fsharp
 // src/IcedTasks/ColdTask.fs
@@ -31,8 +31,10 @@ Contracts:
 
 - The assembly has no assembly-level `AutoOpen`. A project reference alone opens no IcedTasks namespace. `tests/IcedTasks.Tests.NoOpen` and the `Public API` tests guard this.
 - `open IcedTasks` brings each `[<AutoOpen>]` module. A single module open, for example `open IcedTasks.CancellableTasks`, brings the builder but not the `Source` and `Bind` extension members in `TaskBase` or `CancellableTaskBase`. `ColdTasks` holds its own extension members.
-- The public metadata must keep each 0.11.9 entry. `tests/IcedTasks.Tests/PublicApiTests.fs` compares it with `tests/IcedTasks.Tests/PublicApi/IcedTasks-0.11.9-<tfm>.txt`. Do not edit these files: they come from the 0.11.9 package through `PublicApi/list-public-api.fsx`. A new public entry goes in `PublicApi/additions-<tfm>.txt` in the same change. A removed entry fails the test.
+- The public metadata must keep each 0.11.9 entry. `tests/IcedTasks.Tests/PublicApiTests.fs` compares it with `tests/IcedTasks.Tests/PublicApi/IcedTasks-0.11.9-<tfm>.txt`. Do not edit these files: they come from the 0.11.9 package through `PublicApi/list-public-api.fsx`. A new public entry goes in `PublicApi/additions-<tfm>.txt` in the same change. A removed or changed entry fails the test, also a rename of a generic parameter. An intended break in a new major version replaces the 0.11.9 files with files made from the last release of the previous major version.
 - Most builder values are in a nested `[<AutoOpen>]` module, so their qualified path names that module: `IcedTasks.ColdTasks.ColdTaskBuilder.coldTask`. `asyncEx` is directly in `IcedTasks.AsyncExExtensionsLowPriority`, and `parallelAsync` is directly in `IcedTasks.ParallelAsyncs`.
+
+After `open IcedTasks`, `ValueTask.map` and `CancellableValueTask.map` are the non-pooling functions, as in 0.11.9. The betas selected the pooling functions. A swap of `ValueTask.fs` and `PoolingValueTask.fs` in the compile order changes the `ValueTask` selection. `OpenFormsTests.fs` checks both with a quotation.
 
 These namespaces are not opened by `open IcedTasks`:
 

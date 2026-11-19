@@ -26,7 +26,7 @@ Each shipped library build needs one test run. A test TFM selects the nearest li
 ## Public surface tests
 
 - `tests/IcedTasks.Tests.NoOpen` checks FSharp.Core `task` inference with IcedTasks referenced and no IcedTasks `open`. A reference that brings the `ColdTask` overloads into scope makes it fail with FS0041. Its third test names an IcedTasks type, so the project fails to compile without the reference.
-- `OpenFormsTests.fs` uses each 0.11.9 `open` form, each in its own nested module, and fully qualified 0.11.9 names.
+- `OpenFormsTests.fs` uses each 0.11.9 `open` form in a nested module, with the base module open where a bind needs it, the public type abbreviations, and fully qualified 0.11.9 names. It checks with a quotation which `ValueTask.map` and `CancellableValueTask.map` `open IcedTasks` selects.
 - `PublicApiTests.fs` checks that the assembly has no assembly-level `AutoOpenAttribute`, and that each project loads its own library TFM. It lists the public metadata with `PublicApiListing.fs` (`System.Reflection.MetadataLoadContext`) and checks that each entry of `PublicApi/IcedTasks-0.11.9-<tfm>.txt` is still there, and that each added entry is in `PublicApi/additions-<tfm>.txt`. The NS projects link the files. Runtime reflection throws `TypeLoadException` on some IcedTasks signatures, so the listing reads metadata only.
 - `PublicApi/list-public-api.fsx` makes a listing from a DLL, for example `dotnet fsi list-public-api.fsx <packages>/icedtasks/0.11.9/lib/net9.0/IcedTasks.dll IcedTasks-0.11.9-net9.0.txt <packages>/fsharp.core/9.0.300/lib/netstandard2.1 <packages>/microsoft.bcl.asyncinterfaces/6.0.0/lib/netstandard2.0`.
 

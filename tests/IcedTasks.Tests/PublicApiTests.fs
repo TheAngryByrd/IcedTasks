@@ -96,19 +96,15 @@ let tests =
             let added = Set.difference actual baseline
             let unlisted = Set.difference added additions
             let staleAdditions = Set.difference additions added
-            let missingLines = lines "-" missing
-            let unlistedLines = lines "+" unlisted
-            let staleLines = lines "?" staleAdditions
 
-            Expect.isEmpty
-                missing
-                $"Entries of the 0.11.9 {targetFramework} API that the build does not have:{Environment.NewLine}{missingLines}"
+            let report = [
+                if not missing.IsEmpty then
+                    $"""Entries of the 0.11.9 {targetFramework} API that the build does not have:{Environment.NewLine}{lines "-" missing}"""
+                if not unlisted.IsEmpty then
+                    $"""Entries that the {targetFramework} build adds and that additions-{targetFramework}.txt does not list:{Environment.NewLine}{lines "+" unlisted}"""
+                if not staleAdditions.IsEmpty then
+                    $"""Entries of additions-{targetFramework}.txt that the build does not add:{Environment.NewLine}{lines "?" staleAdditions}"""
+            ]
 
-            Expect.isEmpty
-                unlisted
-                $"Entries that the {targetFramework} build adds and that additions-{targetFramework}.txt does not list:{Environment.NewLine}{unlistedLines}"
-
-            Expect.isEmpty
-                staleAdditions
-                $"Entries of additions-{targetFramework}.txt that the build does not add:{Environment.NewLine}{staleLines}"
+            Expect.isEmpty report (String.concat Environment.NewLine report)
     ]

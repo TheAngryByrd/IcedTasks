@@ -1,7 +1,7 @@
 module IcedTasksConsumer.OpenFormsTests
 
 open System
-open System.Reflection
+open System.Runtime.CompilerServices
 open System.Threading
 open System.Threading.Tasks
 open Expecto
@@ -49,8 +49,11 @@ module RootOpen =
             return value
         }
 
-    let mapPending (source: Task<int>) =
-        ValueTask.map ((+) 1) (ValueTask<int>(source))
+    let valueTaskMap =
+        <@ fun (source: ValueTask<int>) -> ValueTask.map ((+) 1) source @>
+
+    let cancellableValueTaskMap =
+        <@ fun (source: CancellableValueTask<int>) -> CancellableValueTask.map ((+) 1) source @>
 
 #if !TEST_NETSTANDARD2_0 && !TEST_NETSTANDARD2_1
     let poolingValueTaskValue () = poolingValueTask { return 7 }
@@ -78,6 +81,31 @@ module PublicAbbreviations =
     let cancellableUnit: CancellableTask = fun _ -> Task.CompletedTask
     let cancellableValueTaskValue: CancellableValueTask<int> = fun _ -> ValueTask<int> 3
     let cancellableValueTaskUnit: CancellableValueTask = fun _ -> ValueTask()
+
+    let stateMachineTypes: Type list = [
+        typeof<TaskBaseStateMachine<int, AsyncTaskMethodBuilder<int>>>
+        typeof<TaskBaseResumptionFunc<int, AsyncTaskMethodBuilder<int>>>
+        typeof<TaskBaseResumptionDynamicInfo<int, AsyncTaskMethodBuilder<int>>>
+        typeof<TaskBaseCode<int, int, AsyncTaskMethodBuilder<int>>>
+        typeof<ColdTaskStateMachine<int>>
+        typeof<ColdTaskResumptionFunc<int>>
+        typeof<ColdTaskResumptionDynamicInfo<int>>
+        typeof<ColdTaskCode<int, int>>
+        typeof<CancellableTaskBaseStateMachine<int, AsyncTaskMethodBuilder<int>>>
+        typeof<CancellableTaskBaseResumptionFunc<int, AsyncTaskMethodBuilder<int>>>
+        typeof<CancellableTaskBaseResumptionDynamicInfo<int, AsyncTaskMethodBuilder<int>>>
+        typeof<CancellableTaskBaseCode<int, int, AsyncTaskMethodBuilder<int>>>
+    ]
+
+    let inline awaiterResult<'Awaiter, 'T when Awaiter<'Awaiter, 'T>> (awaiter: 'Awaiter) =
+        Awaiter.GetResult awaiter
+
+    let inline awaitableResult<'Awaitable, 'Awaiter, 'T when Awaitable<'Awaitable, 'Awaiter, 'T>>
+        (awaitable: 'Awaitable)
+        =
+        awaiterResult (Awaitable.GetAwaiter awaitable)
+
+    let awaitedValue () = awaitableResult (ValueTask<int> 4)
 
 module ColdTasksOpen =
     open IcedTasks.ColdTasks
@@ -228,14 +256,11 @@ module QualifiedNames =
     let polyfillTaskValue () =
         IcedTasks.Polyfill.Task.Tasks.TaskBuilder.task { return 9 }
 
-let private valueTaskSource (valueTask: ValueTask<int>) =
-    typeof<ValueTask<int>>
-        .GetField(
-            "_obj",
-            BindingFlags.NonPublic
-            ||| BindingFlags.Instance
-        )
-        .GetValue(box valueTask)
+let private calledFunction (quotation: Quotations.Expr) =
+    match quotation with
+    | Quotations.Patterns.Lambda(_, Quotations.Patterns.Call(_, methodInfo, _)) ->
+        $"{methodInfo.DeclaringType.FullName}.{methodInfo.Name}"
+    | other -> failwith $"The quotation is not a lambda with one call: {other}"
 
 [<Tests>]
 let tests =
@@ -273,19 +298,17 @@ let tests =
                 "cancellablePoolingValueTask"
 #endif
 
-        testCase "ValueTask.map after open IcedTasks is the non-pooling ValueTask.map"
+        testCase "the module functions that open IcedTasks selects are the 0.11.9 ones"
         <| fun () ->
-            let source =
-                TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously)
+            Expect.equal
+                (calledFunction RootOpen.valueTaskMap)
+                "IcedTasks.ValueTasks+ValueTask.map"
+                "ValueTask.map is the non-pooling function, as in 0.11.9"
 
-            let mapped = RootOpen.mapPending source.Task
-
-            Expect.isTrue
-                (valueTaskSource mapped :? Task<int>)
-                "A ValueTask from AsyncValueTaskMethodBuilder wraps a Task, and one from PoolingAsyncValueTaskMethodBuilder does not"
-
-            source.SetResult 41
-            Expect.equal (mapped.AsTask().Result) 42 "ValueTask.map maps the result"
+            Expect.equal
+                (calledFunction RootOpen.cancellableValueTaskMap)
+                "IcedTasks.CancellableValueTasks+CancellableValueTaskModule.map"
+                "CancellableValueTask.map is the non-pooling function, as in 0.11.9"
 
         testCase "the public type abbreviations of 0.11.9 resolve after open IcedTasks"
         <| fun () ->
@@ -311,6 +334,13 @@ let tests =
                 "CancellableValueTask<'T>"
 
             PublicAbbreviations.cancellableValueTaskUnit(CancellationToken.None).AsTask().Wait()
+
+            Expect.equal
+                PublicAbbreviations.stateMachineTypes.Length
+                12
+                "Each state machine abbreviation resolves"
+
+            Expect.equal (PublicAbbreviations.awaitedValue ()) 4 "Awaitable and Awaiter constraints"
 
         testCase "each 0.11.9 module open brings its builder or its extensions"
         <| fun () ->

@@ -3,6 +3,7 @@ module IcedTasksConsumer.PublicApiListing
 open System
 open System.IO
 open System.Reflection
+open System.Text.RegularExpressions
 
 let private memberFlags =
     BindingFlags.Public
@@ -16,6 +17,7 @@ let private sourceAttributes =
         "Microsoft.FSharp.Core.RequireQualifiedAccessAttribute"
         "Microsoft.FSharp.Core.CompilationRepresentationAttribute"
         "System.Runtime.CompilerServices.ExtensionAttribute"
+        "Microsoft.FSharp.Core.CompilationArgumentCountsAttribute"
     ]
 
 let rec private typeName (t: Type) =
@@ -32,8 +34,7 @@ let rec private typeName (t: Type) =
         typeName (t.GetElementType())
         + "&"
     elif t.IsGenericType then
-        let definition = t.GetGenericTypeDefinition().FullName
-        let name = definition.Substring(0, definition.IndexOf '`')
+        let name = Regex.Replace(t.GetGenericTypeDefinition().FullName, "`[0-9]+", "")
 
         let arguments =
             t.GetGenericArguments()
@@ -71,13 +72,22 @@ let private parameterList (parameters: ParameterInfo array) =
     |> Array.map (fun p -> typeName p.ParameterType)
     |> String.concat ","
 
+let rec private argumentText (value: obj) =
+    match value with
+    | :? Collections.Generic.IEnumerable<CustomAttributeTypedArgument> as items ->
+        items
+        |> Seq.map (fun item -> argumentText item.Value)
+        |> String.concat ","
+        |> sprintf "[%s]"
+    | other -> string other
+
 let private attributeList (attributes: CustomAttributeData seq) =
     attributes
     |> Seq.filter (fun a -> sourceAttributes.Contains a.AttributeType.FullName)
     |> Seq.map (fun a ->
         let arguments =
             a.ConstructorArguments
-            |> Seq.map (fun argument -> string argument.Value)
+            |> Seq.map (fun argument -> argumentText argument.Value)
             |> String.concat ","
 
         $"{a.AttributeType.Name}({arguments})"

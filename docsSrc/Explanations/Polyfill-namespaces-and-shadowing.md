@@ -68,11 +68,11 @@ A project reference to IcedTasks does not open a namespace. Use `open IcedTasks`
 
 | Open | Brings into scope |
 |---|---|
-| `open IcedTasks` | All builders except the polyfills, with the extension members that let them bind `Task`, `ValueTask`, `Async`, and other awaitables. Also the extension members that let FSharp.Core `task` and `async` bind `ColdTask` values. |
+| `open IcedTasks` | All builders except the polyfills, with the extension members that let each builder bind the types that it supports. For example, `valueTask` and `asyncEx` can bind a `Task`, and `parallelAsync` binds only `Async`. Also the extension members that let FSharp.Core `task` and `async` bind `ColdTask` values. |
 | `open IcedTasks.ColdTasks` | `coldTask`, `backgroundColdTask`, the `ColdTask` module, and the `ColdTask` extension members for FSharp.Core `task` and `async`. |
-| `open IcedTasks.CancellableTasks`, `open IcedTasks.ValueTasks`, and the other builder modules | The builder and its module, but not the extension members that let it bind other types. For `let!`, also open the module that holds them, for example `IcedTasks.TaskBase` for `valueTask` or `IcedTasks.CancellableTaskBase` for `cancellableTask`, or use `open IcedTasks`. |
+| `open IcedTasks.CancellableTasks`, `open IcedTasks.ValueTasks`, and the other builder modules | The builder and its module. Some binds need extension members from another module. For example, `valueTask` binds a `ValueTask` with this open only, but it needs `IcedTasks.TaskBase` to bind a `Task`. `cancellableTask` needs `IcedTasks.CancellableTaskBase`. Use `open IcedTasks` to get all of them. |
 | `open IcedTasks.Polyfill.Task` | The IcedTasks `task` and `backgroundTask` builders. |
-| `open IcedTasks.Polyfill.Async` | `async` as the `asyncEx` builder. For `let!` of a `Task` or a `ValueTask`, also use `open IcedTasks`. |
+| `open IcedTasks.Polyfill.Async` | `async` as the `asyncEx` builder. For `let!`, `do!`, and `for` on a `Task`, a `ValueTask`, an awaitable, or an `IAsyncEnumerable<'T>`, also use `open IcedTasks`. |
 
 The `ColdTask` extension members add `Bind` and `ReturnFrom` overloads to the FSharp.Core `task` builder. `open IcedTasks` and `open IcedTasks.ColdTasks` bring them into scope. A file in `namespace IcedTasks` also gets them. If a `task { ... }` expression binds a value that has no type annotation, these overloads can cause error FS0041. Add a type annotation to the value, or write the code in a file that does not bring them into scope.
 
