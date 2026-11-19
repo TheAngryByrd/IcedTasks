@@ -1870,6 +1870,142 @@ module RuntimeTaskTests =
                     Expect.equal value 42 "Should await the awaiter from the function"
                 }
 
+            testCaseTask "the cancellable builders bind functions that return an awaiter"
+            <| fun () ->
+                task {
+                    use cts = new CancellationTokenSource()
+                    let seen = ResizeArray<CancellationToken>()
+
+                    let fromToken (ct: CancellationToken) =
+                        seen.Add ct
+                        (Task.FromResult 20).GetAwaiter()
+
+                    let fromUnit () = (Task.FromResult 22).GetAwaiter()
+
+                    let results: (string * Task<int>) list = [
+                        "cancellableTask",
+                        (cancellableTask {
+                            let! a = fromToken
+                            let! b = fromUnit
+                            return a + b
+                        })
+                            cts.Token
+                        "backgroundCancellableTask",
+                        (backgroundCancellableTask {
+                            let! a = fromToken
+                            let! b = fromUnit
+                            return a + b
+                        })
+                            cts.Token
+                        "cancellableValueTask",
+                        ((cancellableValueTask {
+                            let! a = fromToken
+                            let! b = fromUnit
+                            return a + b
+                        })
+                            cts.Token)
+                            .AsTask()
+                    ]
+
+                    for name, result in results do
+                        let! value = result
+                        Expect.equal value 42 $"%s{name} should await each awaiter"
+
+                    Expect.equal
+                        (List.ofSeq seen)
+                        [
+                            cts.Token
+                            cts.Token
+                            cts.Token
+                        ]
+                        "Each builder should give the caller token to the function"
+                }
+
+            testCaseTask
+                "the cancellable builders check the token before they call a function that returns an awaiter"
+            <| fun () ->
+                task {
+                    let mutable called = 0
+
+                    let fromToken (_: CancellationToken) =
+                        called <- called + 1
+                        (Task.FromResult 1).GetAwaiter()
+
+                    let fromUnit () =
+                        called <- called + 1
+                        (Task.FromResult 1).GetAwaiter()
+
+                    let run (start: CancellationTokenSource -> Task) =
+                        task {
+                            use cts = new CancellationTokenSource()
+                            let result = start cts
+                            do! waitForCompletion result
+                            return result.IsCanceled
+                        }
+
+                    let! canceled =
+                        [
+                            run (fun cts ->
+                                (cancellableTask {
+                                    cts.Cancel()
+                                    let! a = fromToken
+                                    return a
+                                })
+                                    cts.Token
+                            )
+                            run (fun cts ->
+                                (cancellableTask {
+                                    cts.Cancel()
+                                    let! a = fromUnit
+                                    return a
+                                })
+                                    cts.Token
+                            )
+                            run (fun cts ->
+                                (backgroundCancellableTask {
+                                    cts.Cancel()
+                                    let! a = fromToken
+                                    return a
+                                })
+                                    cts.Token
+                            )
+                            run (fun cts ->
+                                (backgroundCancellableTask {
+                                    cts.Cancel()
+                                    let! a = fromUnit
+                                    return a
+                                })
+                                    cts.Token
+                            )
+                            run (fun cts ->
+                                ((cancellableValueTask {
+                                    cts.Cancel()
+                                    let! a = fromToken
+                                    return a
+                                })
+                                    cts.Token)
+                                    .AsTask()
+                            )
+                            run (fun cts ->
+                                ((cancellableValueTask {
+                                    cts.Cancel()
+                                    let! a = fromUnit
+                                    return a
+                                })
+                                    cts.Token)
+                                    .AsTask()
+                            )
+                        ]
+                        |> Task.WhenAll
+
+                    Expect.equal
+                        (List.ofArray canceled)
+                        (List.replicate 6 true)
+                        "Each task should be cancelled"
+
+                    Expect.equal called 0 "No builder should call the function"
+                }
+
             testCase "the linked suites use the runtime-async builders"
             <| fun () ->
                 let asm = typeof<CountingAsyncEnumerable>.Assembly

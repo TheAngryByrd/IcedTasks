@@ -346,6 +346,20 @@ module RuntimeCancellableTaskBase =
                 : WithToken<'Awaiter> =
                 RuntimeCancellableAwait.withToken (fun _ -> coldAwaitable ())
 
+            /// <summary>Gives the ambient token to the function when the builder binds it, and awaits the awaiter that the function returns.</summary>
+            [<NoDynamicInvocation; NoEagerConstraintApplication>]
+            member inline _.Source<'Awaiter, 'TResult when Awaiter<'Awaiter, 'TResult>>
+                ([<InlineIfLambda>] cancellableAwaiter: CancellationToken -> 'Awaiter)
+                : WithToken<'Awaiter> =
+                WithToken(fun ct -> cancellableAwaiter ct)
+
+            /// <summary>Calls the function when the builder binds it, and awaits the awaiter that the function returns.</summary>
+            [<NoDynamicInvocation; NoEagerConstraintApplication>]
+            member inline _.Source<'Awaiter, 'TResult when Awaiter<'Awaiter, 'TResult>>
+                ([<InlineIfLambda>] getAwaiter: unit -> 'Awaiter)
+                : WithToken<'Awaiter> =
+                WithToken(fun _ -> getAwaiter ())
+
             /// <summary>Runs the body with the resource, and then calls <c>Dispose</c> on the resource.</summary>
             /// <remarks>The builder does not dispose a null resource.</remarks>
             [<NoDynamicInvocation>]
