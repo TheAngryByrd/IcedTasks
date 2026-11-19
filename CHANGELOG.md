@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- [Remove the assembly-level `AutoOpen` attributes of 0.11.10-beta001 and beta002, which opened the IcedTasks namespaces in every file of each referencing project. Restore the 0.11.9 namespaces, modules, and public type names](PR_URL) - Credits @TheAngryByrd
+
+### Changed
+- [Remove the namespaces that only 0.11.10-beta001 and beta002 had, for example `IcedTasks.TaskLike`, `IcedTasks.AsyncEx`, and `IcedTasks.ColdTasks.ColdTasks`. Use `open IcedTasks` or the 0.11.9 module names](PR_URL) - Credits @TheAngryByrd
+
 ## [0.11.10-beta002] - 2026-11-18
 
 ### Fixed

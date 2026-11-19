@@ -60,7 +60,20 @@ Use this when you want F# `Async<'T>` semantics, but with AsyncEx interop featur
 - iterate `IAsyncEnumerable<'T>`
 - use AsyncEx task exception behavior
 
-For most code, prefer importing `IcedTasks.AsyncEx` and writing `asyncEx { ... }` explicitly until the team has decided that shadowing `async { ... }` improves readability in that scope.
+For most code, prefer `open IcedTasks` and writing `asyncEx { ... }` explicitly until the team has decided that shadowing `async { ... }` improves readability in that scope.
+
+## What each open brings into scope
+
+A project reference to IcedTasks does not open a namespace. A file must open IcedTasks before it can use an IcedTasks builder.
+
+| Open | Brings into scope |
+|---|---|
+| `open IcedTasks` | All builders except the polyfills. Also the extension members that let FSharp.Core `task` and `async` bind `ColdTask` values. |
+| `open IcedTasks.ColdTasks` | One builder family: `coldTask`, `backgroundColdTask`, and the `ColdTask` module. The other builder modules, for example `IcedTasks.CancellableTasks` and `IcedTasks.ValueTasks`, work the same way. |
+| `open IcedTasks.Polyfill.Task` | The IcedTasks `task` and `backgroundTask` builders. |
+| `open IcedTasks.Polyfill.Async` | `async` as the `asyncEx` builder. |
+
+`open IcedTasks` adds `Bind` and `ReturnFrom` overloads for `ColdTask` to the FSharp.Core `task` builder. If a `task { ... }` expression binds a value that has no type annotation, these overloads can cause error FS0041. Add a type annotation to the value, or write the code in a file that does not open IcedTasks.
 
 ## Import strategy
 

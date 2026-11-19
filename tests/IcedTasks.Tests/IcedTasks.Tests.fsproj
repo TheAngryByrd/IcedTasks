@@ -26,6 +26,12 @@
     <Compile Include="CancellablePoolingValueTaskTests.fs" />
     <Compile Include="ColdTaskTests.fs" />
     <Compile Include="ParallelAsyncTests.fs" />
+    <Compile Include="OpenFormsTests.fs" />
+    <Compile Include="PublicApiTests.fs" />
     <Compile Include="Main.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Reflection.MetadataLoadContext" />
+    <Content Include="PublicApi/*.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

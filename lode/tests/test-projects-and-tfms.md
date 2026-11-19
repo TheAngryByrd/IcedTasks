@@ -1,12 +1,13 @@
 # Test projects and TFMs
 
-Three test projects test the library builds. Each project targets `net10.0;net11.0`, so `dotnet test` runs each project two times.
+Four test projects test the library builds. Each project targets `net10.0;net11.0`, so `dotnet test` runs each project two times.
 
 | Project | Library TFM | Defines | Source files |
 |---|---|---|---|
-| `tests/IcedTasks.Tests` | `net6.0` on the `net10.0` run, `net9.0` on the `net11.0` run | `TEST_NET6_0_OR_GREATER` | its own 16 files |
+| `tests/IcedTasks.Tests` | `net6.0` on the `net10.0` run, `net9.0` on the `net11.0` run | `TEST_NET6_0_OR_GREATER` | its own 18 files, and `PublicApi/*.txt` |
 | `tests/IcedTasks.Tests.NS20` | `netstandard2.0` | `NETSTANDARD2_0;TEST_NETSTANDARD2_0` | links `../IcedTasks.Tests/*.fs`, no Pooling test files |
 | `tests/IcedTasks.Tests.NS21` | `netstandard2.1` | `NETSTANDARD2_1;TEST_NETSTANDARD2_1` | links `../IcedTasks.Tests/*.fs`, no Pooling test files |
+| `tests/IcedTasks.Tests.NoOpen` | same as `IcedTasks.Tests` | none | its own 2 files, with no `open` of an IcedTasks namespace |
 
 The NS projects select the library TFM with `AdditionalProperties`:
 
@@ -21,6 +22,12 @@ The NS projects select the library TFM with `AdditionalProperties`:
 ```
 
 Each shipped library build needs one test run. A test TFM selects the nearest library TFM, so `IcedTasks.Tests` sets `AdditionalProperties="TargetFramework=net6.0"` for its `net10.0` run. Without it, both runs load the `net9.0` build. The restore still uses the `net9.0` dependency graph, so the `net10.0` run loads FSharp.Core 9.0.300, not the 6.0.4 floor of the `net6.0` build. Expecto needs FSharp.Core 7.0.200 or later, so a test run cannot use 6.0.4.
+
+## Public surface tests
+
+- `tests/IcedTasks.Tests.NoOpen` uses the FSharp.Core `task` builder with no IcedTasks `open`. It compiles only if a project reference alone brings no IcedTasks extension members. Its files must not declare a namespace under `IcedTasks`, because that declaration opens `IcedTasks`.
+- `OpenFormsTests.fs` uses each 0.11.9 `open` form and fully qualified 0.11.9 names. It is a top-level module outside the `IcedTasks` namespace for the same reason.
+- `PublicApiTests.fs` checks that the assembly has no assembly-level `AutoOpenAttribute`. It also lists the public metadata with `System.Reflection.MetadataLoadContext` and compares it with `PublicApi/IcedTasks-0.11.9-<tfm>.txt`. The NS projects link the baseline files. Runtime reflection throws `TypeLoadException` on some IcedTasks signatures, so the listing reads metadata only.
 
 ## Rules for new tests
 

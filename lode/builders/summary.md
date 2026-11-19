@@ -20,7 +20,6 @@ The builders domain is the library in `src/IcedTasks`. It defines the computatio
     <Compile Include="CancellableValueTask.fs" />
     <Compile Include="CancellablePoolingValueTask.fs" />
     <Compile Include="CancellableTask.fs" />
-    <Compile Include="AutoOpens.fs" />
 ```
 
 ```mermaid
@@ -43,7 +42,7 @@ Topics:
 - [Cancellation flow](cancellation-flow.md) - the ambient token and the cancellation checks.
 - [and! and MergeSources](and-bang-merge-sources.md) - concurrent start of `and!` operands.
 - [Background builders](background-builders.md) - thread pool escape.
-- [Namespaces and TFMs](namespaces-and-tfms.md) - AutoOpen, polyfill namespaces, and `#if` guards.
+- [Namespaces and TFMs](namespaces-and-tfms.md) - AutoOpen modules, open forms, graph checking, polyfill namespaces, and `#if` guards.
 - [AsyncEx and ParallelAsync](asyncex-and-parallelasync.md) - the `Async` builders.
 - [Companion modules](companion-modules.md) - `map`, `bind`, `zip`, and other functions.
 

@@ -11,7 +11,10 @@ let addBoth getLeft getRight =
     task {
         let! left = getLeft ()
         let! right = getRight ()
-        return left + right
+
+        return
+            left
+            + right
     }
 
 let bindUnannotated value =
@@ -26,15 +29,26 @@ let tests =
         testCaseTask "do! binds an unannotated function result"
         <| fun () ->
             task {
-                let mutable received = None
+                let received = ResizeArray()
 
                 let tryCacheResponse (name: string) (stream: Stream) =
-                    received <- Some(name, stream.Length)
-                    Task.CompletedTask
+                    received.Add(name, stream.Length)
+                    Task.FromResult()
 
-                use stream = new MemoryStream([| 1uy; 2uy |])
+                use stream =
+                    new MemoryStream(
+                        [|
+                            1uy
+                            2uy
+                        |]
+                    )
+
                 do! get tryCacheResponse "blob" stream
-                Expect.equal received (Some("blob", 2L)) "get passes its arguments to tryCacheResponse"
+
+                Expect.equal
+                    (List.ofSeq received)
+                    [ ("blob", 2L) ]
+                    "get passes its arguments to tryCacheResponse"
             }
 
         testCaseTask "let! binds unannotated values"

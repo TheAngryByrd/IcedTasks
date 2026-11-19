@@ -951,7 +951,7 @@ module TaskTests =
                 testCase "SetResult completes a non-generic AsyncTaskMethodBuilder"
                 <| fun () ->
                     let mutable builder = AsyncTaskMethodBuilder.Create()
-                    TaskLike.MethodBuilder.SetResult(&builder)
+                    IcedTasks.MethodBuilder.SetResult(&builder)
 
                     Expect.isTrue
                         builder.Task.IsCompletedSuccessfully
@@ -959,9 +959,9 @@ module TaskTests =
                 testCase "get_Task before SetResult returns the task that SetResult completes"
                 <| fun () ->
                     let mutable builder = AsyncTaskMethodBuilder.Create()
-                    let exported: Task = TaskLike.MethodBuilder.get_Task (&builder)
+                    let exported: Task = IcedTasks.MethodBuilder.get_Task (&builder)
                     Expect.isFalse exported.IsCompleted "The task must be pending before SetResult"
-                    TaskLike.MethodBuilder.SetResult(&builder)
+                    IcedTasks.MethodBuilder.SetResult(&builder)
 
                     Expect.isTrue
                         (obj.ReferenceEquals(exported, builder.Task))

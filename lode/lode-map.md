@@ -17,7 +17,7 @@ Read [summary](summary.md), [terminology](terminology.md), and this map at the s
 - [builders/cancellation-flow.md](builders/cancellation-flow.md) - the ambient token and cancellation checks.
 - [builders/and-bang-merge-sources.md](builders/and-bang-merge-sources.md) - `and!` and concurrent start.
 - [builders/background-builders.md](builders/background-builders.md) - thread pool escape.
-- [builders/namespaces-and-tfms.md](builders/namespaces-and-tfms.md) - AutoOpen, polyfill namespaces, TFM guards.
+- [builders/namespaces-and-tfms.md](builders/namespaces-and-tfms.md) - AutoOpen modules, open forms, graph checking, polyfill namespaces, TFM guards.
 - [builders/asyncex-and-parallelasync.md](builders/asyncex-and-parallelasync.md) - the `Async` builders.
 - [builders/companion-modules.md](builders/companion-modules.md) - module functions and conversions.
 
@@ -32,7 +32,7 @@ Read [summary](summary.md), [terminology](terminology.md), and this map at the s
 ## tests - `tests/`
 
 - [tests/summary.md](tests/summary.md) - Expecto setup and conventions.
-- [tests/test-projects-and-tfms.md](tests/test-projects-and-tfms.md) - the three projects and `#if` symbols.
+- [tests/test-projects-and-tfms.md](tests/test-projects-and-tfms.md) - the four projects, public surface tests, and `#if` symbols.
 - [tests/expect-helpers.md](tests/expect-helpers.md) - shared helpers, multi-start tests, manual clock.
 - [tests/disposal-outcome-tests.md](tests/disposal-outcome-tests.md) - the DisposeAsync outcome matrix and its regression tests.
 

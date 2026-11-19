@@ -1,6 +1,6 @@
 # DisposeAsync outcome tests
 
-`tests/IcedTasks.Tests/AsyncDisposalOutcome.fs` holds a test matrix for the result of `use` on an `IAsyncDisposable` and `for` over an `IAsyncEnumerable`. All three test projects compile it, after `Expect.fs`. Each test file of a builder that supports `use` of an `IAsyncDisposable` adds a `disposalOutcomeTests` list to its root `[<Tests>]` list. `ParallelAsyncTests.fs` has none, because `parallelAsync` forwards `Using` to `async`.
+`tests/IcedTasks.Tests/AsyncDisposalOutcome.fs` holds a test matrix for the result of `use` on an `IAsyncDisposable` and `for` over an `IAsyncEnumerable`. `IcedTasks.Tests`, NS20, and NS21 compile it, after `Expect.fs`. Each test file of a builder that supports `use` of an `IAsyncDisposable` adds a `disposalOutcomeTests` list to its root `[<Tests>]` list. `ParallelAsyncTests.fs` has none, because `parallelAsync` forwards `Using` to `async`.
 
 ## Contract that the tests pin
 
