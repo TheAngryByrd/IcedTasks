@@ -12,7 +12,7 @@
 An assembly-level `AutoOpen` opens its namespace in each file of each project that references the assembly.
 A file with no `open IcedTasks` then gets the IcedTasks extension members.
 The `ColdTask` overloads on the FSharp.Core `task` builder make code such as `task { do! f a b }` fail with FS0041 when `f` has no type annotation.
-The layout also changed the full name of each public type, so code compiled against 0.11.9 fails at run time with `TypeLoadException`.
+The layout also changed the full name of each public type outside `IcedTasks.Polyfill`, so code compiled against 0.11.9 fails at run time with `TypeLoadException` when it uses one of these types.
 
 We put each builder module back in `namespace IcedTasks` as an `[<AutoOpen>] module`, with the 0.11.9 names, and we deleted `AutoOpens.fs`:
 
@@ -27,7 +27,7 @@ module ColdTasks =
 - A project reference alone opens no IcedTasks namespace.
 - `open IcedTasks` brings all builders except the polyfills ([0009](0009-opt-in-polyfill-namespaces.md)).
 - The 0.11.9 module opens, for example `open IcedTasks.ColdTasks`, still work.
-- The public metadata is the same as 0.11.9 on each target framework. `tests/IcedTasks.Tests/PublicApiTests.fs` compares it with `tests/IcedTasks.Tests/PublicApi/IcedTasks-0.11.9-<tfm>.txt`.
+- The public metadata is the same as 0.11.9 on each target framework: type names, kinds, base types, member signatures with return types and generic parameters, and the `AutoOpen`, `RequireQualifiedAccess`, `CompilationRepresentation`, and `Extension` attributes. `tests/IcedTasks.Tests/PublicApiTests.fs` compares it with `tests/IcedTasks.Tests/PublicApi/IcedTasks-0.11.9-<tfm>.txt`.
 
 ## Consequences
 

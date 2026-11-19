@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Remove the assembly-level `AutoOpen` attributes of 0.11.10-beta001, beta002, and beta003, which opened the IcedTasks namespaces in every file of each referencing project. Restore the 0.11.9 namespaces, modules, and public type names](PR_URL) - Credits @TheAngryByrd
 
 ### Changed
-- [Remove the namespaces that only 0.11.10-beta001, beta002, and beta003 had, for example `IcedTasks.TaskLike`, `IcedTasks.AsyncEx`, and `IcedTasks.ColdTasks.ColdTasks`. Use `open IcedTasks` or the 0.11.9 module names](PR_URL) - Credits @TheAngryByrd
+- [Remove the names that only 0.11.10-beta001, beta002, and beta003 had: the namespaces `IcedTasks.TaskLike`, `IcedTasks.Nullness`, `IcedTasks.AsyncEx`, `IcedTasks.ParallelAsync`, and paths that repeat a module name, such as `IcedTasks.ColdTasks.ColdTasks.ColdTaskBuilder`. Use `open IcedTasks` or the 0.11.9 names. A file that used IcedTasks with no `open` on a beta needs `open IcedTasks`. Compile again each assembly that was compiled against a beta, including libraries that depend on IcedTasks, because the public type names change back to the 0.11.9 names and a beta-compiled assembly fails with `TypeLoadException`](PR_URL) - Credits @TheAngryByrd
 
 ## [0.11.10-beta003] - 2026-11-18
 

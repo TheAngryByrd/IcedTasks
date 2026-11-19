@@ -9,7 +9,7 @@ IcedTasks has replacements for the FSharp.Core `task`, `backgroundTask`, and `as
 An auto-opened namespace with these replacements shadows the FSharp.Core builders in each file that opens `IcedTasks`.
 
 We put the polyfills in `IcedTasks.Polyfill.Task` (`Task.fs`) and `IcedTasks.Polyfill.Async` (`AsyncEx.fs`).
-Neither namespace is an `[<AutoOpen>]` module of `IcedTasks`, so `open IcedTasks` does not open them, and a consumer must open each one.
+Neither namespace is an `[<AutoOpen>]` module of `IcedTasks`, so `open IcedTasks` does not open them. A consumer opens one of them to get the short shadowing name, for example `task`.
 
 The #35 commit says "Put Polyfill into specific namespace to opt in precisely".
 #34 says that the namespace is "for fixing things in FSharp.Core that haven't made it upstream such as #31/https://github.com/dotnet/fsharp/issues/16189."

@@ -22,6 +22,7 @@
     <Compile Include="../IcedTasks.Tests/ColdTaskTests.fs" />
     <Compile Include="../IcedTasks.Tests/ParallelAsyncTests.fs" />
     <Compile Include="../IcedTasks.Tests/OpenFormsTests.fs" />
+    <Compile Include="../IcedTasks.Tests/PublicApiListing.fs" />
     <Compile Include="../IcedTasks.Tests/PublicApiTests.fs" />
     <Compile Include="../IcedTasks.Tests/Main.fs" />
   </ItemGroup>

@@ -60,4 +60,11 @@ let tests =
                 let! value = bindUnannotated (Task.FromResult "value")
                 Expect.equal value "value" "let! binds the Task<string> argument"
             }
+
+        testCase "the project references IcedTasks"
+        <| fun () ->
+            Expect.equal
+                (typeof<IcedTasks.ColdTasks.ColdTaskBuilder>.Assembly.GetName().Name)
+                "IcedTasks"
+                "The FSharp.Core task tests above must compile with IcedTasks referenced"
     ]

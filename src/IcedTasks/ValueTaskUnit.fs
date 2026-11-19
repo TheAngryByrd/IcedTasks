@@ -1,6 +1,5 @@
 namespace IcedTasks
 
-
 // Task builder for F# that compiles to allocation-free paths for synchronous code.
 //
 // Originally written in 2016 by Robert Peele (humbobst@gmail.com)
@@ -13,8 +12,6 @@ namespace IcedTasks
 // to this software to the public domain worldwide. This software is distributed without any warranty.
 
 namespace IcedTasks
-
-open IcedTasks.TaskBase
 
 /// Contains methods to build non-generic ValueTasks using the F# computation expression syntax.
 [<AutoOpen>]
@@ -150,6 +147,6 @@ module ValueTasksUnit =
         let valueTaskUnit = ValueTaskUnitBuilder()
 
         /// <summary>
-        /// Alias for <see cref="F:IcedTasks.ValueTasksUnit.ValueTaskBuilder.valueTaskUnit" />.
+        /// Alias for <see cref="P:IcedTasks.ValueTasksUnit.ValueTaskBuilder.valueTaskUnit" />.
         /// </summary>
         let vTaskUnit = valueTaskUnit

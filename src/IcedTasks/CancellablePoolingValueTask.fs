@@ -13,8 +13,6 @@ namespace IcedTasks
 
 #if NET6_0_OR_GREATER
 
-open IcedTasks.CancellableTaskBase
-open IcedTasks.ValueTasks
 
 /// Contains methods to build pooling-backed CancellableValueTasks using the F# computation expression syntax.
 [<AutoOpen>]

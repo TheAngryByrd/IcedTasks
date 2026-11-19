@@ -13,8 +13,6 @@ namespace IcedTasks
 
 namespace IcedTasks
 
-open IcedTasks.TaskBase
-
 /// Contains methods to build non-generic Tasks using the F# computation expression syntax.
 [<AutoOpen>]
 module TasksUnit =

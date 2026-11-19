@@ -11,9 +11,6 @@
 
 namespace IcedTasks
 
-open IcedTasks.ValueTasks
-open IcedTasks.CancellableTaskBase
-
 /// Contains methods to build CancellableValueTasks using the F# computation expression syntax.
 [<AutoOpen>]
 module CancellableValueTasks =

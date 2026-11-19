@@ -1,6 +1,5 @@
 namespace IcedTasks
 
-
 open System.Threading.Tasks
 
 /// <summary>
@@ -76,8 +75,6 @@ module ValueTaskExtensions =
 // to this software to the public domain worldwide. This software is distributed without any warranty.
 
 namespace IcedTasks
-
-open IcedTasks.TaskBase
 
 /// Contains methods to build ValueTasks using the F# computation expression syntax
 [<AutoOpen>]
@@ -208,7 +205,7 @@ module ValueTasks =
         let valueTask = ValueTaskBuilder()
 
         /// <summary>
-        /// Alias for <see cref="F:IcedTasks.ValueTasks.ValueTaskBuilder.valueTask" />.
+        /// Alias for <see cref="P:IcedTasks.ValueTasks.ValueTaskBuilderModule.valueTask" />.
         /// </summary>
         let vTask = valueTask
 

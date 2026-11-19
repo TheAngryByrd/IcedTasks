@@ -32,7 +32,7 @@ Prefer local opens at first: open the polyfill namespace inside the module or fi
 
 FSharp.Core's [`task` expression](https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/task-expressions) is the built-in default for writing `Task<'T>` code in F#.
 
-Use the FSharp.Core builder when it already supports the code you are writing. Use `IcedTasks.Polyfill.Task.task` when you want the IcedTasks task builder behavior under the familiar `task { ... }` name.
+Use the FSharp.Core builder when it already supports the code you are writing. Use the `task` of `IcedTasks.Polyfill.Task` when you want the IcedTasks task builder behavior under the familiar `task { ... }` name.
 
 The IcedTasks task builder is intended as a polyfill for task-builder behavior that cannot be backported everywhere FSharp.Core is used. In this project, the IcedTasks builder participates in the broader IcedTasks interop surface:
 
@@ -64,16 +64,17 @@ For most code, prefer `open IcedTasks` and writing `asyncEx { ... }` explicitly 
 
 ## What each open brings into scope
 
-A project reference to IcedTasks does not open a namespace. A file must open IcedTasks before it can use an IcedTasks builder.
+A project reference to IcedTasks does not open a namespace. Use `open IcedTasks` in each file that uses IcedTasks. It is the supported form.
 
 | Open | Brings into scope |
 |---|---|
-| `open IcedTasks` | All builders except the polyfills. Also the extension members that let FSharp.Core `task` and `async` bind `ColdTask` values. |
-| `open IcedTasks.ColdTasks` | One builder family: `coldTask`, `backgroundColdTask`, and the `ColdTask` module. The other builder modules, for example `IcedTasks.CancellableTasks` and `IcedTasks.ValueTasks`, work the same way. |
+| `open IcedTasks` | All builders except the polyfills, with the extension members that let them bind `Task`, `ValueTask`, `Async`, and other awaitables. Also the extension members that let FSharp.Core `task` and `async` bind `ColdTask` values. |
+| `open IcedTasks.ColdTasks` | `coldTask`, `backgroundColdTask`, the `ColdTask` module, and the `ColdTask` extension members for FSharp.Core `task` and `async`. |
+| `open IcedTasks.CancellableTasks`, `open IcedTasks.ValueTasks`, and the other builder modules | The builder and its module, but not the extension members that let it bind other types. For `let!`, also open the module that holds them, for example `IcedTasks.TaskBase` for `valueTask` or `IcedTasks.CancellableTaskBase` for `cancellableTask`, or use `open IcedTasks`. |
 | `open IcedTasks.Polyfill.Task` | The IcedTasks `task` and `backgroundTask` builders. |
-| `open IcedTasks.Polyfill.Async` | `async` as the `asyncEx` builder. |
+| `open IcedTasks.Polyfill.Async` | `async` as the `asyncEx` builder. For `let!` of a `Task` or a `ValueTask`, also use `open IcedTasks`. |
 
-`open IcedTasks` adds `Bind` and `ReturnFrom` overloads for `ColdTask` to the FSharp.Core `task` builder. If a `task { ... }` expression binds a value that has no type annotation, these overloads can cause error FS0041. Add a type annotation to the value, or write the code in a file that does not open IcedTasks.
+The `ColdTask` extension members add `Bind` and `ReturnFrom` overloads to the FSharp.Core `task` builder. `open IcedTasks` and `open IcedTasks.ColdTasks` bring them into scope. A file in `namespace IcedTasks` also gets them. If a `task { ... }` expression binds a value that has no type annotation, these overloads can cause error FS0041. Add a type annotation to the value, or write the code in a file that does not bring them into scope.
 
 ## Import strategy
 
