@@ -9,7 +9,7 @@ The library first targeted `net6.0`, and then `netstandard2.0;netstandard2.1`.
 #9 changed it to `net7.0` only, for the FSharp.Core fix in issue #8: "This does seem fixed but requires .net 7.0 TFM and F# 7.x."
 
 We target `netstandard2.0` and `netstandard2.1` again (#13), and add `net6.0` (#27) and `net9.0` (#51).
-`src/IcedTasks/IcedTasks.fsproj` has `net9.0;net6.0;netstandard2.1;netstandard2.0`.
+`src/IcedTasks/IcedTasks.fsproj` has `net11.0;net9.0;net6.0;netstandard2.1;netstandard2.0`. [0015](0015-runtime-async-task-builders.md) adds `net11.0` (#62).
 The pooling builders use `PoolingAsyncValueTaskMethodBuilder`, which .NET 6 added, so they compile only under `#if NET6_0_OR_GREATER`.
 
 The netstandard targets let .NET Framework and older .NET consumers use the library.

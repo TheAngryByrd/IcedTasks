@@ -25,7 +25,7 @@ The existing resumable builders use this `Run` shape, with a static path and a d
 flowchart LR
     i4["#4 async2"] --> shape["resumable builder: Run, RunDynamic"]
     i3["#3 tail recursion"] --> bind["Bind and ReturnFrom of task builders"]
-    shape --> tests["tests in all 3 projects"]
+    shape --> tests["tests in all 4 projects"]
     bind --> tests
 ```
 

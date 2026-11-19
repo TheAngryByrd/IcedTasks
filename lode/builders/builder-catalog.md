@@ -13,6 +13,9 @@ Each builder keyword is a value in an AutoOpen module. Paths are under `src/Iced
 | `cancellableTask`, `backgroundCancellableTask` | - | `CancellableTaskBuilder`, `BackgroundCancellableTaskBuilder` (`CancellableTask.fs`) | `CancellableTask<'T>` | `CancellableTaskBuilderBase` | cold |
 | `cancellableValueTask` | - | `CancellableValueTaskBuilder` (`CancellableValueTask.fs`) | `CancellableValueTask<'T>` | `CancellableTaskBuilderBase` | cold |
 | `cancellablePoolingValueTask` | `cancelablePVTask` | `CancellablePoolingValueTaskBuilder` (`CancellablePoolingValueTask.fs`) | `CancellableValueTask<'T>` | `CancellableTaskBuilderBase` | cold |
+| `task`, `backgroundTask`, `valueTask` in `IcedTasks.Polyfill.RuntimeTask` | - | `RuntimeTaskBuilder`, `RuntimeBackgroundTaskBuilder`, `RuntimeValueTaskBuilder` (`RuntimeTask.fs`) | `Task<'T>`, `ValueTask<'T>` | `RuntimeTaskBuilderBase` | hot, `net11.0` only |
+| `coldTask`, `backgroundColdTask` in `IcedTasks.Polyfill.RuntimeTask` | - | `RuntimeColdTaskBuilder`, `RuntimeBackgroundColdTaskBuilder` (`RuntimeTask.fs`) | `unit -> Task<'T>` | `RuntimeTaskBuilderBase` | cold, `net11.0` only |
+| `cancellableTask`, `backgroundCancellableTask`, `cancellableValueTask` in `IcedTasks.Polyfill.RuntimeTask` | - | `RuntimeCancellableTaskBuilder`, `RuntimeBackgroundCancellableTaskBuilder`, `RuntimeCancellableValueTaskBuilder` (`RuntimeCancellableTask.fs`) | `CancellationToken -> Task<'T>`, `CancellationToken -> ValueTask<'T>` | `RuntimeCancellableTaskBuilderBase` | cold, `net11.0` only |
 | `asyncEx` | `async` in `IcedTasks.Polyfill.Async` | `AsyncExBuilder` (`AsyncEx.fs`) | `Async<'T>` | none | `Async` |
 | `parallelAsync` | - | `ParallelAsyncBuilderUsingStartImmediateAsTask` (`ParallelAsync.fs`) | `Async<'T>` | `ParallelAsyncBuilderBase` | `Async` |
 | `parallelAsyncUsingStartChild` | - | `ParallelAsyncBuilderUsingStartChild` (`ParallelAsync.fs`) | `Async<'T>` | `ParallelAsyncBuilderBase` | `Async` |
@@ -20,7 +23,8 @@ Each builder keyword is a value in an AutoOpen module. Paths are under `src/Iced
 ## Contracts
 
 - `task` and `backgroundTask` are in `IcedTasks.Polyfill.Task`. That namespace is not auto-opened. See [namespaces and TFMs](namespaces-and-tfms.md).
-- The pooling builders and their aliases exist only on `net6.0` and `net9.0`.
+- The runtime-async builders are in `IcedTasks.Polyfill.RuntimeTask`, which is not auto-opened. See [runtime-async task builders](runtime-task.md).
+- The pooling builders and their aliases exist only on `net6.0`, `net9.0`, and `net11.0`.
 - `ColdTask.fs`, `CancellableTask.fs`, `CancellableValueTask.fs`, and `CancellablePoolingValueTask.fs` define the result aliases:
 
 ```fsharp
@@ -54,5 +58,6 @@ Decisions:
 
 - [ADR 0001, cold result types are function type aliases](../../adr/0001-function-type-aliases-for-cold-results.md)
 - [ADR 0008, shared builder base classes](../../adr/0008-shared-builder-base-classes.md)
+- [ADR 0015, runtime-async task builders](../../adr/0015-runtime-async-task-builders.md)
 
 Related: [run and start paths](run-and-start-paths.md), [companion modules](companion-modules.md), [summary](summary.md).

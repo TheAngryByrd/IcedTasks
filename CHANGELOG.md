@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- [Add runtime-async versions of `task`, `backgroundTask`, `valueTask`, `coldTask`, `backgroundColdTask`, `cancellableTask`, `backgroundCancellableTask`, and `cancellableValueTask` in `IcedTasks.Polyfill.RuntimeTask` for `net11.0` with F# 11 preview](https://github.com/TheAngryByrd/IcedTasks/pull/62) - Credits @TheAngryByrd
 - [Add a canceled-body case to the DisposeAsync outcome matrix](https://github.com/TheAngryByrd/IcedTasks/pull/79) - Credits @TheAngryByrd
+
+### Changed
+- [Add a `net11.0` library build that depends on FSharp.Core 11.0.101. The `net10.0` test run of `IcedTasks.Tests` loads the `net9.0` build instead of the `net6.0` build, and its `net11.0` test run loads the `net11.0` build. A metadata test checks the public API of each build that `IcedTasks.fsproj` ships](https://github.com/TheAngryByrd/IcedTasks/pull/62) - Credits @TheAngryByrd
 
 ## [0.11.10] - 2026-11-19
 

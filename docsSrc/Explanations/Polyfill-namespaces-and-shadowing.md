@@ -13,6 +13,7 @@ IcedTasks provides polyfill namespaces for builders that use familiar names:
 |---|---|---|
 | `IcedTasks.Polyfill.Task` | FSharp.Core `task` and `backgroundTask` | IcedTasks task builders |
 | `IcedTasks.Polyfill.Async` | FSharp.Core `async` | `asyncEx` |
+| `IcedTasks.Polyfill.RuntimeTask` | FSharp.Core `task` and `backgroundTask`, and IcedTasks `valueTask`, `coldTask`, `backgroundColdTask`, `cancellableTask`, `backgroundCancellableTask`, and `cancellableValueTask` | runtime-async builders, `net11.0` only. See [Runtime-async task builders](Runtime-async-task-builders.html). |
 
 Opening one of these namespaces intentionally changes which computation expression builder is chosen for the familiar name.
 
@@ -73,6 +74,7 @@ A project reference to IcedTasks does not open a namespace. Use `open IcedTasks`
 | `open IcedTasks.CancellableTasks`, `open IcedTasks.ValueTasks`, and the other builder modules | The builder and its module. Some binds need extension members from another module. For example, `valueTask` binds a `ValueTask` with this open only, but it needs `IcedTasks.TaskBase` to bind a `Task`. `cancellableTask` needs `IcedTasks.CancellableTaskBase`. Use `open IcedTasks` to get all of them. |
 | `open IcedTasks.Polyfill.Task` | The IcedTasks `task` and `backgroundTask` builders. |
 | `open IcedTasks.Polyfill.Async` | `async` as the `asyncEx` builder. For `let!`, `do!`, and `for` on a `Task`, a `ValueTask`, an awaitable, or an `IAsyncEnumerable<'T>`, also use `open IcedTasks`. |
+| `open IcedTasks.Polyfill.RuntimeTask` | On `net11.0`, the runtime-async versions of `task`, `backgroundTask`, `valueTask`, `coldTask`, `backgroundColdTask`, `cancellableTask`, `backgroundCancellableTask`, and `cancellableValueTask`. On older target frameworks, nothing. Put it after `open IcedTasks`. A later `open IcedTasks` gives the IcedTasks state-machine versions of the six IcedTasks builder names again. |
 
 The `ColdTask` extension members add `Bind` and `ReturnFrom` overloads to the FSharp.Core `task` builder. `open IcedTasks` and `open IcedTasks.ColdTasks` bring them into scope. A file in `namespace IcedTasks` also gets them. If a `task { ... }` expression binds a value that has no type annotation, these overloads can cause error FS0041. Add a type annotation to the value, or write the code in a file that does not bring them into scope.
 

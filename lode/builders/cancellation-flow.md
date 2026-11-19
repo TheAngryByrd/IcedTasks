@@ -70,4 +70,6 @@ The FSharp.Core `task` builder has no `Bind` for a CancellableTask. The caller m
 
 `AsyncEx` and FSharp.Core `async` can bind a CancellableTask. They give it `Async.CancellationToken`.
 
+The runtime-async cancellable builders keep these rules. See [runtime-async task builders](runtime-task.md).
+
 Related: [source overload priority](source-overload-priority.md), [and! and MergeSources](and-bang-merge-sources.md), [run and start paths](run-and-start-paths.md).

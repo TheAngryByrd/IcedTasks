@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net11.0</TargetFrameworks>
+    <GenerateProgramFile>false</GenerateProgramFile>
+    <DefineConstants>$(DefineConstants);TEST_NET6_0_OR_GREATER;TEST_RUNTIME_ASYNC</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/IcedTasks/IcedTasks.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../IcedTasks.Tests/Expect.fs" />
+    <Compile Include="../IcedTasks.Tests/AsyncDisposalOutcome.fs" />
+    <Compile Include="../IcedTasks.Tests/TaskTests.fs" />
+    <Compile Include="../IcedTasks.Tests/TaskBackgroundTests.fs" />
+    <Compile Include="../IcedTasks.Tests/ValueTaskTests.fs" />
+    <Compile Include="../IcedTasks.Tests/ColdTaskTests.fs" />
+    <Compile Include="../IcedTasks.Tests/CancellableTaskTests.fs" />
+    <Compile Include="../IcedTasks.Tests/CancellableValueTaskTests.fs" />
+    <Compile Include="RuntimeTaskTests.fs" />
+    <Compile Include="../IcedTasks.Tests/Main.fs" />
+  </ItemGroup>
+</Project>

@@ -21,6 +21,7 @@ Related guides:
 - [Use unit builders for non-generic task APIs](../How-To-Guides/Use-unit-builders-for-non-generic-task-apis.html)
 - [Pooling builders](Pooling-builders.html)
 - [Polyfill namespaces and shadowing](Polyfill-namespaces-and-shadowing.html)
+- [Runtime-async task builders](Runtime-async-task-builders.html)
 
 ## Builder comparison
 
@@ -36,6 +37,14 @@ Related guides:
 | `taskUnit` | `Task` | netstandard2.0 | Hot | Multiple | Once-start | Explicit | Explicit | Yes | Yes | Yes |
 | `backgroundTaskUnit` | `Task` | netstandard2.0 | Hot | Multiple | Once-start | Explicit | Explicit | Yes | Yes | Yes |
 | `valueTask` | `ValueTask<'T>` | netstandard2.0 | Hot | Once | Once-start | Explicit | Explicit | Yes | Yes | Yes |
+| `task` (open `IcedTasks.Polyfill.RuntimeTask`) | `Task<'T>` | net11.0+ | Hot | Multiple | Once-start | Explicit | Explicit | Yes | Yes | Yes |
+| `backgroundTask` (open `IcedTasks.Polyfill.RuntimeTask`) | `Task<'T>` | net11.0+ | Hot | Multiple | Once-start | Explicit | Explicit | Yes | Yes | Yes |
+| `valueTask` (open `IcedTasks.Polyfill.RuntimeTask`) | `ValueTask<'T>` | net11.0+ | Hot | Once | Once-start | Explicit | Explicit | Yes | Yes | Yes |
+| `coldTask` (open `IcedTasks.Polyfill.RuntimeTask`) | `unit -> Task<'T>` | net11.0+ | Cold | Multiple | Multiple | Explicit | Explicit | Yes | Yes | Yes |
+| `backgroundColdTask` (open `IcedTasks.Polyfill.RuntimeTask`) | `unit -> Task<'T>` | net11.0+ | Cold | Multiple | Multiple | Explicit | Explicit | Yes | Yes | Yes |
+| `cancellableTask` (open `IcedTasks.Polyfill.RuntimeTask`) | `CancellationToken -> Task<'T>` | net11.0+ | Cold | Multiple | Multiple | Implicit | Implicit | Yes | Yes | Yes |
+| `backgroundCancellableTask` (open `IcedTasks.Polyfill.RuntimeTask`) | `CancellationToken -> Task<'T>` | net11.0+ | Cold | Multiple | Multiple | Implicit | Implicit | Yes | Yes | Yes |
+| `cancellableValueTask` (open `IcedTasks.Polyfill.RuntimeTask`) | `CancellationToken -> ValueTask<'T>` | net11.0+ | Cold | Once per start | Multiple | Implicit | Implicit | Yes | Yes | Yes |
 | `vTask` | `ValueTask<'T>` | netstandard2.0 | Hot | Once | Once-start | Explicit | Explicit | Yes | Yes | Yes |
 | `valueTaskUnit` | `ValueTask` | netstandard2.0 | Hot | Once | Once-start | Explicit | Explicit | Yes | Yes | Yes |
 | `vTaskUnit` | `ValueTask` | netstandard2.0 | Hot | Once | Once-start | Explicit | Explicit | Yes | Yes | Yes |
@@ -58,7 +67,7 @@ Related guides:
 - <sup>7</sup> `IAsyncDisposable` support means `use` and `use!` can dispose async resources inside the computation expression.
 - <sup>8</sup> `IAsyncEnumerable` support means `for` can iterate an async enumerable inside the computation expression.
 
-`IAsyncDisposable` and `IAsyncEnumerable` support is not limited to `asyncEx`. The task, value-task, cancellable, and pooling builders support these features where the table says "Yes". `coldTask` supports `IAsyncDisposable`, but not `for` over `IAsyncEnumerable<'T>`.
+`IAsyncDisposable` and `IAsyncEnumerable` support is not limited to `asyncEx`. The task, value-task, cancellable, and pooling builders support these features where the table says "Yes". The state-machine `coldTask` supports `IAsyncDisposable`, but not `for` over `IAsyncEnumerable<'T>`. The runtime-async `coldTask` supports both.
 
 ## Use task when the work is actually async
 

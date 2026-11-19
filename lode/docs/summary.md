@@ -9,7 +9,7 @@ The docs domain covers `docsSrc/`, `generate-sdk-references.fsx`, and `examples/
 | Folder | `categoryindex` | Content |
 |---|---|---|
 | `docsSrc/Tutorials/` | 1 | one `.fsx` tutorial |
-| `docsSrc/How-To-Guides/` | 2 | eleven `.fsx` guides |
+| `docsSrc/How-To-Guides/` | 2 | eleven `.fsx` guides and one `.md` guide. The runtime-async guide is `.md`, because its code needs `net11.0` and `LangVersion` `preview`, which the fsdocs evaluation does not use |
 | `docsSrc/Explanations/` | 3 | five `.md` explanations |
 
 `docsSrc/index.md` is the landing page. `docsSrc/_template.html` and `docsSrc/content/fsdocs-theme.css` are the custom template and theme.

@@ -73,6 +73,14 @@ module Expecto =
 module Expect =
     open Expecto
 
+    let stringContainsNot (actual: string) (unexpectedSubstring: string) message =
+        if actual.Contains(unexpectedSubstring) then
+            failtestf
+                "%s. Expected %s to not contain substring %s"
+                message
+                actual
+                unexpectedSubstring
+
     /// Expects the passed function to throw `'texn`.
     [<RequiresExplicitTypeArguments>]
     let throwsTAsync<'texn when 'texn :> exn> f message =

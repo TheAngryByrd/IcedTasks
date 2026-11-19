@@ -7,6 +7,10 @@ open FSharp.Control
 open System.Threading
 open System.Threading.Tasks
 
+#if TEST_RUNTIME_ASYNC
+open IcedTasks.Polyfill.RuntimeTask
+#endif
+
 module CancellableTaskTests =
     open System.Collections.Concurrent
     open TimeProviderExtensions

@@ -8,6 +8,10 @@ open IcedTasks
 open System.Collections.Generic
 open FSharp.Control
 
+#if TEST_RUNTIME_ASYNC
+open IcedTasks.Polyfill.RuntimeTask
+#endif
+
 module CancellableValueTaskTests =
     open TimeProviderExtensions
 

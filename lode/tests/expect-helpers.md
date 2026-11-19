@@ -1,6 +1,6 @@
 # Test helpers
 
-`tests/IcedTasks.Tests/Expect.fs` holds the shared helpers. `IcedTasks.Tests`, NS20, and NS21 compile it.
+`tests/IcedTasks.Tests/Expect.fs` holds the shared helpers. `IcedTasks.Tests`, NS20, NS21, and `IcedTasks.Tests.RuntimeAsync` compile it.
 
 | Helper | Use |
 |---|---|

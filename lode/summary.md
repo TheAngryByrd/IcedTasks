@@ -1,6 +1,6 @@
 # IcedTasks summary
 
-IcedTasks is one F# library, published as the `IcedTasks` NuGet package. It adds computation expression builders for task-like values: `valueTask`, `poolingValueTask`, `coldTask`, `cancellableTask`, `cancellableValueTask`, `cancellablePoolingValueTask`, `taskUnit`, `valueTaskUnit`, `asyncEx`, `parallelAsync`, and polyfills of `task` and `backgroundTask`. Background variants exist for `task`, `taskUnit`, `coldTask`, and `cancellableTask`. Most builders use F# resumable code, so the compiler makes a state machine for each expression. The library targets `net9.0;net6.0;netstandard2.1;netstandard2.0` (`src/IcedTasks/IcedTasks.fsproj`). A FAKE console app in `build/` builds, tests, packs, releases, and makes the docs. Expecto tests in `tests/` run each library build: `IcedTasks.Tests` loads the `net6.0` build on `net10.0` and the `net9.0` build on `net11.0`, and the NS20 and NS21 projects load the `netstandard2.0` and `netstandard2.1` builds. The docs site comes from `docsSrc/` through fsdocs.
+IcedTasks is one F# library, published as the `IcedTasks` NuGet package. It adds computation expression builders for task-like values: `valueTask`, `poolingValueTask`, `coldTask`, `cancellableTask`, `cancellableValueTask`, `cancellablePoolingValueTask`, `taskUnit`, `valueTaskUnit`, `asyncEx`, `parallelAsync`, and polyfills of `task` and `backgroundTask`. On `net11.0`, `IcedTasks.Polyfill.RuntimeTask` adds runtime-async versions of `task`, `backgroundTask`, `valueTask`, `coldTask`, `backgroundColdTask`, `cancellableTask`, `backgroundCancellableTask`, and `cancellableValueTask`. Background variants exist for `task`, `taskUnit`, `coldTask`, and `cancellableTask`. Most builders use F# resumable code, so the compiler makes a state machine for each expression. The library targets `net11.0;net9.0;net6.0;netstandard2.1;netstandard2.0` (`src/IcedTasks/IcedTasks.fsproj`). A FAKE console app in `build/` builds, tests, packs, releases, and makes the docs. Expecto tests in `tests/` run the library builds: `IcedTasks.Tests` loads the `net9.0` build on `net10.0` and the `net11.0` build on `net11.0`, and the NS20 and NS21 projects load the `netstandard2.0` and `netstandard2.1` builds. `IcedTasks.Tests.RuntimeAsync` runs the shared suites against the runtime-async builders. `IcedTasks.Tests.NoOpen` checks code with no IcedTasks `open`. It is the only project that loads the `net6.0` build. `IcedTasks.Tests` checks the public API of each build that `IcedTasks.fsproj` ships, from its metadata. The docs site comes from `docsSrc/` through fsdocs.
 
 ```fsharp
 // README.md
@@ -17,7 +17,7 @@ let getDataFromAFewSites = parallelAsync {
 ```mermaid
 flowchart LR
     src["src/IcedTasks<br/>builders and modules"] --> pkg["IcedTasks.nupkg"]
-    tests["tests/<br/>Expecto, 4 projects"] -->|"ProjectReference per TFM"| src
+    tests["tests/<br/>Expecto, 5 projects"] -->|"ProjectReference per TFM"| src
     bench["benchmarks/<br/>BenchmarkDotNet"] --> src
     docs["docsSrc/<br/>fsdocs pages"] -->|"#r Release net9.0 dll"| src
     build["build/<br/>FAKE targets"] --> tests

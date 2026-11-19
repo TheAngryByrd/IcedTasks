@@ -40,6 +40,7 @@ If you need API signatures, generated reference documentation is available under
 - [Compose task values with helper functions](How-To-Guides/Compose-task-values-with-helper-functions.html)
 - [Use background builders to avoid caller context](How-To-Guides/Use-background-builders-to-avoid-caller-context.html)
 - [Use unit builders for non-generic task APIs](How-To-Guides/Use-unit-builders-for-non-generic-task-apis.html)
+- [Use the runtime-async task builders](How-To-Guides/Use-runtime-async-task-builders.html)
 
 ## Learn the concepts
 

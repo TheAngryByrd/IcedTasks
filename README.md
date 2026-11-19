@@ -31,6 +31,7 @@ This library contains additional [computation expressions](https://docs.microsof
 - `Task<'T>` - Polyfill for fixes to F# Task CE. Can be accessed under `IcedTasks.Polyfill.Task` which will [shadow](https://stackoverflow.com/a/39645319) the F# Task CE.
     - `task`
     - `backgroundTask`
+- Runtime-async builders - On `net11.0` with F# 11 `LangVersion` `preview`, `IcedTasks.Polyfill.RuntimeTask` gives runtime-async versions of `task`, `backgroundTask`, `valueTask`, `coldTask`, `backgroundColdTask`, `cancellableTask`, `backgroundCancellableTask`, and `cancellableValueTask`. See [Use the runtime-async task builders](https://www.jimmybyrd.me/IcedTasks/How-To-Guides/Use-runtime-async-task-builders.html).
 
 - `Task` - a CE for a `Task` that has no return value.
     - `taskUnit`

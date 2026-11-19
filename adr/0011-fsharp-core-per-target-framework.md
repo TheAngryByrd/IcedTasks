@@ -10,7 +10,7 @@ Paket did not give enough control over dependencies by MSBuild condition (#51).
 
 We removed Paket and use NuGet central package management (`Directory.Packages.props`) (#51).
 `src/IcedTasks/IcedTasks.fsproj` uses a `Choose` block that sets FSharp.Core for TFMs compatible with `net9.0` and for the other TFMs (#53).
-Today these versions are `9.0.300` (commit 131da45) and `6.0.4` (#53).
+Today these versions are `9.0.300` (commit 131da45) and `6.0.4` (#53). The `net11.0` build uses `11.0.101` for the runtime-async markers ([0015](0015-runtime-async-task-builders.md)).
 `Directory.Build.props` sets `LangVersion` 8.0, and `LangVersion` 9.0 with `Nullable` enabled for `net9.0`.
 
 #51 says "Has to remove paket because we need better control over dependencies based on msbuild conditions."
