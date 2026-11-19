@@ -39,10 +39,10 @@ So the library files check in series again:
 | 0012 (beta002) | 5 | 1.38 s | 1.31 s |
 | 0013 | 15 | 3.07 s | 2.21 s |
 
-The Typecheck phase is about 1 to 1.7 s longer for each target framework.
+The Typecheck phase is about 0.9 to 1.7 s longer for each target framework.
 The full project build includes the F# analyzers, and its time difference is below the run-to-run noise (medians 34.0 s and 34.3 s, single runs from 24 s to 48 s).
 
-A file in `namespace IcedTasks` sees all IcedTasks modules without an `open`.
+A library file in `namespace IcedTasks` sees the types and `[<AutoOpen>]` modules of earlier library files without an `open`.
 Explicit module opens, for example `open IcedTasks.TaskBase`, cannot remove a graph link, because the namespace declaration makes the link.
 
 ## Considered options

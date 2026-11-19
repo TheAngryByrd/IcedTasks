@@ -1,4 +1,3 @@
-// This file must stay outside the IcedTasks namespace. A namespace declaration under IcedTasks opens IcedTasks.
 module IcedTasksConsumer.OpenFormsTests
 
 open System.Threading

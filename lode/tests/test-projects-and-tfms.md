@@ -25,8 +25,8 @@ Each shipped library build needs one test run. A test TFM selects the nearest li
 
 ## Public surface tests
 
-- `tests/IcedTasks.Tests.NoOpen` uses the FSharp.Core `task` builder with no IcedTasks `open`. It compiles only if a project reference alone brings no IcedTasks extension members. Its files must not declare a namespace under `IcedTasks`, because that declaration opens `IcedTasks`.
-- `OpenFormsTests.fs` uses each 0.11.9 `open` form and fully qualified 0.11.9 names. It is a top-level module outside the `IcedTasks` namespace for the same reason.
+- `tests/IcedTasks.Tests.NoOpen` uses the FSharp.Core `task` builder with no IcedTasks `open`. It compiles only if a project reference alone brings no IcedTasks extension members.
+- `OpenFormsTests.fs` uses each 0.11.9 `open` form, each in its own nested module, and fully qualified 0.11.9 names.
 - `PublicApiTests.fs` checks that the assembly has no assembly-level `AutoOpenAttribute`. It also lists the public metadata with `System.Reflection.MetadataLoadContext` and compares it with `PublicApi/IcedTasks-0.11.9-<tfm>.txt`. The NS projects link the baseline files. Runtime reflection throws `TypeLoadException` on some IcedTasks signatures, so the listing reads metadata only.
 
 ## Rules for new tests
