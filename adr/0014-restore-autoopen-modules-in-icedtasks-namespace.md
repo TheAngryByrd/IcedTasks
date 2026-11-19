@@ -3,7 +3,7 @@
 - Status: accepted
 - Date: 2026-11-18
 - Supersedes: [0012](0012-namespace-per-builder-file.md)
-- Source: PR_URL
+- Source: https://github.com/TheAngryByrd/IcedTasks/pull/78
 - Reason source: maintainer decision, measurements in the PR description
 
 [0012](0012-namespace-per-builder-file.md) gave each builder file its own namespace and auto-opened all of them with assembly-level `AutoOpen` attributes in `src/IcedTasks/AutoOpens.fs`.
