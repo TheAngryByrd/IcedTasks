@@ -1069,20 +1069,19 @@ module AsyncExTests =
                     Expect.equal disposeCalls.Value 1 "use must call DisposeAsync once"
                 }
             testCaseTask
-                "an enclosing use waits for a pending inner DisposeAsync before it disposes its own resource"
+                "before the inner body starts, nested use disposes each resource once and the workflow is canceled"
             <| fun () ->
                 task {
                     let events = ResizeArray<string>()
-                    let innerSource = AsyncDisposalOutcome.ObservedDisposalSource()
 
                     let outer =
                         recordingDisposable events "outer" (fun () -> ValueTask.CompletedTask)
 
-                    let inner = recordingDisposable events "inner" innerSource.ValueTask
-                    use cts = new CancellationTokenSource()
+                    let inner =
+                        recordingDisposable events "inner" (fun () -> ValueTask.CompletedTask)
 
-                    let result =
-                        Async.StartImmediateAsTask(
+                    let! result =
+                        runUntilCanceled (fun cts ->
                             asyncEx {
                                 use _ = outer
 
@@ -1091,25 +1090,9 @@ module AsyncExTests =
                                     inner
 
                                 return ()
-                            },
-                            cts.Token
+                            }
                         )
 
-                    try
-                        do! innerSource.ContinuationRegistered.WaitAsync(deadline)
-
-                        Expect.isFalse
-                            result.IsCompleted
-                            "The workflow must wait for the pending inner DisposeAsync"
-
-                        Expect.sequenceEqual
-                            (lock events (fun () -> List.ofSeq events))
-                            [ "inner" ]
-                            "The outer resource must stay open while the inner DisposeAsync is pending"
-                    finally
-                        innerSource.Complete AsyncDisposalOutcome.DisposalSucceeds
-
-                    do! settle result
                     Expect.isTrue result.IsCanceled "The workflow must be canceled"
 
                     Expect.sequenceEqual
@@ -1118,57 +1101,7 @@ module AsyncExTests =
                             "inner"
                             "outer"
                         ]
-                        "The outer resource must be disposed after the inner DisposeAsync completes"
-                }
-            testCaseTask "an inner DisposeAsync failure fails the enclosing workflow"
-            <| fun () ->
-                task {
-                    let events = ResizeArray<string>()
-                    let innerSource = AsyncDisposalOutcome.ObservedDisposalSource()
-
-                    let outer =
-                        recordingDisposable events "outer" (fun () -> ValueTask.CompletedTask)
-
-                    let inner = recordingDisposable events "inner" innerSource.ValueTask
-                    use cts = new CancellationTokenSource()
-
-                    let result =
-                        Async.StartImmediateAsTask(
-                            asyncEx {
-                                use _ = outer
-
-                                use _ =
-                                    cts.Cancel()
-                                    inner
-
-                                return ()
-                            },
-                            cts.Token
-                        )
-
-                    try
-                        do! innerSource.ContinuationRegistered.WaitAsync(deadline)
-                    finally
-                        innerSource.Complete AsyncDisposalOutcome.DisposalFaults
-
-                    do! settle result
-
-                    Expect.isTrue
-                        result.IsFaulted
-                        "The inner DisposeAsync failure must fail the workflow"
-
-                    Expect.isTrue
-                        (result.Exception.InnerExceptions
-                         |> Seq.exists (fun e -> e :? InvalidOperationException))
-                        "The workflow must fail with the inner DisposeAsync exception"
-
-                    Expect.sequenceEqual
-                        (lock events (fun () -> List.ofSeq events))
-                        [
-                            "inner"
-                            "outer"
-                        ]
-                        "The outer resource must be disposed after the inner DisposeAsync completes"
+                        "Each resource must be disposed once, inner first"
                 }
             testCaseTask
                 "Async.TryFinallyAsync on a canceled token runs only the compensation, with a token that cannot cancel"
@@ -1282,7 +1215,7 @@ module AsyncExTests =
                 task {
                     let resource =
                         TestHelpers.makeAsyncDisposable (fun () ->
-                            ValueTask(Task.FromException(OperationCanceledException "dispose"))
+                            ValueTask(Task.FromCanceled(CancellationToken(true)))
                         )
 
                     let! result =
@@ -1297,6 +1230,11 @@ module AsyncExTests =
                     Expect.isTrue
                         result.IsFaulted
                         "The DisposeAsync cancellation must fail the workflow"
+
+                    Expect.isTrue
+                        (result.Exception.InnerExceptions
+                         |> Seq.exists (fun e -> e :? OperationCanceledException))
+                        "The workflow must fail with the DisposeAsync cancellation"
                 }
         ]
 

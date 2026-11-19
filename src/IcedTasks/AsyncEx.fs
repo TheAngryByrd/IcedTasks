@@ -127,24 +127,18 @@ type AsyncEx =
 module AsyncExtensions =
     open System.Runtime.CompilerServices
 
-    type private CancellationCompensation =
-        | Compensated
-        | StartedBeforeComputation of Task
+    let private compensatedCancellations =
+        ConditionalWeakTable<OperationCanceledException, obj>()
 
-    let private cancellationCompensations =
-        ConditionalWeakTable<OperationCanceledException, CancellationCompensation>()
+    let private compensated = obj ()
 
-    let private tryFindCompensation (cancellation: OperationCanceledException) =
-        if obj.ReferenceEquals(cancellation, null) then
-            None
-        else
-            match cancellationCompensations.TryGetValue cancellation with
-            | true, state -> Some state
-            | false, _ -> None
+    let private isCompensated (cancellation: OperationCanceledException) =
+        obj.ReferenceEquals(cancellation, null)
+        || fst (compensatedCancellations.TryGetValue cancellation)
 
-    let private recordCompensation (cancellation: OperationCanceledException) state =
+    let private markCompensated (cancellation: OperationCanceledException) =
         if not (obj.ReferenceEquals(cancellation, null)) then
-            cancellationCompensations.GetValue(cancellation, (fun _ -> state))
+            compensatedCancellations.GetValue(cancellation, (fun _ -> compensated))
             |> ignore
 
     type Microsoft.FSharp.Control.Async with
@@ -158,8 +152,7 @@ module AsyncExtensions =
         /// If compensation is canceled, the result fails with an exception whose inner exception is the cancellation exception.
         /// If the workflow is canceled before computation starts, computation does not run, and compensation starts
         /// with no cancellation token. The result is canceled when the synchronous part of compensation returns.
-        /// An enclosing TryFinallyAsync waits for that compensation before its own compensation, and fails with
-        /// its exception. Without an enclosing TryFinallyAsync, nothing waits for it, and its exception is discarded.</summary>
+        /// Nothing waits for the rest of that compensation, and its exception is discarded.</summary>
         /// <param name="computation">The input computation.</param>
         /// <param name="compensation">The computation to run after computation completes, fails, or is canceled.</param>
         /// <remarks> <see href="http://www.fssnip.net/ru/title/Async-workflow-with-asynchronous-finally-clause">See this F# gist</see></remarks>
@@ -173,7 +166,7 @@ module AsyncExtensions =
                 | (Choice1Of3 x, Choice1Of3()) -> onNext x
                 | (Choice2Of3 compExn, Choice1Of3()) -> onError compExn
                 | (Choice3Of3 compExn, Choice1Of3()) ->
-                    recordCompensation compExn Compensated
+                    markCompensated compExn
                     onCancel compExn
                 | (Choice1Of3 _, Choice2Of3 deferredExn) -> onError deferredExn
                 | (Choice2Of3 compExn, Choice2Of3 deferredExn) ->
@@ -184,37 +177,13 @@ module AsyncExtensions =
                     onError
                     <| new Exception("Unexpected cancellation.", deferredExn)
 
-            let runCompensation compResult (onNext, onError, onCancel) =
+            let startDeferred compResult (onNext, onError, onCancel) =
                 Async.StartWithContinuations(
                     compensation,
                     (fun () -> finish (compResult, Choice1Of3()) (onNext, onError, onCancel)),
                     (fun exn -> finish (compResult, Choice2Of3 exn) (onNext, onError, onCancel)),
                     (fun exn -> finish (compResult, Choice3Of3 exn) (onNext, onError, onCancel))
                 )
-
-            let startDeferred compResult conts =
-                match compResult with
-                | Choice3Of3 cancellation ->
-                    match tryFindCompensation cancellation with
-                    | Some(StartedBeforeComputation inner) ->
-                        let afterInner (inner: Task) =
-                            match inner.Exception with
-                            | null -> runCompensation compResult conts
-                            | failure ->
-                                runCompensation (Choice2Of3 failure.InnerExceptions[0]) conts
-
-                        if inner.IsCompleted then
-                            afterInner inner
-                        else
-                            inner.ContinueWith(
-                                afterInner,
-                                CancellationToken.None,
-                                TaskContinuationOptions.ExecuteSynchronously,
-                                TaskScheduler.Default
-                            )
-                            |> ignore
-                    | _ -> runCompensation compResult conts
-                | _ -> runCompensation compResult conts
 
             let startComp ct (onNext, onError, onCancel) =
                 Async.StartWithContinuations(
@@ -226,40 +195,12 @@ module AsyncExtensions =
                 )
 
             let canceledBeforeComputation (cancellation: OperationCanceledException) =
-                if
-                    not (obj.ReferenceEquals(cancellation, null))
-                    && (tryFindCompensation cancellation).IsNone
-                then
-                    let completion =
-                        TaskCompletionSource<unit>(
-                            TaskCreationOptions.RunContinuationsAsynchronously
-                        )
-
-                    completion.Task.ContinueWith(
-                        (fun (t: Task) ->
-                            t.Exception
-                            |> ignore
-                        ),
-                        TaskContinuationOptions.OnlyOnFaulted
-                    )
-                    |> ignore
-
-                    recordCompensation cancellation (StartedBeforeComputation completion.Task)
-
+                if not (isCompensated cancellation) then
                     Async.StartWithContinuations(
                         compensation,
-                        (fun () ->
-                            completion.TrySetResult(())
-                            |> ignore
-                        ),
-                        (fun exn ->
-                            completion.TrySetException exn
-                            |> ignore
-                        ),
-                        (fun exn ->
-                            completion.TrySetException(Exception("Unexpected cancellation.", exn))
-                            |> ignore
-                        ),
+                        ignore,
+                        ignore,
+                        ignore,
                         CancellationToken.None
                     )
 
