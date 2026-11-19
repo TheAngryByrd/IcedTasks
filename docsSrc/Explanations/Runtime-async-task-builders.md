@@ -86,6 +86,7 @@ The builders support:
 - `Task<'T>`, `Task`, `ValueTask<'T>`, and `ValueTask`.
 - `Async<'T>`.
 - A cold task, a cold awaitable, or a function that returns an awaiter, for example `unit -> Task<'T>`, `unit -> ValueTask`, or `unit -> TaskAwaiter<'T>`.
+  If a function returns a type that is both an awaitable and an awaiter, the builder calls its `GetAwaiter` method and awaits the result, as the state-machine builders do.
 - An awaiter or an awaitable value, such as the result of `Task.Yield()`.
 
 The cancellable builders also accept a `CancellationToken -> 'Awaitable` or a `CancellationToken -> 'Awaiter` value, for example a `CancellableTask<'T>`, a `CancellableValueTask<'T>`, or a `CancellationToken -> TaskAwaiter<'T>` function.
