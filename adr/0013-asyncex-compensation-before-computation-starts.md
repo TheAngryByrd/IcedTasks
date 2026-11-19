@@ -11,20 +11,20 @@ Before #72, the compensation (`DisposeAsync`) did not run in this case.
 
 FSharp.Core checks the token before each public step that could reach the computation: `Delay`, `Bind`, and `Async.FromContinuations` (`MakeAsyncWithCancelCheck` in FSharp.Core `async.fs`).
 `Async.TryCancelled` does not check the token on entry, but its handler is synchronous.
-So no public `Async` step can wait for an asynchronous compensation in this window.
+So the handler cannot wait for an asynchronous compensation before the cancellation continues. An enclosing scope that is already running could wait, but only with a handle that ties the compensation to one execution.
 `AsyncPrimitives.MakeAsync` enters without a check, but FSharp.Core gives no public error continuation or trampoline for user code.
 
 Decision:
 
 - `Async.TryFinallyAsync` wraps its entry in `Async.TryCancelled`.
 - The handler starts the compensation with `Async.StartWithContinuations` and `CancellationToken.None`. Nothing waits for the rest of it, and its exception is discarded.
-- A `ConditionalWeakTable` marks each cancellation exception that already ran the compensation, so the handler does not run it a second time. A null cancellation exception is never a key.
+- When the computation is cancelled and the compensation completes, `finish` marks that cancellation exception in a `ConditionalWeakTable`. The handler skips a marked exception, so the compensation does not run a second time. A null cancellation exception is never a key.
 
 Rejected options:
 
 - Store the early compensation under the cancellation exception, and let an enclosing `TryFinallyAsync` wait for it.
   The key is not tied to one execution: another run that passes the same exception object waits for this cleanup and gets its failure.
-  An `Async.Parallel` branch that a faulting sibling cancels has a different exception object, so the parent does not wait.
+  When a sibling in `Async.Parallel` faults, `Async.Parallel` propagates that fault, so the parent receives an error and never sees the child cancellation.
   The wait also moved the enclosing compensation to a thread pool thread.
 - Track early compensations per execution with ambient state (for example `AsyncLocal`) and wait in each enclosing scope.
   It is more complex, and it cannot make a synchronous `use` or `try ... finally` wait. https://github.com/TheAngryByrd/IcedTasks/issues/74 tracks it.
@@ -35,6 +35,7 @@ Consequences:
 
 - In a nested `use`, an enclosing resource can be disposed before an early inner `DisposeAsync` completes.
 - A caller that sees the cancelled result cannot wait for an early `DisposeAsync` that is still running.
+- Each early cancellation starts one compensation. The table keeps one marker for each live cancellation exception that `finish` marked. The keys are weak.
 - `TryFinallyAsync` is no longer `inline`, because it uses the private table.
   Code that an earlier version compiled has the old inlined body until it is compiled again.
 - A `use!` resource belongs to the workflow only after its source returns it.
