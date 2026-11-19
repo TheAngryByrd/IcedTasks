@@ -9,14 +9,10 @@
 // To the extent possible under law, the author(s) have dedicated all copyright and related and neighboring rights
 // to this software to the public domain worldwide. This software is distributed without any warranty.
 
-namespace IcedTasks.CancellablePoolingValueTasks
+namespace IcedTasks
 
 #if NET6_0_OR_GREATER
 
-open IcedTasks
-open IcedTasks.TaskLike
-open IcedTasks.CancellableTaskBase
-open IcedTasks.ValueTasks
 
 /// Contains methods to build pooling-backed CancellableValueTasks using the F# computation expression syntax.
 [<AutoOpen>]
@@ -266,8 +262,6 @@ module CancellablePoolingValueTasks =
     [<AutoOpen>]
     module HighPriority =
 
-        open IcedTasks.AsyncEx
-
         type AsyncEx with
 
             /// <summary>Return an asynchronous computation that will wait for the given task to complete and return
@@ -337,7 +331,6 @@ module CancellablePoolingValueTasks =
     /// </summary>
     [<AutoOpen>]
     module AsyncExtensions =
-        open IcedTasks.AsyncEx
 
         type AsyncExBuilder with
 

@@ -1,12 +1,9 @@
 namespace IcedTasks
 
-namespace IcedTasks.PoolingValueTasks
+namespace IcedTasks
 
 #if NET6_0_OR_GREATER
 
-open IcedTasks
-open IcedTasks.TaskLike
-open IcedTasks.TaskBase
 // Task builder for F# that compiles to allocation-free paths for synchronous code.
 //
 // Originally written in 2016 by Robert Peele (humbobst@gmail.com)
@@ -150,7 +147,7 @@ module PoolingValueTasks =
         let poolingValueTask = PoolingValueTaskBuilder()
 
         /// <summary>
-        /// Alias for <see cref="F:IcedTasks.PoolingValueTasks.PoolingValueTasks.ValueTaskBuilder.poolingValueTask" />.
+        /// Alias for <see cref="P:IcedTasks.PoolingValueTasks.ValueTaskBuilder.poolingValueTask" />.
         /// </summary>
         let pvTask = poolingValueTask
 

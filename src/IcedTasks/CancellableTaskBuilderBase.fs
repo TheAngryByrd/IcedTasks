@@ -1,8 +1,5 @@
-namespace IcedTasks.CancellableTaskBase
+namespace IcedTasks
 
-open IcedTasks
-open IcedTasks.Nullness
-open IcedTasks.TaskLike
 
 /// Contains methods to build Tasks using the F# computation expression syntax
 [<AutoOpen>]
@@ -604,7 +601,6 @@ module CancellableTaskBase =
     /// <exclude/>
     [<AutoOpen>]
     module HighPriority =
-        open IcedTasks.AsyncEx
 
 
         type AsyncEx with

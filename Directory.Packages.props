@@ -27,6 +27,7 @@
     <PackageVersion Include="YoloDev.Expecto.TestSdk" Version="0.15.3" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.7.2" />
     <PackageVersion Include="FSharp.Control.TaskSeq" Version="1.1.1" />
+    <PackageVersion Include="System.Reflection.MetadataLoadContext" Version="10.0.0" />
 
     <!-- Build -->
     <PackageVersion Include="Fake.IO.FileSystem" Version="$(FakeVersion)" />

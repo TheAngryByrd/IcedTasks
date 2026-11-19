@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- [Remove the assembly-level `AutoOpen` attributes of 0.11.10-beta001, beta002, and beta003, which opened the IcedTasks namespaces in every file of each referencing project. Restore the 0.11.9 namespaces, modules, and public type names](https://github.com/TheAngryByrd/IcedTasks/pull/78) - Credits @TheAngryByrd
+
+### Changed
+- [Remove the names that only 0.11.10-beta001, beta002, and beta003 had: the namespaces `IcedTasks.TaskLike`, `IcedTasks.Nullness`, `IcedTasks.AsyncEx`, `IcedTasks.ParallelAsync`, and paths that repeat a module name, such as `IcedTasks.ColdTasks.ColdTasks.ColdTaskBuilder`. Use `open IcedTasks` or the 0.11.9 names. A file that used IcedTasks names with no `open` on a beta needs `open IcedTasks`. Compile again each assembly that was compiled against a beta, including libraries that depend on IcedTasks: the public type names outside `IcedTasks.Polyfill` change back to the 0.11.9 names, and a beta-compiled assembly that uses one of them fails with `TypeLoadException`. After `open IcedTasks`, the `ValueTask` and `CancellableValueTask` module functions, for example `ValueTask.map`, are again the non-pooling functions of 0.11.9. On the betas, they were the pooling functions. To keep a pooling function, write its full name, for example `IcedTasks.PoolingValueTasks.ValueTaskBuilder.ValueTask.map`](https://github.com/TheAngryByrd/IcedTasks/pull/78) - Credits @TheAngryByrd
+
 ## [0.11.10-beta003] - 2026-11-18
 
 ### Fixed

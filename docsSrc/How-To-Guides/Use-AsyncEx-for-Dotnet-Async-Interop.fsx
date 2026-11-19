@@ -17,7 +17,7 @@ The workflow still returns `Async<'T>`, so you can run it with the usual `Async`
 #r "../../src/IcedTasks/bin/Release/net9.0/IcedTasks.dll"
 
 (**
-Open `IcedTasks.AsyncEx` to bring the `asyncEx` builder into scope.
+Open `IcedTasks` to bring the `asyncEx` builder into scope.
 
 *)
 
@@ -25,7 +25,7 @@ open System
 open System.Collections.Generic
 open System.Threading
 open System.Threading.Tasks
-open IcedTasks.AsyncEx
+open IcedTasks
 
 (**
 ## Bind `Task`, `ValueTask`, and awaitables
