@@ -22,6 +22,7 @@ module AsyncDisposalOutcome =
         | BodyCompletes
         | BodyThrows
         | BodyCancels
+        | BodyAwaitsCanceledTask
 
     type Execution =
         | Static
@@ -30,11 +31,17 @@ module AsyncDisposalOutcome =
 
     type ObservedResult =
         | Completed
-        | Canceled
+        | Canceled of awaited: string
         | Faulted of exceptions: string list
 
-    let private bodyException () = ArgumentException "body"
-    let private disposeException () = InvalidOperationException "dispose"
+    type BodyException(message: string) =
+        inherit Exception(message)
+
+    type DisposeException(message: string) =
+        inherit Exception(message)
+
+    let private bodyException () = BodyException "body"
+    let private disposeException () = DisposeException "dispose"
 
     let private timeout = TimeSpan.FromSeconds 10.
 
@@ -43,6 +50,12 @@ module AsyncDisposalOutcome =
         | BodyCompletes -> ()
         | BodyThrows -> raise (bodyException ())
         | BodyCancels -> cts.Cancel()
+        | BodyAwaitsCanceledTask -> ()
+
+    let awaitsCanceledTask body = body = BodyAwaitsCanceledTask
+
+    let canceledTask () =
+        Task.FromCanceled(CancellationToken(true))
 
     type ObservedDisposalSource() =
         let mutable core = ManualResetValueTaskSourceCore<unit>()
@@ -115,10 +128,17 @@ module AsyncDisposalOutcome =
             $"AggregateException [{inner}]"
         | e -> $"{e.GetType().Name}: {e.Message}"
 
+    let private awaitedException (resultTask: Task) =
+        try
+            resultTask.GetAwaiter().GetResult()
+            "no exception"
+        with e ->
+            describe e
+
     let private observe (resultTask: Task) =
         match resultTask.Status with
         | TaskStatus.RanToCompletion -> Completed
-        | TaskStatus.Canceled -> Canceled
+        | TaskStatus.Canceled -> Canceled(awaitedException resultTask)
         | _ ->
             match resultTask.Exception with
             | null -> Faulted []
@@ -130,26 +150,34 @@ module AsyncDisposalOutcome =
 
     let taskExpectation outcome body =
         match outcome, body with
-        | DisposalFaults, _ -> Faulted [ "InvalidOperationException: dispose" ]
-        | DisposalCancels, _ -> Canceled
-        | DisposalSucceeds, BodyThrows -> Faulted [ "ArgumentException: body" ]
-        | DisposalSucceeds, BodyCancels -> Canceled
+        | DisposalFaults, _ -> Faulted [ "DisposeException: dispose" ]
+        | DisposalCancels, _ -> Canceled "OperationCanceledException: dispose"
+        | DisposalSucceeds, BodyThrows -> Faulted [ "BodyException: body" ]
+        | DisposalSucceeds, BodyCancels -> Canceled(describe (OperationCanceledException()))
+        | DisposalSucceeds, BodyAwaitsCanceledTask -> Canceled(describe (TaskCanceledException()))
         | DisposalSucceeds, BodyCompletes -> Completed
 
     let asyncExpectation outcome body =
         match outcome, body with
         | _, BodyCancels -> invalidArg (nameof body) "The asyncEx matrix has no BodyCancels case"
         | DisposalSucceeds, BodyCompletes -> Completed
-        | DisposalSucceeds, BodyThrows -> Faulted [ "ArgumentException: body" ]
-        | DisposalFaults, BodyCompletes -> Faulted [ "InvalidOperationException: dispose" ]
+        | DisposalSucceeds, BodyThrows -> Faulted [ "BodyException: body" ]
+        | DisposalFaults, BodyCompletes -> Faulted [ "DisposeException: dispose" ]
         | DisposalFaults, BodyThrows ->
-            Faulted [
-                "AggregateException [ArgumentException: body; InvalidOperationException: dispose]"
-            ]
+            Faulted [ "AggregateException [BodyException: body; DisposeException: dispose]" ]
         | DisposalCancels, BodyCompletes -> Faulted [ "OperationCanceledException: dispose" ]
         | DisposalCancels, BodyThrows ->
             Faulted [
-                "AggregateException [ArgumentException: body; OperationCanceledException: dispose]"
+                "AggregateException [BodyException: body; OperationCanceledException: dispose]"
+            ]
+        | DisposalSucceeds, BodyAwaitsCanceledTask -> Faulted [ describe (TaskCanceledException()) ]
+        | DisposalFaults, BodyAwaitsCanceledTask ->
+            Faulted [
+                $"AggregateException [{describe (TaskCanceledException())}; DisposeException: dispose]"
+            ]
+        | DisposalCancels, BodyAwaitsCanceledTask ->
+            Faulted [
+                $"AggregateException [{describe (TaskCanceledException())}; OperationCanceledException: dispose]"
             ]
 
     let private waitFor (signal: Task) (failure: string) =

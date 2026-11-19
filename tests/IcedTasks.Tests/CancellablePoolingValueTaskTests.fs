@@ -1681,12 +1681,17 @@ module CancellablePoolingValueTaskTests =
                     AsyncDisposalOutcome.BodyCompletes
                     AsyncDisposalOutcome.BodyThrows
                     AsyncDisposalOutcome.BodyCancels
+                    AsyncDisposalOutcome.BodyAwaitsCanceledTask
                 ]
                 AsyncDisposalOutcome.taskExpectation
                 (fun body cts resource ->
                     cancellablePoolingValueTask {
                         use _ = resource
                         AsyncDisposalOutcome.runBody body cts
+
+                        if AsyncDisposalOutcome.awaitsCanceledTask body then
+                            do! AsyncDisposalOutcome.canceledTask ()
+
                         do! Task.CompletedTask
                     }
                     |> fun t -> (t cts.Token).AsTask() :> Task
@@ -1695,6 +1700,10 @@ module CancellablePoolingValueTaskTests =
                     cancellablePoolingValueTask {
                         for _ in items do
                             AsyncDisposalOutcome.runBody body cts
+
+                            if AsyncDisposalOutcome.awaitsCanceledTask body then
+                                do! AsyncDisposalOutcome.canceledTask ()
+
                             do! Task.CompletedTask
                     }
                     |> fun t -> (t cts.Token).AsTask() :> Task
@@ -1706,12 +1715,17 @@ module CancellablePoolingValueTaskTests =
                     AsyncDisposalOutcome.BodyCompletes
                     AsyncDisposalOutcome.BodyThrows
                     AsyncDisposalOutcome.BodyCancels
+                    AsyncDisposalOutcome.BodyAwaitsCanceledTask
                 ]
                 AsyncDisposalOutcome.taskExpectation
                 (fun body cts resource ->
                     dCancellablePoolingValueTask {
                         use _ = resource
                         AsyncDisposalOutcome.runBody body cts
+
+                        if AsyncDisposalOutcome.awaitsCanceledTask body then
+                            do! AsyncDisposalOutcome.canceledTask ()
+
                         do! Task.CompletedTask
                     }
                     |> fun t -> (t cts.Token).AsTask() :> Task
@@ -1720,6 +1734,10 @@ module CancellablePoolingValueTaskTests =
                     dCancellablePoolingValueTask {
                         for _ in items do
                             AsyncDisposalOutcome.runBody body cts
+
+                            if AsyncDisposalOutcome.awaitsCanceledTask body then
+                                do! AsyncDisposalOutcome.canceledTask ()
+
                             do! Task.CompletedTask
                     }
                     |> fun t -> (t cts.Token).AsTask() :> Task

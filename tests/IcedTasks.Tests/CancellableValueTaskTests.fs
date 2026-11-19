@@ -1679,12 +1679,17 @@ module CancellableValueTaskTests =
                     AsyncDisposalOutcome.BodyCompletes
                     AsyncDisposalOutcome.BodyThrows
                     AsyncDisposalOutcome.BodyCancels
+                    AsyncDisposalOutcome.BodyAwaitsCanceledTask
                 ]
                 AsyncDisposalOutcome.taskExpectation
                 (fun body cts resource ->
                     cancellableValueTask {
                         use _ = resource
                         AsyncDisposalOutcome.runBody body cts
+
+                        if AsyncDisposalOutcome.awaitsCanceledTask body then
+                            do! AsyncDisposalOutcome.canceledTask ()
+
                         do! Task.CompletedTask
                     }
                     |> fun t -> (t cts.Token).AsTask() :> Task
@@ -1693,6 +1698,10 @@ module CancellableValueTaskTests =
                     cancellableValueTask {
                         for _ in items do
                             AsyncDisposalOutcome.runBody body cts
+
+                            if AsyncDisposalOutcome.awaitsCanceledTask body then
+                                do! AsyncDisposalOutcome.canceledTask ()
+
                             do! Task.CompletedTask
                     }
                     |> fun t -> (t cts.Token).AsTask() :> Task
@@ -1704,12 +1713,17 @@ module CancellableValueTaskTests =
                     AsyncDisposalOutcome.BodyCompletes
                     AsyncDisposalOutcome.BodyThrows
                     AsyncDisposalOutcome.BodyCancels
+                    AsyncDisposalOutcome.BodyAwaitsCanceledTask
                 ]
                 AsyncDisposalOutcome.taskExpectation
                 (fun body cts resource ->
                     dCancellableValueTask {
                         use _ = resource
                         AsyncDisposalOutcome.runBody body cts
+
+                        if AsyncDisposalOutcome.awaitsCanceledTask body then
+                            do! AsyncDisposalOutcome.canceledTask ()
+
                         do! Task.CompletedTask
                     }
                     |> fun t -> (t cts.Token).AsTask() :> Task
@@ -1718,6 +1732,10 @@ module CancellableValueTaskTests =
                     dCancellableValueTask {
                         for _ in items do
                             AsyncDisposalOutcome.runBody body cts
+
+                            if AsyncDisposalOutcome.awaitsCanceledTask body then
+                                do! AsyncDisposalOutcome.canceledTask ()
+
                             do! Task.CompletedTask
                     }
                     |> fun t -> (t cts.Token).AsTask() :> Task
