@@ -22,7 +22,7 @@ We add runtime-async versions of `task`, `backgroundTask`, `valueTask`, `coldTas
 
 The compiler can lower the builder only when it inlines every member into the consumer method.
 Without `NoDynamicInvocation`, a consumer in Debug with `LangVersion` 11.0 compiled with no error. It called the compiled library members, ran `AsyncHelpers.Await` outside a runtime-async method, and returned `1045044550` in place of `42`.
-With `NoDynamicInvocation`, the same consumer fails to compile with FS3350 and FS3918. In Release, the consumer fails with FS3350 in both cases.
+With `NoDynamicInvocation`, the same consumer fails to compile with FS3350 and FS3918. The compiler defect is [dotnet/fsharp#21001](https://github.com/dotnet/fsharp/issues/21001). In Release, the consumer fails with FS3350 in both cases.
 
 ## Considered options
 
