@@ -1,4 +1,4 @@
-# 0013. Put each builder module in the IcedTasks namespace, with no assembly-level AutoOpen
+# 0014. Put each builder module in the IcedTasks namespace, with no assembly-level AutoOpen
 
 - Status: accepted
 - Date: 2026-11-18
@@ -7,7 +7,7 @@
 - Reason source: maintainer decision, measurements in the PR description
 
 [0012](0012-namespace-per-builder-file.md) gave each builder file its own namespace and auto-opened all of them with assembly-level `AutoOpen` attributes in `src/IcedTasks/AutoOpens.fs`.
-0.11.10-beta001 and 0.11.10-beta002 shipped that layout.
+0.11.10-beta001, beta002, and beta003 shipped that layout.
 
 An assembly-level `AutoOpen` opens its namespace in each file of each project that references the assembly.
 A file with no `open IcedTasks` then gets the IcedTasks extension members.
@@ -37,7 +37,7 @@ So the library files check in series again:
 | Layout | Graph depth (net9.0) | Typecheck median, net9.0 | Typecheck median, netstandard2.0 |
 |---|---|---|---|
 | 0012 (beta002) | 5 | 1.38 s | 1.31 s |
-| 0013 | 15 | 3.07 s | 2.21 s |
+| 0014 | 15 | 3.07 s | 2.21 s |
 
 The Typecheck phase is about 0.9 to 1.7 s longer for each target framework.
 The full project build includes the F# analyzers, and its time difference is below the run-to-run noise (medians 34.0 s and 34.3 s, single runs from 24 s to 48 s).

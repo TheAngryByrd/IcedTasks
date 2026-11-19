@@ -878,6 +878,463 @@ module AsyncExTests =
         ]
 
 
+    let private deadline = TimeSpan.FromSeconds 10.
+
+    let private settle (result: Task) =
+        result.ContinueWith(fun (_: Task) -> ()).WaitAsync(deadline)
+
+    let private runUntilCanceled (work: CancellationTokenSource -> Async<unit>) =
+        task {
+            use cts = new CancellationTokenSource()
+            let result = Async.StartImmediateAsTask(work cts, cts.Token)
+            do! settle result
+            return result
+        }
+
+    let private countingDisposable (disposeCalls: int ref) (disposeAsync: unit -> ValueTask) =
+        TestHelpers.makeAsyncDisposable (fun () ->
+            Interlocked.Increment(&disposeCalls.contents)
+            |> ignore
+
+            disposeAsync ()
+        )
+
+    let private recordingDisposable
+        (events: ResizeArray<string>)
+        name
+        (disposeAsync: unit -> ValueTask)
+        =
+        TestHelpers.makeAsyncDisposable (fun () ->
+            lock events (fun () -> events.Add name)
+            disposeAsync ()
+        )
+
+    let cancelBeforeBodyTests =
+        testList "Cancellation and disposal" [
+            testCaseTask
+                "before the body starts, use disposes the resource once, the body does not run, and the workflow is canceled"
+            <| fun () ->
+                task {
+                    let disposeCalls = ref 0
+                    let bodyRuns = ref 0
+
+                    let resource =
+                        countingDisposable disposeCalls (fun () -> ValueTask.CompletedTask)
+
+                    let! result =
+                        runUntilCanceled (fun cts ->
+                            asyncEx {
+                                use _ =
+                                    cts.Cancel()
+                                    resource
+
+                                bodyRuns.Value <-
+                                    bodyRuns.Value
+                                    + 1
+                            }
+                        )
+
+                    Expect.isTrue result.IsCanceled "The workflow must be canceled"
+                    Expect.equal disposeCalls.Value 1 "use must dispose the resource once"
+                    Expect.equal bodyRuns.Value 0 "The body must not run"
+                }
+            testCaseTask
+                "before the body starts, use! disposes the resource once, the body does not run, and the workflow is canceled"
+            <| fun () ->
+                task {
+                    let disposeCalls = ref 0
+                    let bodyRuns = ref 0
+
+                    let resource =
+                        countingDisposable disposeCalls (fun () -> ValueTask.CompletedTask)
+
+                    let! result =
+                        runUntilCanceled (fun cts ->
+                            asyncEx {
+                                use! acquired =
+                                    CustomAwaiter.CustomAwaiter(
+                                        (fun () ->
+                                            cts.Cancel()
+                                            resource
+                                        ),
+                                        (fun () -> true)
+                                    )
+
+                                bodyRuns.Value <-
+                                    bodyRuns.Value
+                                    + 1
+                            }
+                        )
+
+                    Expect.isTrue result.IsCanceled "The workflow must be canceled"
+                    Expect.equal disposeCalls.Value 1 "use! must dispose the resource once"
+                    Expect.equal bodyRuns.Value 0 "The body must not run"
+                }
+            testCaseTask
+                "before the body starts, for disposes the enumerator once, does not move next, and the workflow is canceled"
+            <| fun () ->
+                task {
+                    let disposeCalls = ref 0
+                    let moveNextCalls = ref 0
+
+                    let! result =
+                        runUntilCanceled (fun cts ->
+                            let items =
+                                { new IAsyncEnumerable<int> with
+                                    member _.GetAsyncEnumerator(_) =
+                                        cts.Cancel()
+
+                                        { new IAsyncEnumerator<int> with
+                                            member _.MoveNextAsync() =
+                                                Interlocked.Increment(&moveNextCalls.contents)
+                                                |> ignore
+
+                                                ValueTask<bool>(false)
+
+                                            member _.Current = 0
+
+                                            member _.DisposeAsync() =
+                                                Interlocked.Increment(&disposeCalls.contents)
+                                                |> ignore
+
+                                                ValueTask.CompletedTask
+                                        }
+                                }
+
+                            asyncEx {
+                                for _ in items do
+                                    ()
+                            }
+                        )
+
+                    Expect.isTrue result.IsCanceled "The workflow must be canceled"
+                    Expect.equal disposeCalls.Value 1 "for must dispose the enumerator once"
+                    Expect.equal moveNextCalls.Value 0 "for must not move next"
+                }
+            testCaseTask
+                "before the body starts, a pending DisposeAsync starts once, is read once, and the workflow is canceled without waiting for it"
+            <| fun () ->
+                task {
+                    let disposeCalls = ref 0
+                    let source = AsyncDisposalOutcome.ObservedDisposalSource()
+                    let resource = countingDisposable disposeCalls source.ValueTask
+
+                    try
+                        let! result =
+                            runUntilCanceled (fun cts ->
+                                asyncEx {
+                                    use _ =
+                                        cts.Cancel()
+                                        resource
+
+                                    return ()
+                                }
+                            )
+
+                        Expect.isTrue result.IsCanceled "The workflow must be canceled"
+                        Expect.equal disposeCalls.Value 1 "use must start DisposeAsync once"
+                    finally
+                        source.Complete AsyncDisposalOutcome.DisposalSucceeds
+
+                    do! source.ResultRead.WaitAsync(deadline)
+
+                    Expect.equal
+                        source.GetResultCalls
+                        1
+                        "The pending DisposeAsync result must be read once"
+                }
+            testCaseTask
+                "before the body starts, a DisposeAsync exception is discarded and the workflow is canceled"
+            <| fun () ->
+                task {
+                    let disposeCalls = ref 0
+
+                    let resource =
+                        countingDisposable
+                            disposeCalls
+                            (fun () -> raise (InvalidOperationException "dispose"))
+
+                    let! result =
+                        runUntilCanceled (fun cts ->
+                            asyncEx {
+                                use _ =
+                                    cts.Cancel()
+                                    resource
+
+                                return ()
+                            }
+                        )
+
+                    Expect.isTrue result.IsCanceled "The workflow must be canceled"
+                    Expect.equal disposeCalls.Value 1 "use must call DisposeAsync once"
+                }
+            testCaseTask
+                "before the inner body starts, nested use disposes each resource once and the workflow is canceled"
+            <| fun () ->
+                task {
+                    let events = ResizeArray<string>()
+
+                    let outer =
+                        recordingDisposable events "outer" (fun () -> ValueTask.CompletedTask)
+
+                    let inner =
+                        recordingDisposable events "inner" (fun () -> ValueTask.CompletedTask)
+
+                    let! result =
+                        runUntilCanceled (fun cts ->
+                            asyncEx {
+                                use _ = outer
+
+                                use _ =
+                                    cts.Cancel()
+                                    inner
+
+                                return ()
+                            }
+                        )
+
+                    Expect.isTrue result.IsCanceled "The workflow must be canceled"
+
+                    Expect.sequenceEqual
+                        (lock events (fun () -> List.ofSeq events))
+                        [
+                            "inner"
+                            "outer"
+                        ]
+                        "Each resource must be disposed once, inner first"
+                }
+            testCaseTask
+                "before the inner body starts, an enclosing use can dispose before a pending inner DisposeAsync completes"
+            <| fun () ->
+                task {
+                    let events = ResizeArray<string>()
+                    let innerSource = AsyncDisposalOutcome.ObservedDisposalSource()
+
+                    let outer =
+                        recordingDisposable events "outer" (fun () -> ValueTask.CompletedTask)
+
+                    let inner = recordingDisposable events "inner" innerSource.ValueTask
+
+                    try
+                        let! result =
+                            runUntilCanceled (fun cts ->
+                                asyncEx {
+                                    use _ = outer
+
+                                    use _ =
+                                        cts.Cancel()
+                                        inner
+
+                                    return ()
+                                }
+                            )
+
+                        Expect.isTrue result.IsCanceled "The workflow must be canceled"
+
+                        Expect.sequenceEqual
+                            (lock events (fun () -> List.ofSeq events))
+                            [
+                                "inner"
+                                "outer"
+                            ]
+                            "The outer resource is disposed while the inner DisposeAsync is pending"
+                    finally
+                        innerSource.Complete AsyncDisposalOutcome.DisposalSucceeds
+                }
+            testCaseTask
+                "a run that receives the cancellation of another run with a pending early compensation runs its own compensation"
+            <| fun () ->
+                task {
+                    let firstSource = AsyncDisposalOutcome.ObservedDisposalSource()
+                    let firstCancellation = TaskCompletionSource<OperationCanceledException>()
+                    use firstCts = new CancellationTokenSource()
+                    firstCts.Cancel()
+
+                    try
+                        Async.StartWithContinuations(
+                            Async.TryFinallyAsync(
+                                async { return () },
+                                async { do! Async.AwaitTask(firstSource.ValueTask().AsTask()) }
+                            ),
+                            ignore,
+                            ignore,
+                            (fun cancellation ->
+                                firstCancellation.TrySetResult cancellation
+                                |> ignore
+                            ),
+                            firstCts.Token
+                        )
+
+                        let! cancellation = firstCancellation.Task.WaitAsync(deadline)
+                        let secondCompensations = ref 0
+
+                        let second =
+                            Async.TryFinallyAsync(
+                                Async.FromContinuations(fun (_, _, ccont) -> ccont cancellation),
+                                async {
+                                    secondCompensations.Value <-
+                                        secondCompensations.Value
+                                        + 1
+                                }
+                            )
+
+                        let result = Async.StartImmediateAsTask second
+                        do! settle result
+
+                        Expect.isTrue
+                            result.IsCanceled
+                            "The second run must be canceled while the first compensation is pending"
+
+                        Expect.equal
+                            secondCompensations.Value
+                            1
+                            "The second run must run its own compensation once"
+                    finally
+                        firstSource.Complete AsyncDisposalOutcome.DisposalSucceeds
+                }
+            testCaseTask
+                "Async.TryFinallyAsync on a canceled token runs only the compensation, with a token that cannot cancel"
+            <| fun () ->
+                task {
+                    let computationRuns = ref 0
+                    let compensationRuns = ref 0
+                    let compensationCanBeCanceled = ref true
+                    use cts = new CancellationTokenSource()
+                    cts.Cancel()
+
+                    let work =
+                        Async.TryFinallyAsync(
+                            async {
+                                computationRuns.Value <-
+                                    computationRuns.Value
+                                    + 1
+                            },
+                            async {
+                                let! token = Async.CancellationToken
+                                compensationCanBeCanceled.Value <- token.CanBeCanceled
+
+                                compensationRuns.Value <-
+                                    compensationRuns.Value
+                                    + 1
+                            }
+                        )
+
+                    let result = Async.StartImmediateAsTask(work, cts.Token)
+                    do! settle result
+
+                    Expect.isTrue result.IsCanceled "The workflow must be canceled"
+                    Expect.equal computationRuns.Value 0 "The computation must not run"
+                    Expect.equal compensationRuns.Value 1 "The compensation must run once"
+
+                    Expect.isFalse
+                        compensationCanBeCanceled.Value
+                        "The compensation must run with a token that cannot cancel"
+                }
+            testCaseTask "a null cancellation from the computation runs the compensation once"
+            <| fun () ->
+                task {
+                    let compensationRuns = ref 0
+
+                    let work =
+                        Async.TryFinallyAsync(
+                            Async.FromContinuations(fun (_, _, ccont) ->
+                                ccont Unchecked.defaultof<OperationCanceledException>
+                            ),
+                            async {
+                                compensationRuns.Value <-
+                                    compensationRuns.Value
+                                    + 1
+                            }
+                        )
+
+                    let result = Async.StartImmediateAsTask work
+                    do! settle result
+
+                    Expect.isTrue result.IsCanceled "The workflow must be canceled"
+                    Expect.equal compensationRuns.Value 1 "The compensation must run once"
+                }
+            testCaseTask "a cancellation inside the body disposes the resource once"
+            <| fun () ->
+                task {
+                    let disposeCalls = ref 0
+
+                    let resource =
+                        countingDisposable disposeCalls (fun () -> ValueTask.CompletedTask)
+
+                    let! result =
+                        runUntilCanceled (fun cts ->
+                            asyncEx {
+                                use _ = resource
+                                cts.Cancel()
+                                do! async { return () }
+                            }
+                        )
+
+                    Expect.isTrue result.IsCanceled "The workflow must be canceled"
+                    Expect.equal disposeCalls.Value 1 "use must dispose the resource once"
+                }
+            testCaseTask
+                "a cancellation inside the body followed by a DisposeAsync failure fails the workflow"
+            <| fun () ->
+                task {
+                    let resource =
+                        TestHelpers.makeAsyncDisposable (fun () ->
+                            ValueTask(Task.FromException(InvalidOperationException "dispose"))
+                        )
+
+                    let! result =
+                        runUntilCanceled (fun cts ->
+                            asyncEx {
+                                use _ = resource
+                                cts.Cancel()
+                                do! async { return () }
+                            }
+                        )
+
+                    Expect.isTrue result.IsFaulted "The DisposeAsync failure must fail the workflow"
+
+                    Expect.isTrue
+                        (result.Exception.InnerExceptions
+                         |> Seq.exists (fun e -> e :? InvalidOperationException))
+                        "The workflow must fail with the DisposeAsync exception"
+                }
+            testCaseTask
+                "a cancellation inside the body followed by a canceled DisposeAsync fails the workflow"
+            <| fun () ->
+                task {
+                    use disposalCts = new CancellationTokenSource()
+                    disposalCts.Cancel()
+
+                    let resource =
+                        TestHelpers.makeAsyncDisposable (fun () ->
+                            ValueTask(Task.FromCanceled(disposalCts.Token))
+                        )
+
+                    let! result =
+                        runUntilCanceled (fun cts ->
+                            asyncEx {
+                                use _ = resource
+                                cts.Cancel()
+                                do! async { return () }
+                            }
+                        )
+
+                    Expect.isTrue
+                        result.IsFaulted
+                        "The DisposeAsync cancellation must fail the workflow"
+
+                    Expect.isTrue
+                        (result.Exception.InnerExceptions
+                         |> Seq.exists (fun e ->
+                             match e with
+                             | :? OperationCanceledException as canceled ->
+                                 canceled.CancellationToken = disposalCts.Token
+                             | _ -> false
+                         ))
+                        "The workflow must fail with the DisposeAsync cancellation, not the body cancellation"
+                }
+        ]
+
     let disposalOutcomeTests =
         testList "DisposeAsync outcome" [
             AsyncDisposalOutcome.tests
@@ -1009,6 +1466,7 @@ module AsyncExTests =
         testList "IcedTasks.AsyncEx" [
             builderTests
             disposalOutcomeTests
+            cancelBeforeBodyTests
         ]
 
 module PolyfillTest =

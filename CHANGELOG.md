@@ -8,10 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
-- [Remove the assembly-level `AutoOpen` attributes of 0.11.10-beta001 and beta002, which opened the IcedTasks namespaces in every file of each referencing project. Restore the 0.11.9 namespaces, modules, and public type names](PR_URL) - Credits @TheAngryByrd
+- [Remove the assembly-level `AutoOpen` attributes of 0.11.10-beta001, beta002, and beta003, which opened the IcedTasks namespaces in every file of each referencing project. Restore the 0.11.9 namespaces, modules, and public type names](PR_URL) - Credits @TheAngryByrd
 
 ### Changed
-- [Remove the namespaces that only 0.11.10-beta001 and beta002 had, for example `IcedTasks.TaskLike`, `IcedTasks.AsyncEx`, and `IcedTasks.ColdTasks.ColdTasks`. Use `open IcedTasks` or the 0.11.9 module names](PR_URL) - Credits @TheAngryByrd
+- [Remove the namespaces that only 0.11.10-beta001, beta002, and beta003 had, for example `IcedTasks.TaskLike`, `IcedTasks.AsyncEx`, and `IcedTasks.ColdTasks.ColdTasks`. Use `open IcedTasks` or the 0.11.9 module names](PR_URL) - Credits @TheAngryByrd
+
+## [0.11.10-beta003] - 2026-11-18
+
+### Fixed
+- [Dispose in asyncEx when the token is cancelled before the use body starts](https://github.com/TheAngryByrd/IcedTasks/pull/75) - Credits @TheAngryByrd. `Async.TryFinallyAsync` now starts the compensation in this case. It is no longer `inline`, so code compiled against an earlier version must be compiled again to get the fix.
+
+- [Dispose the resource of `use` and `use!` in `asyncEx` when the body throws before its first bind](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+- [Read `GetResult` of a completed non-generic `ValueTask` in `AsyncEx.AwaitValueTask`, `Async.AwaitValueTask`, `ValueTask.ofUnit`, and `PoolingValueTask.ofUnit`](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+- [Complete `taskUnit`, `backgroundTaskUnit`, and `valueTaskUnit` on the dynamic path, and make `MethodBuilder.SetResult` and `MethodBuilder.get_Task` act on the builder, not a copy](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+- [Fix multi-start of cold and cancellable tasks on the dynamic path](https://github.com/TheAngryByrd/IcedTasks/pull/67) - Credits @xperiandri
+- [Align the background cold builder exception path](https://github.com/TheAngryByrd/IcedTasks/pull/66) - Credits @TheAngryByrd
+
+### Changed
+- [Test on net10.0 and net11.0 with the .NET 11 SDK, test the net6.0 library build, and run the build and the docs on .NET 10 instead of .NET 8 and 9](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
+- [Use NuGet trusted publishing in the publish workflow](https://github.com/TheAngryByrd/IcedTasks/pull/68) - Credits @TheAngryByrd
+
+### Added
+- [Tests for the DisposeAsync outcome of `use` and `for` in each builder](https://github.com/TheAngryByrd/IcedTasks/pull/73) - Credits @TheAngryByrd
 
 ## [0.11.10-beta002] - 2026-11-18
 
@@ -369,7 +387,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Increased soeed and lowered memory usage of ColdTask and CancellableTask
 - Build for netstandard2.0 and netstandard2.1
 
-[Unreleased]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.10-beta002...HEAD
+[Unreleased]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.10-beta003...HEAD
+[0.11.10-beta003]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.9...v0.11.10-beta003
 [0.11.10-beta002]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.9...v0.11.10-beta002
 [0.11.10-beta001]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.9...v0.11.10-beta001
 [0.11.9]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.8...v0.11.9

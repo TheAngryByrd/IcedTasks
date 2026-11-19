@@ -54,9 +54,9 @@ let answer = Async.RunSynchronously bindDotnetAsyncShapes
 (**
 ## Dispose `IAsyncDisposable` values
 
-Use `use` for resources that implement `IAsyncDisposable`. Disposal runs when the workflow completes, raises, or is cancelled. Disposal also runs when the body raises before its first asynchronous step. Disposal does not run when the workflow is cancelled after the resource is made and before the body starts.
+Use `use` for resources that implement `IAsyncDisposable`. Disposal runs when the workflow completes, raises, or is cancelled. Disposal also runs when the body raises before its first asynchronous step. If the workflow is cancelled after the resource is made and before the body starts, `DisposeAsync` starts at once and the cancellation continues. The workflow does not wait for a `DisposeAsync` that has not completed, and it discards a `DisposeAsync` exception in this case. An enclosing `use` can then dispose its own resource before that `DisposeAsync` completes. A `use!` resource belongs to the workflow only after `use!` receives it. If the workflow is cancelled after the source made the resource and before `use!` receives it, for example from a completed `Task`, nothing disposes the resource.
 
-If `DisposeAsync` fails, the workflow fails with the `DisposeAsync` exception. If the `ValueTask` from `DisposeAsync` fails with an `AggregateException` that has one inner exception, the workflow fails with the inner exception. If the body and `DisposeAsync` both fail, the workflow fails with an `AggregateException` that contains both exceptions.
+After the body starts, if `DisposeAsync` fails, the workflow fails with the `DisposeAsync` exception. If the `ValueTask` from `DisposeAsync` fails with an `AggregateException` that has one inner exception, the workflow fails with the inner exception. If the body and `DisposeAsync` both fail, the workflow fails with an `AggregateException` that contains both exceptions.
 
 *)
 

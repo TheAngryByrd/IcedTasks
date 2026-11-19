@@ -43,7 +43,7 @@ These namespaces are not opened by `open IcedTasks`:
 
 ### Graph-based checking
 
-Graph-based type checking links each file that declares `namespace IcedTasks` to every earlier file with a type or an `[<AutoOpen>]` module in that namespace. So the library files check in series (graph depth 15 on `net9.0`). An `open` of one module cannot remove a link. [ADR 0013](../../adr/0013-restore-autoopen-modules-in-icedtasks-namespace.md) records the measured cost and the selective signature file option.
+Graph-based type checking links each file that declares `namespace IcedTasks` to every earlier file with a type or an `[<AutoOpen>]` module in that namespace. So the library files check in series (graph depth 15 on `net9.0`). An `open` of one module cannot remove a link. [ADR 0014](../../adr/0014-restore-autoopen-modules-in-icedtasks-namespace.md) records the measured cost and the selective signature file option.
 
 ```mermaid
 flowchart LR
@@ -83,6 +83,6 @@ Decisions:
 - [ADR 0010, Microsoft.Bcl.AsyncInterfaces on netstandard2.0](../../adr/0010-bcl-asyncinterfaces-on-netstandard2-0.md)
 - [ADR 0011, FSharp.Core per target framework](../../adr/0011-fsharp-core-per-target-framework.md)
 - [ADR 0012, one namespace for each builder file](../../adr/0012-namespace-per-builder-file.md) (superseded)
-- [ADR 0013, AutoOpen modules in the IcedTasks namespace](../../adr/0013-restore-autoopen-modules-in-icedtasks-namespace.md)
+- [ADR 0014, AutoOpen modules in the IcedTasks namespace](../../adr/0014-restore-autoopen-modules-in-icedtasks-namespace.md)
 
 Related: [builder catalog](builder-catalog.md), [test projects and TFMs](../tests/test-projects-and-tfms.md).
