@@ -763,12 +763,16 @@ module ValueTaskDynamicTests =
                 [
                     AsyncDisposalOutcome.BodyCompletes
                     AsyncDisposalOutcome.BodyThrows
+                    AsyncDisposalOutcome.BodyAwaitsCanceledTask
                 ]
                 AsyncDisposalOutcome.taskExpectation
                 (fun body cts resource ->
                     dValueTask {
                         use _ = resource
                         AsyncDisposalOutcome.runBody body cts
+
+                        if AsyncDisposalOutcome.awaitsCanceledTask body then
+                            do! AsyncDisposalOutcome.canceledTask ()
                     }
                     |> fun t -> t.AsTask() :> Task
                 )
@@ -776,6 +780,9 @@ module ValueTaskDynamicTests =
                     dValueTask {
                         for _ in items do
                             AsyncDisposalOutcome.runBody body cts
+
+                            if AsyncDisposalOutcome.awaitsCanceledTask body then
+                                do! AsyncDisposalOutcome.canceledTask ()
                     }
                     |> fun t -> t.AsTask() :> Task
                 )

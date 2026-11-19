@@ -1052,12 +1052,16 @@ module ValueTaskTests =
                 [
                     AsyncDisposalOutcome.BodyCompletes
                     AsyncDisposalOutcome.BodyThrows
+                    AsyncDisposalOutcome.BodyAwaitsCanceledTask
                 ]
                 AsyncDisposalOutcome.taskExpectation
                 (fun body cts resource ->
                     valueTask {
                         use _ = resource
                         AsyncDisposalOutcome.runBody body cts
+
+                        if AsyncDisposalOutcome.awaitsCanceledTask body then
+                            do! AsyncDisposalOutcome.canceledTask ()
                     }
                     |> fun t -> t.AsTask() :> Task
                 )
@@ -1065,6 +1069,9 @@ module ValueTaskTests =
                     valueTask {
                         for _ in items do
                             AsyncDisposalOutcome.runBody body cts
+
+                            if AsyncDisposalOutcome.awaitsCanceledTask body then
+                                do! AsyncDisposalOutcome.canceledTask ()
                     }
                     |> fun t -> t.AsTask() :> Task
                 )
@@ -1074,12 +1081,16 @@ module ValueTaskTests =
                 [
                     AsyncDisposalOutcome.BodyCompletes
                     AsyncDisposalOutcome.BodyThrows
+                    AsyncDisposalOutcome.BodyAwaitsCanceledTask
                 ]
                 AsyncDisposalOutcome.taskExpectation
                 (fun body cts resource ->
                     valueTaskUnit {
                         use _ = resource
                         AsyncDisposalOutcome.runBody body cts
+
+                        if AsyncDisposalOutcome.awaitsCanceledTask body then
+                            do! AsyncDisposalOutcome.canceledTask ()
                     }
                     |> fun t -> t.AsTask()
                 )
@@ -1087,6 +1098,9 @@ module ValueTaskTests =
                     valueTaskUnit {
                         for _ in items do
                             AsyncDisposalOutcome.runBody body cts
+
+                            if AsyncDisposalOutcome.awaitsCanceledTask body then
+                                do! AsyncDisposalOutcome.canceledTask ()
                     }
                     |> fun t -> t.AsTask()
                 )
@@ -1096,12 +1110,16 @@ module ValueTaskTests =
                 [
                     AsyncDisposalOutcome.BodyCompletes
                     AsyncDisposalOutcome.BodyThrows
+                    AsyncDisposalOutcome.BodyAwaitsCanceledTask
                 ]
                 AsyncDisposalOutcome.taskExpectation
                 (fun body cts resource ->
                     dValueTaskUnit {
                         use _ = resource
                         AsyncDisposalOutcome.runBody body cts
+
+                        if AsyncDisposalOutcome.awaitsCanceledTask body then
+                            do! AsyncDisposalOutcome.canceledTask ()
                     }
                     |> fun t -> t.AsTask()
                 )
@@ -1109,6 +1127,9 @@ module ValueTaskTests =
                     dValueTaskUnit {
                         for _ in items do
                             AsyncDisposalOutcome.runBody body cts
+
+                            if AsyncDisposalOutcome.awaitsCanceledTask body then
+                                do! AsyncDisposalOutcome.canceledTask ()
                     }
                     |> fun t -> t.AsTask()
                 )
