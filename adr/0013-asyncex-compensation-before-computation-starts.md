@@ -38,5 +38,5 @@ Consequences:
 - Each early cancellation starts one compensation. The table keeps one marker for each live cancellation exception that `finish` marked. The keys are weak.
 - `TryFinallyAsync` is no longer `inline`, because it uses the private table.
   Code that an earlier version compiled has the old inlined body until it is compiled again.
-- A `use!` resource belongs to the workflow only after its source returns it.
-  If the source itself is cancelled first, the workflow never sees the resource and does not dispose it. FSharp.Core `async` has the same rule.
+- A `use!` resource belongs to the workflow only after `use!` receives it.
+  If the workflow is cancelled after the source made the resource and before `use!` receives it, for example by the `Bind` check after a completed `Task`, nothing disposes the resource. FSharp.Core `async` has the same rule.

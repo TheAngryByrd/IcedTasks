@@ -154,7 +154,7 @@ module AsyncExtensions =
         /// with no cancellation token. The result is canceled when the synchronous part of compensation returns.
         /// Nothing waits for the rest of that compensation, and its exception is discarded.</summary>
         /// <param name="computation">The input computation.</param>
-        /// <param name="compensation">The computation to run after computation completes, fails, or is canceled.</param>
+        /// <param name="compensation">The computation to run after computation completes, fails, or is canceled, or when the workflow is canceled before computation starts.</param>
         /// <remarks> <see href="http://www.fssnip.net/ru/title/Async-workflow-with-asynchronous-finally-clause">See this F# gist</see></remarks>
         /// <returns>An async with the result of the computation.</returns>
         static member TryFinallyAsync
