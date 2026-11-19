@@ -14,6 +14,8 @@ Each builder keyword is a value in an AutoOpen module. Paths are under `src/Iced
 | `cancellableValueTask` | - | `CancellableValueTaskBuilder` (`CancellableValueTask.fs`) | `CancellableValueTask<'T>` | `CancellableTaskBuilderBase` | cold |
 | `cancellablePoolingValueTask` | `cancelablePVTask` | `CancellablePoolingValueTaskBuilder` (`CancellablePoolingValueTask.fs`) | `CancellableValueTask<'T>` | `CancellableTaskBuilderBase` | cold |
 | `task`, `backgroundTask`, `valueTask` in `IcedTasks.Polyfill.RuntimeTask` | - | `RuntimeTaskBuilder`, `RuntimeBackgroundTaskBuilder`, `RuntimeValueTaskBuilder` (`RuntimeTask.fs`) | `Task<'T>`, `ValueTask<'T>` | `RuntimeTaskBuilderBase` | hot, `net11.0` only |
+| `coldTask`, `backgroundColdTask` in `IcedTasks.Polyfill.RuntimeTask` | - | `RuntimeColdTaskBuilder`, `RuntimeBackgroundColdTaskBuilder` (`RuntimeTask.fs`) | `unit -> Task<'T>` | `RuntimeTaskBuilderBase` | cold, `net11.0` only |
+| `cancellableTask`, `backgroundCancellableTask`, `cancellableValueTask` in `IcedTasks.Polyfill.RuntimeTask` | - | `RuntimeCancellableTaskBuilder`, `RuntimeBackgroundCancellableTaskBuilder`, `RuntimeCancellableValueTaskBuilder` (`RuntimeCancellableTask.fs`) | `CancellationToken -> Task<'T>`, `CancellationToken -> ValueTask<'T>` | `RuntimeCancellableTaskBuilderBase` | cold, `net11.0` only |
 | `asyncEx` | `async` in `IcedTasks.Polyfill.Async` | `AsyncExBuilder` (`AsyncEx.fs`) | `Async<'T>` | none | `Async` |
 | `parallelAsync` | - | `ParallelAsyncBuilderUsingStartImmediateAsTask` (`ParallelAsync.fs`) | `Async<'T>` | `ParallelAsyncBuilderBase` | `Async` |
 | `parallelAsyncUsingStartChild` | - | `ParallelAsyncBuilderUsingStartChild` (`ParallelAsync.fs`) | `Async<'T>` | `ParallelAsyncBuilderBase` | `Async` |

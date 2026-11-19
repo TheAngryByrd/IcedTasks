@@ -26,7 +26,8 @@ The repository has no glossary file. The terms below come from the code and from
 - runtime async - the .NET 11 feature where the runtime suspends a method that has `MethodImplOptions.Async`. The builders in `IcedTasks.Polyfill.RuntimeTask` use it.
 - return marker - `__runtimeAsyncReturn` or `__runtimeAsyncReturnValueTask`. The F# compiler makes the method that contains it runtime async.
 - Started - the `Started<'T>` delegate that a runtime-async `Source` returns. `Bind` invokes it to await the operation.
-- polyfill namespace - `IcedTasks.Polyfill.Task`, `IcedTasks.Polyfill.Async`, or `IcedTasks.Polyfill.RuntimeTask`. Opening one shadows the FSharp.Core `task`, `backgroundTask`, or `async` builder. `IcedTasks.Polyfill.RuntimeTask` also shadows the IcedTasks `valueTask`.
+- WithToken - the `WithToken<'T>` delegate that a runtime-async cancellable `Source` returns for a token-dependent or cold value. `Bind` checks the token and invokes it with the token.
+- polyfill namespace - `IcedTasks.Polyfill.Task`, `IcedTasks.Polyfill.Async`, or `IcedTasks.Polyfill.RuntimeTask`. Opening one shadows the FSharp.Core `task`, `backgroundTask`, or `async` builder. `IcedTasks.Polyfill.RuntimeTask` also shadows the IcedTasks `valueTask`, cold, and cancellable builders.
 - AsyncEx - the `asyncEx` builder. It keeps F# `Async` semantics and adds task interop.
 - companion module - the module with the same name as a type alias, such as `CancellableTask.map`.
 - TFM - target framework moniker, such as `netstandard2.0`.

@@ -202,6 +202,21 @@ module RuntimeTaskBase =
                 : Started<'TResult> =
                 RuntimeAwait.started (Awaitable.GetAwaiter awaitable)
 
+            /// <summary>Calls the function, and wraps its awaiter for the builder to await.</summary>
+            [<NoDynamicInvocation; NoEagerConstraintApplication>]
+            member inline _.Source<'Awaiter, 'TResult when Awaiter<'Awaiter, 'TResult>>
+                ([<InlineIfLambda>] getAwaiter: unit -> 'Awaiter)
+                : Started<'TResult> =
+                RuntimeAwait.started (getAwaiter ())
+
+            /// <summary>Calls the function, gets the awaiter of its result, and wraps it for the builder to await.</summary>
+            [<NoDynamicInvocation; NoEagerConstraintApplication>]
+            member inline _.Source<'Awaitable, 'Awaiter, 'TResult
+                when Awaitable<'Awaitable, 'Awaiter, 'TResult>>
+                ([<InlineIfLambda>] coldAwaitable: unit -> 'Awaitable)
+                : Started<'TResult> =
+                RuntimeAwait.started (Awaitable.GetAwaiter(coldAwaitable ()))
+
             /// <summary>Runs the body with the resource, and then calls <c>Dispose</c> on the resource.</summary>
             /// <remarks>The builder does not dispose a null resource.</remarks>
             [<NoDynamicInvocation>]
@@ -266,7 +281,7 @@ module RuntimeTaskBase =
                 let task = coldTask ()
                 Started(fun () -> AsyncHelpers.Await task)
 
-/// <summary>Contains the runtime-async <c>task</c>, <c>backgroundTask</c>, and <c>valueTask</c> builders.</summary>
+/// <summary>Contains the runtime-async <c>task</c>, <c>backgroundTask</c>, <c>valueTask</c>, <c>coldTask</c>, and <c>backgroundColdTask</c> builders.</summary>
 /// <remarks>
 /// Open <c>IcedTasks.Polyfill.RuntimeTask</c> to use these builders in place of the FSharp.Core and IcedTasks builders.
 /// The project that opens the namespace must target <c>net11.0</c> or later and set <c>LangVersion</c> to <c>preview</c>.
@@ -338,6 +353,53 @@ module RuntimeTasks =
         member inline _.Source(task: ValueTask<'T>) =
             Started(fun () -> AsyncHelpers.Await task)
 
+    /// <summary>Builds a cold task, <c>unit -> Task&lt;'T&gt;</c>, as a .NET runtime-async method.</summary>
+    /// <remarks>Each call of the cold task runs the computation again.</remarks>
+    type RuntimeColdTaskBuilder() =
+        inherit RuntimeTaskBuilderBase()
+
+        /// <summary>Returns a function that runs the computation as a runtime-async method each time that it is called.</summary>
+        [<NoDynamicInvocation>]
+        member inline _.Run([<InlineIfLambda>] code: unit -> 'T) : unit -> Task<'T> =
+            fun () -> __runtimeAsyncReturn (code ())
+
+        /// <summary>Gives the task to the builder, which awaits it with <c>AsyncHelpers.Await</c>.</summary>
+        /// <remarks>This member is on the builder type so that type inference prefers <c>Task&lt;'T&gt;</c>.</remarks>
+        [<NoDynamicInvocation>]
+        member inline _.Source(task: Task<'T>) =
+            Started(fun () -> AsyncHelpers.Await task)
+
+    /// <summary>Builds a cold task, <c>unit -> Task&lt;'T&gt;</c>, as a .NET runtime-async method that does not run on the caller context.</summary>
+    /// <remarks>
+    /// Each call of the cold task runs the computation again.
+    /// If the caller has a <c>SynchronizationContext</c> or a task scheduler that is not the default,
+    /// the call starts the computation on the thread pool with <c>Task.Run</c>.
+    /// </remarks>
+    type RuntimeBackgroundColdTaskBuilder() =
+        inherit RuntimeTaskBuilderBase()
+
+        /// <summary>Returns a function that runs the computation as a runtime-async method each time that it is called.</summary>
+        /// <remarks>
+        /// If the caller has a <c>SynchronizationContext</c> or a task scheduler that is not the default, the computation starts on the thread pool.
+        /// Otherwise, the computation starts on the caller thread.
+        /// </remarks>
+        [<NoDynamicInvocation>]
+        member inline _.Run([<InlineIfLambda>] code: unit -> 'T) : unit -> Task<'T> =
+            fun () ->
+                if
+                    isNull SynchronizationContext.Current
+                    && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
+                then
+                    __runtimeAsyncReturn (code ())
+                else
+                    Task.Run<'T>(fun () -> __runtimeAsyncReturn (code ()))
+
+        /// <summary>Gives the task to the builder, which awaits it with <c>AsyncHelpers.Await</c>.</summary>
+        /// <remarks>This member is on the builder type so that type inference prefers <c>Task&lt;'T&gt;</c>.</remarks>
+        [<NoDynamicInvocation>]
+        member inline _.Source(task: Task<'T>) =
+            Started(fun () -> AsyncHelpers.Await task)
+
     /// <summary>Builds a <c>Task&lt;'T&gt;</c> as a .NET runtime-async method.</summary>
     /// <example>
     /// <code>
@@ -357,5 +419,11 @@ module RuntimeTasks =
 
     /// <summary>Builds a <c>ValueTask&lt;'T&gt;</c> as a .NET runtime-async method.</summary>
     let valueTask = RuntimeValueTaskBuilder()
+
+    /// <summary>Builds a cold task, <c>unit -> Task&lt;'T&gt;</c>, as a .NET runtime-async method.</summary>
+    let coldTask = RuntimeColdTaskBuilder()
+
+    /// <summary>Builds a cold task, <c>unit -> Task&lt;'T&gt;</c>, as a .NET runtime-async method that does not run on the caller context.</summary>
+    let backgroundColdTask = RuntimeBackgroundColdTaskBuilder()
 
 #endif

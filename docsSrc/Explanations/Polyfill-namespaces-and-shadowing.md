@@ -13,7 +13,7 @@ IcedTasks provides polyfill namespaces for builders that use familiar names:
 |---|---|---|
 | `IcedTasks.Polyfill.Task` | FSharp.Core `task` and `backgroundTask` | IcedTasks task builders |
 | `IcedTasks.Polyfill.Async` | FSharp.Core `async` | `asyncEx` |
-| `IcedTasks.Polyfill.RuntimeTask` | FSharp.Core `task` and `backgroundTask`, and IcedTasks `valueTask` | runtime-async builders, `net11.0` only. See [Runtime-async task builders](Runtime-async-task-builders.html). |
+| `IcedTasks.Polyfill.RuntimeTask` | FSharp.Core `task` and `backgroundTask`, and IcedTasks `valueTask`, `coldTask`, `backgroundColdTask`, `cancellableTask`, `backgroundCancellableTask`, and `cancellableValueTask` | runtime-async builders, `net11.0` only. See [Runtime-async task builders](Runtime-async-task-builders.html). |
 
 Opening one of these namespaces intentionally changes which computation expression builder is chosen for the familiar name.
 

@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- [Add the runtime-async `task`, `backgroundTask`, and `valueTask` builders in `IcedTasks.Polyfill.RuntimeTask` for `net11.0` with F# 11 preview](https://github.com/TheAngryByrd/IcedTasks/pull/62) - Credits @TheAngryByrd
+- [Add runtime-async versions of `task`, `backgroundTask`, `valueTask`, `coldTask`, `backgroundColdTask`, `cancellableTask`, `backgroundCancellableTask`, and `cancellableValueTask` in `IcedTasks.Polyfill.RuntimeTask` for `net11.0` with F# 11 preview](https://github.com/TheAngryByrd/IcedTasks/pull/62) - Credits @TheAngryByrd
 
 ### Changed
 - [Add a `net11.0` library build that depends on FSharp.Core 11.0.101. The `net10.0` test run loads the `net9.0` build and the `net11.0` test run loads the `net11.0` build. No test run loads the `net6.0` build](https://github.com/TheAngryByrd/IcedTasks/pull/62) - Credits @TheAngryByrd

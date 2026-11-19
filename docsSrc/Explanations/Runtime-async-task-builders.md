@@ -9,7 +9,7 @@ index: 7
 
 .NET 11 adds runtime async. In a runtime-async method, the .NET runtime suspends and resumes the method. The compiler does not generate a state machine for the method.
 
-F# 11 has preview support for runtime async. IcedTasks uses this support in the `task`, `backgroundTask`, and `valueTask` builders of the `IcedTasks.Polyfill.RuntimeTask` namespace.
+F# 11 has preview support for runtime async. IcedTasks uses this support in the builders of the `IcedTasks.Polyfill.RuntimeTask` namespace. For the steps to use them, see [Use the runtime-async task builders](../How-To-Guides/Use-runtime-async-task-builders.html).
 
 ## Requirements
 
@@ -33,19 +33,31 @@ Runtime async is a preview feature of F# 11. A later F# compiler can change the 
 
 Each `net11.0` project that references IcedTasks gets the `net11.0` build, also when it does not use these builders. That build depends on FSharp.Core 11.0.101 or later.
 
-The namespace contains the builders only in the `net11.0` build of IcedTasks. In the builds for older target frameworks, the namespace is empty. Thus, in a project that targets `net10.0`, `task` gives the FSharp.Core builder, also when the project opens the namespace.
+The namespace contains the builders only in the `net11.0` build of IcedTasks. In the builds for older target frameworks, the namespace is empty. Thus, in a project that targets `net10.0`, each builder name gives the state-machine builder, also when the project opens the namespace.
 
-## Use the builders
+## The builders
 
-Open the namespace in the module that uses the builders. The builders shadow the FSharp.Core `task` and `backgroundTask` builders, and the IcedTasks `valueTask` builder.
+When you open the namespace, these builders replace the builders with the same names. The result types do not change, so the companion modules, such as `CancellableTask.map`, continue to work.
+
+| Builder | Result | Replaces |
+| --- | --- | --- |
+| `task` | `Task<'T>` | FSharp.Core `task` |
+| `backgroundTask` | `Task<'T>` | FSharp.Core `backgroundTask` |
+| `valueTask` | `ValueTask<'T>` | IcedTasks `valueTask` |
+| `coldTask` | `unit -> Task<'T>` | IcedTasks `coldTask` |
+| `backgroundColdTask` | `unit -> Task<'T>` | IcedTasks `backgroundColdTask` |
+| `cancellableTask` | `CancellationToken -> Task<'T>` | IcedTasks `cancellableTask` |
+| `backgroundCancellableTask` | `CancellationToken -> Task<'T>` | IcedTasks `backgroundCancellableTask` |
+| `cancellableValueTask` | `CancellationToken -> ValueTask<'T>` | IcedTasks `cancellableValueTask` |
 
 ```fsharp
 module Orders =
+    open System.Threading
     open System.Threading.Tasks
     open IcedTasks.Polyfill.RuntimeTask
 
-    let getTotal (getPrice: int -> Task<decimal>) (ids: int list) =
-        task {
+    let getTotal (getPrice: int -> CancellationToken -> Task<decimal>) (ids: int list) =
+        cancellableTask {
             let mutable total = 0m
 
             for id in ids do
@@ -56,13 +68,9 @@ module Orders =
         }
 ```
 
-| Builder | Result | Return marker |
-| --- | --- | --- |
-| `task` | `Task<'T>` | `__runtimeAsyncReturn` |
-| `backgroundTask` | `Task<'T>` | `__runtimeAsyncReturn` |
-| `valueTask` | `ValueTask<'T>` | `__runtimeAsyncReturnValueTask` |
+The cold and cancellable builders return a function. Each call of the function runs the computation again, as a new runtime-async method.
 
-`backgroundTask` starts the computation on the thread pool when the caller has a `SynchronizationContext` or a task scheduler that is not the default. Otherwise, it starts the computation on the caller thread.
+The `background*` builders start the computation on the thread pool when the caller has a `SynchronizationContext` or a task scheduler that is not the default. Otherwise, they start the computation on the caller thread.
 
 ## Supported expressions
 
@@ -73,20 +81,50 @@ The builders support:
 - `for` over `seq<'T>` and `IAsyncEnumerable<'T>`.
 - `while`, `try/with`, `try/finally`, and `if`.
 
-`let!` accepts these values:
+`let!` accepts these values in each builder:
 
 - `Task<'T>`, `Task`, `ValueTask<'T>`, and `ValueTask`.
-- `Async<'T>`. The builder starts it with `Async.StartImmediateAsTask`.
-- A cold task, `unit -> Task<'T>` or `unit -> Task`. The builder starts it at the bind.
+- `Async<'T>`.
+- A cold task or a cold awaitable, for example `unit -> Task<'T>` or `unit -> ValueTask`.
 - An awaiter or an awaitable value, such as the result of `Task.Yield()`.
 
-The builder awaits `Task` and `ValueTask` values with `AsyncHelpers.Await`, and other awaiters with `AsyncHelpers.UnsafeAwaitAwaiter`.
+The cancellable builders also accept a `CancellationToken -> 'Awaitable` value, for example a `CancellableTask<'T>` or a `CancellableValueTask<'T>`.
 
-The builder evaluates all `and!` operands from left to right before it awaits the first operand. An `Async` and a cold task start when the builder evaluates them. The builder does not start a task or a value task. It awaits the task in the state that the task has, so a task that was created and not started stays incomplete until other code starts it. An awaiter or an awaitable that starts its work only when the builder registers a continuation does not start until the builder awaits it.
+The builders await `Task` and `ValueTask` values with `AsyncHelpers.Await`, and other awaiters with `AsyncHelpers.UnsafeAwaitAwaiter`.
+
+## Cancellation in the cancellable builders
+
+The cancellable builders keep the `CancellationToken` that the caller gives. This token is the ambient token.
+
+- If the token is cancelled when the caller calls the function, the task is cancelled and the computation does not run.
+- The builder checks the token before each `let!`, `do!`, `return!`, and `and!`. If the token is cancelled, the builder throws `OperationCanceledException`, and the task is cancelled.
+- The builder gives the token to each bound `CancellationToken -> 'Awaitable` value and `Async<'T>` value, and to `GetAsyncEnumerator` in `for` over an `IAsyncEnumerable<'T>`.
+- The builder does not check the token before `DisposeAsync`, `Dispose`, or a `finally` block. Thus, cleanup runs also after cancellation.
+- `return` and `for` over a `seq<'T>` do not check the token.
+
+To get the ambient token in the computation, bind `CancellableTask.getCancellationToken ()`:
+
+```fsharp
+let writeAll (stream: System.IO.Stream) (chunks: byte[] list) =
+    cancellableTask {
+        let! ct = CancellableTask.getCancellationToken ()
+
+        for chunk in chunks do
+            do! stream.WriteAsync(chunk, ct)
+    }
+```
+
+## Start order of `and!` operands
+
+The non-cancellable builders evaluate all `and!` operands from left to right before they await the first operand. An `Async`, a cold task, and a cold awaitable start when the builder evaluates them.
+
+The cancellable builders start a cancellable operand, an `Async`, and a cold task when they bind it, with the ambient token. For `and!`, they start each operand from left to right before they await the first operand.
+
+The builders do not start a task or a value task. They await the task in the state that the task has. Thus, a task that was created and not started stays incomplete until other code starts it. An awaiter or an awaitable that starts its work only when the builder registers a continuation does not start until the builder awaits it.
 
 If the evaluation of an operand throws, for example a cold task that throws before it returns its task, that exception is the result. The builder does not await the operands.
 
-After the evaluation, the builder awaits the operands from left to right. If an operand fails, the builder does not await the operands to its right, and the result has the exception of that operand. The operands to its right can continue to run.
+After the start, the builder awaits the operands from left to right. If an operand fails, the builder does not await the operands to its right, and the result has the exception of that operand. The operands to its right can continue to run.
 
 ## Differences from the state-machine builders
 
@@ -97,10 +135,11 @@ After the evaluation, the builder awaits the operands from left to right. If an 
 
 ## Builders that have no runtime-async version
 
-`taskUnit`, `backgroundTaskUnit`, `valueTaskUnit`, `coldTask`, `backgroundColdTask`, `cancellableTask`, `backgroundCancellableTask`, `cancellableValueTask`, and the pooling builders have no runtime-async version. The `vTask` alias continues to give the state-machine `valueTask` builder.
+`taskUnit`, `backgroundTaskUnit`, `valueTaskUnit`, the pooling builders, `asyncEx`, and `parallelAsync` have no runtime-async version. The `vTask` alias continues to give the state-machine `valueTask` builder.
 
 Related:
 
+- [Use the runtime-async task builders](../How-To-Guides/Use-runtime-async-task-builders.html)
 - [Polyfill namespaces and shadowing](Polyfill-namespaces-and-shadowing.html)
 - [Choosing a builder](Choosing-a-builder.html)
 - [Runtime-async specification](https://github.com/dotnet/runtime/blob/main/docs/design/specs/runtime-async.md)

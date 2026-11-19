@@ -26,7 +26,7 @@ These namespaces are not auto-opened:
 
 - `IcedTasks.Polyfill.Task` (`Task.fs`) - shadows FSharp.Core `task` and `backgroundTask`.
 - `IcedTasks.Polyfill.Async` (`AsyncEx.fs`) - defines `let async = asyncEx` and shadows FSharp.Core `async`.
-- `IcedTasks.Polyfill.RuntimeTask` (`RuntimeTask.fs`) - runtime-async `task`, `backgroundTask`, and `valueTask`. Empty before `net11.0`.
+- `IcedTasks.Polyfill.RuntimeTask` (`RuntimeTask.fs`, `RuntimeCancellableTask.fs`) - runtime-async `task`, `backgroundTask`, `valueTask`, cold, and cancellable builders. Empty before `net11.0`. Two files share this namespace, so that one `open` gives all eight builders.
 - `IcedTasks.Nullness` (`Nullness.fs`).
 
 A new builder namespace must get a line in `AutoOpens.fs`. `AutoOpens.fs` is the last file in the compile order.
@@ -53,7 +53,7 @@ flowchart LR
 | `LangVersion` 9.0 and `Nullable` | `net9.0` | `Directory.Build.props` |
 | `LangVersion` `preview` | each `net11.0` inner build of a multi-target F# project, also the test projects | `Directory.Build.props` |
 | `Nullable` | library TFM compatible with `net11.0` | `IcedTasks.fsproj` |
-| Runtime-async builders | `#if NET11_0_OR_GREATER` | `RuntimeTask.fs` |
+| Runtime-async builders | `#if NET11_0_OR_GREATER` | `RuntimeTask.fs`, `RuntimeCancellableTask.fs` |
 | Pooling builders | `#if NET6_0_OR_GREATER` | `PoolingValueTask.fs`, `CancellablePoolingValueTask.fs` |
 | Nullness unions | `#if NULLABLE` | `Nullness.fs` |
 

@@ -19,6 +19,7 @@
     <Compile Include="TaskUnit.fs" />
     <Compile Include="Task.fs" />
     <Compile Include="RuntimeTask.fs" />
+    <Compile Include="RuntimeCancellableTask.fs" />
     <Compile Include="AsyncEx.fs" />
     <Compile Include="ParallelAsync.fs" />
     <Compile Include="ColdTask.fs" />

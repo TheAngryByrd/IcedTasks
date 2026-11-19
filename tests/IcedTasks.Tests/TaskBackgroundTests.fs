@@ -8,6 +8,10 @@ open IcedTasks
 open IcedTasks.Polyfill.Task
 open System.Collections.Generic
 
+#if TEST_RUNTIME_ASYNC
+open IcedTasks.Polyfill.RuntimeTask
+#endif
+
 module TaskBackgroundTests =
 
     type BackgroundTaskUnitDynamicBuilder() =

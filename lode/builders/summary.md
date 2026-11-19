@@ -14,6 +14,7 @@ The builders domain is the library in `src/IcedTasks`. It defines the computatio
     <Compile Include="TaskUnit.fs" />
     <Compile Include="Task.fs" />
     <Compile Include="RuntimeTask.fs" />
+    <Compile Include="RuntimeCancellableTask.fs" />
     <Compile Include="AsyncEx.fs" />
     <Compile Include="ParallelAsync.fs" />
     <Compile Include="ColdTask.fs" />
@@ -34,7 +35,8 @@ flowchart TD
     CTB --> cold["coldTask, backgroundColdTask"]
     asyncB["FSharp.Core async"] --> ax["asyncEx"]
     asyncB --> pa["parallelAsync"]
-    rt["RuntimeTaskBuilderBase<br/>net11.0, no state machine"] --> rtb["RuntimeTask: task, backgroundTask, valueTask"]
+    rt["RuntimeTaskBuilderBase<br/>net11.0, no state machine"] --> rtb["task, backgroundTask, valueTask,<br/>coldTask, backgroundColdTask"]
+    rct["RuntimeCancellableTaskBuilderBase<br/>net11.0"] --> rctb["cancellableTask, backgroundCancellableTask,<br/>cancellableValueTask"]
 ```
 
 Topics:

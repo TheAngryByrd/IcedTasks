@@ -5,6 +5,10 @@ open Expecto
 open System.Threading.Tasks
 open IcedTasks
 
+#if TEST_RUNTIME_ASYNC
+open IcedTasks.Polyfill.RuntimeTask
+#endif
+
 module ColdTaskHelpers =
     let map (mapper: 'a -> 'b) (item: ColdTask<'a>) : ColdTask<'b> =
         coldTask {

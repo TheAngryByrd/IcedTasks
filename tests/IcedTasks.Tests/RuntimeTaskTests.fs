@@ -4,8 +4,6 @@ open System
 open Expecto
 open System.Threading.Tasks
 open IcedTasks
-
-#if NET11_0_OR_GREATER
 open IcedTasks.Polyfill.RuntimeTask
 
 module RuntimeTaskTests =
@@ -175,203 +173,6 @@ module RuntimeTaskTests =
 
     let builderTests =
         testList "TaskBuilder" [
-            testList "Return" [
-                testCaseAsync "Simple Return"
-                <| async {
-                    let foo = task { return "lol" }
-
-                    let! result =
-                        foo
-                        |> Async.AwaitTask
-
-                    Expect.equal result "lol" "Should be able to Return value"
-                }
-            ]
-
-            testList "ReturnFrom" [
-                testCaseAsync "Can ReturnFrom ValueTask"
-                <| async {
-                    let fooTask: ValueTask = ValueTask.CompletedTask
-                    let outerTask = task { return! fooTask }
-                    // Compiling is sufficient expect
-                    do!
-                        outerTask
-                        |> Async.AwaitTask
-
-                }
-                testCaseAsync "Can ReturnFrom ValueTask<T>"
-                <| async {
-                    let expected = "lol"
-                    let fooTask: ValueTask<_> = ValueTask.FromResult expected
-                    let outerTask = task { return! fooTask }
-
-                    let! actual =
-                        outerTask
-                        |> Async.AwaitTask
-
-                    Expect.equal actual expected "Should be able to Return! value"
-                }
-                testCaseAsync "Can ReturnFrom Task"
-                <| async {
-                    let outerTask = task { return! Task.CompletedTask }
-                    // Compiling is sufficient expect
-                    do!
-                        outerTask
-                        |> Async.AwaitTask
-
-                }
-                testCaseAsync "Can ReturnFrom Task<T>"
-                <| async {
-                    let expected = "lol"
-                    let outerTask = task { return! Task.FromResult expected }
-
-                    let! actual =
-                        outerTask
-                        |> Async.AwaitTask
-
-                    Expect.equal actual expected "Should be able to Return! value"
-                }
-
-                testCaseAsync "Can ReturnFrom TaskLike"
-                <| async {
-                    let fooTask = Task.Yield()
-                    let outerTask = task { return! fooTask }
-
-                    do!
-                        outerTask
-                        |> Async.AwaitTask
-                // Compiling is sufficient expect
-                }
-
-                testCaseAsync "Can ReturnFrom Async<T>"
-                <| async {
-                    let expected = "lol"
-                    let fooTask = async.Return expected
-                    let outerTask = task { return! fooTask }
-
-
-                    let! actual =
-                        outerTask
-                        |> Async.AwaitTask
-
-                    Expect.equal actual expected ""
-                }
-            ]
-
-            testList "Binds" [
-                testCaseAsync "Can Bind ValueTask"
-                <| async {
-                    let fooTask: ValueTask = ValueTask.CompletedTask
-                    let outerTask = task { do! fooTask }
-
-                    do!
-                        outerTask
-                        |> Async.AwaitTask
-                // Compiling is a sufficient Expect
-                }
-                testCaseAsync "Can Bind ValueTask<T>"
-                <| async {
-                    let expected = "lol"
-                    let fooTask: ValueTask<_> = ValueTask.FromResult expected
-
-                    let outerTask =
-                        task {
-                            let! result = fooTask
-                            return result
-                        }
-
-                    let! actual =
-                        outerTask
-                        |> Async.AwaitTask
-
-                    Expect.equal actual expected ""
-                }
-                testCaseAsync "Can Bind Task"
-                <| async {
-                    let outerTask = task { do! Task.CompletedTask }
-
-                    do!
-                        outerTask
-                        |> Async.AwaitTask
-                // Compiling is a sufficient Expect
-                }
-
-                testCaseAsync "Can Bind Task<T>"
-                <| async {
-                    let expected = "lol"
-
-                    let outerTask =
-                        task {
-                            let! result = Task.FromResult expected
-                            return result
-                        }
-
-                    let! actual =
-                        outerTask
-                        |> Async.AwaitTask
-
-                    Expect.equal actual expected ""
-                }
-
-
-                testCaseAsync "Can Bind Async<T>"
-                <| async {
-                    let expected = "lol"
-                    let fooTask = async.Return expected
-
-                    let outerTask =
-                        task {
-                            let! result = fooTask
-                            return result
-                        }
-
-                    let! actual =
-                        outerTask
-                        |> Async.AwaitTask
-
-                    Expect.equal actual expected ""
-                }
-
-
-                testCaseAsync "Can Bind Type inference"
-                <| async {
-                    let expected = "lol"
-
-                    let outerTask fooTask =
-                        task {
-                            let! result = fooTask
-                            return result
-                        }
-
-                    let! actual =
-                        outerTask (Task.FromResult expected)
-                        |> Async.AwaitTask
-
-                    Expect.equal actual expected ""
-                }
-
-            ]
-
-            testList "Zero/Combine/Delay" [
-                testCaseAsync "if statement"
-                <| async {
-                    let data = 42
-
-                    let! actual =
-                        task {
-                            let result = data
-
-                            if true then
-                                ()
-
-                            return result
-                        }
-                        |> Async.AwaitTask
-
-                    Expect.equal actual data "Zero/Combine/Delay should work"
-                }
-            ]
-
             testList "TryWith" [
                 testCaseAsync "try with syntax"
                 <| async {
@@ -478,88 +279,6 @@ module RuntimeTaskTests =
             ]
 
             testList "Using" [
-                testCaseAsync "use IDisposable"
-                <| async {
-                    let data = 42
-
-                    let mutable wasDisposed = false
-                    let doDispose () = wasDisposed <- true
-
-                    let! actual =
-                        task {
-                            use d = TestHelpers.makeDisposable (doDispose)
-                            return data
-                        }
-                        |> Async.AwaitTask
-
-                    Expect.equal actual data "Should be able to use use"
-                    Expect.isTrue wasDisposed ""
-                }
-                testCaseAsync "use! IDisposable"
-                <| async {
-                    let data = 42
-                    let mutable wasDisposed = false
-                    let doDispose () = wasDisposed <- true
-
-                    let! actual =
-                        task {
-                            use! d =
-                                TestHelpers.makeDisposable (doDispose)
-                                |> async.Return
-
-                            return data
-                        }
-                        |> Async.AwaitTask
-
-                    Expect.equal actual data "Should be able to use use"
-                    Expect.isTrue wasDisposed ""
-                }
-
-
-                testCaseAsync "use IAsyncDisposable sync"
-                <| async {
-                    let data = 42
-                    let mutable wasDisposed = false
-
-                    let doDispose () =
-                        wasDisposed <- true
-                        ValueTask.CompletedTask
-
-                    let! actual =
-                        task {
-                            use d = TestHelpers.makeAsyncDisposable (doDispose)
-
-                            return data
-                        }
-                        |> Async.AwaitTask
-
-                    Expect.equal actual data "Should be able to use use"
-                    Expect.isTrue wasDisposed ""
-                }
-                testCaseAsync "use! IAsyncDisposable sync"
-                <| async {
-                    let data = 42
-                    let mutable wasDisposed = false
-
-                    let doDispose () =
-                        wasDisposed <- true
-                        ValueTask.CompletedTask
-
-                    let! actual =
-                        task {
-                            use! d =
-                                TestHelpers.makeAsyncDisposable (doDispose)
-                                |> async.Return
-
-                            return data
-                        }
-                        |> Async.AwaitTask
-
-                    Expect.equal actual data "Should be able to use use"
-                    Expect.isTrue wasDisposed ""
-                }
-
-
                 testCaseAsync "use IAsyncDisposable propagate exception"
                 <| async {
                     let doDispose () =
@@ -588,331 +307,6 @@ module RuntimeTaskTests =
                         message
                         (Some "boom")
                         "The DisposeAsync exception should reach the caller"
-                }
-
-
-                testCaseAsync "use IAsyncDisposable async"
-                <| async {
-                    let data = 42
-                    let mutable wasDisposed = false
-
-                    let doDispose () =
-                        task {
-                            Expect.isFalse wasDisposed ""
-                            do! Task.Yield()
-                            wasDisposed <- true
-                        }
-                        |> ValueTask
-
-
-                    let! actual =
-                        task {
-                            use d = TestHelpers.makeAsyncDisposable (doDispose)
-                            do! Task.Yield()
-                            Expect.isFalse wasDisposed ""
-
-                            return data
-                        }
-                        |> Async.AwaitTask
-
-                    Expect.equal actual data "Should be able to use use"
-                    Expect.isTrue wasDisposed ""
-                }
-                testCaseAsync "use! IAsyncDisposable async"
-                <| async {
-                    let data = 42
-                    let mutable wasDisposed = false
-
-                    let doDispose () =
-                        task {
-                            Expect.isFalse wasDisposed ""
-                            do! Task.Yield()
-                            wasDisposed <- true
-                        }
-                        |> ValueTask
-
-
-                    let! actual =
-                        task {
-                            use! d =
-                                TestHelpers.makeAsyncDisposable (doDispose)
-                                |> async.Return
-
-                            Expect.isFalse wasDisposed ""
-
-                            return data
-                        }
-                        |> Async.AwaitTask
-
-                    Expect.equal actual data "Should be able to use use"
-                    Expect.isTrue wasDisposed ""
-                }
-
-                testCaseAsync "null"
-                <| async {
-                    let data = 42
-
-                    let! actual =
-                        task {
-                            use d = null
-                            return data
-                        }
-                        |> Async.AwaitTask
-
-                    Expect.equal actual data "Should be able to use use"
-                }
-            ]
-
-
-            testList "While" [
-                yield!
-                    [
-                        10
-                        10000
-                        1000000
-                    ]
-                    |> List.map (fun loops ->
-                        testCaseAsync $"while to {loops}"
-                        <| async {
-                            let mutable index = 0
-
-                            let! actual =
-                                task {
-                                    while index < loops do
-                                        index <- index + 1
-
-                                    return index
-                                }
-                                |> Async.AwaitTask
-
-                            Expect.equal actual loops "Should be ok"
-                        }
-                    )
-
-
-                yield!
-                    [
-                        10
-                        10000
-                        1000000
-                    ]
-                    |> List.map (fun loops ->
-                        testCaseAsync $"while bind to {loops}"
-                        <| async {
-                            let mutable index = 0
-
-                            let! actual =
-                                task {
-                                    while index < loops do
-                                        do! Task.Yield()
-                                        index <- index + 1
-
-                                    return index
-                                }
-                                |> Async.AwaitTask
-
-                            Expect.equal actual loops "Should be ok"
-                        }
-                    )
-            ]
-
-            testList "For" [
-
-                yield!
-                    [
-                        10
-                        10000
-                        1000000
-                    ]
-                    |> List.map (fun loops ->
-                        testCaseAsync $"for in {loops}"
-                        <| async {
-                            let mutable index = 0
-
-                            let! actual =
-                                task {
-                                    for _ in [ 1..loops ] do
-                                        index <- index + 1
-
-                                    return index
-                                }
-                                |> Async.AwaitTask
-
-                            Expect.equal actual loops "Should run the body once for each item"
-                        }
-                    )
-
-
-                yield!
-                    [
-                        10
-                        10000
-                        1000000
-                    ]
-                    |> List.map (fun loops ->
-                        testCaseAsync $"for to {loops}"
-                        <| async {
-                            let mutable index = 0
-
-                            let! actual =
-                                task {
-                                    for _ = 1 to loops do
-                                        index <- index + 1
-
-                                    return index
-                                }
-                                |> Async.AwaitTask
-
-                            Expect.equal actual loops "Should run the body once for each item"
-                        }
-                    )
-
-                yield!
-                    [
-                        10
-                        10000
-                        1000000
-                    ]
-                    |> List.map (fun loops ->
-                        testCaseAsync $"for bind in {loops}"
-                        <| async {
-                            let mutable index = 0
-
-                            let! actual =
-                                task {
-                                    for _ in [ 1..loops ] do
-                                        do! Task.Yield()
-                                        index <- index + 1
-
-                                    return index
-                                }
-                                |> Async.AwaitTask
-
-                            Expect.equal actual loops "Should run the body once for each item"
-                        }
-                    )
-
-
-                yield!
-                    [
-                        10
-                        10000
-                        1000000
-                    ]
-                    |> List.map (fun loops ->
-                        testCaseAsync $"for bind to {loops}"
-                        <| async {
-                            let mutable index = 0
-
-                            let! actual =
-                                task {
-                                    for _ = 1 to loops do
-                                        do! Task.Yield()
-                                        index <- index + 1
-
-                                    return index
-                                }
-                                |> Async.AwaitTask
-
-                            Expect.equal actual loops "Should run the body once for each item"
-                        }
-                    )
-                yield!
-                    [
-                        10
-                        10000
-                        1000000
-                    ]
-                    |> List.map (fun loops ->
-                        testCaseAsync $"IAsyncEnumerable for in {loops}"
-                        <| async {
-                            let mutable index = 0
-
-                            let asyncSeq: IAsyncEnumerable<_> =
-                                AsyncEnumerable.forXtoY
-                                    1
-                                    loops
-                                    (cancellableValueTask { do! Task.Yield() })
-
-                            let! actual =
-                                task {
-                                    for (_: int) in asyncSeq do
-                                        do! Task.Yield()
-                                        index <- index + 1
-
-                                    return index
-                                }
-                                |> Async.AwaitTask
-
-                            Expect.equal actual loops "Should run the body once for each item"
-                        }
-                    )
-
-            ]
-
-            testList "MergeSources" [
-
-                testCaseAsync "and! task x task"
-                <| asyncEx {
-                    let! actual =
-                        task {
-                            let! a = task { return 1 }
-                            and! b = task { return 2 }
-                            return a + b
-                        }
-
-                    Expect.equal actual 3 ""
-                }
-
-                testCaseAsync "and! awaitableT x awaitableT"
-                <| asyncEx {
-                    let! actual =
-                        task {
-                            let! a = valueTask { return 1 }
-                            and! b = valueTask { return 2 }
-                            return a + b
-                        }
-
-                    Expect.equal actual 3 ""
-                }
-
-                testCaseAsync "and! awaitableT x awaitableUnit"
-                <| asyncEx {
-                    let! actual =
-                        task {
-                            let! a = valueTask { return 2 }
-                            and! _ = Task.Yield()
-                            return a
-                        }
-
-                    Expect.equal actual 2 ""
-                }
-
-                testCaseAsync "and! awaitableUnit x awaitableT "
-                <| asyncEx {
-                    let! actual =
-                        task {
-                            let! _ = Task.Yield()
-                            and! a = valueTask { return 2 }
-                            return a
-                        }
-
-                    Expect.equal actual 2 ""
-                }
-
-                testCaseAsync "and! 5 random"
-                <| asyncEx {
-                    let! actual =
-                        task {
-                            let! a = ValueTask.FromResult 1
-                            and! b = Task.FromResult 2
-                            and! c = coldTask { return 3 }
-                            and! _ = Task.Yield()
-                            and! _ = ValueTask.CompletedTask
-                            return a + b + c
-                        }
-
-                    Expect.equal actual 6 ""
                 }
 
             ]
@@ -1631,6 +1025,331 @@ module RuntimeTaskTests =
                 }
         ]
 
+    let coldAndCancellableTests =
+        testList "Cold and cancellable builders" [
+            testCaseAsync "coldTask body runs in a runtime-async method"
+            <| async {
+                let work =
+                    coldTask {
+                        let method = nonNull (MethodBase.GetCurrentMethod())
+                        do! Task.Yield()
+                        return method
+                    }
+
+                let! method =
+                    work ()
+                    |> Async.AwaitTask
+
+                expectRuntimeAsync method
+            }
+
+            testCaseAsync "backgroundColdTask body runs in a runtime-async method"
+            <| async {
+                let work =
+                    backgroundColdTask {
+                        let method = nonNull (MethodBase.GetCurrentMethod())
+                        do! Task.Yield()
+                        return method
+                    }
+
+                let! method =
+                    work ()
+                    |> Async.AwaitTask
+
+                expectRuntimeAsync method
+            }
+
+            testCaseAsync "cancellableTask body runs in a runtime-async method"
+            <| async {
+                let work =
+                    cancellableTask {
+                        let method = nonNull (MethodBase.GetCurrentMethod())
+                        do! Task.Yield()
+                        return method
+                    }
+
+                let! method =
+                    work CancellationToken.None
+                    |> Async.AwaitTask
+
+                expectRuntimeAsync method
+            }
+
+            testCaseAsync "backgroundCancellableTask body runs in a runtime-async method"
+            <| async {
+                let work =
+                    backgroundCancellableTask {
+                        let method = nonNull (MethodBase.GetCurrentMethod())
+                        do! Task.Yield()
+                        return method
+                    }
+
+                let! method =
+                    work CancellationToken.None
+                    |> Async.AwaitTask
+
+                expectRuntimeAsync method
+            }
+
+            testCaseAsync "cancellableValueTask body runs in a runtime-async method"
+            <| async {
+                let work =
+                    cancellableValueTask {
+                        let method = nonNull (MethodBase.GetCurrentMethod())
+                        do! Task.Yield()
+                        return method
+                    }
+
+                let! method =
+                    work CancellationToken.None
+                    |> Async.AwaitValueTask
+
+                expectRuntimeAsync method
+            }
+
+            testCaseTask
+                "and! starts both cancellable operands with the token before it awaits them"
+            <| fun () ->
+                task {
+                    use cts = new CancellationTokenSource()
+                    let rightStarted = TaskCompletionSource<CancellationToken>()
+
+                    let left (ct: CancellationToken) =
+                        task {
+                            let! rightToken = rightStarted.Task
+                            return ct = rightToken
+                        }
+
+                    let right (ct: CancellationToken) =
+                        rightStarted.SetResult ct
+                        Task.FromResult ct
+
+                    let work =
+                        cancellableTask {
+                            let! sameToken = left
+                            and! rightToken = right
+                            return struct (sameToken, rightToken)
+                        }
+
+                    let! struct (sameToken, rightToken) =
+                        (work cts.Token).WaitAsync(TimeSpan.FromSeconds 10.)
+
+                    Expect.isTrue sameToken "Both operands should get the same token"
+                    Expect.equal rightToken cts.Token "The operands should get the caller token"
+                }
+
+            testCaseTask "and! gives the left exception when both cancellable operands fail"
+            <| fun () ->
+                task {
+                    let left (_: CancellationToken) : Task<int> =
+                        Task.FromException<int>(ArgumentException "left")
+
+                    let right (_: CancellationToken) : Task<int> =
+                        Task.FromException<int>(InvalidOperationException "right")
+
+                    let work =
+                        cancellableTask {
+                            let! a = left
+                            and! b = right
+                            return a + b
+                        }
+
+                    let! message =
+                        task {
+                            try
+                                let! _ = work CancellationToken.None
+                                return None
+                            with e ->
+                                return Some e.Message
+                        }
+
+                    Expect.equal message (Some "left") "The left operand is awaited first"
+                }
+
+            testCase "backgroundColdTask escapes the caller SynchronizationContext"
+            <| fun () ->
+                let mutable posted = false
+
+                let syncContext =
+                    { new SynchronizationContext() with
+                        member _.Post(d, state) =
+                            posted <- true
+                            d.Invoke(state)
+                    }
+
+                let work =
+                    backgroundColdTask {
+                        let onThreadPool = Thread.CurrentThread.IsThreadPoolThread
+                        do! Task.Yield()
+                        return onThreadPool
+                    }
+
+                let t =
+                    use _sync = TestHelpers.setSyncContext syncContext
+                    work ()
+
+                Expect.isTrue
+                    (t.WaitAsync(TimeSpan.FromSeconds 10.).Result)
+                    "Should start on a thread pool thread"
+
+                Expect.isFalse posted "Should not post to the caller context"
+
+            testCase "backgroundCancellableTask escapes the caller SynchronizationContext"
+            <| fun () ->
+                let mutable posted = false
+
+                let syncContext =
+                    { new SynchronizationContext() with
+                        member _.Post(d, state) =
+                            posted <- true
+                            d.Invoke(state)
+                    }
+
+                let work =
+                    backgroundCancellableTask {
+                        let onThreadPool = Thread.CurrentThread.IsThreadPoolThread
+                        do! Task.Yield()
+                        return onThreadPool
+                    }
+
+                let t =
+                    use _sync = TestHelpers.setSyncContext syncContext
+                    work CancellationToken.None
+
+                Expect.isTrue
+                    (t.WaitAsync(TimeSpan.FromSeconds 10.).Result)
+                    "Should start on a thread pool thread"
+
+                Expect.isFalse posted "Should not post to the caller context"
+
+            testCaseTask
+                "let! with more steps of a cancellable value checks the token before it calls the value"
+            <| fun () ->
+                task {
+                    use cts = new CancellationTokenSource()
+                    let mutable called = false
+
+                    let work =
+                        cancellableTask {
+                            cts.Cancel()
+
+                            let! value =
+                                fun (_: CancellationToken) ->
+                                    called <- true
+                                    Task.FromResult 1
+
+                            do! Task.CompletedTask
+                            return value
+                        }
+
+                    let result = work cts.Token
+
+                    let! _ =
+                        result.ContinueWith(fun (_: Task) -> ()).WaitAsync(TimeSpan.FromSeconds 10.)
+
+                    Expect.isTrue result.IsCanceled "The task should be cancelled"
+                    Expect.isFalse called "The builder should not call the cancellable value"
+                }
+
+            testCaseTask "let! with more steps of a task checks the token before it continues"
+            <| fun () ->
+                task {
+                    use cts = new CancellationTokenSource()
+                    let mutable continued = false
+
+                    let work =
+                        cancellableTask {
+                            cts.Cancel()
+                            let! value = Task.FromResult 1
+                            continued <- true
+                            do! Task.CompletedTask
+                            return value
+                        }
+
+                    let result = work cts.Token
+
+                    let! _ =
+                        result.ContinueWith(fun (_: Task) -> ()).WaitAsync(TimeSpan.FromSeconds 10.)
+
+                    Expect.isTrue result.IsCanceled "The task should be cancelled"
+                    Expect.isFalse continued "The builder should not continue after the let!"
+                }
+
+            testCaseTask
+                "let! with return of a cancellable value checks the token before it calls the value"
+            <| fun () ->
+                task {
+                    use cts = new CancellationTokenSource()
+                    let mutable called = false
+
+                    let work =
+                        cancellableTask {
+                            cts.Cancel()
+
+                            let! value =
+                                fun (_: CancellationToken) ->
+                                    called <- true
+                                    Task.FromResult 1
+
+                            return value
+                        }
+
+                    let result = work cts.Token
+
+                    let! _ =
+                        result.ContinueWith(fun (_: Task) -> ()).WaitAsync(TimeSpan.FromSeconds 10.)
+
+                    Expect.isTrue result.IsCanceled "The task should be cancelled"
+                    Expect.isFalse called "The builder should not call the cancellable value"
+                }
+
+            testCaseTask "let! with return of a task checks the token before it continues"
+            <| fun () ->
+                task {
+                    use cts = new CancellationTokenSource()
+                    let mutable continued = false
+
+                    let work =
+                        cancellableTask {
+                            cts.Cancel()
+                            let! value = Task.FromResult 1
+                            continued <- true
+                            return value
+                        }
+
+                    let result = work cts.Token
+
+                    let! _ =
+                        result.ContinueWith(fun (_: Task) -> ()).WaitAsync(TimeSpan.FromSeconds 10.)
+
+                    Expect.isTrue result.IsCanceled "The task should be cancelled"
+                    Expect.isFalse continued "The builder should not continue after the let!"
+                }
+
+            testCaseTask
+                "cancellableTask does not run the body when the token is cancelled at the call"
+            <| fun () ->
+                task {
+                    use cts = new CancellationTokenSource()
+                    cts.Cancel()
+                    let mutable ran = false
+
+                    let work =
+                        cancellableTask {
+                            ran <- true
+                            return 1
+                        }
+
+                    let result = work cts.Token
+
+                    let! _ =
+                        result.ContinueWith(fun (_: Task) -> ()).WaitAsync(TimeSpan.FromSeconds 10.)
+
+                    Expect.isTrue result.IsCanceled "The task should be cancelled"
+                    Expect.isFalse ran "The body should not run"
+                }
+        ]
+
     [<Tests>]
     let tests =
         testList "IcedTasks.Polyfill.RuntimeTask" [
@@ -1642,5 +1361,5 @@ module RuntimeTaskTests =
             disposalOutcomeTests
             moreBuilderTests
             disposeOnCancelAndOrderTests
+            coldAndCancellableTests
         ]
-#endif

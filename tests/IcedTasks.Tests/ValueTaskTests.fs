@@ -6,6 +6,10 @@ open System.Threading
 open System.Threading.Tasks
 open IcedTasks
 
+#if TEST_RUNTIME_ASYNC
+open IcedTasks.Polyfill.RuntimeTask
+#endif
+
 module ValueTaskTests =
     open System.Collections.Generic
 

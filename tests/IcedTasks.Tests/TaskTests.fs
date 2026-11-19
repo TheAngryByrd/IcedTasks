@@ -6,6 +6,10 @@ open System.Threading.Tasks
 open IcedTasks
 open IcedTasks.Polyfill.Task
 
+#if TEST_RUNTIME_ASYNC
+open IcedTasks.Polyfill.RuntimeTask
+#endif
+
 module TaskTests =
     open System.Collections.Generic
     open System.Runtime.CompilerServices

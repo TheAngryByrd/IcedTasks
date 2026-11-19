@@ -40,6 +40,11 @@ Related guides:
 | `IcedTasks.Polyfill.RuntimeTask.task` | `Task<'T>` | net11.0+ | Hot | Multiple | Once-start | Explicit | Explicit | Yes | Yes | Yes |
 | `IcedTasks.Polyfill.RuntimeTask.backgroundTask` | `Task<'T>` | net11.0+ | Hot | Multiple | Once-start | Explicit | Explicit | Yes | Yes | Yes |
 | `IcedTasks.Polyfill.RuntimeTask.valueTask` | `ValueTask<'T>` | net11.0+ | Hot | Once | Once-start | Explicit | Explicit | Yes | Yes | Yes |
+| `IcedTasks.Polyfill.RuntimeTask.coldTask` | `unit -> Task<'T>` | net11.0+ | Cold | Multiple | Multiple | Explicit | Explicit | Yes | Yes | Yes |
+| `IcedTasks.Polyfill.RuntimeTask.backgroundColdTask` | `unit -> Task<'T>` | net11.0+ | Cold | Multiple | Multiple | Explicit | Explicit | Yes | Yes | Yes |
+| `IcedTasks.Polyfill.RuntimeTask.cancellableTask` | `CancellationToken -> Task<'T>` | net11.0+ | Cold | Multiple | Multiple | Implicit | Implicit | Yes | Yes | Yes |
+| `IcedTasks.Polyfill.RuntimeTask.backgroundCancellableTask` | `CancellationToken -> Task<'T>` | net11.0+ | Cold | Multiple | Multiple | Implicit | Implicit | Yes | Yes | Yes |
+| `IcedTasks.Polyfill.RuntimeTask.cancellableValueTask` | `CancellationToken -> ValueTask<'T>` | net11.0+ | Cold | Once per start | Multiple | Implicit | Implicit | Yes | Yes | Yes |
 | `vTask` | `ValueTask<'T>` | netstandard2.0 | Hot | Once | Once-start | Explicit | Explicit | Yes | Yes | Yes |
 | `valueTaskUnit` | `ValueTask` | netstandard2.0 | Hot | Once | Once-start | Explicit | Explicit | Yes | Yes | Yes |
 | `vTaskUnit` | `ValueTask` | netstandard2.0 | Hot | Once | Once-start | Explicit | Explicit | Yes | Yes | Yes |

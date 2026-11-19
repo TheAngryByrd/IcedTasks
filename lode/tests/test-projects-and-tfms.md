@@ -1,10 +1,11 @@
 # Test projects and TFMs
 
-Three test projects test the library builds. Each project targets `net10.0;net11.0`, so `dotnet test` runs each project two times.
+Four test projects test the library builds. The first three target `net10.0;net11.0`, so `dotnet test` runs each of them two times. `IcedTasks.Tests.RuntimeAsync` targets `net11.0` only.
 
 | Project | Library TFM | Defines | Source files |
 |---|---|---|---|
-| `tests/IcedTasks.Tests` | `net9.0` on the `net10.0` run, `net11.0` on the `net11.0` run | `TEST_NET6_0_OR_GREATER` | its own 17 files |
+| `tests/IcedTasks.Tests` | `net9.0` on the `net10.0` run, `net11.0` on the `net11.0` run | `TEST_NET6_0_OR_GREATER` | its own 16 files |
+| `tests/IcedTasks.Tests.RuntimeAsync` | `net11.0` | `TEST_NET6_0_OR_GREATER;TEST_RUNTIME_ASYNC` | links `Expect.fs`, `AsyncDisposalOutcome.fs`, the task, value task, cold, and cancellable test files, `RuntimeTaskTests.fs`, and `Main.fs` |
 | `tests/IcedTasks.Tests.NS20` | `netstandard2.0` | `NETSTANDARD2_0;TEST_NETSTANDARD2_0` | links `../IcedTasks.Tests/*.fs`, no Pooling test files |
 | `tests/IcedTasks.Tests.NS21` | `netstandard2.1` | `NETSTANDARD2_1;TEST_NETSTANDARD2_1` | links `../IcedTasks.Tests/*.fs`, no Pooling test files |
 
@@ -27,6 +28,7 @@ A test TFM selects the nearest library TFM. The `net10.0` run of `IcedTasks.Test
 - Put a new test file in `tests/IcedTasks.Tests` and add it to the compile list of that project.
 - Link the file in the NS20 and NS21 projects too, unless it tests a pooling builder.
 - Guard TaskSeq tests with `#if TEST_NETSTANDARD2_1 || TEST_NET6_0_OR_GREATER`. The NS20 build runs the `IAsyncEnumerable` tests through `Microsoft.Bcl.AsyncInterfaces`, and it skips the TaskSeq tests.
+- A test of a builder that has a runtime-async version also runs in `IcedTasks.Tests.RuntimeAsync`. Keep the `#if TEST_RUNTIME_ASYNC` open of `IcedTasks.Polyfill.RuntimeTask` before the test module. Put a test that only the runtime-async builders need in `RuntimeTaskTests.fs`.
 
 ```mermaid
 flowchart TD
