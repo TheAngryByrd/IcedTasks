@@ -1,6 +1,6 @@
 # Runtime-async task builders
 
-The namespace `IcedTasks.Polyfill.RuntimeTask` has eight builders that the .NET runtime suspends. They use no resumable code and no state machine. Both files compile only for `net11.0` (`#if NET11_0_OR_GREATER`). Human docs: `docsSrc/Explanations/Runtime-async-task-builders.md` and `docsSrc/How-To-Guides/Use-runtime-async-task-builders.md`.
+The namespace `IcedTasks.Polyfill.RuntimeTask` has eight builders that the .NET runtime suspends. They use no resumable code and no state machine. Both files contain code only for `net11.0` (`#if NET11_0_OR_GREATER`). Human docs: `docsSrc/Explanations/Runtime-async-task-builders.md` and `docsSrc/How-To-Guides/Use-runtime-async-task-builders.md`.
 
 | File | Base | Builders |
 |---|---|---|
@@ -12,8 +12,8 @@ The namespace `IcedTasks.Polyfill.RuntimeTask` has eight builders that the .NET 
 | Item | Non-cancellable | Cancellable |
 |---|---|---|
 | `Return`, `Zero` | `value`, `()` | `fun _ -> value`, `fun _ -> ()` |
-| Bound value | `Started<'T>` (`unit -> 'T`) | `Started<'T>` for hot values, `WithToken<'T>` (`CancellationToken -> 'T`) for token-dependent and cold values |
-| `Run` | `__runtimeAsyncReturn (code ())`, or `fun () -> ...` for cold | `fun ct -> __runtimeAsyncReturn (ct.ThrowIfCancellationRequested(); code ct)` |
+| Bound value | `Started<'T>` (`unit -> 'T`, awaits) | `Started<'T>` for hot values, `WithToken<'Awaiter>` (`CancellationToken -> 'Awaiter`, starts and returns the awaiter) for token-dependent and cold values |
+| `Run` | `__runtimeAsyncReturn (code ())`, or `fun () -> ...` for cold | `fun ct -> if ct.IsCancellationRequested then Task.FromCanceled ct else __runtimeAsyncReturn (code ct)` |
 | Suspension | `AsyncHelpers.Await` for `Task`/`ValueTask`, `UnsafeAwaitAwaiter` for other awaiters | same |
 
 ```fsharp
@@ -22,10 +22,10 @@ The namespace `IcedTasks.Polyfill.RuntimeTask` has eight builders that the .NET 
             ([<InlineIfLambda>] code: CancellationToken -> 'T)
             : CancellationToken -> Task<'T> =
             fun ct ->
-                __runtimeAsyncReturn (
-                    ct.ThrowIfCancellationRequested()
-                    code ct
-                )
+                if ct.IsCancellationRequested then
+                    Task.FromCanceled<'T>(ct)
+                else
+                    __runtimeAsyncReturn (code ct)
 ```
 
 ```mermaid
@@ -40,22 +40,23 @@ flowchart LR
 ## Source priority
 
 - Builder type: `Source(Task<'T>)` on the task and cold builders, `Source(ValueTask<'T>)` on `valueTask`, `Source(CancellationToken -> Task<'T>)` or `-> ValueTask<'T>` on the cancellable builders.
-- Non-cancellable `HighPriority`: `IAsyncEnumerable`, `Task<'T>`, `Task`, `ValueTask<'T>`, `ValueTask`, `Async<'T>`, `unit -> Task<'T>`, `unit -> Task`. `LowPriority`: any awaiter, any awaitable, `unit -> 'Awaiter`, `unit -> 'Awaitable`, `IDisposable` `Using`, `seq`. These sources start the operation in `Source`.
+- Non-cancellable `HighPriority`: `IAsyncEnumerable`, `Task<'T>`, `Task`, `ValueTask<'T>`, `ValueTask`, `Async<'T>`, `unit -> Task<'T>`, `unit -> Task`. `LowPriority`: any awaiter, any awaitable, `unit -> 'Awaiter`, `unit -> 'Awaitable`, `IDisposable` `Using`, `seq`. `Source` calls an `Async`, a cold task, and a cold awaitable. It captures a task, a value task, or an awaiter as it is.
 - Cancellable `HighPriority`: the same hot types as `Started`, and `Async<'T>`, `CancellationToken -> Task<'T>`/`Task`/`ValueTask<'T>`/`ValueTask`, `unit -> Task<'T>`/`Task` as `WithToken`. `LowPriority`: any awaiter, any awaitable, `CancellationToken -> 'Awaitable`, `unit -> 'Awaitable`, `IDisposable` `Using`, `seq`. A `WithToken` source starts in `Bind`, after the token check.
 
 ## Invariants
 
 - Each member is `inline` and has `NoDynamicInvocation`. Without it, a Debug consumer on `LangVersion` 11.0 compiles and returns wrong values. See [ADR 0013](../../adr/0013-runtime-async-task-builders.md).
-- Cancellable: `Run` checks the token at the call. `Bind`, `BindReturn`, and `ReturnFrom` check it before they await. `Return`, `Zero`, `For` over `seq`, `Using` cleanup, and `TryFinally` do not check it. `For` over `IAsyncEnumerable` gives the token to `GetAsyncEnumerator`.
-- `and!`: non-cancellable sources start in `Source`. Cancellable `MergeSources` starts each `WithToken` operand with `__runtimeAsyncReturnValueTask (operand.Invoke ct)`, from left to right, then awaits from left to right. A left fault skips the right await. The order matches `Task.fs` and `CancellableTask.fs` `MergeSources`.
+- Cancellable: `Run` returns `Task.FromCanceled` or `ValueTask.FromCanceled` for a cancelled token, as `CancellableTask.fs` does. `Bind`, `BindReturn`, and `ReturnFrom` check the token before they start a `WithToken` source or await. `For` over `IAsyncEnumerable` gives the token to `GetAsyncEnumerator` and checks it before each `MoveNextAsync`. `Return`, `Zero`, `For` over `seq`, `Using` cleanup, and `TryFinally` do not check it.
+- `and!`: non-cancellable sources start in `Source`. Each cancellable `MergeSources` returns a `WithToken` whose `Invoke` runs one `__runtimeAsyncReturnValueTask` helper: check the token, start the `WithToken` operands from left to right, then check and await each operand from left to right. A start that throws stops the later starts. A left fault skips the right await and the right `GetResult`. This matches the inner computation of `CancellableTask.fs` `MergeSources`.
 - A source captures a `Task`, `ValueTask`, or awaiter in its current state. It does not start a created task.
-- `Using` captures a body exception with `ExceptionDispatchInfo`, awaits `DisposeAsync` outside the `try`, and then rethrows. A suspension in a `finally` loses the stack trace on rethrow (dotnet/fsharp#20869). A `DisposeAsync` exception replaces the body exception.
+- `Using` calls `RuntimeAwait.usingAsync`, which both bases share. It captures a body exception with `ExceptionDispatchInfo`, awaits `DisposeAsync` outside the `try`, and then rethrows. A suspension in a `finally` loses the stack trace on rethrow (dotnet/fsharp#20869). A `DisposeAsync` exception replaces the body exception.
 - Cold and cancellable `Run` return a function. Each call runs a new runtime-async closure, so multi-start runs the body again.
-- `background*` use `Task.Run(fun () -> __runtimeAsyncReturn (...))` when a `SynchronizationContext` or non-default scheduler is present. `backgroundCancellableTask` gives the token to `Task.Run`.
+- `background*` use `Task.Run(fun () -> __runtimeAsyncReturn (...))` when a `SynchronizationContext` or non-default scheduler is present. They examine the context when the function is called. The state-machine cold and cancellable versions examine it when the expression makes the function. `backgroundCancellableTask` gives the token to `Task.Run`.
+- Runtime cold builders call a bound cold task in `Source`. The state-machine `coldTask` calls it at the bind.
 
 ## Tests
 
-`tests/IcedTasks.Tests.RuntimeAsync` (`net11.0`, defines `TEST_RUNTIME_ASYNC`) links the suites for `task`, `backgroundTask`, `valueTask`, `coldTask`, `cancellableTask`, and `cancellableValueTask`. Each linked file opens the runtime namespace under `#if TEST_RUNTIME_ASYNC`, so the same tests run against the runtime builders. `RuntimeTaskTests.fs` adds the runtime-only tests: the `Async` flag, start order with a deadline, token checks on the `Bind` and `BindReturn` paths, the `DisposeAsync` outcome matrix, and the background escape.
+`tests/IcedTasks.Tests.RuntimeAsync` (`net11.0`, defines `TEST_RUNTIME_ASYNC`) links the suites for `task`, `backgroundTask`, `valueTask`, `coldTask`, `cancellableTask`, and `cancellableValueTask`. Each linked file opens the runtime namespace under `#if TEST_RUNTIME_ASYNC`, so the same tests run against the runtime builders. `tests/IcedTasks.Tests.RuntimeAsync/RuntimeTaskTests.fs` adds the runtime-only tests, including the cancellable rules above, and a reflection test that each linked module compiles with the runtime builders. The other tests: the `Async` flag, start order with a deadline, token checks on the `Bind` and `BindReturn` paths, the `DisposeAsync` outcome matrix, and the background escape.
 
 ## Lessons
 

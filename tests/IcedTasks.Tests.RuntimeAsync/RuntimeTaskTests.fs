@@ -11,6 +11,7 @@ module RuntimeTaskTests =
     open System.Reflection
     open System.Runtime.CompilerServices
     open System.Threading
+    open System.Threading.Tasks.Sources
 
 
     [<MethodImpl(MethodImplOptions.NoInlining)>]
@@ -1350,6 +1351,560 @@ module RuntimeTaskTests =
                 }
         ]
 
+    type CountingAsyncEnumerable(count: int) =
+        let mutable moves = 0
+        let mutable disposals = 0
+        member _.Moves = moves
+        member _.Disposals = disposals
+
+        interface IAsyncEnumerable<int> with
+            member _.GetAsyncEnumerator(_) =
+                { new IAsyncEnumerator<int> with
+                    member _.MoveNextAsync() =
+                        moves <- moves + 1
+
+                        ValueTask<bool>(
+                            moves
+                            <= count
+                        )
+
+                    member _.Current = moves
+
+                    member _.DisposeAsync() =
+                        disposals <-
+                            disposals
+                            + 1
+
+                        ValueTask()
+                }
+
+    type CountingValueTaskSource(value: int) =
+        let mutable reads = 0
+        member _.Reads = reads
+
+        interface IValueTaskSource<int> with
+            member _.GetStatus(_) = ValueTaskSourceStatus.Succeeded
+
+            member _.GetResult(_) =
+                reads <- reads + 1
+                value
+
+            member _.OnCompleted(_, _, _, _) =
+                invalidOp "The source is already complete"
+
+    let waitForCompletion (t: Task) =
+        t.ContinueWith(fun (_: Task) -> ()).WaitAsync(TimeSpan.FromSeconds 10.)
+
+    let messageOf (t: Task) =
+        match t.Exception with
+        | null -> None
+        | e -> Some e.InnerException.Message
+
+    let cancellableRulesTests =
+        testList "Cancellable rules" [
+            testCaseTask "for runs the body once for each item in task and cancellableTask"
+            <| fun () ->
+                task {
+                    let count = 10000
+                    let mutable seqVisits = 0
+                    let mutable asyncVisits = 0
+                    let mutable cancellableVisits = 0
+
+                    do!
+                        task {
+                            for _ in [ 1..count ] do
+                                seqVisits <-
+                                    seqVisits
+                                    + 1
+
+                            for _ in CountingAsyncEnumerable count do
+                                asyncVisits <-
+                                    asyncVisits
+                                    + 1
+                        }
+
+                    do!
+                        (cancellableTask {
+                            for _ in [ 1..count ] do
+                                cancellableVisits <-
+                                    cancellableVisits
+                                    + 1
+
+                            for _ in CountingAsyncEnumerable count do
+                                cancellableVisits <-
+                                    cancellableVisits
+                                    + 1
+                        })
+                            CancellationToken.None
+
+                    Expect.equal seqVisits count "task for over a seq"
+                    Expect.equal asyncVisits count "task for over an IAsyncEnumerable"
+
+                    Expect.equal
+                        cancellableVisits
+                        (2 * count)
+                        "cancellableTask for over a seq and an IAsyncEnumerable"
+                }
+
+            testCaseTask "for over an IAsyncEnumerable checks the token before each move"
+            <| fun () ->
+                task {
+                    use cts = new CancellationTokenSource()
+                    let items = CountingAsyncEnumerable 5
+                    let mutable visits = 0
+
+                    let work =
+                        cancellableTask {
+                            for _ in items do
+                                visits <- visits + 1
+                                cts.Cancel()
+                        }
+
+                    let result = work cts.Token
+                    do! waitForCompletion result
+                    Expect.isTrue result.IsCanceled "The loop should stop with a cancelled task"
+                    Expect.equal visits 1 "The body should run once"
+                    Expect.equal items.Disposals 1 "The enumerator should be disposed once"
+                }
+
+            testCaseTask
+                "cancellableValueTask for over an IAsyncEnumerable checks the token before each move"
+            <| fun () ->
+                task {
+                    use cts = new CancellationTokenSource()
+                    let items = CountingAsyncEnumerable 5
+                    let mutable visits = 0
+
+                    let work =
+                        cancellableValueTask {
+                            for _ in items do
+                                visits <- visits + 1
+                                cts.Cancel()
+                        }
+
+                    let result = (work cts.Token).AsTask()
+                    do! waitForCompletion result
+                    Expect.isTrue result.IsCanceled "The loop should stop with a cancelled task"
+                    Expect.equal visits 1 "The body should run once"
+                }
+
+            testCaseTask "and! checks the token before it awaits the right operand"
+            <| fun () ->
+                task {
+                    use cts = new CancellationTokenSource()
+                    let left = TaskCompletionSource<int>()
+                    let right = TaskCompletionSource<int>()
+
+                    let work =
+                        cancellableTask {
+                            let! a = left.Task
+                            and! b = right.Task
+                            return a + b
+                        }
+
+                    let result = work cts.Token
+                    cts.Cancel()
+                    left.SetResult 1
+                    do! waitForCompletion result
+
+                    Expect.isTrue
+                        result.IsCanceled
+                        "The task should be cancelled without the right operand"
+                }
+
+            testCaseTask
+                "and! with cancellable operands checks the token before it awaits the right operand"
+            <| fun () ->
+                task {
+                    use cts = new CancellationTokenSource()
+                    let left = TaskCompletionSource<int>()
+                    let right = TaskCompletionSource<int>()
+
+                    let work =
+                        cancellableTask {
+                            let! a = fun (_: CancellationToken) -> left.Task
+                            and! b = fun (_: CancellationToken) -> right.Task
+                            return a + b
+                        }
+
+                    let result = work cts.Token
+                    cts.Cancel()
+                    left.SetResult 1
+                    do! waitForCompletion result
+
+                    Expect.isTrue
+                        result.IsCanceled
+                        "The task should be cancelled without the right operand"
+                }
+
+            testCaseTask
+                "and! does not start the right operand when the left operand throws before it returns"
+            <| fun () ->
+                task {
+                    let mutable rightCalls = 0
+
+                    let work =
+                        cancellableTask {
+                            let! a =
+                                fun (_: CancellationToken) ->
+                                    raise (ArgumentException "left-sync")
+                                    Task.FromResult 1
+
+                            and! b =
+                                fun (_: CancellationToken) ->
+                                    rightCalls <-
+                                        rightCalls
+                                        + 1
+
+                                    Task.FromResult 2
+
+                            return a + b
+                        }
+
+                    let result = work CancellationToken.None
+                    do! waitForCompletion result
+
+                    Expect.equal
+                        (messageOf result)
+                        (Some "left-sync")
+                        "The left exception should win"
+
+                    Expect.equal rightCalls 0 "The right operand should not start"
+                }
+
+            testCaseTask "and! fails at once when the right operand throws before it returns"
+            <| fun () ->
+                task {
+                    let left = TaskCompletionSource<int>()
+
+                    let work =
+                        cancellableTask {
+                            let! a = fun (_: CancellationToken) -> left.Task
+
+                            and! b =
+                                fun (_: CancellationToken) ->
+                                    raise (ArgumentException "right-sync")
+                                    Task.FromResult 2
+
+                            return a + b
+                        }
+
+                    let result = work CancellationToken.None
+                    do! waitForCompletion result
+
+                    Expect.equal
+                        (messageOf result)
+                        (Some "right-sync")
+                        "The right exception should arrive without the left result"
+                }
+
+            testCaseTask "and! gives the start exception before an awaited fault"
+            <| fun () ->
+                task {
+                    let work =
+                        cancellableTask {
+                            let! a =
+                                fun (_: CancellationToken) ->
+                                    Task.FromException<int>(InvalidOperationException "left-async")
+
+                            and! b =
+                                fun (_: CancellationToken) ->
+                                    raise (ArgumentException "right-sync")
+                                    Task.FromResult 2
+
+                            return a + b
+                        }
+
+                    let result = work CancellationToken.None
+                    do! waitForCompletion result
+
+                    Expect.equal
+                        (messageOf result)
+                        (Some "right-sync")
+                        "A start exception comes before an await"
+                }
+
+            testCaseTask "and! does not read the right result before the left operand completes"
+            <| fun () ->
+                task {
+                    let left = TaskCompletionSource<int>()
+                    let source = CountingValueTaskSource 2
+
+                    let work =
+                        cancellableTask {
+                            let! a = fun (_: CancellationToken) -> left.Task
+
+                            and! b =
+                                fun (_: CancellationToken) ->
+                                    ValueTask<int>(source :> IValueTaskSource<int>, 0s)
+
+                            return a + b
+                        }
+
+                    let result = work CancellationToken.None
+                    let readsBeforeLeft = source.Reads
+                    left.SetException(InvalidOperationException "left")
+                    do! waitForCompletion result
+
+                    Expect.equal
+                        readsBeforeLeft
+                        0
+                        "The right result should not be read before the left operand"
+
+                    Expect.equal source.Reads 0 "A left fault should skip the right result"
+                }
+
+            testCaseTask "and! starts cancellable operands from left to right"
+            <| fun () ->
+                task {
+                    let order = ResizeArray<string>()
+
+                    let start name (_: CancellationToken) =
+                        order.Add name
+                        Task.FromResult 1
+
+                    let work =
+                        cancellableTask {
+                            let! a = start "left"
+                            and! b = start "right"
+                            return a + b
+                        }
+
+                    let! _ = (work CancellationToken.None).WaitAsync(TimeSpan.FromSeconds 10.)
+
+                    Expect.equal
+                        (List.ofSeq order)
+                        [
+                            "left"
+                            "right"
+                        ]
+                        "The operands should start from left to right"
+                }
+
+            testCaseTask
+                "and! starts a cancellable right operand before it awaits a task on the left"
+            <| fun () ->
+                task {
+                    let left = TaskCompletionSource<int>()
+                    let rightStarted = TaskCompletionSource()
+
+                    let work =
+                        cancellableTask {
+                            let! a = left.Task
+
+                            and! b =
+                                fun (_: CancellationToken) ->
+                                    rightStarted.SetResult()
+                                    Task.FromResult 2
+
+                            return a + b
+                        }
+
+                    let result = work CancellationToken.None
+                    do! rightStarted.Task.WaitAsync(TimeSpan.FromSeconds 10.)
+                    left.SetResult 1
+                    let! value = result.WaitAsync(TimeSpan.FromSeconds 10.)
+                    Expect.equal value 3 "Should combine both results"
+                }
+
+            testCaseTask "return! of a task checks the token"
+            <| fun () ->
+                task {
+                    use cts = new CancellationTokenSource()
+
+                    let work =
+                        cancellableTask {
+                            cts.Cancel()
+                            return! Task.FromResult 1
+                        }
+
+                    let result = work cts.Token
+                    do! waitForCompletion result
+                    Expect.isTrue result.IsCanceled "The task should be cancelled"
+                }
+
+            testCaseTask "return! of a cancellable value checks the token before it calls the value"
+            <| fun () ->
+                task {
+                    use cts = new CancellationTokenSource()
+                    let mutable called = false
+
+                    let work =
+                        cancellableTask {
+                            cts.Cancel()
+
+                            return!
+                                fun (_: CancellationToken) ->
+                                    called <- true
+                                    Task.FromResult 1
+                        }
+
+                    let result = work cts.Token
+                    do! waitForCompletion result
+                    Expect.isTrue result.IsCanceled "The task should be cancelled"
+                    Expect.isFalse called "The builder should not call the cancellable value"
+                }
+
+            testCaseTask
+                "a call with a cancelled token gives TaskCanceledException, as the state-machine builders do"
+            <| fun () ->
+                task {
+                    use cts = new CancellationTokenSource()
+                    cts.Cancel()
+                    let mutable ran = 0
+
+                    let results: Task list = [
+                        (cancellableTask {
+                            ran <- ran + 1
+                            return 1
+                        })
+                            cts.Token
+                        :> Task
+                        (backgroundCancellableTask {
+                            ran <- ran + 1
+                            return 1
+                        })
+                            cts.Token
+                        :> Task
+                        ((cancellableValueTask {
+                            ran <- ran + 1
+                            return 1
+                        })
+                            cts.Token)
+                            .AsTask()
+                        :> Task
+                    ]
+
+                    for result in results do
+                        do! waitForCompletion result
+                        Expect.isTrue result.IsCanceled "The task should be cancelled"
+
+                        let thrown =
+                            try
+                                result.GetAwaiter().GetResult()
+                                None
+                            with e ->
+                                Some(e.GetType())
+
+                        Expect.equal
+                            thrown
+                            (Some typeof<TaskCanceledException>)
+                            "The awaited exception type"
+
+                    Expect.equal ran 0 "No body should run"
+                }
+
+            testCaseTask
+                "backgroundColdTask and backgroundCancellableTask escape a task scheduler that is not the default"
+            <| fun () ->
+                task {
+                    let scheduler = ConcurrentExclusiveSchedulerPair().ExclusiveScheduler
+
+                    let onScheduler (f: unit -> Task<TaskScheduler>) =
+                        Task.Factory
+                            .StartNew(
+                                f,
+                                CancellationToken.None,
+                                TaskCreationOptions.None,
+                                scheduler
+                            )
+                            .Unwrap()
+
+                    let cold = backgroundColdTask { return TaskScheduler.Current }
+                    let cancellable = backgroundCancellableTask { return TaskScheduler.Current }
+                    let! coldScheduler = onScheduler cold
+
+                    let! cancellableScheduler =
+                        onScheduler (fun () -> cancellable CancellationToken.None)
+
+                    Expect.equal
+                        coldScheduler
+                        TaskScheduler.Default
+                        "backgroundColdTask should start on the default scheduler"
+
+                    Expect.equal
+                        cancellableScheduler
+                        TaskScheduler.Default
+                        "backgroundCancellableTask should start on the default scheduler"
+                }
+
+            testCaseTask
+                "backgroundCancellableTask gives a fault on the thread pool path to its task"
+            <| fun () ->
+                task {
+                    let syncContext =
+                        { new SynchronizationContext() with
+                            member _.Post(d, state) = d.Invoke(state)
+                        }
+
+                    let work =
+                        backgroundCancellableTask {
+                            do! Task.Yield()
+                            raise (InvalidOperationException "worker")
+                            return 1
+                        }
+
+                    let result =
+                        use _sync = TestHelpers.setSyncContext syncContext
+                        work CancellationToken.None
+
+                    do! waitForCompletion result
+
+                    Expect.equal
+                        (messageOf result)
+                        (Some "worker")
+                        "The fault should reach the returned task"
+                }
+
+            testCaseTask "coldTask binds a function that returns an awaiter"
+            <| fun () ->
+                task {
+                    let work =
+                        coldTask {
+                            let! value = fun () -> (Task.FromResult 41).GetAwaiter()
+                            return value + 1
+                        }
+
+                    let! value = work ()
+                    Expect.equal value 42 "Should await the awaiter from the function"
+                }
+
+            testCase "the linked suites use the runtime-async builders"
+            <| fun () ->
+                let asm = typeof<CountingAsyncEnumerable>.Assembly
+
+                let flags =
+                    BindingFlags.Public
+                    ||| BindingFlags.NonPublic
+                    ||| BindingFlags.Static
+                    ||| BindingFlags.Instance
+                    ||| BindingFlags.DeclaredOnly
+
+                let countIn (moduleName: string) =
+                    asm.GetTypes()
+                    |> Seq.filter (fun t ->
+                        let name = string t.FullName
+                        name.StartsWith($"IcedTasks.Tests.{moduleName}+")
+                    )
+                    |> Seq.collect (fun t -> t.GetMethods(flags))
+                    |> Seq.filter isRuntimeAsync
+                    |> Seq.length
+
+                for moduleName in
+                    [
+                        "TaskTests"
+                        "TaskBackgroundTests"
+                        "ValueTaskTests"
+                        "ColdTaskTests"
+                        "CancellableTaskTests"
+                        "CancellableValueTaskTests"
+                    ] do
+                    Expect.isGreaterThan
+                        (countIn moduleName)
+                        10
+                        $"%s{moduleName} should compile its tests with the runtime-async builders"
+        ]
+
     [<Tests>]
     let tests =
         testList "IcedTasks.Polyfill.RuntimeTask" [
@@ -1362,4 +1917,5 @@ module RuntimeTaskTests =
             moreBuilderTests
             disposeOnCancelAndOrderTests
             coldAndCancellableTests
+            cancellableRulesTests
         ]

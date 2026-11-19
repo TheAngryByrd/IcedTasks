@@ -11,10 +11,10 @@ A prototype of #62 used a private compiler build and an unsafe IL cast. The F# 1
 
 We add runtime-async versions of `task`, `backgroundTask`, `valueTask`, `coldTask`, `backgroundColdTask`, `cancellableTask`, `backgroundCancellableTask`, and `cancellableValueTask` in `IcedTasks.Polyfill.RuntimeTask` (`src/IcedTasks/RuntimeTask.fs`, `src/IcedTasks/RuntimeCancellableTask.fs`).
 
-- The file compiles only under `#if NET11_0_OR_GREATER`. The library adds a `net11.0` target with `LangVersion` `preview`, `Nullable`, and FSharp.Core 11.0.101. `Directory.Build.props` sets `LangVersion` `preview` for each `net11.0` inner build of the multi-target F# projects in this repository, because the tests also use the builders. A project that sets one `TargetFramework` in its own file gets the TFM after the props import, so the condition does not apply to it.
-- The namespace is not auto-opened. It shadows `task`, `backgroundTask`, and `valueTask`, as the other polyfills do ([0009](0009-opt-in-polyfill-namespaces.md)).
+- The two files contain code only under `#if NET11_0_OR_GREATER`. The library adds a `net11.0` target with `LangVersion` `preview`, `Nullable`, and FSharp.Core 11.0.101. `Directory.Build.props` sets `LangVersion` `preview` for each `net11.0` inner build of the multi-target F# projects in this repository, because the tests also use the builders. A project that sets one `TargetFramework` in its own file gets the TFM after the props import, so the condition does not apply to it.
+- The namespace is not auto-opened. It shadows the eight builder names, as the other polyfills do ([0009](0009-opt-in-polyfill-namespaces.md)).
 - The builder shape follows the sample `RuntimeTaskBuilder` in the dotnet/fsharp component tests: the body returns `'T` directly, `Source` gives a `Started<'T>` delegate, and `Run` applies the return marker.
-- The cancellable builders follow the sample `async2` builder: the body is `CancellationToken -> 'T`, and a `WithToken<'T>` delegate gives the ambient token to token-dependent and cold sources. They keep the token checks of `CancellableTaskBuilderBase`.
+- The cancellable builders follow the sample `async2` builder: the body is `CancellationToken -> 'T`, and a `WithToken<'T>` delegate gives the ambient token to token-dependent and cold sources. A `WithToken` source starts the operation and returns its awaiter, so that `and!` can start all operands before it awaits them. The builders keep the token checks, the start order, and the `Task.FromCanceled` result of `CancellableTaskBuilderBase` and `CancellableTask.fs`.
 - The result types are the existing aliases, so the companion modules work with the runtime builders.
 - Each member has `NoDynamicInvocation`.
 

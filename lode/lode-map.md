@@ -33,7 +33,7 @@ Read [summary](summary.md), [terminology](terminology.md), and this map at the s
 ## tests - `tests/`
 
 - [tests/summary.md](tests/summary.md) - Expecto setup and conventions.
-- [tests/test-projects-and-tfms.md](tests/test-projects-and-tfms.md) - the three projects and `#if` symbols.
+- [tests/test-projects-and-tfms.md](tests/test-projects-and-tfms.md) - the four projects and `#if` symbols.
 - [tests/expect-helpers.md](tests/expect-helpers.md) - shared helpers, multi-start tests, manual clock.
 - [tests/disposal-outcome-tests.md](tests/disposal-outcome-tests.md) - the DisposeAsync outcome matrix and its regression tests.
 

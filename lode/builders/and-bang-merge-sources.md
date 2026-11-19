@@ -65,4 +65,6 @@ The FsCheck property "parallelism" checks the concurrent start. It runs in `test
 
 Decision: [ADR 0005, start both `and!` operands first](../../adr/0005-and-bang-starts-both-operands.md).
 
+The runtime-async builders keep the start and await order. Their cold builders call a bound cold task when they evaluate it, not at the bind. See [runtime-async task builders](runtime-task.md).
+
 Related: [cancellation flow](cancellation-flow.md), [companion modules](companion-modules.md).

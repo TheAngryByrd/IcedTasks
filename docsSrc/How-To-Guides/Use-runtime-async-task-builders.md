@@ -56,7 +56,7 @@ In this module, the eight builder names now give the runtime-async builders. The
 
 Put the `open` in a module, not at the top of a large file. Then the reader can see which code uses runtime async.
 
-To use one runtime-async builder without the `open`, write the full name:
+Always open the namespace. Most `Source` members of the builders are extension members in the namespace, so they work only after the `open`. If you write the full name of a builder without the `open`, only binds of `Task<'T>` work:
 
 ```fsharp
 open System.Threading.Tasks
@@ -68,7 +68,7 @@ let answer () =
     }
 ```
 
-The module `RuntimeTasks` contains `task`, `backgroundTask`, `valueTask`, `coldTask`, and `backgroundColdTask`. The module `RuntimeCancellableTasks` contains the three cancellable builders.
+A bind of a `Task`, a `ValueTask`, or an `Async` in that expression stops with error FS0193. To keep the `open` small, put the code in its own module.
 
 ## 3. Write the computation expressions
 
@@ -166,7 +166,7 @@ module Downloads =
 
 - `getText client url` returns `CancellationToken -> Task<string>`. The caller starts it with a token: `getText client url ct`.
 - In `getBoth`, the builder gives the ambient token to both calls of `getText`. It starts both calls before it awaits the first one.
-- The builder checks the token before each `let!`, `do!`, `return!`, and `and!`. If the caller cancels the token, the task is cancelled.
+- The builder checks the token before each `let!`, `do!`, `return!`, and `and!`. If the caller cancels the token, the task is cancelled at the next check, or when an operation that uses the token stops.
 - `loadOnce load` returns `unit -> Task<string>`. Each call runs the computation again.
 
 `CancellableTask.getCancellationToken` comes from the `IcedTasks` namespace. The runtime-async builders bind it as they bind any `CancellationToken -> ValueTask<'T>` value.
@@ -185,7 +185,7 @@ You can build one project for `net10.0` and `net11.0`.
 </PropertyGroup>
 ```
 
-You do not need `#if` around the `open`. In the `net10.0` build of IcedTasks, the namespace `IcedTasks.Polyfill.RuntimeTask` is empty. Thus, the same code uses the state-machine builders on `net10.0` and the runtime-async builders on `net11.0`. On `net10.0`, `task` and `backgroundTask` come from FSharp.Core, and the other builder names come from IcedTasks.
+You do not need `#if` around the `open`. A `net10.0` project gets the `net9.0` build of IcedTasks. In that build, the namespace `IcedTasks.Polyfill.RuntimeTask` is empty. Thus, the same code uses the state-machine builders on `net10.0` and the runtime-async builders on `net11.0`. On `net10.0`, `task` and `backgroundTask` come from FSharp.Core, and the other builder names come from IcedTasks.
 
 ## 6. Make sure that a method is runtime async
 
@@ -202,7 +202,7 @@ let isRuntimeAsync () =
     }
 ```
 
-On `net11.0`, `isRuntimeAsync ()` returns `true` in Debug and Release builds. In a `net10.0` build, the same code returns `false`, because it uses the FSharp.Core `task` builder.
+On `net11.0`, the task from `isRuntimeAsync ()` gives `true` in Debug and Release builds. In a `net10.0` build, the same task gives `false`, because the code uses the FSharp.Core `task` builder.
 
 You can also examine the IL. In the IL view of ILSpy 9.1, the method header of a runtime-async method shows `cil managed flag(2000)`. The value `0x2000` is `MethodImplAttributes.Async`.
 
@@ -213,7 +213,8 @@ You can also examine the IL. In the IL view of ILSpy 9.1, the method header of a
 | `error FS3350: Feature 'runtime async' is not available in F# 11.0. Please use language version 'PREVIEW' or greater.` | `LangVersion` is not `preview`. | Set `<LangVersion>preview</LangVersion>` for `net11.0`. |
 | `error FS3918: Runtime async suspension method 'Await' may only be called from a runtime async method.` | In Debug, this error comes with FS3350. | Correct FS3350. |
 | `error NU1605: Detected package downgrade: FSharp.Core from 11.0.101 to ...` | The project sets a FSharp.Core version older than 11.0.101. | Use FSharp.Core 11.0.101 or later. |
-| `error FS0039: The value, constructor, namespace or type 'task' is not defined.` | The code writes `IcedTasks.Polyfill.RuntimeTask.task`. | Open the namespace, or write `IcedTasks.Polyfill.RuntimeTask.RuntimeTasks.task`. |
+| `error FS0039: The value, constructor, namespace or type 'task' is not defined.` | The code writes `IcedTasks.Polyfill.RuntimeTask.task`. | Open the namespace. |
+| `error FS0193: The type 'Task' is not compatible with the type 'Task<'a>'` in a builder that you wrote with its full name | The extension `Source` members are not in scope. | Open the namespace. |
 | A function name is missing from a stack trace in a Release build. | The optimizer moved a small function into its caller. | Put `[<MethodImpl(MethodImplOptions.NoInlining)>]` on the function. |
 
 ## Related

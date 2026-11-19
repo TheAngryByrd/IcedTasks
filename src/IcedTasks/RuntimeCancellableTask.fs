@@ -22,20 +22,20 @@ module RuntimeCancellableTaskBase =
 
     /// <summary>A bound value that needs the ambient <c>CancellationToken</c>.</summary>
     /// <remarks>
-    /// Invoke starts the operation with the token, suspends the runtime-async method until the operation completes, and then returns the result.
+    /// Invoke starts the operation with the token and returns its awaiter. The builder awaits the awaiter later.
     /// </remarks>
-    type WithToken<'T> = delegate of CancellationToken -> 'T
+    type WithToken<'Awaiter> = delegate of CancellationToken -> 'Awaiter
 
     /// <exclude/>
     module RuntimeCancellableAwait =
 
-        /// <summary>Starts the token-dependent awaitable with the token, and awaits it.</summary>
+        /// <summary>Wraps a token-dependent awaitable, so that the builder starts it with the ambient token.</summary>
         [<NoDynamicInvocation>]
         let inline withToken<'Awaitable, 'Awaiter, 'TResult
             when Awaitable<'Awaitable, 'Awaiter, 'TResult>>
             ([<InlineIfLambda>] start: CancellationToken -> 'Awaitable)
-            : WithToken<'TResult> =
-            WithToken(fun ct -> RuntimeAwait.awaitAwaiter (Awaitable.GetAwaiter(start ct)))
+            : WithToken<'Awaiter> =
+            WithToken(fun ct -> Awaitable.GetAwaiter(start ct))
 
     /// <summary>The base class of the runtime-async cancellable task builders.</summary>
     /// <remarks>
@@ -119,25 +119,7 @@ module RuntimeCancellableTaskBase =
                 resource: #IAsyncDisposableNull,
                 [<InlineIfLambda>] body: #IAsyncDisposableNull -> CancellationToken -> 'T
             ) : CancellationToken -> 'T =
-            fun ct ->
-                let mutable failure: ExceptionDispatchInfo | null = null
-
-                let result =
-                    try
-                        body resource ct
-                    with ex ->
-                        failure <- ExceptionDispatchInfo.Capture ex
-                        Unchecked.defaultof<'T>
-
-                // A rethrow after a suspending finally loses the stack trace: https://github.com/dotnet/fsharp/issues/20869
-                if not (isNull (box resource)) then
-                    AsyncHelpers.Await(resource.DisposeAsync())
-
-                match failure with
-                | null -> result
-                | failure ->
-                    failure.Throw()
-                    result
+            fun ct -> RuntimeAwait.usingAsync resource (fun () -> body resource ct)
 
         /// <summary>Runs the body for each element of the sequence.</summary>
         [<NoDynamicInvocation>]
@@ -149,7 +131,7 @@ module RuntimeCancellableTaskBase =
                     body item ct
 
         /// <summary>Runs the body for each element of the asynchronous sequence.</summary>
-        /// <remarks>The builder gives the ambient token to <c>GetAsyncEnumerator</c>.</remarks>
+        /// <remarks>The builder gives the ambient token to <c>GetAsyncEnumerator</c>, and it checks the token before each <c>MoveNextAsync</c>.</remarks>
         [<NoDynamicInvocation>]
         member inline this.For
             (
@@ -160,7 +142,8 @@ module RuntimeCancellableTaskBase =
                 this.Using
                     (sequence.GetAsyncEnumerator ct,
                      fun enumerator ct ->
-                         while AsyncHelpers.Await(enumerator.MoveNextAsync()) do
+                         while (ct.ThrowIfCancellationRequested()
+                                AsyncHelpers.Await(enumerator.MoveNextAsync())) do
                              body enumerator.Current ct)
                     ct
 
@@ -176,15 +159,16 @@ module RuntimeCancellableTaskBase =
                 continuation (started.Invoke()) ct
 
         /// <summary>Checks the token, starts the operation with the token, awaits it, and then gives its result to the continuation.</summary>
-        [<NoDynamicInvocation>]
-        member inline _.Bind
+        [<NoDynamicInvocation; NoEagerConstraintApplication>]
+        member inline _.Bind<'Awaiter, 'T, 'U when Awaiter<'Awaiter, 'T>>
             (
-                [<InlineIfLambda>] withToken: WithToken<'T>,
+                [<InlineIfLambda>] withToken: WithToken<'Awaiter>,
                 [<InlineIfLambda>] continuation: 'T -> CancellationToken -> 'U
             ) : CancellationToken -> 'U =
             fun ct ->
                 ct.ThrowIfCancellationRequested()
-                continuation (withToken.Invoke ct) ct
+                let awaiter = withToken.Invoke ct
+                continuation (RuntimeAwait.awaitAwaiter awaiter) ct
 
         /// <summary>Checks the token, awaits the operation, and then gives its result to the mapper.</summary>
         [<NoDynamicInvocation>]
@@ -196,13 +180,14 @@ module RuntimeCancellableTaskBase =
                 mapper (started.Invoke())
 
         /// <summary>Checks the token, starts the operation with the token, awaits it, and then gives its result to the mapper.</summary>
-        [<NoDynamicInvocation>]
-        member inline _.BindReturn
-            ([<InlineIfLambda>] withToken: WithToken<'T>, [<InlineIfLambda>] mapper: 'T -> 'U)
+        [<NoDynamicInvocation; NoEagerConstraintApplication>]
+        member inline _.BindReturn<'Awaiter, 'T, 'U when Awaiter<'Awaiter, 'T>>
+            ([<InlineIfLambda>] withToken: WithToken<'Awaiter>, [<InlineIfLambda>] mapper: 'T -> 'U)
             : CancellationToken -> 'U =
             fun ct ->
                 ct.ThrowIfCancellationRequested()
-                mapper (withToken.Invoke ct)
+                let awaiter = withToken.Invoke ct
+                mapper (RuntimeAwait.awaitAwaiter awaiter)
 
         /// <summary>Checks the token, awaits the operation, and returns its result as the result of the computation.</summary>
         [<NoDynamicInvocation>]
@@ -214,63 +199,111 @@ module RuntimeCancellableTaskBase =
                 started.Invoke()
 
         /// <summary>Checks the token, starts the operation with the token, awaits it, and returns its result as the result of the computation.</summary>
-        [<NoDynamicInvocation>]
-        member inline _.ReturnFrom
-            ([<InlineIfLambda>] withToken: WithToken<'T>)
+        [<NoDynamicInvocation; NoEagerConstraintApplication>]
+        member inline _.ReturnFrom<'Awaiter, 'T when Awaiter<'Awaiter, 'T>>
+            ([<InlineIfLambda>] withToken: WithToken<'Awaiter>)
             : CancellationToken -> 'T =
             fun ct ->
                 ct.ThrowIfCancellationRequested()
-                withToken.Invoke ct
+                let awaiter = withToken.Invoke ct
+                RuntimeAwait.awaitAwaiter awaiter
 
         /// <summary>Combines two operations for <c>and!</c>.</summary>
+        /// <remarks>
+        /// The combined operation runs as a separate runtime-async value task.
+        /// It checks the token before it awaits the left operation, and again before it awaits the right operation.
+        /// </remarks>
         [<NoDynamicInvocation>]
         member inline _.MergeSources
             ([<InlineIfLambda>] left: Started<'T1>, [<InlineIfLambda>] right: Started<'T2>)
-            =
-            Started(fun () ->
-                let leftResult = left.Invoke()
-                let rightResult = right.Invoke()
-                struct (leftResult, rightResult)
+            : WithToken<ValueTaskAwaiter<struct ('T1 * 'T2)>> =
+            WithToken(fun ct ->
+                let merged =
+                    __runtimeAsyncReturnValueTask (
+                        ct.ThrowIfCancellationRequested()
+                        let leftResult = left.Invoke()
+                        ct.ThrowIfCancellationRequested()
+                        let rightResult = right.Invoke()
+                        struct (leftResult, rightResult)
+                    )
+
+                merged.GetAwaiter()
             )
 
         /// <summary>Combines two operations for <c>and!</c>.</summary>
-        /// <remarks>The builder starts the left operation, then the right operation, and then awaits them from left to right.</remarks>
-        [<NoDynamicInvocation>]
-        member inline _.MergeSources
-            ([<InlineIfLambda>] left: WithToken<'T1>, [<InlineIfLambda>] right: WithToken<'T2>)
-            =
+        /// <remarks>
+        /// The combined operation runs as a separate runtime-async value task.
+        /// It checks the token, starts the left operation and then the right operation, and then checks the token before it awaits each one, from left to right.
+        /// </remarks>
+        [<NoDynamicInvocation; NoEagerConstraintApplication>]
+        member inline _.MergeSources<'Awaiter1, 'T1, 'Awaiter2, 'T2
+            when Awaiter<'Awaiter1, 'T1> and Awaiter<'Awaiter2, 'T2>>
+            (
+                [<InlineIfLambda>] left: WithToken<'Awaiter1>,
+                [<InlineIfLambda>] right: WithToken<'Awaiter2>
+            ) : WithToken<ValueTaskAwaiter<struct ('T1 * 'T2)>> =
             WithToken(fun ct ->
-                let leftTask = __runtimeAsyncReturnValueTask (left.Invoke ct)
-                let rightTask = __runtimeAsyncReturnValueTask (right.Invoke ct)
-                let leftResult = AsyncHelpers.Await leftTask
-                let rightResult = AsyncHelpers.Await rightTask
-                struct (leftResult, rightResult)
+                let merged =
+                    __runtimeAsyncReturnValueTask (
+                        ct.ThrowIfCancellationRequested()
+                        let leftAwaiter = left.Invoke ct
+                        let rightAwaiter = right.Invoke ct
+                        ct.ThrowIfCancellationRequested()
+                        let leftResult = RuntimeAwait.awaitAwaiter leftAwaiter
+                        ct.ThrowIfCancellationRequested()
+                        let rightResult = RuntimeAwait.awaitAwaiter rightAwaiter
+                        struct (leftResult, rightResult)
+                    )
+
+                merged.GetAwaiter()
             )
 
         /// <summary>Combines two operations for <c>and!</c>.</summary>
-        /// <remarks>The builder starts the right operation, and then awaits the operations from left to right.</remarks>
-        [<NoDynamicInvocation>]
-        member inline _.MergeSources
-            ([<InlineIfLambda>] left: Started<'T1>, [<InlineIfLambda>] right: WithToken<'T2>)
-            =
+        /// <remarks>
+        /// The combined operation runs as a separate runtime-async value task.
+        /// It checks the token, starts the right operation, and then checks the token before it awaits each operation, from left to right.
+        /// </remarks>
+        [<NoDynamicInvocation; NoEagerConstraintApplication>]
+        member inline _.MergeSources<'T1, 'Awaiter2, 'T2 when Awaiter<'Awaiter2, 'T2>>
+            ([<InlineIfLambda>] left: Started<'T1>, [<InlineIfLambda>] right: WithToken<'Awaiter2>)
+            : WithToken<ValueTaskAwaiter<struct ('T1 * 'T2)>> =
             WithToken(fun ct ->
-                let rightTask = __runtimeAsyncReturnValueTask (right.Invoke ct)
-                let leftResult = left.Invoke()
-                let rightResult = AsyncHelpers.Await rightTask
-                struct (leftResult, rightResult)
+                let merged =
+                    __runtimeAsyncReturnValueTask (
+                        ct.ThrowIfCancellationRequested()
+                        let rightAwaiter = right.Invoke ct
+                        ct.ThrowIfCancellationRequested()
+                        let leftResult = left.Invoke()
+                        ct.ThrowIfCancellationRequested()
+                        let rightResult = RuntimeAwait.awaitAwaiter rightAwaiter
+                        struct (leftResult, rightResult)
+                    )
+
+                merged.GetAwaiter()
             )
 
         /// <summary>Combines two operations for <c>and!</c>.</summary>
-        /// <remarks>The builder starts the left operation, and then awaits the operations from left to right.</remarks>
-        [<NoDynamicInvocation>]
-        member inline _.MergeSources
-            ([<InlineIfLambda>] left: WithToken<'T1>, [<InlineIfLambda>] right: Started<'T2>)
-            =
+        /// <remarks>
+        /// The combined operation runs as a separate runtime-async value task.
+        /// It checks the token, starts the left operation, and then checks the token before it awaits each operation, from left to right.
+        /// </remarks>
+        [<NoDynamicInvocation; NoEagerConstraintApplication>]
+        member inline _.MergeSources<'Awaiter1, 'T1, 'T2 when Awaiter<'Awaiter1, 'T1>>
+            ([<InlineIfLambda>] left: WithToken<'Awaiter1>, [<InlineIfLambda>] right: Started<'T2>)
+            : WithToken<ValueTaskAwaiter<struct ('T1 * 'T2)>> =
             WithToken(fun ct ->
-                let leftTask = __runtimeAsyncReturnValueTask (left.Invoke ct)
-                let leftResult = AsyncHelpers.Await leftTask
-                let rightResult = right.Invoke()
-                struct (leftResult, rightResult)
+                let merged =
+                    __runtimeAsyncReturnValueTask (
+                        ct.ThrowIfCancellationRequested()
+                        let leftAwaiter = left.Invoke ct
+                        ct.ThrowIfCancellationRequested()
+                        let leftResult = RuntimeAwait.awaitAwaiter leftAwaiter
+                        ct.ThrowIfCancellationRequested()
+                        let rightResult = right.Invoke()
+                        struct (leftResult, rightResult)
+                    )
+
+                merged.GetAwaiter()
             )
 
     /// <exclude/>
@@ -299,7 +332,7 @@ module RuntimeCancellableTaskBase =
             member inline _.Source<'Awaitable, 'Awaiter, 'TResult
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult>>
                 ([<InlineIfLambda>] cancellableAwaitable: CancellationToken -> 'Awaitable)
-                : WithToken<'TResult> =
+                : WithToken<'Awaiter> =
                 RuntimeCancellableAwait.withToken cancellableAwaitable
 
             /// <summary>Calls the function when the builder binds it.</summary>
@@ -307,7 +340,7 @@ module RuntimeCancellableTaskBase =
             member inline _.Source<'Awaitable, 'Awaiter, 'TResult
                 when Awaitable<'Awaitable, 'Awaiter, 'TResult>>
                 ([<InlineIfLambda>] coldAwaitable: unit -> 'Awaitable)
-                : WithToken<'TResult> =
+                : WithToken<'Awaiter> =
                 RuntimeCancellableAwait.withToken (fun _ -> coldAwaitable ())
 
             /// <summary>Runs the body with the resource, and then calls <c>Dispose</c> on the resource.</summary>
@@ -363,9 +396,7 @@ module RuntimeCancellableTaskBase =
             [<NoDynamicInvocation>]
             member inline _.Source(computation: Async<'T>) =
                 WithToken(fun ct ->
-                    AsyncHelpers.Await(
-                        Async.StartImmediateAsTask(computation, cancellationToken = ct)
-                    )
+                    Async.StartImmediateAsTask(computation, cancellationToken = ct).GetAwaiter()
                 )
 
             /// <summary>Calls the cancellable task with the ambient token when the builder binds it.</summary>
@@ -373,36 +404,36 @@ module RuntimeCancellableTaskBase =
             member inline _.Source
                 ([<InlineIfLambda>] cancellableTask: CancellationToken -> Task<'T>)
                 =
-                WithToken(fun ct -> AsyncHelpers.Await(cancellableTask ct))
+                WithToken(fun ct -> (cancellableTask ct).GetAwaiter())
 
             /// <summary>Calls the cancellable task with the ambient token when the builder binds it.</summary>
             [<NoDynamicInvocation>]
             member inline _.Source([<InlineIfLambda>] cancellableTask: CancellationToken -> Task) =
-                WithToken(fun ct -> AsyncHelpers.Await(cancellableTask ct))
+                WithToken(fun ct -> (cancellableTask ct).GetAwaiter())
 
             /// <summary>Calls the cancellable value task with the ambient token when the builder binds it.</summary>
             [<NoDynamicInvocation>]
             member inline _.Source
                 ([<InlineIfLambda>] cancellableValueTask: CancellationToken -> ValueTask<'T>)
                 =
-                WithToken(fun ct -> AsyncHelpers.Await(cancellableValueTask ct))
+                WithToken(fun ct -> (cancellableValueTask ct).GetAwaiter())
 
             /// <summary>Calls the cancellable value task with the ambient token when the builder binds it.</summary>
             [<NoDynamicInvocation>]
             member inline _.Source
                 ([<InlineIfLambda>] cancellableValueTask: CancellationToken -> ValueTask)
                 =
-                WithToken(fun ct -> AsyncHelpers.Await(cancellableValueTask ct))
+                WithToken(fun ct -> (cancellableValueTask ct).GetAwaiter())
 
             /// <summary>Calls the cold task when the builder binds it.</summary>
             [<NoDynamicInvocation>]
             member inline _.Source([<InlineIfLambda>] coldTask: unit -> Task<'T>) =
-                WithToken(fun _ -> AsyncHelpers.Await(coldTask ()))
+                WithToken(fun _ -> (coldTask ()).GetAwaiter())
 
             /// <summary>Calls the cold task when the builder binds it.</summary>
             [<NoDynamicInvocation>]
             member inline _.Source([<InlineIfLambda>] coldTask: unit -> Task) =
-                WithToken(fun _ -> AsyncHelpers.Await(coldTask ()))
+                WithToken(fun _ -> (coldTask ()).GetAwaiter())
 
 /// <summary>Contains the runtime-async <c>cancellableTask</c>, <c>backgroundCancellableTask</c>, and <c>cancellableValueTask</c> builders.</summary>
 /// <remarks>
@@ -431,16 +462,16 @@ module RuntimeCancellableTasks =
             ([<InlineIfLambda>] code: CancellationToken -> 'T)
             : CancellationToken -> Task<'T> =
             fun ct ->
-                __runtimeAsyncReturn (
-                    ct.ThrowIfCancellationRequested()
-                    code ct
-                )
+                if ct.IsCancellationRequested then
+                    Task.FromCanceled<'T>(ct)
+                else
+                    __runtimeAsyncReturn (code ct)
 
         /// <summary>Calls the cancellable task with the ambient token when the builder binds it.</summary>
         /// <remarks>This member is on the builder type so that type inference prefers <c>CancellationToken -> Task&lt;'T&gt;</c>.</remarks>
         [<NoDynamicInvocation>]
         member inline _.Source([<InlineIfLambda>] cancellableTask: CancellationToken -> Task<'T>) =
-            WithToken(fun ct -> AsyncHelpers.Await(cancellableTask ct))
+            WithToken(fun ct -> (cancellableTask ct).GetAwaiter())
 
     /// <summary>Builds a cancellable task, <c>CancellationToken -> Task&lt;'T&gt;</c>, as a .NET runtime-async method that does not run on the caller context.</summary>
     /// <remarks>
@@ -461,30 +492,21 @@ module RuntimeCancellableTasks =
             ([<InlineIfLambda>] code: CancellationToken -> 'T)
             : CancellationToken -> Task<'T> =
             fun ct ->
-                if
+                if ct.IsCancellationRequested then
+                    Task.FromCanceled<'T>(ct)
+                elif
                     isNull SynchronizationContext.Current
                     && obj.ReferenceEquals(TaskScheduler.Current, TaskScheduler.Default)
                 then
-                    __runtimeAsyncReturn (
-                        ct.ThrowIfCancellationRequested()
-                        code ct
-                    )
+                    __runtimeAsyncReturn (code ct)
                 else
-                    Task.Run<'T>(
-                        (fun () ->
-                            __runtimeAsyncReturn (
-                                ct.ThrowIfCancellationRequested()
-                                code ct
-                            )
-                        ),
-                        ct
-                    )
+                    Task.Run<'T>((fun () -> __runtimeAsyncReturn (code ct)), ct)
 
         /// <summary>Calls the cancellable task with the ambient token when the builder binds it.</summary>
         /// <remarks>This member is on the builder type so that type inference prefers <c>CancellationToken -> Task&lt;'T&gt;</c>.</remarks>
         [<NoDynamicInvocation>]
         member inline _.Source([<InlineIfLambda>] cancellableTask: CancellationToken -> Task<'T>) =
-            WithToken(fun ct -> AsyncHelpers.Await(cancellableTask ct))
+            WithToken(fun ct -> (cancellableTask ct).GetAwaiter())
 
     /// <summary>Builds a cancellable value task, <c>CancellationToken -> ValueTask&lt;'T&gt;</c>, as a .NET runtime-async method.</summary>
     /// <remarks>
@@ -500,10 +522,10 @@ module RuntimeCancellableTasks =
             ([<InlineIfLambda>] code: CancellationToken -> 'T)
             : CancellationToken -> ValueTask<'T> =
             fun ct ->
-                __runtimeAsyncReturnValueTask (
-                    ct.ThrowIfCancellationRequested()
-                    code ct
-                )
+                if ct.IsCancellationRequested then
+                    ValueTask.FromCanceled<'T>(ct)
+                else
+                    __runtimeAsyncReturnValueTask (code ct)
 
         /// <summary>Calls the cancellable value task with the ambient token when the builder binds it.</summary>
         /// <remarks>This member is on the builder type so that type inference prefers <c>CancellationToken -> ValueTask&lt;'T&gt;</c>.</remarks>
@@ -511,7 +533,7 @@ module RuntimeCancellableTasks =
         member inline _.Source
             ([<InlineIfLambda>] cancellableValueTask: CancellationToken -> ValueTask<'T>)
             =
-            WithToken(fun ct -> AsyncHelpers.Await(cancellableValueTask ct))
+            WithToken(fun ct -> (cancellableValueTask ct).GetAwaiter())
 
     /// <summary>Builds a cancellable task, <c>CancellationToken -> Task&lt;'T&gt;</c>, as a .NET runtime-async method.</summary>
     let cancellableTask = RuntimeCancellableTaskBuilder()

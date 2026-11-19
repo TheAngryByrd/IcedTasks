@@ -51,4 +51,6 @@ The tests set a synchronization context with `TestHelpers.setSyncContext` (`test
 
 Human docs: `docsSrc/How-To-Guides/Use-background-builders-to-avoid-caller-context.fsx`.
 
+The runtime-async `background*` builders examine the context when the function is called, not when the computation expression makes it. See [runtime-async task builders](runtime-task.md).
+
 Related: [builder catalog](builder-catalog.md), [test helpers](../tests/expect-helpers.md).

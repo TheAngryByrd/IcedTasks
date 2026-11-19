@@ -47,6 +47,36 @@ module RuntimeTaskBase =
             : Started<'TResult> =
             Started(fun () -> awaitAwaiter awaiter)
 
+        /// <summary>Runs the body, and then awaits <c>DisposeAsync</c> on the resource.</summary>
+        /// <remarks>
+        /// The function does not dispose a null resource.
+        /// If the body throws, the function awaits <c>DisposeAsync</c> and then throws the body exception with its original stack trace.
+        /// If <c>DisposeAsync</c> throws, its exception replaces the body exception.
+        /// </remarks>
+        [<NoDynamicInvocation>]
+        let inline usingAsync<'Resource, 'T when 'Resource :> IAsyncDisposableNull>
+            (resource: 'Resource)
+            ([<InlineIfLambda>] body: unit -> 'T)
+            : 'T =
+            let mutable failure: ExceptionDispatchInfo | null = null
+
+            let result =
+                try
+                    body ()
+                with ex ->
+                    failure <- ExceptionDispatchInfo.Capture ex
+                    Unchecked.defaultof<'T>
+
+            // A rethrow after a suspending finally loses the stack trace: https://github.com/dotnet/fsharp/issues/20869
+            if not (isNull (box resource)) then
+                AsyncHelpers.Await(resource.DisposeAsync())
+
+            match failure with
+            | null -> result
+            | failure ->
+                failure.Throw()
+                result
+
     /// <summary>The base class of the runtime-async task builders.</summary>
     /// <remarks>
     /// The body of the computation expression returns its result directly.
@@ -110,24 +140,7 @@ module RuntimeTaskBase =
         member inline _.Using
             (resource: #IAsyncDisposableNull, [<InlineIfLambda>] body: #IAsyncDisposableNull -> 'T)
             =
-            let mutable failure: ExceptionDispatchInfo | null = null
-
-            let result =
-                try
-                    body resource
-                with ex ->
-                    failure <- ExceptionDispatchInfo.Capture ex
-                    Unchecked.defaultof<'T>
-
-            // A rethrow after a suspending finally loses the stack trace: https://github.com/dotnet/fsharp/issues/20869
-            if not (isNull (box resource)) then
-                AsyncHelpers.Await(resource.DisposeAsync())
-
-            match failure with
-            | null -> result
-            | failure ->
-                failure.Throw()
-                result
+            RuntimeAwait.usingAsync resource (fun () -> body resource)
 
         /// <summary>Runs the body for each element of the sequence.</summary>
         [<NoDynamicInvocation>]

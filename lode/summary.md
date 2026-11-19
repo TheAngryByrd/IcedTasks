@@ -17,7 +17,7 @@ let getDataFromAFewSites = parallelAsync {
 ```mermaid
 flowchart LR
     src["src/IcedTasks<br/>builders and modules"] --> pkg["IcedTasks.nupkg"]
-    tests["tests/<br/>Expecto, 3 projects"] -->|"ProjectReference per TFM"| src
+    tests["tests/<br/>Expecto, 4 projects"] -->|"ProjectReference per TFM"| src
     bench["benchmarks/<br/>BenchmarkDotNet"] --> src
     docs["docsSrc/<br/>fsdocs pages"] -->|"#r Release net9.0 dll"| src
     build["build/<br/>FAKE targets"] --> tests
