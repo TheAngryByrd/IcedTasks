@@ -243,13 +243,12 @@ let getDataFromAFewSites = parallelAsync {
 GitHub Actions |
 :---: |
 [![GitHub Actions](https://github.com/TheAngryByrd/IcedTasks/workflows/Build%20master/badge.svg)](https://github.com/TheAngryByrd/IcedTasks/actions?query=branch%3Amaster) |
-[![Build History](https://buildstats.info/github/chart/TheAngryByrd/IcedTasks)](https://github.com/TheAngryByrd/IcedTasks/actions?query=branch%3Amaster) |
 
 ## NuGet
 
-Package | Stable | Prerelease
---- | --- | ---
-IcedTasks | [![NuGet Badge](https://buildstats.info/nuget/IcedTasks)](https://www.nuget.org/packages/IcedTasks/) | [![NuGet Badge](https://buildstats.info/nuget/IcedTasks?includePreReleases=true)](https://www.nuget.org/packages/IcedTasks/)
+Package | Stable | Prerelease | Downloads
+--- | --- | --- | ---
+IcedTasks | [![NuGet version](https://img.shields.io/nuget/v/IcedTasks)](https://www.nuget.org/packages/IcedTasks/) | [![NuGet prerelease version](https://img.shields.io/nuget/vpre/IcedTasks)](https://www.nuget.org/packages/IcedTasks/absoluteLatest) | [![NuGet downloads](https://img.shields.io/nuget/dt/IcedTasks)](https://www.nuget.org/packages/IcedTasks/)
 
 ---
 
