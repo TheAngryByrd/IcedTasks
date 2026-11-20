@@ -10,6 +10,10 @@ open System.Threading.Tasks
 
 open IcedTasks
 
+#if BENCHMARK_RUNTIME_ASYNC
+open IcedTasks.Polyfill.RuntimeTask
+#endif
+
 open System.IO
 
 [<AutoOpen>]
