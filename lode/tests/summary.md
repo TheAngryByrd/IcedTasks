@@ -27,7 +27,7 @@ module ExpectoTemplate =
 
 ```mermaid
 flowchart LR
-    sln["dotnet test IcedTasks.sln"] --> t["IcedTasks.Tests<br/>lib default TFM"]
+    sln["dotnet test IcedTasks.slnx"] --> t["IcedTasks.Tests<br/>lib default TFM"]
     sln --> n20["IcedTasks.Tests.NS20<br/>lib netstandard2.0"]
     sln --> n21["IcedTasks.Tests.NS21<br/>lib netstandard2.1"]
     sln --> rt["IcedTasks.Tests.RuntimeAsync<br/>lib net11.0, runtime-async builders"]

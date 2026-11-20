@@ -32,7 +32,7 @@
 - The docs pages reference `src/IcedTasks/bin/Release/net9.0/IcedTasks.dll`. Build Release before `BuildDocs`. See [fsdocs build](docs/fsdocs-build.md).
 - Each member of a runtime-async builder must be `inline` and have `NoDynamicInvocation`. See [runtime-async task builders](builders/runtime-task.md).
 - The pooling builders exist only under `NET6_0_OR_GREATER`. Code that uses them must also compile for `netstandard2.0` and `netstandard2.1`, or sit under the same guard.
-- `dotnet build IcedTasks.sln` also builds `build/`, the benchmarks, and `examples/ILSpySamples` (`IcedTasks.sln`).
+- `dotnet build IcedTasks.slnx` also builds `build/`, the benchmarks, and `examples/ILSpySamples` (`IcedTasks.slnx`).
 - Untracked `.claude/worktrees/` copies of the repository can exist. Exclude them from searches.
 - `CHANGELOG.md` uses Keep a Changelog. Add a PR link and credit to each entry, because the `Release` target puts the notes in the commit body (`README.md`, "Releasing").
 - Changes that touch only tests, the build, or docs usually get no changelog entry. A change to how the package is published gets one.
