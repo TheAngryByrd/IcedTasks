@@ -511,6 +511,71 @@ module ValueTaskTests =
 
             testList "For" [
 
+                testCaseAsync "for gives each element to the body in order"
+                <| async {
+                    let seen = ResizeArray<int>()
+
+                    let! actual =
+                        valueTask {
+                            for i in
+                                [
+                                    3
+                                    1
+                                    2
+                                ] do
+                                seen.Add i
+
+                            return seen.Count
+                        }
+                        |> Async.AwaitValueTask
+
+                    Expect.equal actual 3 "The body must run once for each element"
+
+                    Expect.equal
+                        (List.ofSeq seen)
+                        [
+                            3
+                            1
+                            2
+                        ]
+                        "The body must get the elements in order"
+                }
+
+                testCaseAsync "IAsyncEnumerable for gives each element to the body in order"
+                <| async {
+                    let seen = ResizeArray<int>()
+
+                    let items: IAsyncEnumerable<int> =
+                        AsyncEnumerable.AsyncEnumerable(
+                            [
+                                3
+                                1
+                                2
+                            ],
+                            Func<_, _>(cancellableValueTask { do! Task.Yield() })
+                        )
+
+                    let! actual =
+                        valueTask {
+                            for (i: int) in items do
+                                seen.Add i
+
+                            return seen.Count
+                        }
+                        |> Async.AwaitValueTask
+
+                    Expect.equal actual 3 "The body must run once for each element"
+
+                    Expect.equal
+                        (List.ofSeq seen)
+                        [
+                            3
+                            1
+                            2
+                        ]
+                        "The body must get the elements in order"
+                }
+
                 yield!
                     [
                         10
@@ -521,17 +586,20 @@ module ValueTaskTests =
                         testCaseAsync $"for in {loops}"
                         <| async {
                             let mutable index = 0
+                            let mutable runs = 0
 
                             let! actual =
                                 valueTask {
-                                    for i in [ 1..10 ] do
+                                    for i in [ 1..loops ] do
+                                        runs <- runs + 1
                                         index <- i + i
 
                                     return index
                                 }
                                 |> Async.AwaitValueTask
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual (loops * 2) "The last element must reach the body"
+                            Expect.equal runs loops "The body must run once for each element"
                         }
                     )
 
@@ -546,17 +614,20 @@ module ValueTaskTests =
                         testCaseAsync $"for to {loops}"
                         <| async {
                             let mutable index = 0
+                            let mutable runs = 0
 
                             let! actual =
                                 valueTask {
                                     for i = 1 to loops do
+                                        runs <- runs + 1
                                         index <- i + i
 
                                     return index
                                 }
                                 |> Async.AwaitValueTask
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual (loops * 2) "The last element must reach the body"
+                            Expect.equal runs loops "The body must run once for each element"
                         }
                     )
 
@@ -570,18 +641,21 @@ module ValueTaskTests =
                         testCaseAsync $"for bind in {loops}"
                         <| async {
                             let mutable index = 0
+                            let mutable runs = 0
 
                             let! actual =
                                 valueTask {
-                                    for i in [ 1..10 ] do
+                                    for i in [ 1..loops ] do
                                         do! Task.Yield()
+                                        runs <- runs + 1
                                         index <- i + i
 
                                     return index
                                 }
                                 |> Async.AwaitValueTask
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual (loops * 2) "The last element must reach the body"
+                            Expect.equal runs loops "The body must run once for each element"
                         }
                     )
 
@@ -595,18 +669,21 @@ module ValueTaskTests =
                         testCaseAsync $"for bind to {loops}"
                         <| async {
                             let mutable index = 0
+                            let mutable runs = 0
 
                             let! actual =
                                 valueTask {
                                     for i = 1 to loops do
                                         do! Task.Yield()
+                                        runs <- runs + 1
                                         index <- i + i
 
                                     return index
                                 }
                                 |> Async.AwaitValueTask
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual (loops * 2) "The last element must reach the body"
+                            Expect.equal runs loops "The body must run once for each element"
                         }
                     )
 
@@ -638,6 +715,7 @@ module ValueTaskTests =
                         testCaseAsync $"IAsyncEnumerable for in {loops}"
                         <| async {
                             let mutable index = 0
+                            let mutable runs = 0
 
                             let asyncSeq: IAsyncEnumerable<_> =
                                 AsyncEnumerable.forXtoY
@@ -649,13 +727,15 @@ module ValueTaskTests =
                                 valueTask {
                                     for (i: int) in asyncSeq do
                                         do! Task.Yield()
+                                        runs <- runs + 1
                                         index <- i + i
 
                                     return index
                                 }
                                 |> Async.AwaitValueTask
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual (loops * 2) "The last element must reach the body"
+                            Expect.equal runs (loops + 1) "The body must run once for each element"
                         }
                     )
 
@@ -798,15 +878,36 @@ module ValueTaskTests =
                                 ]
                             }
 
+                        let started = ref 0
+
+                        let allStarted =
+                            TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
+
+                        let gatedWork id (l: ResizeArray<_>) =
+                            valueTask {
+                                lock l (fun () -> l.Add(id))
+
+                                if
+                                    System.Threading.Interlocked.Increment(&started.contents) = 6
+                                then
+                                    allStarted.TrySetResult()
+                                    |> ignore
+
+                                do! allStarted.Task.WaitAsync(TimeSpan.FromSeconds 10.)
+                                let dt = DateTimeOffset.UtcNow
+                                lock l (fun () -> l.Add(id))
+                                return dt
+                            }
+
                         let executeParallel () =
                             valueTask {
                                 parallelList.Clear()
-                                let! a = fakeWork1 parallelList
-                                and! b = fakeWork2 parallelList
-                                and! c = fakeWork3 parallelList
-                                and! d = fakeWork4 parallelList
-                                and! e = fakeWork5 parallelList
-                                and! f = fakeWork6 parallelList
+                                let! a = gatedWork 1 parallelList
+                                and! b = gatedWork 2 parallelList
+                                and! c = gatedWork 3 parallelList
+                                and! d = gatedWork 4 parallelList
+                                and! e = gatedWork 5 parallelList
+                                and! f = gatedWork 6 parallelList
 
                                 return [
                                     a
@@ -842,23 +943,21 @@ module ValueTaskTests =
                                     6
                                 ]
 
-                        let! parallelNotSequenced =
+                        let! allStartedFirst =
                             valueTask {
-                                let mutable result = false
+                                let! _ = executeParallel ()
 
-                                while not result do
-                                    let! _ = executeParallel ()
+                                let starts =
+                                    parallelEntrances ()
+                                    |> List.truncate 6
+                                    |> List.distinct
 
-                                    result <-
-                                        parallelEntrances ()
-                                        <> sequencedEntrances
-
-                                return result
+                                return List.length starts = 6
                             }
 
                         return
                             sequencedAlwaysOrdered
-                            && parallelNotSequenced
+                            && allStartedFirst
                     }
                     |> Async.RunSynchronously
             ]
