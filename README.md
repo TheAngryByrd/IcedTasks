@@ -280,7 +280,7 @@ Install one of these:
 $ ./build.sh  <optional buildtarget>// on unix
 ```
 
-The default target is `DotnetPack`. It runs `Clean`, `DotnetRestore`, `CheckFormatCode`, `DotnetBuild`, `DotnetTest`, and `DotnetPack`. Off CI, `CheckFormatCode` formats the source files in place. The build writes the library to `src/IcedTasks/bin/<configuration>/<target framework>/IcedTasks.dll` for each target framework, and the packages to `dist/`.
+The default target is `DotnetPack`. It runs `Clean`, `DotnetRestore`, `CheckFormatCode`, `DotnetBuild`, `DotnetTest`, `BinaryCompat`, and `DotnetPack`. Off CI, `CheckFormatCode` formats the source files in place. The build writes the library to `src/IcedTasks/bin/<configuration>/<target framework>/IcedTasks.dll` for each target framework, and the packages to `dist/`.
 
 ---
 
@@ -293,6 +293,7 @@ The default target is `DotnetPack`. It runs `Clean`, `DotnetRestore`, `CheckForm
 - [`DotnetBuild`](#building) - Runs [dotnet build](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-build) on the solution file.
 - `FSharpAnalyzers` - Runs the F# analyzers from `packages/analyzers` on the source projects. The build does not create that directory. The analyzers also run after each build of `src`, and their warnings do not fail the build.
 - `DotnetTest` - Runs [dotnet test](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-test) on the solution file.
+- `BinaryCompat` - Builds `tests/IcedTasks.BinaryCompat` against the IcedTasks 0.11.9 package in Debug and Release, runs it with the 0.11.9 `IcedTasks.dll` and with the current one, and fails if the results differ.
 - `WatchTests` - Runs [dotnet watch](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-watch) test on each test project.
 - `GenerateAssemblyInfo` - Generates `AssemblyInfo.fs` for the source projects.
 - `DotnetPack` - Runs [dotnet pack](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-pack) and writes the packages to `dist/`.

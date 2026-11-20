@@ -21,9 +21,9 @@ let private start name =
 
 let private record name (value: 'T) = lines.Add $"%s{name}=%A{value}"
 
-let private result _ (task: Task<'T>) = task.Result
+let private result (task: Task<'T>) = task.Result
 
-let private complete _ (task: Task) = task.Wait()
+let private complete (task: Task) = task.Wait()
 
 let private run (computation: Async<'T>) = Async.RunSynchronously computation
 
@@ -88,9 +88,8 @@ let private cases (ct: CancellationToken) (cancelled: CancellationToken) =
 
     record
         "coldTask"
-        (result
-            "coldTask"
-            ((coldTask {
+        (result (
+            (coldTask {
                 let! a = Task.FromResult 1
                 let! b = ValueTask<int>(2)
                 let! c = async { return 3 }
@@ -111,21 +110,19 @@ let private cases (ct: CancellationToken) (cancelled: CancellationToken) =
                     + c
                     + d
                     + log.Count
-            }) ()))
+            }) ()
+        ))
 
     start "backgroundColdTask"
 
-    record
-        "backgroundColdTask"
-        (result "backgroundColdTask" ((backgroundColdTask { return! coldWork }) ()))
+    record "backgroundColdTask" (result ((backgroundColdTask { return! coldWork }) ()))
 
     start "cancellableTask"
 
     record
         "cancellableTask"
-        (result
-            "cancellableTask"
-            ((cancellableTask {
+        (result (
+            (cancellableTask {
                 let! a = coldWork
                 let! b = cancellableWork
                 and! c = Task.FromResult 3
@@ -144,29 +141,25 @@ let private cases (ct: CancellationToken) (cancelled: CancellationToken) =
 
                 return (a, b, c, total)
             })
-                ct))
+                ct
+        ))
 
     start "backgroundCancellableTask"
 
     record
         "backgroundCancellableTask"
-        (result
-            "backgroundCancellableTask"
-            ((backgroundCancellableTask { return! cancellableWork }) ct))
+        (result ((backgroundCancellableTask { return! cancellableWork }) ct))
 
     start "cancellableTask cancelled"
 
-    record
-        "cancellableTask cancelled"
-        (result "cancellableTask cancelled" (status ((cancellableTask { return 1 }) cancelled)))
+    record "cancellableTask cancelled" (result (status ((cancellableTask { return 1 }) cancelled)))
 
     start "cancellableValueTask"
 
     record
         "cancellableValueTask"
-        (result
-            "cancellableValueTask"
-            (((cancellableValueTask {
+        (result (
+            ((cancellableValueTask {
                 let! a = ValueTask<int>(4)
                 let! b = cancellableWork
                 let log = ResizeArray<string>()
@@ -183,38 +176,36 @@ let private cases (ct: CancellationToken) (cancelled: CancellationToken) =
                     + log.Count
             })
                 ct)
-                .AsTask()))
+                .AsTask()
+        ))
 
     start "cancellableValueTask cancelled"
 
     record
         "cancellableValueTask cancelled"
-        (result
-            "cancellableValueTask cancelled"
-            (status (((cancellableValueTask { return 1 }) cancelled).AsTask())))
+        (result (status (((cancellableValueTask { return 1 }) cancelled).AsTask())))
 
     start "cancellablePoolingValueTask"
 
     record
         "cancellablePoolingValueTask"
-        (result
-            "cancellablePoolingValueTask"
-            (((cancellablePoolingValueTask {
+        (result (
+            ((cancellablePoolingValueTask {
                 let! a = cancellableWork
                 and! b = fun (_: CancellationToken) -> Task.FromResult 5
                 let! c = fun (_: CancellationToken) -> ValueTask<int>(6)
                 return (a, b, c)
             })
                 ct)
-                .AsTask()))
+                .AsTask()
+        ))
 
     start "valueTask"
 
     record
         "valueTask"
-        (result
-            "valueTask"
-            ((valueTask {
+        (result (
+            (valueTask {
                 let! a = Task.FromResult 5
                 let! b = ValueTask<int>(6)
                 and! c = Task.FromResult 7
@@ -225,15 +216,15 @@ let private cases (ct: CancellationToken) (cancelled: CancellationToken) =
                 with e ->
                     return (a, b, c, e.Message)
             })
-                .AsTask()))
+                .AsTask()
+        ))
 
     start "poolingValueTask"
 
     record
         "poolingValueTask"
-        (result
-            "poolingValueTask"
-            ((poolingValueTask {
+        (result (
+            (poolingValueTask {
                 let! a = ValueTask<int>(8)
                 let mutable i = 0
 
@@ -243,32 +234,33 @@ let private cases (ct: CancellationToken) (cancelled: CancellationToken) =
 
                 return! ValueTask<int>(a + i)
             })
-                .AsTask()))
+                .AsTask()
+        ))
 
     start "unit builders"
     let unitLog = ResizeArray<string>()
 
-    complete
-        "taskUnit"
-        (taskUnit {
+    complete (
+        taskUnit {
             do! Task.Yield()
             unitLog.Add "taskUnit"
-        })
+        }
+    )
 
-    complete
-        "backgroundTaskUnit"
-        (backgroundTaskUnit {
+    complete (
+        backgroundTaskUnit {
             do! Task.CompletedTask
             unitLog.Add "backgroundTaskUnit"
-        })
+        }
+    )
 
-    complete
-        "valueTaskUnit"
-        ((valueTaskUnit {
+    complete (
+        (valueTaskUnit {
             do! ValueTask.CompletedTask
             unitLog.Add "valueTaskUnit"
         })
-            .AsTask())
+            .AsTask()
+    )
 
     record "unit builders" (List.ofSeq unitLog)
 
@@ -344,22 +336,20 @@ let private cases (ct: CancellationToken) (cancelled: CancellationToken) =
         ))
 
     start "ColdTask.map"
-    record "ColdTask.map" (result "ColdTask.map" ((ColdTask.map (fun x -> x * 2) coldWork) ()))
+    record "ColdTask.map" (result ((ColdTask.map (fun x -> x * 2) coldWork) ()))
 
     start "CancellableTask.map"
 
     record
         "CancellableTask.map"
-        (result "CancellableTask.map" ((CancellableTask.map (fun x -> x + 100) cancellableWork) ct))
+        (result ((CancellableTask.map (fun x -> x + 100) cancellableWork) ct))
 
     start "Async.AwaitCancellableTask"
     record "Async.AwaitCancellableTask" (run (Async.AwaitCancellableTask cancellableWork))
 
     start "ValueTask.map"
 
-    record
-        "ValueTask.map"
-        (result "ValueTask.map" ((ValueTask.map (fun x -> x - 1) (ValueTask<int>(50))).AsTask()))
+    record "ValueTask.map" (result ((ValueTask.map (fun x -> x - 1) (ValueTask<int>(50))).AsTask()))
 
 module private PolyfillTask =
     open IcedTasks.Polyfill.Task
@@ -371,9 +361,8 @@ module private PolyfillTask =
 
         record
             "task polyfill"
-            (result
-                "task polyfill"
-                (task {
+            (result (
+                task {
                     let! a = coldWork
                     let! b = ValueTask<int>(13)
 
@@ -388,13 +377,12 @@ module private PolyfillTask =
                         a
                         + b
                         + log.Count
-                }))
+                }
+            ))
 
         start "backgroundTask polyfill"
 
-        record
-            "backgroundTask polyfill"
-            (result "backgroundTask polyfill" (backgroundTask { return! coldWork () }))
+        record "backgroundTask polyfill" (result (backgroundTask { return! coldWork () }))
 
 [<EntryPoint>]
 let main _ =
@@ -410,9 +398,10 @@ let main _ =
             TimeSpan.FromSeconds 1.
         )
 
+    use live = new CancellationTokenSource()
     use cts = new CancellationTokenSource()
     cts.Cancel()
-    cases CancellationToken.None cts.Token
+    cases live.Token cts.Token
     PolyfillTask.cases ()
 
     let icedTasks = typeof<ColdTasks.ColdTaskBuilder>.Assembly
