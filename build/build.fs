@@ -39,7 +39,7 @@ let productName = "IcedTasks"
 
 let sln =
     rootDirectory
-    </> "IcedTasks.sln"
+    </> "IcedTasks.slnx"
 
 let srcGlob =
     rootDirectory

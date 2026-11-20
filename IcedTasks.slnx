@@ -1,0 +1,31 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/CSharpTaskBenchmarks/CSharpTaskBenchmarks.csproj" />
+    <Project Path="benchmarks/FSharpBenchmarks/benchmarks.fsproj" />
+  </Folder>
+  <Folder Name="/examples/">
+    <Project Path="examples/ILSpySamples/ILSpySamples.fsproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/IcedTasks/IcedTasks.fsproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/IcedTasks.Tests.NoOpen/IcedTasks.Tests.NoOpen.fsproj" />
+    <Project Path="tests/IcedTasks.Tests.NS20/IcedTasks.Tests.NS20.fsproj" />
+    <Project Path="tests/IcedTasks.Tests.NS21/IcedTasks.Tests.NS21.fsproj" />
+    <Project Path="tests/IcedTasks.Tests.RuntimeAsync/IcedTasks.Tests.RuntimeAsync.fsproj" />
+    <Project Path="tests/IcedTasks.Tests/IcedTasks.Tests.fsproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+  </Folder>
+  <Project Path="build/build.fsproj" />
+</Solution>
