@@ -403,127 +403,251 @@ let binaryCompatProject =
     rootDirectory
     </> "tests/IcedTasks.BinaryCompat/IcedTasks.BinaryCompat.fsproj"
 
-// Both fixture target frameworks compile against the net9.0 build of IcedTasks 0.11.9.
+let icedTasksProject =
+    rootDirectory
+    </> "src/IcedTasks/IcedTasks.fsproj"
+
+// Both fixture target frameworks compile against the net9.0 build of the released package.
 // A consumer that upgrades the package then loads the library build that NuGet selects for its target framework.
 let binaryCompatBuilds = [
     "net10.0", "net9.0"
     "net11.0", "net11.0"
 ]
 
+// The case names that tests/IcedTasks.BinaryCompat/Program.fs prints, in order.
+let binaryCompatCases = [
+    "coldTask"
+    "backgroundColdTask"
+    "cancellableTask"
+    "backgroundCancellableTask"
+    "cancellableTask cancelled"
+    "cancellableValueTask"
+    "cancellableValueTask cancelled"
+    "cancellablePoolingValueTask"
+    "valueTask"
+    "poolingValueTask"
+    "unit builders"
+    "asyncEx"
+    "parallelAsync"
+    "parallelAsyncUsingStartChild"
+    "ColdTask.map"
+    "CancellableTask.map"
+    "Async.AwaitCancellableTask"
+    "ValueTask.map"
+    "task polyfill"
+    "backgroundTask polyfill"
+]
+
+let configurationName config =
+    match config with
+    | DotNet.BuildConfiguration.Debug -> "Debug"
+    | DotNet.BuildConfiguration.Release -> "Release"
+    | DotNet.BuildConfiguration.Custom name -> name
+
+let frameworkName (targetFramework: string) =
+    $".NETCoreApp,Version=v{targetFramework.Substring 3}"
+
 let binaryCompat ctx =
     let config = configuration ctx.Context.AllExecutingTargets
+    let libraryConfig = configurationName config
 
-    let configName =
-        match config with
-        | DotNet.BuildConfiguration.Debug -> "Debug"
-        | DotNet.BuildConfiguration.Release -> "Release"
-        | DotNet.BuildConfiguration.Custom name -> name
+    let withCpuLimit (o: DotNet.Options) =
+        DotNet.Options.withAdditionalArgs [ maxCpuMsBuild.Value ] o
+
+    let packageVersion =
+        Xml.Linq.XDocument
+            .Load(binaryCompatProject)
+            .Descendants(Xml.Linq.XName.Get "PackageReference")
+        |> Seq.find (fun e -> e.Attribute(Xml.Linq.XName.Get "Include").Value = productName)
+        |> fun e -> e.Attribute(Xml.Linq.XName.Get "VersionOverride").Value
 
     DotNet.build
         (fun c -> {
             c with
-                Common =
-                    c.Common
-                    |> DotNet.Options.withAdditionalArgs [ maxCpuMsBuild.Value ]
+                Common = withCpuLimit c.Common
                 Configuration = config
+                MSBuildParams = {
+                    c.MSBuildParams with
+                        Properties = [ "PackageVersion", latestEntry.NuGetVersion ]
+                }
         })
-        binaryCompatProject
+        icedTasksProject
+
+    retryIfInCI
+        10
+        (fun () ->
+            DotNet.restore
+                (fun c -> {
+                    c with
+                        Common = withCpuLimit c.Common
+                })
+                binaryCompatProject
+        )
+
+    let pathComparison =
+        if OperatingSystem.IsWindows() then
+            StringComparison.OrdinalIgnoreCase
+        else
+            StringComparison.Ordinal
 
     let run (dir: string) =
         DotNet.exec
-            (fun o -> { o with RedirectOutput = true })
-            (dir
-             </> "IcedTasks.BinaryCompat.dll")
+            (fun o -> {
+                o with
+                    RedirectOutput = true
+                    WorkingDirectory = dir
+            })
+            "IcedTasks.BinaryCompat.dll"
             ""
 
-    for appFramework, libraryFramework in binaryCompatBuilds do
-        let packageRun =
-            rootDirectory
-            </> "tests/IcedTasks.BinaryCompat/bin"
-            </> configName
-            </> appFramework
+    let fail what (result: ProcessResult) =
+        failwithf
+            "%s%sstdout:%s%s%sstderr:%s%s"
+            what
+            Environment.NewLine
+            Environment.NewLine
+            (String.concat Environment.NewLine result.Messages)
+            Environment.NewLine
+            Environment.NewLine
+            (String.concat Environment.NewLine result.Errors)
 
-        let currentRun =
-            rootDirectory
-            </> "temp/binary-compat"
-            </> appFramework
+    let check
+        what
+        (result: ProcessResult)
+        (version: Version)
+        (libraryFramework: string)
+        (dir: string)
+        =
+        if
+            result.ExitCode
+            <> 0
+        then
+            fail $"{what} failed with exit code {result.ExitCode}." result
 
-        let currentLibrary =
-            rootDirectory
-            </> "src/IcedTasks/bin"
-            </> configName
-            </> libraryFramework
-            </> "IcedTasks.dll"
-
-        Shell.cleanDir currentRun
-        Shell.copyDir currentRun packageRun (fun _ -> true)
-        Shell.copyFile currentRun currentLibrary
-
-        let expected = run packageRun
-        let actual = run currentRun
-
-        let currentVersion = Reflection.AssemblyName.GetAssemblyName(currentLibrary).Version
+        let assemblyPath =
+            IO.Path.GetFullPath(
+                dir
+                </> "IcedTasks.dll"
+            )
 
         let loaded =
-            actual.Errors
-            |> List.exists (fun line -> line.StartsWith $"IcedTasks {currentVersion} from ")
+            $"IcedTasks {version} {frameworkName libraryFramework} from {assemblyPath}"
 
         if
-            expected.ExitCode
-            <> 0
+            not (
+                result.Errors
+                |> List.exists (fun line -> String.Equals(line, loaded, pathComparison))
+            )
         then
-            failwithf
-                "The %s program failed with IcedTasks 0.11.9 (exit code %d):%s%s"
-                appFramework
-                expected.ExitCode
-                Environment.NewLine
-                (String.concat Environment.NewLine expected.Errors)
+            fail $"{what} did not load the expected assembly: {loaded}" result
+
+        let names =
+            result.Messages
+            |> List.map (fun line -> line.Split('=', 2)[0])
 
         if
-            actual.ExitCode
-            <> 0
+            names
+            <> binaryCompatCases
         then
-            failwithf
-                "The %s program compiled against IcedTasks 0.11.9 failed with the current %s build (exit code %d):%s%s"
-                appFramework
-                libraryFramework
-                actual.ExitCode
-                Environment.NewLine
-                (String.concat Environment.NewLine actual.Errors)
+            fail $"{what} did not print the expected cases: %A{binaryCompatCases}" result
 
-        if not loaded then
-            failwithf
-                "The %s program did not load the current %s build %s:%s%s"
-                appFramework
-                libraryFramework
-                currentLibrary
-                Environment.NewLine
-                (String.concat Environment.NewLine actual.Errors)
+    for fixtureConfig in
+        [
+            DotNet.BuildConfiguration.Debug
+            DotNet.BuildConfiguration.Release
+        ] do
+        let fixtureName = configurationName fixtureConfig
 
-        if
-            actual.Messages
-            <> expected.Messages
-        then
-            failwithf
-                "The %s program gives other results with the current %s build.%sWith 0.11.9:%s%s%sWith the current build:%s%s"
-                appFramework
-                libraryFramework
-                Environment.NewLine
-                Environment.NewLine
-                (String.concat Environment.NewLine expected.Messages)
-                Environment.NewLine
-                Environment.NewLine
-                (String.concat Environment.NewLine actual.Messages)
+        DotNet.build
+            (fun c -> {
+                c with
+                    Common = withCpuLimit c.Common
+                    Configuration = fixtureConfig
+                    NoRestore = true
+            })
+            binaryCompatProject
 
-        Trace.logfn
-            "Binary compatibility: %s, IcedTasks 0.11.9 replaced by the current %s build %O, %d results equal"
-            appFramework
-            libraryFramework
-            currentVersion
-            actual.Messages.Length
+        for appFramework, libraryFramework in binaryCompatBuilds do
+            let packageRun =
+                rootDirectory
+                </> "tests/IcedTasks.BinaryCompat/bin"
+                </> fixtureName
+                </> appFramework
+
+            let currentRun =
+                rootDirectory
+                </> "temp/binary-compat"
+                </> fixtureName
+                </> appFramework
+
+            let currentLibrary =
+                rootDirectory
+                </> "src/IcedTasks/bin"
+                </> libraryConfig
+                </> libraryFramework
+                </> "IcedTasks.dll"
+
+            let currentVersion = Reflection.AssemblyName.GetAssemblyName(currentLibrary).Version
+
+            if currentVersion = Version $"{packageVersion}.0" then
+                failwithf
+                    "%s has the version of the released package %s, so it is not the current build."
+                    currentLibrary
+                    packageVersion
+
+            Shell.cleanDir currentRun
+            Shell.copyDir currentRun packageRun (fun _ -> true)
+            Shell.copyFile currentRun currentLibrary
+
+            let label =
+                $"The {fixtureName} {appFramework} program compiled against IcedTasks {packageVersion}"
+
+            let expected = run packageRun
+
+            check
+                $"{label}, with IcedTasks {packageVersion},"
+                expected
+                (Version $"{packageVersion}.0")
+                "net9.0"
+                packageRun
+
+            let actual = run currentRun
+
+            check
+                $"{label}, with the current {libraryConfig} {libraryFramework} build,"
+                actual
+                currentVersion
+                libraryFramework
+                currentRun
+
+            if
+                actual.Messages
+                <> expected.Messages
+            then
+                failwithf
+                    "%s gives other results with the current %s build.%sWith %s:%s%s%sWith the current build:%s%s"
+                    label
+                    libraryFramework
+                    Environment.NewLine
+                    packageVersion
+                    Environment.NewLine
+                    (String.concat Environment.NewLine expected.Messages)
+                    Environment.NewLine
+                    Environment.NewLine
+                    (String.concat Environment.NewLine actual.Messages)
+
+            Trace.logfn
+                "Binary compatibility: %s %s program, IcedTasks %s replaced by the current %s %s build, %d results equal"
+                fixtureName
+                appFramework
+                packageVersion
+                libraryConfig
+                libraryFramework
+                actual.Messages.Length
 
 let watchTests _ =
     !!testsGlob
+    -- binaryCompatProject
     |> Seq.map (fun proj ->
         fun () ->
             dotnet.watch
