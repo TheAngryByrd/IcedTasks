@@ -209,7 +209,7 @@ module ParallelAsyncTests =
 
                     let! actual =
                         parallelAsync {
-                            for i in [ 1..loops ] do
+                            for i in seq { 1..loops } do
                                 runs <- runs + 1
                                 index <- i + i
 

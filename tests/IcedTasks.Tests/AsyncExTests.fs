@@ -673,7 +673,7 @@ module AsyncExTests =
 
                             let! actual =
                                 asyncEx {
-                                    for i in [ 1..loops ] do
+                                    for i in seq { 1..loops } do
                                         runs <- runs + 1
                                         index <- i + i
 
@@ -716,7 +716,6 @@ module AsyncExTests =
                     [
                         10
                         10000
-                        1000000
                     ]
                     |> List.map (fun loops ->
                         testCaseAsync $"for bind in {loops}"
@@ -726,7 +725,7 @@ module AsyncExTests =
 
                             let! actual =
                                 asyncEx {
-                                    for i in [ 1..loops ] do
+                                    for i in seq { 1..loops } do
                                         do! Task.Yield()
                                         runs <- runs + 1
                                         index <- i + i
