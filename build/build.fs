@@ -492,16 +492,32 @@ let binaryCompat ctx =
         else
             StringComparison.Ordinal
 
+    let lines (text: string) =
+        if String.IsNullOrEmpty text then
+            []
+        else
+            text.ReplaceLineEndings("\n").TrimEnd('\n').Split('\n')
+            |> List.ofArray
+
+    // DotNet.exec in FAKE 6.1.3 adds stdout and stderr lines to one List<T> from two threads, which can lose a line.
     let run (dir: string) =
-        DotNet.exec
-            (fun o -> {
-                o with
-                    RedirectOutput = true
-                    WorkingDirectory = dir
-                    Timeout = Some(TimeSpan.FromMinutes 5.)
-            })
-            "IcedTasks.BinaryCompat.dll"
-            ""
+        let result =
+            CreateProcess.fromRawCommand (DotNet.Options.Create()).DotNetCliPath [
+                "IcedTasks.BinaryCompat.dll"
+            ]
+            |> CreateProcess.withWorkingDirectory dir
+            |> CreateProcess.withTimeout (TimeSpan.FromMinutes 5.)
+            |> CreateProcess.redirectOutput
+            |> Proc.run
+
+        ProcessResult.New result.ExitCode [
+            yield!
+                lines result.Result.Output
+                |> List.map ConsoleMessage.CreateOut
+            yield!
+                lines result.Result.Error
+                |> List.map ConsoleMessage.CreateError
+        ]
 
     let fail what (result: ProcessResult) =
         failwithf
