@@ -707,6 +707,69 @@ module CancellableTaskTests =
 
             testList "For" [
 
+                testCaseAsync "for gives each element to the body in order"
+                <| async {
+                    let seen = ResizeArray<int>()
+
+                    let! actual =
+                        cancellableTask {
+                            for i in
+                                [
+                                    3
+                                    1
+                                    2
+                                ] do
+                                seen.Add i
+
+                            return seen.Count
+                        }
+
+                    Expect.equal actual 3 "The body must run once for each element"
+
+                    Expect.equal
+                        (List.ofSeq seen)
+                        [
+                            3
+                            1
+                            2
+                        ]
+                        "The body must get the elements in order"
+                }
+
+                testCaseAsync "IAsyncEnumerable for gives each element to the body in order"
+                <| async {
+                    let seen = ResizeArray<int>()
+
+                    let items: IAsyncEnumerable<int> =
+                        AsyncEnumerable.AsyncEnumerable(
+                            [
+                                3
+                                1
+                                2
+                            ],
+                            Func<_, _>(cancellableValueTask { do! Task.Yield() })
+                        )
+
+                    let! actual =
+                        cancellableTask {
+                            for (i: int) in items do
+                                seen.Add i
+
+                            return seen.Count
+                        }
+
+                    Expect.equal actual 3 "The body must run once for each element"
+
+                    Expect.equal
+                        (List.ofSeq seen)
+                        [
+                            3
+                            1
+                            2
+                        ]
+                        "The body must get the elements in order"
+                }
+
                 yield!
                     [
                         10
@@ -717,16 +780,19 @@ module CancellableTaskTests =
                         testCaseAsync $"for in {loops}"
                         <| async {
                             let mutable index = 0
+                            let mutable runs = 0
 
                             let! actual =
                                 cancellableTask {
-                                    for i in [ 1..10 ] do
+                                    for i in seq { 1..loops } do
+                                        runs <- runs + 1
                                         index <- i + i
 
                                     return index
                                 }
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual (loops * 2) "The last element must reach the body"
+                            Expect.equal runs loops "The body must run once for each element"
                         }
                     )
 
@@ -741,16 +807,19 @@ module CancellableTaskTests =
                         testCaseAsync $"for to {loops}"
                         <| async {
                             let mutable index = 0
+                            let mutable runs = 0
 
                             let! actual =
                                 cancellableTask {
                                     for i = 1 to loops do
+                                        runs <- runs + 1
                                         index <- i + i
 
                                     return index
                                 }
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual (loops * 2) "The last element must reach the body"
+                            Expect.equal runs loops "The body must run once for each element"
                         }
                     )
 
@@ -758,23 +827,25 @@ module CancellableTaskTests =
                     [
                         10
                         10000
-                        1000000
                     ]
                     |> List.map (fun loops ->
                         testCaseAsync $"for bind in {loops}"
                         <| async {
                             let mutable index = 0
+                            let mutable runs = 0
 
                             let! actual =
                                 cancellableTask {
-                                    for i in [ 1..10 ] do
+                                    for i in seq { 1..loops } do
                                         do! Task.Yield()
+                                        runs <- runs + 1
                                         index <- i + i
 
                                     return index
                                 }
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual (loops * 2) "The last element must reach the body"
+                            Expect.equal runs loops "The body must run once for each element"
                         }
                     )
 
@@ -788,17 +859,20 @@ module CancellableTaskTests =
                         testCaseAsync $"for bind to {loops}"
                         <| async {
                             let mutable index = 0
+                            let mutable runs = 0
 
                             let! actual =
                                 cancellableTask {
                                     for i = 1 to loops do
                                         do! Task.Yield()
+                                        runs <- runs + 1
                                         index <- i + i
 
                                     return index
                                 }
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual (loops * 2) "The last element must reach the body"
+                            Expect.equal runs loops "The body must run once for each element"
                         }
                     )
 
@@ -829,6 +903,7 @@ module CancellableTaskTests =
                         testCaseAsync $"IAsyncEnumerable for in {loops}"
                         <| async {
                             let mutable index = 0
+                            let mutable runs = 0
 
                             let asyncSeq: IAsyncEnumerable<_> =
                                 AsyncEnumerable.forXtoY
@@ -840,13 +915,15 @@ module CancellableTaskTests =
                                 cancellableTask {
                                     for (i: int) in asyncSeq do
                                         do! Task.Yield()
+                                        runs <- runs + 1
                                         index <- i + i
 
                                     return index
                                 }
                                 |> Async.AwaitCancellableTask
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual (loops * 2) "The last element must reach the body"
+                            Expect.equal runs (loops + 1) "The body must run once for each element"
                         }
                     )
 
@@ -1128,15 +1205,36 @@ module CancellableTaskTests =
                                 ]
                             }
 
+                        let started = ref 0
+
+                        let allStarted =
+                            TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
+
+                        let gatedWork id (l: ResizeArray<_>) =
+                            cancellableTask {
+                                lock l (fun () -> l.Add(id))
+
+                                if
+                                    System.Threading.Interlocked.Increment(&started.contents) = 6
+                                then
+                                    allStarted.TrySetResult()
+                                    |> ignore
+
+                                do! allStarted.Task.WaitAsync(TimeSpan.FromSeconds 10.)
+                                let dt = DateTimeOffset.UtcNow
+                                lock l (fun () -> l.Add(id))
+                                return dt
+                            }
+
                         let executeParallel =
                             cancellableTask {
                                 parallelList.Clear()
-                                let! a = fakeWork1 parallelList
-                                and! b = fakeWork2 parallelList
-                                and! c = fakeWork3 parallelList
-                                and! d = fakeWork4 parallelList
-                                and! e = fakeWork5 parallelList
-                                and! f = fakeWork6 parallelList
+                                let! a = gatedWork 1 parallelList
+                                and! b = gatedWork 2 parallelList
+                                and! c = gatedWork 3 parallelList
+                                and! d = gatedWork 4 parallelList
+                                and! e = gatedWork 5 parallelList
+                                and! f = gatedWork 6 parallelList
 
                                 return [
                                     a
@@ -1172,23 +1270,21 @@ module CancellableTaskTests =
                                     6
                                 ]
 
-                        let! parallelNotSequenced =
+                        let! allStartedFirst =
                             cancellableTask {
-                                let mutable result = false
+                                let! _ = executeParallel
 
-                                while not result do
-                                    let! _ = executeParallel
+                                let starts =
+                                    parallelEntrances ()
+                                    |> List.truncate 6
+                                    |> List.distinct
 
-                                    result <-
-                                        parallelEntrances ()
-                                        <> sequencedEntrances
-
-                                return result
+                                return List.length starts = 6
                             }
 
                         return
                             sequencedAlwaysOrdered
-                            && parallelNotSequenced
+                            && allStartedFirst
                     }
                     |> Async.RunSynchronously
             ]
