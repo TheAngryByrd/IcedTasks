@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- [Run a program compiled against IcedTasks 0.11.9 with the current IcedTasks.dll in CI](https://github.com/TheAngryByrd/IcedTasks/pull/82) - Credits @TheAngryByrd
+- [Strengthen the shared For tests and gate the and! parallelism property](https://github.com/TheAngryByrd/IcedTasks/pull/81) - Credits @TheAngryByrd
 
 ## [0.12.0-beta001] - 2026-11-19
 
