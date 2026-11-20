@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- [Strengthen the shared For tests and gate the and! parallelism property](https://github.com/TheAngryByrd/IcedTasks/pull/81) - Credits @TheAngryByrd
+
 ## [0.12.0-beta001] - 2026-11-19
 
 ### Added
