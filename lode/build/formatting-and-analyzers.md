@@ -23,7 +23,7 @@ Fantomas runs in three places:
 ## Analyzers
 
 - `src/Directory.Build.props` references `FSharp.Analyzers.Build`, `Ionide.Analyzers`, and `G-Research.FSharp.Analyzers`.
-- `src/Directory.Build.targets` sets `RunAnalyzersDuringBuild` and the analyzer paths. The analyzers thus run after each build of `src/`.
+- `src/Directory.Build.targets` sets `RunAnalyzersDuringBuild` and the analyzer paths. The analyzers thus run after each build of `src/`. It also passes `--exclude-analyzers PostfixGenericsAnalyzer`, so the Ionide rule that prefers postfix generic syntax for `seq`, `list`, and `array` (`IONIDE-002` for `seq`) does not run. The maintainer prefers the prefix form, for example `seq<'T>`.
 - `FSharp.Analyzers.Build` sets `FSharpAnalyzersContinueOnError` to true by default. An analyzer warning does not fail the build. `TreatWarningsAsErrors` applies to compiler warnings.
 - The `FSharpAnalyzers` FAKE target fails on `BDH0002`. It reads analyzers from `packages/analyzers`, and the build does not create that directory.
 - `.vscode/settings.json` turns the editor analyzers off.
