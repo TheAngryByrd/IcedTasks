@@ -596,6 +596,69 @@ module AsyncExTests =
 
             testList "For" [
 
+                testCaseAsync "for gives each element to the body in order"
+                <| async {
+                    let seen = ResizeArray<int>()
+
+                    let! actual =
+                        asyncEx {
+                            for i in
+                                [
+                                    3
+                                    1
+                                    2
+                                ] do
+                                seen.Add i
+
+                            return seen.Count
+                        }
+
+                    Expect.equal actual 3 "The body must run once for each element"
+
+                    Expect.equal
+                        (List.ofSeq seen)
+                        [
+                            3
+                            1
+                            2
+                        ]
+                        "The body must get the elements in order"
+                }
+
+                testCaseAsync "IAsyncEnumerable for gives each element to the body in order"
+                <| async {
+                    let seen = ResizeArray<int>()
+
+                    let items: IAsyncEnumerable<int> =
+                        AsyncEnumerable.AsyncEnumerable(
+                            [
+                                3
+                                1
+                                2
+                            ],
+                            Func<_, _>(cancellableValueTask { do! Task.Yield() })
+                        )
+
+                    let! actual =
+                        asyncEx {
+                            for (i: int) in items do
+                                seen.Add i
+
+                            return seen.Count
+                        }
+
+                    Expect.equal actual 3 "The body must run once for each element"
+
+                    Expect.equal
+                        (List.ofSeq seen)
+                        [
+                            3
+                            1
+                            2
+                        ]
+                        "The body must get the elements in order"
+                }
+
                 yield!
                     [
                         10
@@ -606,16 +669,19 @@ module AsyncExTests =
                         testCaseAsync $"for in {loops}"
                         <| async {
                             let mutable index = 0
+                            let mutable runs = 0
 
                             let! actual =
                                 asyncEx {
-                                    for i in [ 1..10 ] do
+                                    for i in seq { 1..loops } do
+                                        runs <- runs + 1
                                         index <- i + i
 
                                     return index
                                 }
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual (loops * 2) "The last element must reach the body"
+                            Expect.equal runs loops "The body must run once for each element"
                         }
                     )
 
@@ -630,16 +696,19 @@ module AsyncExTests =
                         testCaseAsync $"for to {loops}"
                         <| async {
                             let mutable index = 0
+                            let mutable runs = 0
 
                             let! actual =
                                 asyncEx {
                                     for i = 1 to loops do
+                                        runs <- runs + 1
                                         index <- i + i
 
                                     return index
                                 }
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual (loops * 2) "The last element must reach the body"
+                            Expect.equal runs loops "The body must run once for each element"
                         }
                     )
 
@@ -647,23 +716,25 @@ module AsyncExTests =
                     [
                         10
                         10000
-                        1000000
                     ]
                     |> List.map (fun loops ->
                         testCaseAsync $"for bind in {loops}"
                         <| async {
                             let mutable index = 0
+                            let mutable runs = 0
 
                             let! actual =
                                 asyncEx {
-                                    for i in [ 1..10 ] do
+                                    for i in seq { 1..loops } do
                                         do! Task.Yield()
+                                        runs <- runs + 1
                                         index <- i + i
 
                                     return index
                                 }
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual (loops * 2) "The last element must reach the body"
+                            Expect.equal runs loops "The body must run once for each element"
                         }
                     )
 
@@ -677,17 +748,20 @@ module AsyncExTests =
                         testCaseAsync $"for bind to {loops}"
                         <| async {
                             let mutable index = 0
+                            let mutable runs = 0
 
                             let! actual =
                                 asyncEx {
                                     for i = 1 to loops do
                                         do! Task.Yield()
+                                        runs <- runs + 1
                                         index <- i + i
 
                                     return index
                                 }
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual (loops * 2) "The last element must reach the body"
+                            Expect.equal runs loops "The body must run once for each element"
                         }
                     )
 
@@ -718,6 +792,7 @@ module AsyncExTests =
                         testCaseAsync $"IAsyncEnumerable for in {loops}"
                         <| async {
                             let mutable index = 0
+                            let mutable runs = 0
 
                             let asyncSeq: IAsyncEnumerable<_> =
                                 AsyncEnumerable.forXtoY
@@ -729,12 +804,14 @@ module AsyncExTests =
                                 asyncEx {
                                     for (i: int) in asyncSeq do
                                         do! Task.Yield()
+                                        runs <- runs + 1
                                         index <- i + i
 
                                     return index
                                 }
 
-                            Expect.equal actual index "Should be ok"
+                            Expect.equal actual (loops * 2) "The last element must reach the body"
+                            Expect.equal runs (loops + 1) "The body must run once for each element"
                         }
                     )
 
