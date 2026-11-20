@@ -399,6 +399,129 @@ let dotnetTest ctx =
             })
         sln
 
+let binaryCompatProject =
+    rootDirectory
+    </> "tests/IcedTasks.BinaryCompat/IcedTasks.BinaryCompat.fsproj"
+
+// Both fixture target frameworks compile against the net9.0 build of IcedTasks 0.11.9.
+// A consumer that upgrades the package then loads the library build that NuGet selects for its target framework.
+let binaryCompatBuilds = [
+    "net10.0", "net9.0"
+    "net11.0", "net11.0"
+]
+
+let binaryCompat ctx =
+    let config = configuration ctx.Context.AllExecutingTargets
+
+    let configName =
+        match config with
+        | DotNet.BuildConfiguration.Debug -> "Debug"
+        | DotNet.BuildConfiguration.Release -> "Release"
+        | DotNet.BuildConfiguration.Custom name -> name
+
+    DotNet.build
+        (fun c -> {
+            c with
+                Common =
+                    c.Common
+                    |> DotNet.Options.withAdditionalArgs [ maxCpuMsBuild.Value ]
+                Configuration = config
+        })
+        binaryCompatProject
+
+    let run (dir: string) =
+        DotNet.exec
+            (fun o -> { o with RedirectOutput = true })
+            (dir
+             </> "IcedTasks.BinaryCompat.dll")
+            ""
+
+    for appFramework, libraryFramework in binaryCompatBuilds do
+        let packageRun =
+            rootDirectory
+            </> "tests/IcedTasks.BinaryCompat/bin"
+            </> configName
+            </> appFramework
+
+        let currentRun =
+            rootDirectory
+            </> "temp/binary-compat"
+            </> appFramework
+
+        let currentLibrary =
+            rootDirectory
+            </> "src/IcedTasks/bin"
+            </> configName
+            </> libraryFramework
+            </> "IcedTasks.dll"
+
+        Shell.cleanDir currentRun
+        Shell.copyDir currentRun packageRun (fun _ -> true)
+        Shell.copyFile currentRun currentLibrary
+
+        let expected = run packageRun
+        let actual = run currentRun
+
+        let currentVersion = Reflection.AssemblyName.GetAssemblyName(currentLibrary).Version
+
+        let loaded =
+            actual.Errors
+            |> List.exists (fun line -> line.StartsWith $"IcedTasks {currentVersion} from ")
+
+        if
+            expected.ExitCode
+            <> 0
+        then
+            failwithf
+                "The %s program failed with IcedTasks 0.11.9 (exit code %d):%s%s"
+                appFramework
+                expected.ExitCode
+                Environment.NewLine
+                (String.concat Environment.NewLine expected.Errors)
+
+        if
+            actual.ExitCode
+            <> 0
+        then
+            failwithf
+                "The %s program compiled against IcedTasks 0.11.9 failed with the current %s build (exit code %d):%s%s"
+                appFramework
+                libraryFramework
+                actual.ExitCode
+                Environment.NewLine
+                (String.concat Environment.NewLine actual.Errors)
+
+        if not loaded then
+            failwithf
+                "The %s program did not load the current %s build %s:%s%s"
+                appFramework
+                libraryFramework
+                currentLibrary
+                Environment.NewLine
+                (String.concat Environment.NewLine actual.Errors)
+
+        if
+            actual.Messages
+            <> expected.Messages
+        then
+            failwithf
+                "The %s program gives other results with the current %s build.%sWith 0.11.9:%s%s%sWith the current build:%s%s"
+                appFramework
+                libraryFramework
+                Environment.NewLine
+                Environment.NewLine
+                (String.concat Environment.NewLine expected.Messages)
+                Environment.NewLine
+                Environment.NewLine
+                (String.concat Environment.NewLine actual.Messages)
+
+        Trace.logfn
+            "Binary compatibility: %s, IcedTasks 0.11.9 replaced by the current %s build %O, %d results equal"
+            appFramework
+            libraryFramework
+            currentVersion
+            actual.Messages.Length
+
 let watchTests _ =
     !!testsGlob
     |> Seq.map (fun proj ->
@@ -650,6 +773,7 @@ let initTargets () =
     Target.create "DotnetBuild" dotnetBuild
     Target.create "FSharpAnalyzers" fsharpAnalyzers
     Target.create "DotnetTest" dotnetTest
+    Target.create "BinaryCompat" binaryCompat
     Target.create "WatchTests" watchTests
     Target.create "GenerateAssemblyInfo" generateAssemblyInfo
     Target.create "DotnetPack" dotnetPack
@@ -724,6 +848,7 @@ let initTargets () =
     ==> "CheckFormatCode"
     ==> "DotnetBuild"
     ==> "DotnetTest"
+    ==> "BinaryCompat"
     ==> "DotnetPack"
     ==> "PublishToNuGet"
     ==> "GitHubRelease"

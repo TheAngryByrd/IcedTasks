@@ -1,0 +1,4 @@
+<Project>
+    <!-- Skip tests/Directory.Build.props: this program is not a test project and needs none of its packages. -->
+    <Import Project="../../Directory.Build.props" />
+</Project>

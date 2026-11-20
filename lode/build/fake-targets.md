@@ -8,6 +8,7 @@
     ==> "CheckFormatCode"
     ==> "DotnetBuild"
     ==> "DotnetTest"
+    ==> "BinaryCompat"
     ==> "DotnetPack"
     ==> "PublishToNuGet"
     ==> "GitHubRelease"
@@ -18,7 +19,7 @@
 flowchart LR
     Clean -.->|"?=>"| DotnetRestore
     Clean --> DotnetPack
-    DotnetRestore --> CheckFormatCode --> DotnetBuild --> DotnetTest --> DotnetPack --> PublishToNuGet --> GitHubRelease --> Publish
+    DotnetRestore --> CheckFormatCode --> DotnetBuild --> DotnetTest --> BinaryCompat --> DotnetPack --> PublishToNuGet --> GitHubRelease --> Publish
     GenerateAssemblyInfo --> PublishToNuGet
     GenerateAssemblyInfo --> Release
     UpdateChangelog --> GitRelease --> Release
@@ -32,7 +33,7 @@ flowchart LR
 
 | Command | Targets |
 |---|---|
-| `./build.sh` | Clean, DotnetRestore, CheckFormatCode, DotnetBuild, DotnetTest, DotnetPack |
+| `./build.sh` | Clean, DotnetRestore, CheckFormatCode, DotnetBuild, DotnetTest, BinaryCompat, DotnetPack |
 | `./build.sh Publish` | the default list, GenerateAssemblyInfo, PublishToNuGet, GitHubRelease |
 | `./build.sh Release 0.2.0` | UpdateChangelog, GenerateAssemblyInfo, GitRelease. It does not build or test. |
 | `./build.sh BuildDocs` | DotnetRestore, CheckFormatCode, DotnetBuild, CleanDocsCache, BuildDocs |
@@ -44,6 +45,7 @@ flowchart LR
 
 - DotnetBuild: `dotnet build IcedTasks.sln --no-restore -c <cfg> /p:PackageVersion=<latest changelog version>`.
 - DotnetTest: `dotnet test IcedTasks.sln --no-build -c <cfg> --logger "trx;LogFilePrefix=testResults"`.
+- BinaryCompat: builds `tests/IcedTasks.BinaryCompat` against the IcedTasks 0.11.9 package and runs it. Then it copies the output to `temp/binary-compat/<tfm>`, replaces `IcedTasks.dll` with the current build, and runs it again. The `net10.0` run gets the current `net9.0` build and the `net11.0` run the current `net11.0` build, because both TFMs compile against the 0.11.9 `net9.0` build and an upgrade selects these builds. The target fails if a run fails, if the second run does not load the current assembly version, or if the two outputs differ.
 - DotnetPack: packs to `dist/` with the version and release notes from `CHANGELOG.md`.
 - GenerateAssemblyInfo: writes `src/IcedTasks/AssemblyInfo.fs`. The file is tracked and is in `.fantomasignore`.
 
