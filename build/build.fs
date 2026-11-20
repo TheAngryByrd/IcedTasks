@@ -461,6 +461,8 @@ let binaryCompat ctx =
         |> Seq.find (fun e -> e.Attribute(Xml.Linq.XName.Get "Include").Value = productName)
         |> fun e -> e.Attribute(Xml.Linq.XName.Get "VersionOverride").Value
 
+    let packageAssemblyVersion = Version $"{packageVersion.Split('-')[0]}.0"
+
     DotNet.build
         (fun c -> {
             c with
@@ -496,6 +498,7 @@ let binaryCompat ctx =
                 o with
                     RedirectOutput = true
                     WorkingDirectory = dir
+                    Timeout = Some(TimeSpan.FromMinutes 5.)
             })
             "IcedTasks.BinaryCompat.dll"
             ""
@@ -541,9 +544,22 @@ let binaryCompat ctx =
         then
             fail $"{what} did not load the expected assembly: {loaded}" result
 
-        let names =
+        let cases =
             result.Messages
-            |> List.map (fun line -> line.Split('=', 2)[0])
+            |> List.map (fun line ->
+                match line.Split('=', 2) with
+                | [| name; value |] when
+                    value
+                    <> ""
+                    ->
+                    Some name
+                | _ -> None
+            )
+
+        if List.contains None cases then
+            fail $"{what} printed a line that is not a name=value result." result
+
+        let names = List.choose id cases
 
         if
             names
@@ -577,6 +593,7 @@ let binaryCompat ctx =
             let currentRun =
                 rootDirectory
                 </> "temp/binary-compat"
+                </> libraryConfig
                 </> fixtureName
                 </> appFramework
 
@@ -589,7 +606,7 @@ let binaryCompat ctx =
 
             let currentVersion = Reflection.AssemblyName.GetAssemblyName(currentLibrary).Version
 
-            if currentVersion = Version $"{packageVersion}.0" then
+            if currentVersion = packageAssemblyVersion then
                 failwithf
                     "%s has the version of the released package %s, so it is not the current build."
                     currentLibrary
@@ -607,7 +624,7 @@ let binaryCompat ctx =
             check
                 $"{label}, with IcedTasks {packageVersion},"
                 expected
-                (Version $"{packageVersion}.0")
+                (packageAssemblyVersion)
                 "net9.0"
                 packageRun
 

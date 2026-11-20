@@ -5,32 +5,52 @@ open System.Collections.Generic
 open System.Runtime.Versioning
 open System.Threading
 open System.Threading.Tasks
+open System.Threading.Tasks.Sources
 open IcedTasks
 
 let private deadline = TimeSpan.FromSeconds 60.
 
 let private lines = ResizeArray<string>()
 
+let mutable private current = "startup"
+let private sinceStart = Diagnostics.Stopwatch.StartNew()
+
+let private start name =
+    current <- name
+    sinceStart.Restart()
+
 let private record name (value: 'T) = lines.Add $"%s{name}=%A{value}"
 
-let private result name (task: Task<'T>) =
-    if task.Wait deadline then
-        task.Result
-    else
-        failwith $"%s{name} did not complete in %O{deadline}"
+let private result _ (task: Task<'T>) = task.Result
 
-let private complete name (task: Task) =
-    if not (task.Wait deadline) then
-        failwith $"%s{name} did not complete in %O{deadline}"
+let private complete _ (task: Task) = task.Wait()
 
-let private run (computation: Async<'T>) =
-    Async.RunSynchronously(computation, int deadline.TotalMilliseconds)
+let private run (computation: Async<'T>) = Async.RunSynchronously computation
 
 type private AsyncResource(log: ResizeArray<string>) =
     interface IAsyncDisposable with
         member _.DisposeAsync() =
             log.Add "disposed"
             ValueTask.CompletedTask
+
+// Each move stays pending until the awaiter registers its continuation, so each await suspends.
+type private PendingMove() =
+    let mutable registered = false
+
+    interface IValueTaskSource<bool> with
+        member _.GetStatus _ =
+            if registered then
+                ValueTaskSourceStatus.Succeeded
+            else
+                ValueTaskSourceStatus.Pending
+
+        member _.GetResult _ = true
+
+        member _.OnCompleted(continuation, state, _, _) =
+            registered <- true
+
+            ThreadPool.QueueUserWorkItem((fun s -> continuation.Invoke s), state)
+            |> ignore
 
 type private Items(items: int list) =
     interface IAsyncEnumerable<int> with
@@ -46,7 +66,7 @@ type private Items(items: int list) =
                     | head :: tail ->
                         current <- head
                         rest <- tail
-                        ValueTask<bool>(Task.Run(fun () -> true))
+                        ValueTask<bool>(PendingMove(), 0s)
                     | [] -> ValueTask<bool>(false)
 
                 member _.DisposeAsync() = ValueTask.CompletedTask
@@ -64,6 +84,8 @@ let private status (task: Task<'T>) =
     task.ContinueWith(fun (t: Task<'T>) -> string t.Status)
 
 let private cases (ct: CancellationToken) (cancelled: CancellationToken) =
+    start "coldTask"
+
     record
         "coldTask"
         (result
@@ -91,9 +113,13 @@ let private cases (ct: CancellationToken) (cancelled: CancellationToken) =
                     + log.Count
             }) ()))
 
+    start "backgroundColdTask"
+
     record
         "backgroundColdTask"
         (result "backgroundColdTask" ((backgroundColdTask { return! coldWork }) ()))
+
+    start "cancellableTask"
 
     record
         "cancellableTask"
@@ -116,13 +142,11 @@ let private cases (ct: CancellationToken) (cancelled: CancellationToken) =
                         total
                         + 100
 
-                return
-                    a
-                    + b
-                    + c
-                    + total
+                return (a, b, c, total)
             })
                 ct))
+
+    start "backgroundCancellableTask"
 
     record
         "backgroundCancellableTask"
@@ -130,9 +154,13 @@ let private cases (ct: CancellationToken) (cancelled: CancellationToken) =
             "backgroundCancellableTask"
             ((backgroundCancellableTask { return! cancellableWork }) ct))
 
+    start "cancellableTask cancelled"
+
     record
         "cancellableTask cancelled"
         (result "cancellableTask cancelled" (status ((cancellableTask { return 1 }) cancelled)))
+
+    start "cancellableValueTask"
 
     record
         "cancellableValueTask"
@@ -157,11 +185,15 @@ let private cases (ct: CancellationToken) (cancelled: CancellationToken) =
                 ct)
                 .AsTask()))
 
+    start "cancellableValueTask cancelled"
+
     record
         "cancellableValueTask cancelled"
         (result
             "cancellableValueTask cancelled"
             (status (((cancellableValueTask { return 1 }) cancelled).AsTask())))
+
+    start "cancellablePoolingValueTask"
 
     record
         "cancellablePoolingValueTask"
@@ -171,10 +203,12 @@ let private cases (ct: CancellationToken) (cancelled: CancellationToken) =
                 let! a = cancellableWork
                 and! b = fun (_: CancellationToken) -> Task.FromResult 5
                 let! c = fun (_: CancellationToken) -> ValueTask<int>(6)
-                return a + b + c
+                return (a, b, c)
             })
                 ct)
                 .AsTask()))
+
+    start "valueTask"
 
     record
         "valueTask"
@@ -187,15 +221,13 @@ let private cases (ct: CancellationToken) (cancelled: CancellationToken) =
 
                 try
                     failwith "boom"
-                    return 0
+                    return (0, 0, 0, "")
                 with e ->
-                    return
-                        a
-                        + b
-                        + c
-                        + e.Message.Length
+                    return (a, b, c, e.Message)
             })
                 .AsTask()))
+
+    start "poolingValueTask"
 
     record
         "poolingValueTask"
@@ -213,6 +245,7 @@ let private cases (ct: CancellationToken) (cancelled: CancellationToken) =
             })
                 .AsTask()))
 
+    start "unit builders"
     let unitLog = ResizeArray<string>()
 
     complete
@@ -238,6 +271,8 @@ let private cases (ct: CancellationToken) (cancelled: CancellationToken) =
             .AsTask())
 
     record "unit builders" (List.ofSeq unitLog)
+
+    start "asyncEx"
 
     record
         "asyncEx"
@@ -284,15 +319,19 @@ let private cases (ct: CancellationToken) (cancelled: CancellationToken) =
             }
         ))
 
+    start "parallelAsync"
+
     record
         "parallelAsync"
         (run (
             parallelAsync {
                 let! a = async { return 11 }
                 and! b = async { return 12 }
-                return a + b
+                return (a, b)
             }
         ))
+
+    start "parallelAsyncUsingStartChild"
 
     record
         "parallelAsyncUsingStartChild"
@@ -300,17 +339,23 @@ let private cases (ct: CancellationToken) (cancelled: CancellationToken) =
             parallelAsyncUsingStartChild {
                 let! a = async { return 13 }
                 and! b = async { return 14 }
-                return a + b
+                return (a, b)
             }
         ))
 
+    start "ColdTask.map"
     record "ColdTask.map" (result "ColdTask.map" ((ColdTask.map (fun x -> x * 2) coldWork) ()))
+
+    start "CancellableTask.map"
 
     record
         "CancellableTask.map"
         (result "CancellableTask.map" ((CancellableTask.map (fun x -> x + 100) cancellableWork) ct))
 
+    start "Async.AwaitCancellableTask"
     record "Async.AwaitCancellableTask" (run (Async.AwaitCancellableTask cancellableWork))
+
+    start "ValueTask.map"
 
     record
         "ValueTask.map"
@@ -321,6 +366,8 @@ module private PolyfillTask =
 
     let cases () =
         let log = ResizeArray<string>()
+
+        start "task polyfill"
 
         record
             "task polyfill"
@@ -343,12 +390,26 @@ module private PolyfillTask =
                         + log.Count
                 }))
 
+        start "backgroundTask polyfill"
+
         record
             "backgroundTask polyfill"
             (result "backgroundTask polyfill" (backgroundTask { return! coldWork () }))
 
 [<EntryPoint>]
 let main _ =
+    use _watchdog =
+        new Timer(
+            (fun _ ->
+                if sinceStart.Elapsed > deadline then
+                    eprintfn $"%s{current} did not complete in %O{deadline}"
+                    exit 3
+            ),
+            null,
+            TimeSpan.FromSeconds 1.,
+            TimeSpan.FromSeconds 1.
+        )
+
     use cts = new CancellationTokenSource()
     cts.Cancel()
     cases CancellationToken.None cts.Token
