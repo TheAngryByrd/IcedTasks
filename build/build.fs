@@ -493,11 +493,15 @@ let binaryCompat ctx =
             StringComparison.Ordinal
 
     let lines (text: string) =
-        if String.IsNullOrEmpty text then
-            []
-        else
-            text.ReplaceLineEndings("\n").TrimEnd('\n').Split('\n')
-            |> List.ofArray
+        use reader = new IO.StringReader(text)
+
+        List.unfold
+            (fun () ->
+                match reader.ReadLine() with
+                | null -> None
+                | line -> Some(line, ())
+            )
+            ()
 
     // DotNet.exec in FAKE 6.1.3 adds stdout and stderr lines to one List<T> from two threads, which can lose a line.
     let run (dir: string) =
