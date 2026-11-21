@@ -150,14 +150,13 @@ The table shows one run on Windows 11 with .NET 11.0.0 on X64. Each value is the
 | `task`, ten completed `Task` values | 163.7 ns, 792 B | 30.8 ns, 144 B |
 | `valueTask`, ten completed `Task` values | 110.3 ns, 720 B | 14.7 ns, 72 B |
 | `cancellableValueTask`, ten completed `CancellableValueTask` values | 154.7 ns, 248 B | 7.1 ns, 0 B |
-| `task`, ten completed `ValueTask` values | 35.2 ns, 72 B | 44.5 ns, 72 B |
 | `task`, ten binds that suspend | 2.06 μs, 112 B | 2.28 μs, 176 B |
 | `valueTask`, ten binds that suspend | 4.05 μs, 736 B | 2.36 μs, 176 B |
 | `cancellableTask`, ten binds that suspend | 6.54 μs, 800 B | 5.68 μs, 184 B |
 
 - When the bound values are complete, the runtime-async builders are usually much faster and allocate less memory.
 - In these benchmarks, the JIT compiler also removes some `Task.FromResult` allocations, because it can see the whole method. Code that gets its tasks from other methods can get a smaller gain.
-- The runtime-async `task` is slower than the state-machine `task` when it binds completed `ValueTask` values.
+- In .NET 11.0.0, a runtime-async method that awaits ten or more `ValueTask` values that it creates itself, such as `let! x = ValueTask<int>(100)`, is slower. The JIT compiler does not inline the awaits in this case. In a test, ten such binds took approximately 40 ns, and nine took approximately 15 ns. C# code with the same shape has the same limit.
 - When a bind suspends, the runtime-async builders allocate approximately 180 B in these benchmarks. The state-machine `task` allocates less memory and is approximately 10 % faster. The state-machine `valueTask` and `cancellableTask` allocate more memory and are slower.
 - In the benchmarks that write to a file, the I/O time is much larger than the cost of the builder. The two kinds of builders give the same result in these benchmarks.
 

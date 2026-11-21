@@ -50,6 +50,8 @@ Invariants and lessons:
 
 - The C# compiler on `net11.0` (SDK 11.0.100) does not emit runtime-async methods by default. `Features=runtime-async=on` makes it set `MethodImplAttributes` `0x2000` on each `async` method.
 - An incremental build does not compile again when only `Features` or `DefineConstants` change. Without the separate `obj` and `bin` folders, the second job can run the assembly of the first job.
+- The time of some state-machine rows depends on the process. `Fsharp_TenBindSync_TaskBuilder_BindValueTask` gave 35.2 ns and 41.5 ns in single runs, and a median of 86.7 ns (standard deviation 27.7 ns) with `--launchCount 3`. Use `--launchCount 3` before you report a difference of less than 30 %.
+- In .NET 11.0.0, the JIT does not inline `AsyncHelpers.Await` in a runtime-async method that awaits ten or more `ValueTask` values that it creates itself (`newobj`). Each await then allocates a continuation. C# has the same limit: ten `await new ValueTask<int>(100)` take 36 to 47 ns, nine take about 14 ns, and ten awaits of a `ValueTask` from a method call take 14 to 22 ns. The F# compiler inlines `sync_ValueTask ()` to `newobj`, so the F# ten-bind `ValueTask` rows hit this limit and the C# rows do not.
 - A run writes its reports to `BenchmarkDotNet.Artifacts/results` in the project folder. Pass `--artifacts <folder>` to keep the committed reports unchanged.
 
 ```mermaid
