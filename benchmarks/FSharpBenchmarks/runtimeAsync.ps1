@@ -1,0 +1,1 @@
+dotnet run -c Release -f net11.0 -- --runtime-async --filter "*IcedTasks.Benchmarks.SyncCompletionBenchmarks*" "*IcedTasks.Benchmarks.AsyncCompletionBenchmarks*" "*IcedTasks.Benchmarks.FileWriteBenchmarks*"
