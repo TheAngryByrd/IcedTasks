@@ -9,5 +9,12 @@
         <IsPackable>false</IsPackable>
         <IsTestProject>false</IsTestProject>
     </PropertyGroup>
+    <!-- BenchmarkDotNet builds each job with its MSBuild arguments into the same project folders, and an incremental build reuses the output of the other job. -->
+    <PropertyGroup Condition="'$(RuntimeAsync)' == 'true' And '$(TargetFramework)' == 'net11.0'">
+        <IntermediateOutputPath>$(MSBuildProjectDirectory)/obj/$(Configuration)/runtime-async/</IntermediateOutputPath>
+        <OutputPath>$(MSBuildProjectDirectory)/bin/$(Configuration)/runtime-async/</OutputPath>
+        <DefineConstants>$(DefineConstants);BENCHMARK_RUNTIME_ASYNC</DefineConstants>
+        <Features>$(Features);runtime-async=on</Features>
+    </PropertyGroup>
 
 </Project>
