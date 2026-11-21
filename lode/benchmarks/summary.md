@@ -44,6 +44,8 @@ dotnet run -c Release -f net10.0 -- --filter "*IcedTasks.Benchmarks.AsyncComplet
 
 The benchmark files open `IcedTasks.Polyfill.RuntimeTask` under `#if BENCHMARK_RUNTIME_ASYNC`. `async` and Ply (`FSharp.Control.Tasks.Affine.task`) are the same in both jobs, so they show the noise between the jobs.
 
+`docsSrc/Explanations/Runtime-async-task-builders.md` (section "Performance") shows the results of one run. Update that table when a new run changes the conclusions.
+
 Invariants and lessons:
 
 - The C# compiler on `net11.0` (SDK 11.0.100) does not emit runtime-async methods by default. `Features=runtime-async=on` makes it set `MethodImplAttributes` `0x2000` on each `async` method.

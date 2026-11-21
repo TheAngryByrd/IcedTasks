@@ -139,6 +139,30 @@ F# combines three or more operands from the right. Thus, `let! a = x and! b = y 
 - In `for` over an `IAsyncEnumerable<'T>`, the state-machine cancellable builders check the token between the `MoveNextAsync` call and its await. If the move cancels the token, they dispose the enumerator while the move is pending. A C# async iterator rejects that with `NotSupportedException`. The runtime builders await the move first.
 - The F# compiler issue [dotnet/fsharp#20869](https://github.com/dotnet/fsharp/issues/20869) is open. It reports that a rethrow after a suspending `with` handler or `finally` block can lose the stack trace. `use` and `for` over an `IAsyncEnumerable<'T>` await `DisposeAsync` outside the protected region, so they keep the stack trace. A `with` handler in your own code that suspends and then rethrows can lose it.
 
+## Performance
+
+The benchmarks in `benchmarks/FSharpBenchmarks` compare the state-machine builders and the runtime-async builders on the same code. To run the comparison, run `benchmarks/FSharpBenchmarks/runtimeAsync.ps1`.
+
+The table shows one run on Windows 11 with .NET 11.0.0 on X64. Each value is the time and the allocated memory for one computation expression with ten binds.
+
+| Builder and binds | State-machine builder | Runtime-async builder |
+| --- | --- | --- |
+| `task`, ten completed `Task` values | 163.7 ns, 792 B | 30.8 ns, 144 B |
+| `valueTask`, ten completed `Task` values | 110.3 ns, 720 B | 14.7 ns, 72 B |
+| `cancellableValueTask`, ten completed `CancellableValueTask` values | 154.7 ns, 248 B | 7.1 ns, 0 B |
+| `task`, ten completed `ValueTask` values | 35.2 ns, 72 B | 44.5 ns, 72 B |
+| `task`, ten binds that suspend | 2.06 μs, 112 B | 2.28 μs, 176 B |
+| `valueTask`, ten binds that suspend | 4.05 μs, 736 B | 2.36 μs, 176 B |
+| `cancellableTask`, ten binds that suspend | 6.54 μs, 800 B | 5.68 μs, 184 B |
+
+- When the bound values are complete, the runtime-async builders are usually much faster and allocate less memory.
+- In these benchmarks, the JIT compiler also removes some `Task.FromResult` allocations, because it can see the whole method. Code that gets its tasks from other methods can get a smaller gain.
+- The runtime-async `task` is slower than the state-machine `task` when it binds completed `ValueTask` values.
+- When a bind suspends, the runtime-async builders allocate approximately 180 B in these benchmarks. The state-machine `task` allocates less memory and is approximately 10 % faster. The state-machine `valueTask` and `cancellableTask` allocate more memory and are slower.
+- In the benchmarks that write to a file, the I/O time is much larger than the cost of the builder. The two kinds of builders give the same result in these benchmarks.
+
+These numbers come from one machine. Measure your own code before you change builders.
+
 ## Builders that have no runtime-async version
 
 `taskUnit`, `backgroundTaskUnit`, `valueTaskUnit`, the pooling builders, `asyncEx`, and `parallelAsync` have no runtime-async version. The `vTask` alias continues to give the state-machine `valueTask` builder.
