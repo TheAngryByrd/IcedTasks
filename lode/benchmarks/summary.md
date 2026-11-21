@@ -4,8 +4,8 @@
 
 | Project | TFMs | Content |
 |---|---|---|
-| `benchmarks/FSharpBenchmarks/benchmarks.fsproj` | net8.0, net9.0, net10.0 | the benchmark classes, Release and `Optimize` forced |
-| `benchmarks/CSharpTaskBenchmarks` | net8.0, net9.0 | C# `Task` and `ValueTask` baselines |
+| `benchmarks/FSharpBenchmarks/benchmarks.fsproj` | net10.0, net11.0 | the benchmark classes, Release and `Optimize` forced |
+| `benchmarks/CSharpTaskBenchmarks` | net10.0, net11.0 | C# `Task` and `ValueTask` baselines |
 
 Benchmark classes in `benchmarks/FSharpBenchmarks/`:
 
@@ -22,6 +22,33 @@ dotnet run -c Release -f net10.0 -- --filter "*IcedTasks.Benchmarks.AsyncComplet
 ```
 
 `fileWriting.ps1` and `syncCompletion.ps1` run the other classes the same way.
+
+## Runtime-async comparison
+
+`runtimeAsync.ps1` runs `SyncCompletionBenchmarks`, `AsyncCompletionBenchmarks`, and `FileWriteBenchmarks` on `net11.0` with the `--runtime-async` switch. `Program.fs` removes the switch and adds two jobs that differ only in an MSBuild property:
+
+| Job | Property | F# `task`, `valueTask`, `cancellableTask`, `cancellableValueTask` | C# `async` methods |
+|---|---|---|---|
+| `StateMachine` | `/p:RuntimeAsync=false` | state-machine builders (FSharp.Core `task`, `IcedTasks`) | compiler state machine |
+| `RuntimeAsync` | `/p:RuntimeAsync=true` | `IcedTasks.Polyfill.RuntimeTask` builders | runtime async |
+
+```xml
+<!-- benchmarks/Directory.Build.props -->
+<PropertyGroup Condition="'$(RuntimeAsync)' == 'true' And '$(TargetFramework)' == 'net11.0'">
+    <IntermediateOutputPath>$(MSBuildProjectDirectory)/obj/$(Configuration)/runtime-async/</IntermediateOutputPath>
+    <OutputPath>$(MSBuildProjectDirectory)/bin/$(Configuration)/runtime-async/</OutputPath>
+    <DefineConstants>$(DefineConstants);BENCHMARK_RUNTIME_ASYNC</DefineConstants>
+    <Features>$(Features);runtime-async=on</Features>
+</PropertyGroup>
+```
+
+The benchmark files open `IcedTasks.Polyfill.RuntimeTask` under `#if BENCHMARK_RUNTIME_ASYNC`. `async` and Ply (`FSharp.Control.Tasks.Affine.task`) are the same in both jobs, so they show the noise between the jobs.
+
+Invariants and lessons:
+
+- The C# compiler on `net11.0` (SDK 11.0.100) does not emit runtime-async methods by default. `Features=runtime-async=on` makes it set `MethodImplAttributes` `0x2000` on each `async` method.
+- An incremental build does not compile again when only `Features` or `DefineConstants` change. Without the separate `obj` and `bin` folders, the second job can run the assembly of the first job.
+- A run writes its reports to `BenchmarkDotNet.Artifacts/results` in the project folder. Pass `--artifacts <folder>` to keep the committed reports unchanged.
 
 ```mermaid
 flowchart LR
