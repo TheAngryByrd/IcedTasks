@@ -273,9 +273,9 @@ module CancellableTaskBase =
                             let result = Awaiter.GetResult awaiter
                             (continuation result).Invoke(&sm)
                         else
-                            let mutable awaiter = awaiter :> ICriticalNotifyCompletion
+                            let mutable awaiter = awaiter
 
-                            MethodBuilder.AwaitUnsafeOnCompleted(
+                            MethodBuilder.AwaitUnsafeOnCompletedTyped<_, 'TOverall, _, _>(
                                 &sm.Data.MethodBuilder,
                                 &awaiter,
                                 &sm
@@ -448,9 +448,9 @@ module CancellableTaskBase =
                             let result = Awaiter.GetResult awaiter
                             (continuation result).Invoke(&sm)
                         else
-                            let mutable awaiter = awaiter :> ICriticalNotifyCompletion
+                            let mutable awaiter = awaiter
 
-                            MethodBuilder.AwaitUnsafeOnCompleted(
+                            MethodBuilder.AwaitUnsafeOnCompletedTyped<_, 'TOverall, _, _>(
                                 &sm.Data.MethodBuilder,
                                 &awaiter,
                                 &sm
@@ -506,9 +506,9 @@ module CancellableTaskBase =
                             let result = Awaiter.GetResult awaiter
                             (continuation result).Invoke(&sm)
                         else
-                            let mutable awaiter = awaiter :> ICriticalNotifyCompletion
+                            let mutable awaiter = awaiter
 
-                            MethodBuilder.AwaitUnsafeOnCompleted(
+                            MethodBuilder.AwaitUnsafeOnCompletedTyped<_, 'TOverall, _, _>(
                                 &sm.Data.MethodBuilder,
                                 &awaiter,
                                 &sm
