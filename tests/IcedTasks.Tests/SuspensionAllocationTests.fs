@@ -56,6 +56,29 @@ type InlineDisposable(suspend: bool) =
 
 
 // IcedTasks has no builder on these method builders, so these test builders reach their branches of the suspension helper.
+[<Sealed>]
+type RecordingSynchronizationContext() =
+    inherit SynchronizationContext()
+    let mutable started = 0
+    let mutable completed = 0
+    let mutable posted = 0
+
+    member _.Started = started
+    member _.Completed = completed
+    member _.Posted = posted
+
+    override _.OperationStarted() =
+        started <-
+            started
+            + 1
+
+    override _.OperationCompleted() =
+        completed <-
+            completed
+            + 1
+
+    override _.Post(_, _) = posted <- posted + 1
+
 type PoolingValueTaskUnitTestBuilder() =
     inherit TaskBuilderBase()
 
@@ -477,6 +500,21 @@ module SuspensionAllocationTests =
             n
             "The builder must resume on the calling thread and run each iteration."
 
+    // AsyncVoidMethodBuilder reports its start and end to the context and posts a fault to it.
+    let private ranToEndInContext (start: int ref -> unit) n =
+        let context = RecordingSynchronizationContext()
+        let prior = SynchronizationContext.Current
+        SynchronizationContext.SetSynchronizationContext context
+
+        try
+            ranToEnd start n
+        finally
+            SynchronizationContext.SetSynchronizationContext prior
+
+        Expect.equal context.Started 1 "The builder must start one operation."
+        Expect.equal context.Completed 1 "The builder must complete its operation."
+        Expect.equal context.Posted 0 "The builder must not post a fault."
+
     [<Tests>]
     let tests =
         testList "A suspension does not box the awaiter" [
@@ -574,7 +612,7 @@ module SuspensionAllocationTests =
             testCase "a builder on AsyncVoidMethodBuilder"
             <| fun () ->
                 expectNoAllocationPerSuspension (fun suspend n ->
-                    ranToEnd (fun count -> suspendingAsyncVoid count suspend n) n
+                    ranToEndInContext (fun count -> suspendingAsyncVoid count suspend n) n
                 )
             testCase "a builder on AsyncIteratorMethodBuilder"
             <| fun () ->
