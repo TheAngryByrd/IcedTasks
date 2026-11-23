@@ -66,6 +66,8 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           runCmd: |
+            starship --version
+            test "$(command -v starship)" = "/usr/local/bin/starship"
             chmod +x ./build.sh
             ./build.sh
         env:
