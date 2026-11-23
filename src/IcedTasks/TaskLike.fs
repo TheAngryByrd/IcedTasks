@@ -178,6 +178,17 @@ type MethodBuilder =
         elif System.Type.op_Equality (typeof<'Builder>, typeof<AsyncValueTaskMethodBuilder>) then
             let typed = &Unsafe.As<'Builder, AsyncValueTaskMethodBuilder>(&builder)
             typed.AwaitUnsafeOnCompleted(&awaiter, &stateMachine)
+        elif
+            System.Type.op_Equality (typeof<'Builder>, typeof<PoolingAsyncValueTaskMethodBuilder>)
+        then
+            let typed = &Unsafe.As<'Builder, PoolingAsyncValueTaskMethodBuilder>(&builder)
+            typed.AwaitUnsafeOnCompleted(&awaiter, &stateMachine)
+        elif System.Type.op_Equality (typeof<'Builder>, typeof<AsyncVoidMethodBuilder>) then
+            let typed = &Unsafe.As<'Builder, AsyncVoidMethodBuilder>(&builder)
+            typed.AwaitUnsafeOnCompleted(&awaiter, &stateMachine)
+        elif System.Type.op_Equality (typeof<'Builder>, typeof<AsyncIteratorMethodBuilder>) then
+            let typed = &Unsafe.As<'Builder, AsyncIteratorMethodBuilder>(&builder)
+            typed.AwaitUnsafeOnCompleted(&awaiter, &stateMachine)
         else
             let mutable awaiter = awaiter :> ICriticalNotifyCompletion
             builder.AwaitUnsafeOnCompleted(&awaiter, &stateMachine)

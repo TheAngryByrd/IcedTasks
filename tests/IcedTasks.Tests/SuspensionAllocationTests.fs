@@ -8,6 +8,8 @@ open System.Threading.Tasks.Sources
 open System.Runtime.ExceptionServices
 open Expecto
 open IcedTasks
+open Microsoft.FSharp.Core.CompilerServices
+open Microsoft.FSharp.Core.CompilerServices.StateMachineHelpers
 
 // Each continuation below runs at once on the calling thread, so all allocations of a run are on the test thread.
 [<Struct; NoEquality; NoComparison>]
@@ -51,6 +53,110 @@ type InlineDisposable(suspend: bool) =
         member this.DisposeAsync() =
             pending <- suspend
             ValueTask(this :> IValueTaskSource, 0s)
+
+
+// IcedTasks has no builder on these method builders, so these test builders reach their branches of the suspension helper.
+type PoolingValueTaskUnitTestBuilder() =
+    inherit TaskBuilderBase()
+
+    member inline _.Run
+        (code: TaskBaseCode<unit, unit, PoolingAsyncValueTaskMethodBuilder>)
+        : ValueTask =
+        if __useResumableCode then
+            __stateMachine<
+                TaskBaseStateMachineData<unit, PoolingAsyncValueTaskMethodBuilder>,
+                ValueTask
+             >
+                (MoveNextMethodImpl<_>(fun sm ->
+                    __resumeAt sm.ResumptionPoint
+                    let mutable __stack_exn = null
+
+                    try
+                        let __stack_code_fin = code.Invoke(&sm)
+
+                        if __stack_code_fin then
+                            sm.Data.MethodBuilder.SetResult()
+                    with exn ->
+                        __stack_exn <- exn
+
+                    match __stack_exn with
+                    | null -> ()
+                    | exn -> sm.Data.MethodBuilder.SetException exn
+                ))
+                (SetStateMachineMethodImpl<_>(fun sm state ->
+                    sm.Data.MethodBuilder.SetStateMachine state
+                ))
+                (AfterCode<_, _>(fun sm ->
+                    sm.Data.MethodBuilder <- PoolingAsyncValueTaskMethodBuilder.Create()
+                    sm.Data.MethodBuilder.Start(&sm)
+                    sm.Data.MethodBuilder.Task
+                ))
+        else
+            failwith "This test builder has only the static path."
+
+type AsyncVoidTestBuilder() =
+    inherit TaskBuilderBase()
+
+    member inline _.Run(code: TaskBaseCode<unit, unit, AsyncVoidMethodBuilder>) : unit =
+        if __useResumableCode then
+            __stateMachine<TaskBaseStateMachineData<unit, AsyncVoidMethodBuilder>, unit>
+                (MoveNextMethodImpl<_>(fun sm ->
+                    __resumeAt sm.ResumptionPoint
+                    let mutable __stack_exn = null
+
+                    try
+                        let __stack_code_fin = code.Invoke(&sm)
+
+                        if __stack_code_fin then
+                            sm.Data.MethodBuilder.SetResult()
+                    with exn ->
+                        __stack_exn <- exn
+
+                    match __stack_exn with
+                    | null -> ()
+                    | exn -> sm.Data.MethodBuilder.SetException exn
+                ))
+                (SetStateMachineMethodImpl<_>(fun sm state ->
+                    sm.Data.MethodBuilder.SetStateMachine state
+                ))
+                (AfterCode<_, _>(fun sm ->
+                    sm.Data.MethodBuilder <- AsyncVoidMethodBuilder.Create()
+                    sm.Data.MethodBuilder.Start(&sm)
+                ))
+        else
+            failwith "This test builder has only the static path."
+
+type AsyncIteratorTestBuilder() =
+    inherit TaskBuilderBase()
+
+    member inline _.Run(code: TaskBaseCode<unit, unit, AsyncIteratorMethodBuilder>) : unit =
+        if __useResumableCode then
+            __stateMachine<TaskBaseStateMachineData<unit, AsyncIteratorMethodBuilder>, unit>
+                (MoveNextMethodImpl<_>(fun sm ->
+                    __resumeAt sm.ResumptionPoint
+                    let mutable __stack_exn = null
+
+                    try
+                        let __stack_code_fin = code.Invoke(&sm)
+
+                        if __stack_code_fin then
+                            sm.Data.MethodBuilder.Complete()
+                    with exn ->
+                        __stack_exn <- exn
+
+                    match __stack_exn with
+                    | null -> ()
+                    | exn ->
+                        sm.Data.MethodBuilder.Complete()
+                        ExceptionDispatchInfo.Throw exn
+                ))
+                (SetStateMachineMethodImpl<_>(fun _ _ -> ()))
+                (AfterCode<_, _>(fun sm ->
+                    sm.Data.MethodBuilder <- AsyncIteratorMethodBuilder.Create()
+                    sm.Data.MethodBuilder.MoveNext(&sm)
+                ))
+        else
+            failwith "This test builder has only the static path."
 
 module SuspensionAllocationTests =
 
@@ -316,6 +422,61 @@ module SuspensionAllocationTests =
             (if suspend then n else 0)
             "Each pending DisposeAsync must register one continuation."
 
+    let private poolingValueTaskUnitTest = PoolingValueTaskUnitTestBuilder()
+    let private asyncVoidTest = AsyncVoidTestBuilder()
+    let private asyncIteratorTest = AsyncIteratorTestBuilder()
+
+    let private suspendingPoolingValueTaskUnit (count: int ref) suspend n =
+        poolingValueTaskUnitTest {
+            let mutable i = 0
+
+            while i < n do
+                do! InlineResumeAwaiter(suspend)
+
+                count.Value <-
+                    count.Value
+                    + 1
+
+                i <- i + 1
+        }
+
+    let private suspendingAsyncVoid (count: int ref) suspend n =
+        asyncVoidTest {
+            let mutable i = 0
+
+            while i < n do
+                do! InlineResumeAwaiter(suspend)
+
+                count.Value <-
+                    count.Value
+                    + 1
+
+                i <- i + 1
+        }
+
+    let private suspendingAsyncIterator (count: int ref) suspend n =
+        asyncIteratorTest {
+            let mutable i = 0
+
+            while i < n do
+                do! InlineResumeAwaiter(suspend)
+
+                count.Value <-
+                    count.Value
+                    + 1
+
+                i <- i + 1
+        }
+
+    let private ranToEnd (start: int ref -> unit) n =
+        let count = ref 0
+        start count
+
+        Expect.equal
+            count.Value
+            n
+            "The builder must resume on the calling thread and run each iteration."
+
     [<Tests>]
     let tests =
         testList "A suspension does not box the awaiter" [
@@ -404,5 +565,20 @@ module SuspensionAllocationTests =
                             (disposingCancellableValueTask resource n CancellationToken.None)
                                 .AsTask()
                         )
+                )
+            testCase "a builder on PoolingAsyncValueTaskMethodBuilder"
+            <| fun () ->
+                expectNoAllocationPerSuspension (fun suspend n ->
+                    valueComplete (fun count -> suspendingPoolingValueTaskUnit count suspend n) n
+                )
+            testCase "a builder on AsyncVoidMethodBuilder"
+            <| fun () ->
+                expectNoAllocationPerSuspension (fun suspend n ->
+                    ranToEnd (fun count -> suspendingAsyncVoid count suspend n) n
+                )
+            testCase "a builder on AsyncIteratorMethodBuilder"
+            <| fun () ->
+                expectNoAllocationPerSuspension (fun suspend n ->
+                    ranToEnd (fun count -> suspendingAsyncIterator count suspend n) n
                 )
         ]
