@@ -4,7 +4,7 @@ Each resumable builder has a `Run` member with two paths. The base builders have
 
 - Static path: `Run` checks `if __useResumableCode then __stateMachine<...>(MoveNextMethodImpl)(SetStateMachineMethodImpl)(AfterCode)`. The compiler makes a struct state machine.
 - Dynamic path: otherwise `Run` calls `static member RunDynamic`. `RunDynamic` makes a `...ResumptionDynamicInfo` object expression with `MoveNext` and `SetStateMachine`.
-- The dynamic `MoveNext` uses `MethodBuilder.AwaitOnCompleted`. The static `Bind` uses `AwaitUnsafeOnCompleted` (`src/IcedTasks/TaskBuilderBase.fs`).
+- The dynamic `MoveNext` uses `MethodBuilder.AwaitOnCompleted` with the awaiter as `ICriticalNotifyCompletion`. The static `Bind` members of `TaskBuilderBase` and `CancellableTaskBuilderBase` call `MethodBuilder.AwaitUnsafeOnCompletedTyped`. See [Suspension and the awaiter type](#suspension-and-the-awaiter-type).
 
 ## Hot and cold
 
@@ -51,6 +51,27 @@ sequenceDiagram
     Value->>SM: copy or create SM 2, Start
     SM-->>Caller: Task 2 (body runs again)
 ```
+
+## Suspension and the awaiter type
+
+The .NET method builders have fast paths for `TaskAwaiter`, `ValueTaskAwaiter`, `ConfiguredTaskAwaiter`, and `YieldAwaiter`. They use them only when `AwaitUnsafeOnCompleted<TAwaiter, TStateMachine>` gets the concrete awaiter type. With `ICriticalNotifyCompletion` as `TAwaiter`, each suspension boxes the awaiter and calls `UnsafeOnCompleted(Action)`.
+
+The base builders reach the method builder through an SRTP constraint on `'Builder`, and that constraint can name one awaiter type. A member that is generic in `'Builder` and binds two awaiter types (`Using` for `IAsyncDisposable`, `For` over `IAsyncEnumerable`, `MergeSources`) needs one constraint. So does a generic user function with two binds in a cancellable builder, because the two `Bind` overloads delay the inference of `'Builder` (`CancellableTask.zip`, `apply`, and `bind` fail to compile with a concrete awaiter in the constraint). The constraint therefore keeps `byref<ICriticalNotifyCompletion>`.
+
+`MethodBuilder.AwaitUnsafeOnCompletedTyped` (`src/IcedTasks/TaskLike.fs`) keeps that constraint. On `net6.0` and later it compares `typeof<'Builder>` with the five .NET method builders and calls the generic method of that builder with the concrete awaiter. The JIT removes the comparisons, because each builder is a struct. Other builders and the `netstandard` builds pass the awaiter as `ICriticalNotifyCompletion`.
+
+```fsharp
+// src/IcedTasks/TaskLike.fs (MethodBuilder.AwaitUnsafeOnCompletedTyped)
+        if System.Type.op_Equality (typeof<'Builder>, typeof<AsyncTaskMethodBuilder<'TOverall>>) then
+            let typed = &Unsafe.As<'Builder, AsyncTaskMethodBuilder<'TOverall>>(&builder)
+            typed.AwaitUnsafeOnCompleted(&awaiter, &stateMachine)
+```
+
+- Invariant: the call must use the method builder field by reference (`let typed = &Unsafe.As ...`). A copy loses the task that `AwaitUnsafeOnCompleted` stores in the builder, and the result never completes.
+- `coldTask` has its own `Bind` that calls `sm.Data.MethodBuilder.AwaitUnsafeOnCompleted` on the concrete `AsyncTaskMethodBuilder<'T>`, so it does not use the helper.
+- `tests/IcedTasks.Tests/SuspensionAllocationTests.fs` checks each builder on the two bases. A struct awaiter runs the continuation at once on the test thread, and `GC.GetAllocatedBytesForCurrentThread` must show no more bytes for ten extra suspensions than for ten extra binds of a completed awaiter. The runs use 12 and 22 binds, because `AsyncTaskMethodBuilder` caches the `Task<int>` of results up to 8. The file is not linked into the `netstandard` test projects, which use the fallback.
+
+Lesson: a cold or cancellable `Run` returns a function whose closure holds the whole state machine struct (one field for each awaiter and each bound value). Moving `__stateMachine` inside that function does not work. With `if __useResumableCode` outside the function, the compiler takes `RunDynamic` and gives no FS3511 warning. With the check inside the function, the compiler compiles static code but also captures `code` for the dynamic branch: three objects for each call and 35 helper classes instead of 2 for one expression.
 
 ## When the dynamic path runs
 
