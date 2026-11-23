@@ -141,7 +141,7 @@ type MethodBuilder =
     /// <typeparam name="TOverall">The result type of the method builder.</typeparam>
     /// <typeparam name="TAwaiter">The type of the awaiter.</typeparam>
     /// <typeparam name="TStateMachine">The type of the state machine.</typeparam>
-    static member inline AwaitUnsafeOnCompletedTyped<'Builder, 'TOverall, 'TAwaiter, 'TStateMachine
+    static member inline internal AwaitUnsafeOnCompletedTyped<'Builder, 'TOverall, 'TAwaiter, 'TStateMachine
         when 'Builder: (member AwaitUnsafeOnCompleted:
             byref<ICriticalNotifyCompletion> * byref<'TStateMachine> -> unit)
         and 'TAwaiter :> ICriticalNotifyCompletion

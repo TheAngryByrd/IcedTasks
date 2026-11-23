@@ -4,10 +4,11 @@ open System
 open System.Runtime.CompilerServices
 open System.Threading
 open System.Threading.Tasks
+open System.Threading.Tasks.Sources
 open Expecto
 open IcedTasks
 
-// The continuation runs at once on the calling thread, so all allocations of a run are on the test thread.
+// Each continuation below runs at once on the calling thread, so all allocations of a run are on the test thread.
 [<Struct; NoEquality; NoComparison>]
 type InlineResumeAwaiter(suspend: bool) =
     member _.IsCompleted = not suspend
@@ -21,6 +22,21 @@ type InlineResumeAwaiter(suspend: bool) =
 type InlineResume(suspend: bool) =
     member _.GetAwaiter() = InlineResumeAwaiter(suspend)
 
+[<Sealed>]
+type InlineDisposable(suspend: bool) =
+    interface IValueTaskSource with
+        member _.GetStatus _ =
+            if suspend then
+                ValueTaskSourceStatus.Pending
+            else
+                ValueTaskSourceStatus.Succeeded
+
+        member _.GetResult _ = ()
+        member _.OnCompleted(continuation, state, _, _) = continuation.Invoke(state)
+
+    interface IAsyncDisposable with
+        member this.DisposeAsync() = ValueTask(this :> IValueTaskSource, 0s)
+
 module SuspensionAllocationTests =
 
     let private allocatedBytes (run: unit -> unit) =
@@ -31,18 +47,25 @@ module SuspensionAllocationTests =
         GC.GetAllocatedBytesForCurrentThread()
         - before
 
+    // AsyncTaskMethodBuilder caches the Task<int> of results up to 8, so both runs return larger results.
     let private expectNoAllocationPerSuspension (run: bool -> int -> unit) =
-        let tenMore suspend =
-            allocatedBytes (fun () -> run suspend 22)
-            - allocatedBytes (fun () -> run suspend 12)
+        let prior = SynchronizationContext.Current
+        SynchronizationContext.SetSynchronizationContext null
 
-        let suspending = tenMore true
-        let completed = tenMore false
+        try
+            let tenMore suspend =
+                allocatedBytes (fun () -> run suspend 22)
+                - allocatedBytes (fun () -> run suspend 12)
 
-        Expect.equal
-            suspending
-            completed
-            $"Ten more suspensions must allocate no more than ten more binds of a completed awaiter. Suspending: {suspending} B, completed: {completed} B."
+            let suspending = tenMore true
+            let completed = tenMore false
+
+            Expect.equal
+                suspending
+                completed
+                $"Ten more suspensions must allocate the same bytes as ten more binds of a completed awaiter. Suspending: {suspending} B, completed: {completed} B."
+        finally
+            SynchronizationContext.SetSynchronizationContext prior
 
     let private polyfillTask suspend n =
         IcedTasks.Polyfill.Task.Tasks.TaskBuilder.task {
@@ -66,21 +89,31 @@ module SuspensionAllocationTests =
             return i
         }
 
-    let private suspendingTaskUnit suspend n =
+    let private suspendingTaskUnit (count: int ref) suspend n =
         taskUnit {
             let mutable i = 0
 
             while i < n do
                 do! InlineResumeAwaiter(suspend)
+
+                count.Value <-
+                    count.Value
+                    + 1
+
                 i <- i + 1
         }
 
-    let private suspendingBackgroundTaskUnit suspend n =
+    let private suspendingBackgroundTaskUnit (count: int ref) suspend n =
         backgroundTaskUnit {
             let mutable i = 0
 
             while i < n do
                 do! InlineResumeAwaiter(suspend)
+
+                count.Value <-
+                    count.Value
+                    + 1
+
                 i <- i + 1
         }
 
@@ -95,12 +128,17 @@ module SuspensionAllocationTests =
             return i
         }
 
-    let private suspendingValueTaskUnit suspend n =
+    let private suspendingValueTaskUnit (count: int ref) suspend n =
         valueTaskUnit {
             let mutable i = 0
 
             while i < n do
                 do! InlineResumeAwaiter(suspend)
+
+                count.Value <-
+                    count.Value
+                    + 1
+
                 i <- i + 1
         }
 
@@ -170,15 +208,74 @@ module SuspensionAllocationTests =
             return i
         }
 
-    let private result (task: Task<int>) n =
-        Expect.equal (task.GetAwaiter().GetResult()) n "The builder must resume after each bind."
+    let private disposingValueTask (resource: IAsyncDisposable) n =
+        valueTask {
+            let mutable i = 0
 
-    let private complete (task: Task) = task.GetAwaiter().GetResult()
+            while i < n do
+                use _ = resource
+                i <- i + 1
+
+            return i
+        }
+
+    let private disposingCancellableTask (resource: IAsyncDisposable) n =
+        cancellableTask {
+            let mutable i = 0
+
+            while i < n do
+                use _ = resource
+                i <- i + 1
+
+            return i
+        }
+
+    let private disposingCancellableValueTask (resource: IAsyncDisposable) n =
+        cancellableValueTask {
+            let mutable i = 0
+
+            while i < n do
+                use _ = resource
+                i <- i + 1
+
+            return i
+        }
+
+    let private result (task: Task<int>) n =
+        Expect.isTrue
+            task.IsCompleted
+            "The builder must resume on the calling thread after each bind."
+
+        Expect.equal task.Result n "The builder must run each iteration."
+
+    let private complete (start: int ref -> Task) n =
+        let count = ref 0
+        let task = start count
+
+        Expect.isTrue
+            task.IsCompleted
+            "The builder must resume on the calling thread after each bind."
+
+        task.GetAwaiter().GetResult()
+        Expect.equal count.Value n "The builder must run each iteration."
 
     let private valueResult (task: ValueTask<int>) n =
-        Expect.equal (task.GetAwaiter().GetResult()) n "The builder must resume after each bind."
+        Expect.isTrue
+            task.IsCompleted
+            "The builder must resume on the calling thread after each bind."
 
-    let private valueComplete (task: ValueTask) = task.GetAwaiter().GetResult()
+        Expect.equal (task.GetAwaiter().GetResult()) n "The builder must run each iteration."
+
+    let private valueComplete (start: int ref -> ValueTask) n =
+        let count = ref 0
+        let task = start count
+
+        Expect.isTrue
+            task.IsCompleted
+            "The builder must resume on the calling thread after each bind."
+
+        task.GetAwaiter().GetResult()
+        Expect.equal count.Value n "The builder must run each iteration."
 
     [<Tests>]
     let tests =
@@ -194,12 +291,12 @@ module SuspensionAllocationTests =
             testCase "taskUnit"
             <| fun () ->
                 expectNoAllocationPerSuspension (fun suspend n ->
-                    complete (suspendingTaskUnit suspend n)
+                    complete (fun count -> suspendingTaskUnit count suspend n) n
                 )
             testCase "backgroundTaskUnit"
             <| fun () ->
                 expectNoAllocationPerSuspension (fun suspend n ->
-                    complete (suspendingBackgroundTaskUnit suspend n)
+                    complete (fun count -> suspendingBackgroundTaskUnit count suspend n) n
                 )
             testCase "valueTask"
             <| fun () ->
@@ -209,7 +306,7 @@ module SuspensionAllocationTests =
             testCase "valueTaskUnit"
             <| fun () ->
                 expectNoAllocationPerSuspension (fun suspend n ->
-                    valueComplete (suspendingValueTaskUnit suspend n)
+                    valueComplete (fun count -> suspendingValueTaskUnit count suspend n) n
                 )
             testCase "poolingValueTask"
             <| fun () ->
@@ -241,6 +338,31 @@ module SuspensionAllocationTests =
                 expectNoAllocationPerSuspension (fun suspend n ->
                     valueResult
                         (suspendingCancellablePoolingValueTask suspend n CancellationToken.None)
+                        n
+                )
+            testCase "valueTask, use of an IAsyncDisposable"
+            <| fun () ->
+                expectNoAllocationPerSuspension (fun suspend n ->
+                    valueResult (disposingValueTask (InlineDisposable suspend) n) n
+                )
+            testCase "cancellableTask, use of an IAsyncDisposable"
+            <| fun () ->
+                expectNoAllocationPerSuspension (fun suspend n ->
+                    result
+                        (disposingCancellableTask
+                            (InlineDisposable suspend)
+                            n
+                            CancellationToken.None)
+                        n
+                )
+            testCase "cancellableValueTask, use of an IAsyncDisposable"
+            <| fun () ->
+                expectNoAllocationPerSuspension (fun suspend n ->
+                    valueResult
+                        (disposingCancellableValueTask
+                            (InlineDisposable suspend)
+                            n
+                            CancellationToken.None)
                         n
                 )
         ]
