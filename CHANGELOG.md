@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- [On .NET 6 and later, the state-machine `task`, `valueTask`, `poolingValueTask`, `taskUnit`, `valueTaskUnit`, cancellable, and background builders pass the awaiter with its own type to the .NET method builder on suspension. In code that is compiled with the static state machine against the `net6.0` or later build, a suspension on a .NET awaiter no longer boxes it. For example, 736 B become 120 B for ten `Task.Yield()` in `valueTask`](https://github.com/TheAngryByrd/IcedTasks/pull/87) - Credits @TheAngryByrd
+
 ## [0.12.0-beta001] - 2026-11-19
 
 ### Added

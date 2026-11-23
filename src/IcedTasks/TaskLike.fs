@@ -131,6 +131,72 @@ type MethodBuilder =
         =
         builder.AwaitUnsafeOnCompleted(&awaiter, &stateMachine)
 
+    /// <summary>Schedules the state machine to proceed to the next action when the specified awaiter completes.
+    /// On .NET 6 and later, the .NET method builders get the awaiter with its own type, so they can use their fast paths for known awaiters.
+    /// Other method builders get the awaiter as an <see cref="T:System.Runtime.CompilerServices.ICriticalNotifyCompletion"/>.</summary>
+    /// <param name="builder">The method builder.</param>
+    /// <param name="awaiter">The awaiter.</param>
+    /// <param name="stateMachine">The state machine.</param>
+    /// <typeparam name="Builder">The type of the method builder.</typeparam>
+    /// <typeparam name="TOverall">The result type of the method builder.</typeparam>
+    /// <typeparam name="TAwaiter">The type of the awaiter.</typeparam>
+    /// <typeparam name="TStateMachine">The type of the state machine.</typeparam>
+    static member inline internal AwaitUnsafeOnCompletedTyped<'Builder, 'TOverall, 'TAwaiter, 'TStateMachine
+        when 'Builder: (member AwaitUnsafeOnCompleted:
+            byref<ICriticalNotifyCompletion> * byref<'TStateMachine> -> unit)
+        and 'TAwaiter :> ICriticalNotifyCompletion
+        and 'TStateMachine :> IAsyncStateMachine>
+        (builder: byref<'Builder>, awaiter: byref<'TAwaiter>, stateMachine: byref<'TStateMachine>)
+        =
+#if NET6_0_OR_GREATER
+        if
+            System.Type.op_Equality (typeof<'Builder>, typeof<AsyncTaskMethodBuilder<'TOverall>>)
+        then
+            let typed = &Unsafe.As<'Builder, AsyncTaskMethodBuilder<'TOverall>>(&builder)
+            typed.AwaitUnsafeOnCompleted(&awaiter, &stateMachine)
+        elif
+            System.Type.op_Equality (
+                typeof<'Builder>,
+                typeof<AsyncValueTaskMethodBuilder<'TOverall>>
+            )
+        then
+            let typed = &Unsafe.As<'Builder, AsyncValueTaskMethodBuilder<'TOverall>>(&builder)
+            typed.AwaitUnsafeOnCompleted(&awaiter, &stateMachine)
+        elif
+            System.Type.op_Equality (
+                typeof<'Builder>,
+                typeof<PoolingAsyncValueTaskMethodBuilder<'TOverall>>
+            )
+        then
+            let typed =
+                &Unsafe.As<'Builder, PoolingAsyncValueTaskMethodBuilder<'TOverall>>(&builder)
+
+            typed.AwaitUnsafeOnCompleted(&awaiter, &stateMachine)
+        elif System.Type.op_Equality (typeof<'Builder>, typeof<AsyncTaskMethodBuilder>) then
+            let typed = &Unsafe.As<'Builder, AsyncTaskMethodBuilder>(&builder)
+            typed.AwaitUnsafeOnCompleted(&awaiter, &stateMachine)
+        elif System.Type.op_Equality (typeof<'Builder>, typeof<AsyncValueTaskMethodBuilder>) then
+            let typed = &Unsafe.As<'Builder, AsyncValueTaskMethodBuilder>(&builder)
+            typed.AwaitUnsafeOnCompleted(&awaiter, &stateMachine)
+        elif
+            System.Type.op_Equality (typeof<'Builder>, typeof<PoolingAsyncValueTaskMethodBuilder>)
+        then
+            let typed = &Unsafe.As<'Builder, PoolingAsyncValueTaskMethodBuilder>(&builder)
+            typed.AwaitUnsafeOnCompleted(&awaiter, &stateMachine)
+        elif System.Type.op_Equality (typeof<'Builder>, typeof<AsyncVoidMethodBuilder>) then
+            let typed = &Unsafe.As<'Builder, AsyncVoidMethodBuilder>(&builder)
+            typed.AwaitUnsafeOnCompleted(&awaiter, &stateMachine)
+        elif System.Type.op_Equality (typeof<'Builder>, typeof<AsyncIteratorMethodBuilder>) then
+            let typed = &Unsafe.As<'Builder, AsyncIteratorMethodBuilder>(&builder)
+            typed.AwaitUnsafeOnCompleted(&awaiter, &stateMachine)
+        else
+            let mutable awaiter = awaiter :> ICriticalNotifyCompletion
+            builder.AwaitUnsafeOnCompleted(&awaiter, &stateMachine)
+#else
+        let mutable awaiter = awaiter :> ICriticalNotifyCompletion
+        builder.AwaitUnsafeOnCompleted(&awaiter, &stateMachine)
+#endif
+
 
     /// <summary>Schedules the state machine to proceed to the next action when the specified awaiter completes.</summary>
     /// <param name="awaiter">The awaiter.</param>

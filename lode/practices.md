@@ -27,7 +27,7 @@
 
 ## Gotchas
 
-- With .NET SDK 10.0.400 and later, Debug builds take the dynamic path for every resumable builder. Test both Debug and Release.
+- Debug and Release builds both compile resumable builders to static state machines (SDK 10.0.404 and 11.0.100: the Debug `IcedTasks.Tests` assembly has 1012 state-machine structs and no `ResumptionDynamicInfo` subclass). Unoptimized code still differs: it does not inline small functions and it copies structs that Release keeps in place. Test both Debug and Release.
 - `./build.sh` uses Debug unless the `Publish` target runs or `CONFIGURATION` is set (`build/build.fs`).
 - The docs pages reference `src/IcedTasks/bin/Release/net9.0/IcedTasks.dll`. Build Release before `BuildDocs`. See [fsdocs build](docs/fsdocs-build.md).
 - Each member of a runtime-async builder must be `inline` and have `NoDynamicInvocation`. See [runtime-async task builders](builders/runtime-task.md).

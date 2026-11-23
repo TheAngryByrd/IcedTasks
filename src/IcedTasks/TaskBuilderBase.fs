@@ -224,9 +224,13 @@ module TaskBase =
                         (continuation result).Invoke(&sm)
                     else
 
-                        let mutable awaiter = awaiter :> ICriticalNotifyCompletion
+                        let mutable awaiter = awaiter
 
-                        MethodBuilder.AwaitUnsafeOnCompleted(&sm.Data.MethodBuilder, &awaiter, &sm)
+                        MethodBuilder.AwaitUnsafeOnCompletedTyped<_, 'TOverall, _, _>(
+                            &sm.Data.MethodBuilder,
+                            &awaiter,
+                            &sm
+                        )
 
                         false
                 else
