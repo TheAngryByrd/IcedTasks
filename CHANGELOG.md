@@ -5,10 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.12.0-beta002] - 2026-11-23
 
 ### Changed
 - [On .NET 6 and later, the state-machine `task`, `valueTask`, `poolingValueTask`, `taskUnit`, `valueTaskUnit`, cancellable, and background builders pass the awaiter with its own type to the .NET method builder on suspension. In code that is compiled with the static state machine against the `net6.0` or later build, a suspension on a .NET awaiter no longer boxes it. For example, 736 B become 120 B for ten `Task.Yield()` in `valueTask`](https://github.com/TheAngryByrd/IcedTasks/pull/87) - Credits @TheAngryByrd
+
+- [Add a `net11.0` library build that depends on FSharp.Core 11.0.101. The `net10.0` test run of `IcedTasks.Tests` loads the `net9.0` build instead of the `net6.0` build, and its `net11.0` test run loads the `net11.0` build. A metadata test checks the public API of each build that `IcedTasks.fsproj` ships](https://github.com/TheAngryByrd/IcedTasks/pull/62) - Credits @TheAngryByrd
+
+### Added
+- [Add runtime-async versions of `task`, `backgroundTask`, `valueTask`, `coldTask`, `backgroundColdTask`, `cancellableTask`, `backgroundCancellableTask`, and `cancellableValueTask` in `IcedTasks.Polyfill.RuntimeTask` for `net11.0` with F# 11 preview](https://github.com/TheAngryByrd/IcedTasks/pull/62) - Credits @TheAngryByrd
+- [Add a canceled-body case to the DisposeAsync outcome matrix](https://github.com/TheAngryByrd/IcedTasks/pull/79) - Credits @TheAngryByrd
 
 ## [0.12.0-beta001] - 2026-11-19
 
@@ -433,7 +439,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Increased soeed and lowered memory usage of ColdTask and CancellableTask
 - Build for netstandard2.0 and netstandard2.1
 
-[Unreleased]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.12.0-beta001...HEAD
+[Unreleased]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.12.0-beta002...HEAD
+[0.12.0-beta002]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.10...v0.12.0-beta002
 [0.12.0-beta001]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.10...v0.12.0-beta001
 [0.11.10]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.9...v0.11.10
 [0.11.10-beta004]: https://github.com/TheAngryByrd/IcedTasks/compare/v0.11.9...v0.11.10-beta004
