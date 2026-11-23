@@ -75,7 +75,7 @@ Lesson: on the static path, a cold or cancellable `Run` returns a function whose
 
 ## When the dynamic path runs
 
-With .NET SDK 10.0.400 and later, every Debug build takes the dynamic path. Release builds take the static path when the compiler can compile the state machine. The tests force the dynamic path with test builders whose `Run` calls `RunDynamic`. See [test helpers](../tests/expect-helpers.md).
+Debug and Release builds take the static path when the compiler can compile the state machine. With SDK 10.0.404 and 11.0.100, a Debug build makes the same struct state machines as a Release build. The dynamic path runs when the compiler cannot compile the state machine (FS3511). The tests force the dynamic path with test builders whose `Run` calls `RunDynamic`. See [test helpers](../tests/expect-helpers.md).
 
 ## Exceptions
 

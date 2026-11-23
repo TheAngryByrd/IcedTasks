@@ -53,7 +53,7 @@ flowchart TD
 
 ## Configuration
 
-CI runs the tests in Debug and in Release. Debug takes the dynamic path of each builder. See [run and start paths](../builders/run-and-start-paths.md).
+CI runs the tests in Debug and in Release. Both configurations take the static path. The dynamic test builders take the dynamic path in both. See [run and start paths](../builders/run-and-start-paths.md).
 
 Decision: [ADR 0007, separate netstandard test projects](../../adr/0007-separate-netstandard-test-projects.md).
 
