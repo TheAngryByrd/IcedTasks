@@ -5,6 +5,7 @@ open System.Runtime.CompilerServices
 open System.Threading
 open System.Threading.Tasks
 open System.Threading.Tasks.Sources
+open System.Runtime.ExceptionServices
 open Expecto
 open IcedTasks
 
@@ -24,18 +25,32 @@ type InlineResume(suspend: bool) =
 
 [<Sealed>]
 type InlineDisposable(suspend: bool) =
+    let mutable pending = false
+    let mutable registrations = 0
+
+    member _.Registrations = registrations
+
     interface IValueTaskSource with
         member _.GetStatus _ =
-            if suspend then
+            if pending then
                 ValueTaskSourceStatus.Pending
             else
                 ValueTaskSourceStatus.Succeeded
 
         member _.GetResult _ = ()
-        member _.OnCompleted(continuation, state, _, _) = continuation.Invoke(state)
+
+        member _.OnCompleted(continuation, state, _, _) =
+            registrations <-
+                registrations
+                + 1
+
+            pending <- false
+            continuation.Invoke(state)
 
     interface IAsyncDisposable with
-        member this.DisposeAsync() = ValueTask(this :> IValueTaskSource, 0s)
+        member this.DisposeAsync() =
+            pending <- suspend
+            ValueTask(this :> IValueTaskSource, 0s)
 
 module SuspensionAllocationTests =
 
@@ -47,12 +62,27 @@ module SuspensionAllocationTests =
         GC.GetAllocatedBytesForCurrentThread()
         - before
 
+    // A new thread has no SynchronizationContext and uses the default TaskScheduler, so the background builders start inline.
+    let private onNewThread (measure: unit -> unit) =
+        let mutable failure = None
+
+        let thread =
+            Thread(fun () ->
+                try
+                    measure ()
+                with e ->
+                    failure <- Some(ExceptionDispatchInfo.Capture e)
+            )
+
+        thread.Start()
+        Expect.isTrue (thread.Join(TimeSpan.FromSeconds 30.)) "The measurement must finish in 30 s."
+
+        failure
+        |> Option.iter (fun e -> e.Throw())
+
     // AsyncTaskMethodBuilder caches the Task<int> of results up to 8, so both runs return larger results.
     let private expectNoAllocationPerSuspension (run: bool -> int -> unit) =
-        let prior = SynchronizationContext.Current
-        SynchronizationContext.SetSynchronizationContext null
-
-        try
+        onNewThread (fun () ->
             let tenMore suspend =
                 allocatedBytes (fun () -> run suspend 22)
                 - allocatedBytes (fun () -> run suspend 12)
@@ -64,8 +94,7 @@ module SuspensionAllocationTests =
                 suspending
                 completed
                 $"Ten more suspensions must allocate the same bytes as ten more binds of a completed awaiter. Suspending: {suspending} B, completed: {completed} B."
-        finally
-            SynchronizationContext.SetSynchronizationContext prior
+        )
 
     let private polyfillTask suspend n =
         IcedTasks.Polyfill.Task.Tasks.TaskBuilder.task {
@@ -277,6 +306,15 @@ module SuspensionAllocationTests =
         task.GetAwaiter().GetResult()
         Expect.equal count.Value n "The builder must run each iteration."
 
+    let private disposed suspend n (start: IAsyncDisposable -> Task<int>) =
+        let resource = InlineDisposable suspend
+        result (start resource) n
+
+        Expect.equal
+            resource.Registrations
+            (if suspend then n else 0)
+            "Each pending DisposeAsync must register one continuation."
+
     [<Tests>]
     let tests =
         testList "A suspension does not box the awaiter" [
@@ -343,26 +381,27 @@ module SuspensionAllocationTests =
             testCase "valueTask, use of an IAsyncDisposable"
             <| fun () ->
                 expectNoAllocationPerSuspension (fun suspend n ->
-                    valueResult (disposingValueTask (InlineDisposable suspend) n) n
+                    disposed suspend n (fun resource -> (disposingValueTask resource n).AsTask())
                 )
             testCase "cancellableTask, use of an IAsyncDisposable"
             <| fun () ->
                 expectNoAllocationPerSuspension (fun suspend n ->
-                    result
-                        (disposingCancellableTask
-                            (InlineDisposable suspend)
-                            n
-                            CancellationToken.None)
+                    disposed
+                        suspend
                         n
+                        (fun resource ->
+                            disposingCancellableTask resource n CancellationToken.None
+                        )
                 )
             testCase "cancellableValueTask, use of an IAsyncDisposable"
             <| fun () ->
                 expectNoAllocationPerSuspension (fun suspend n ->
-                    valueResult
-                        (disposingCancellableValueTask
-                            (InlineDisposable suspend)
-                            n
-                            CancellationToken.None)
+                    disposed
+                        suspend
                         n
+                        (fun resource ->
+                            (disposingCancellableValueTask resource n CancellationToken.None)
+                                .AsTask()
+                        )
                 )
         ]
