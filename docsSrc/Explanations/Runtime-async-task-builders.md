@@ -143,21 +143,22 @@ F# combines three or more operands from the right. Thus, `let! a = x and! b = y 
 
 The benchmarks in `benchmarks/FSharpBenchmarks` compare the state-machine builders and the runtime-async builders on the same code. To run the comparison, run `benchmarks/FSharpBenchmarks/runtimeAsync.ps1`.
 
-The table shows one run on Windows 11 with .NET 11.0.0 on X64. Each value is the time and the allocated memory for one computation expression with ten binds.
+The table shows runs on Windows 11 with .NET 11.0.0 on X64. Each value is the time and the allocated memory for one computation expression with ten binds. The rows with binds that suspend come from a run with three processes for each builder kind.
 
 | Builder and binds | State-machine builder | Runtime-async builder |
 | --- | --- | --- |
 | `task`, ten completed `Task` values | 163.7 ns, 792 B | 30.8 ns, 144 B |
 | `valueTask`, ten completed `Task` values | 110.3 ns, 720 B | 14.7 ns, 72 B |
 | `cancellableValueTask`, ten completed `CancellableValueTask` values | 154.7 ns, 248 B | 7.1 ns, 0 B |
-| `task`, ten binds that suspend | 2.06 μs, 112 B | 2.28 μs, 176 B |
-| `valueTask`, ten binds that suspend | 4.05 μs, 736 B | 2.36 μs, 176 B |
-| `cancellableTask`, ten binds that suspend | 6.54 μs, 800 B | 5.68 μs, 184 B |
+| `task`, ten binds that suspend | 2.06 μs, 112 B | 2.32 μs, 176 B |
+| `valueTask`, ten binds that suspend | 2.16 μs, 120 B | 2.37 μs, 176 B |
+| `cancellableTask`, ten binds that suspend | 2.05 μs, 184 B | 2.23 μs, 184 B |
 
 - When the bound values are complete, the runtime-async builders are usually much faster and allocate less memory.
 - In these benchmarks, the JIT compiler also removes some `Task.FromResult` allocations, because it can see the whole method. Code that gets its tasks from other methods can get a smaller gain.
 - In .NET 11.0.0, a runtime-async method that awaits ten or more `ValueTask` values that it creates itself, such as `let! x = ValueTask<int>(100)`, is slower. The JIT compiler does not inline the awaits in this case. In a test, ten such binds took approximately 40 ns, and nine took approximately 15 ns. C# code with the same shape has the same limit.
-- When a bind suspends, the runtime-async builders allocate approximately 180 B in these benchmarks. The state-machine `task` allocates less memory and is approximately 10 % faster. The state-machine `valueTask` and `cancellableTask` allocate more memory and are slower.
+- When a bind suspends, the runtime-async builders allocate 176 to 184 B in these benchmarks. The state-machine builders allocate the same memory or less (112 to 184 B). The times differ by approximately 10 %, which is the same as the difference between two runs of the unchanged Ply benchmark.
+- On .NET 6 and later, the state-machine builders give the awaiter with its own type to the .NET method builder when a bind suspends, so a .NET awaiter is not boxed. Code that was compiled against an earlier IcedTasks version keeps the earlier inlined code until it is compiled again.
 - In the benchmarks that write to a file, the I/O time is much larger than the cost of the builder. The two kinds of builders give the same result in these benchmarks.
 
 These numbers come from one machine. Measure your own code before you change builders.

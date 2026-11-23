@@ -74,6 +74,7 @@ module SuspensionAllocationTests =
                     failure <- Some(ExceptionDispatchInfo.Capture e)
             )
 
+        thread.IsBackground <- true
         thread.Start()
         Expect.isTrue (thread.Join(TimeSpan.FromSeconds 30.)) "The measurement must finish in 30 s."
 
