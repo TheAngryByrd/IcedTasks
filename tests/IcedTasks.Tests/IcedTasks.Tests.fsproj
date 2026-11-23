@@ -44,6 +44,7 @@
     <Compile Include="ColdTaskTests.fs" />
     <Compile Include="ParallelAsyncTests.fs" />
     <Compile Include="OpenFormsTests.fs" />
+    <Compile Include="SuspensionAllocationTests.fs" />
     <Compile Include="PublicApiListing.fs" />
     <Compile Include="PublicApiTests.fs" />
     <Compile Include="Main.fs" />
