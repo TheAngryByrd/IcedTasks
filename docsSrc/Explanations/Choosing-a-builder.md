@@ -108,11 +108,7 @@ Use these builders when cancellation is a real part of the API contract. If the 
 
 ## Use tailRecursiveCancellableTask for a recursive loop
 
-Use `tailRecursiveCancellableTask` when a `cancellableTask` calls itself with `return!` in a loop, and the awaits in the loop often complete synchronously. A message loop over a queue that is not empty is the usual case.
-
-The result is a `CancellableTask<'T>`, as for `cancellableTask`. The difference is that `return!` of a `CancellableTask<'T>` is a tail call, as in `async`. In `cancellableTask`, `return!` is a bind, so each synchronous iteration of such a loop adds stack frames and keeps its state machine alive. About 1,000 synchronous iterations overflow a 512 KB thread stack. In `tailRecursiveCancellableTask`, the loop runs in constant stack and constant heap.
-
-`return!` inside `try`, `use`, `for`, or `while` is not a tail call, as in `async`. See [Tail-recursive cancellable task](Tail-recursive-cancellable-task.html) for the semantics and the costs. The builder is in the `net6.0` and later builds.
+Use `tailRecursiveCancellableTask` when a cancellable computation calls itself with `return!` and its awaits often complete synchronously, for example a message loop. In `cancellableTask`, such a loop adds stack frames for each iteration and can overflow the stack. See [Tail-recursive cancellable task](Tail-recursive-cancellable-task.html).
 
 ## Use coldTask when you want cold task-shaped work without cancellation
 

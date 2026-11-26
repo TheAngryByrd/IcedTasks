@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- [Add `tailRecursiveCancellableTask` on `net6.0` and later: a `CancellableTask<'T>` builder whose `return!` of a `CancellableTask<'T>` is a tail call, so a recursive loop over synchronous awaits runs in constant stack and constant heap. In `cancellableTask`, such a loop overflows a 512 KB stack after about 1,000 iterations](https://github.com/TheAngryByrd/IcedTasks/pull/89) - Credits @bigjonroberts
+- [Add `tailRecursiveCancellableTask` on `net6.0` and later: a `CancellableTask<'T>` builder whose `return!` of a `CancellableTask<'T>` is a tail call](https://github.com/TheAngryByrd/IcedTasks/pull/89) - Credits @bigjonroberts
 
 ## [0.12.0-beta002] - 2026-11-23
 

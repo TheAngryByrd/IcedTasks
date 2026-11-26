@@ -17,37 +17,22 @@ module TailRecursiveCancellableTasks =
     open Microsoft.FSharp.Core.LanguagePrimitives.IntrinsicOperators
     open Microsoft.FSharp.Collections
 
-    /// <summary>
-    /// The result of one step of a <c>tailRecursiveCancellableTask</c>.
-    /// When <c>Next</c> is <c>ValueNone</c>, <c>Result</c> is the result of the computation.
-    /// When <c>Next</c> is <c>ValueSome step</c>, the computation continues with <c>step</c>, and <c>Result</c> has no meaning.
-    /// </summary>
+    /// The result of one step: the final <c>Result</c>, or the <c>Next</c> step to run.
     [<Struct; NoComparison; NoEquality>]
     type TailRecursiveStep<'T> = {
         Result: 'T
         Next: TailRecursiveStepFunc<'T> voption
     }
 
-    /// <summary>
-    /// One step of a <c>tailRecursiveCancellableTask</c>: the state machine of one computation expression body.
-    /// </summary>
+    /// One step: one run of a computation expression body.
     and TailRecursiveStepFunc<'T> = CancellationToken -> Task<TailRecursiveStep<'T>>
 
-    /// <summary>
-    /// The method builder of <c>tailRecursiveCancellableTask</c>.
-    /// It wraps an <see cref="T:System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1"/> for one step, and it holds the pending tail call.
-    /// </summary>
-    /// <remarks>
-    /// <c>return!</c> of a CancellableTask writes the next step to <c>TailCall</c> and completes the body.
-    /// <c>SetResult</c> then completes the step task with that next step instead of the result.
-    /// </remarks>
+    /// An AsyncTaskMethodBuilder for one step, plus the pending tail call that <c>SetResult</c> gives as the next step.
     [<Struct; NoComparison; NoEquality>]
     type TailRecursiveCancellableTaskMethodBuilder<'T> =
-        /// The method builder of the step task.
         [<DefaultValue(false)>]
         val mutable Inner: AsyncTaskMethodBuilder<TailRecursiveStep<'T>>
 
-        /// The pending tail call, or <c>ValueNone</c>.
         [<DefaultValue(false)>]
         val mutable TailCall: TailRecursiveStepFunc<'T> voption
 
@@ -70,7 +55,7 @@ module TailRecursiveCancellableTasks =
         /// Marks the step as failed and binds the specified exception to the step task.
         member this.SetException(``exception``: exn) = this.Inner.SetException ``exception``
 
-        /// Completes the step task. When a tail call is pending, the step task gets the tail call. Otherwise it gets the result.
+        /// Completes the step task with the pending tail call, if any, else with the result.
         member this.SetResult(result: 'T) =
             let next = this.TailCall
             this.TailCall <- ValueNone
@@ -93,15 +78,7 @@ module TailRecursiveCancellableTasks =
         /// Gets the step task.
         member this.Task: Task<TailRecursiveStep<'T>> = this.Inner.Task
 
-    /// <summary>
-    /// The value of a <c>tailRecursiveCancellableTask { ... }</c> expression.
-    /// It is a <c>CancellableTask&lt;'T&gt;</c>: an <c>FSharpFunc</c> from <see cref="T:System.Threading.CancellationToken"/> to <see cref="T:System.Threading.Tasks.Task`1"/>.
-    /// It also exposes its first step, so that <c>return!</c> in another <c>tailRecursiveCancellableTask</c> can continue with that step directly.
-    /// </summary>
-    /// <remarks>
-    /// <c>Invoke</c> runs the chain of steps in one loop. A step that completes synchronously does not add a stack frame,
-    /// and a completed step is not retained. Thus a recursive loop that tail calls itself runs in constant stack and constant heap.
-    /// </remarks>
+    /// A CancellableTask that runs its chain of steps in one loop, so a tail-recursive loop uses constant stack and heap.
     [<Sealed>]
     type TailRecursiveCancellableTask<'T>(step: TailRecursiveStepFunc<'T>) =
         inherit FSharpFunc<CancellationToken, Task<'T>>()
@@ -134,11 +111,10 @@ module TailRecursiveCancellableTasks =
         override _.Invoke(cancellationToken: CancellationToken) : Task<'T> =
             TailRecursiveCancellableTask<'T>.Drive(step, cancellationToken)
 
-        /// Views this object as a CancellableTask. The compiler does not coerce an FSharpFunc subclass to a function type, so this unboxes.
+        /// Views this object as a CancellableTask. F# does not coerce an FSharpFunc subclass to a function type.
         member this.AsCancellableTask: CancellableTask<'T> = unbox (box this)
 
-        /// Gets the step that <c>return!</c> continues with for a CancellableTask.
-        /// For a <c>tailRecursiveCancellableTask</c> value, this is its first step. Any other CancellableTask becomes a step that awaits it.
+        /// The first step of a TailRecursiveCancellableTask, or a step that awaits any other CancellableTask.
         static member StepOf(cancellableTask: CancellableTask<'T>) : TailRecursiveStepFunc<'T> =
             match box cancellableTask with
             | :? TailRecursiveCancellableTask<'T> as tailRecursive -> tailRecursive.Step
@@ -149,34 +125,20 @@ module TailRecursiveCancellableTasks =
                         return { Result = result; Next = ValueNone }
                     }
 
-    /// <summary>
-    /// A CancellableTask that <c>Source</c> has marked for <c>return!</c>.
-    /// <c>ReturnFrom</c> makes it a tail call. <c>Bind</c> and <c>BindReturn</c> await it.
-    /// </summary>
+    /// A CancellableTask source. <c>ReturnFrom</c> tail calls it; <c>Bind</c> awaits it.
     [<Struct; NoComparison; NoEquality>]
     type TailRecursiveCancellableTaskSource<'T> = { CancellableTask: CancellableTask<'T> }
 
-    /// <summary>
-    /// Contains methods to build tail-recursive CancellableTasks using the F# computation expression syntax.
-    /// </summary>
-    /// <remarks>
-    /// This builder makes <c>return!</c> of a CancellableTask a tail call. The combinators that run code after a sub-computation
-    /// (<c>Combine</c>, <c>While</c>, <c>For</c>, <c>TryWith</c>, <c>TryFinally</c>, <c>Using</c>) run a pending tail call to completion
-    /// inside their scope, so <c>try</c>, <c>finally</c>, and <c>use</c> keep the semantics of <c>cancellableTask</c> and F# <c>async</c>.
-    /// </remarks>
+    /// Contains methods to build CancellableTasks where <c>return!</c> of a CancellableTask is a tail call.
     type TailRecursiveCancellableTaskBuilder() =
 
         inherit CancellableTaskBuilderBase()
 
-        /// <summary>
-        /// Runs <c>code</c>, then runs a pending tail call to completion before this scope ends.
-        /// </summary>
-        /// <remarks>
-        /// The combinators that run code after a sub-computation call this. It is generic in <c>'Builder</c> so that they keep the
-        /// signatures of the base members, which they hide. <c>Run</c> fixes <c>'Builder</c> to
+        /// <summary>Runs <c>code</c>, then runs a pending tail call to completion inside this scope.</summary>
+        ///
+        /// <remarks><c>'Builder</c> stays generic so the scoped members keep the base signatures. <c>Run</c> fixes it to
         /// <c>TailRecursiveCancellableTaskMethodBuilder&lt;'TOverall&gt;</c>, so the <c>Unsafe.As</c> view is exact.
-        /// The view is taken in place: a helper that takes the state machine by reference reads a copy on the static path.
-        /// </remarks>
+        /// Take the view in place on <c>sm</c>: a helper that takes the state machine by reference reads a copy on the static path.</remarks>
         member inline this.FlushTailCall
             (code: CancellableTaskBaseCode<'TOverall, 'T, 'Builder>)
             : CancellableTaskBaseCode<'TOverall, 'T, 'Builder> =
@@ -310,7 +272,7 @@ module TailRecursiveCancellableTasks =
 
             TailRecursiveCancellableTask<'T>(step).AsCancellableTask
 
-        /// Hosts the task code in a state machine. The result is a CancellableTask that runs the chain of tail calls in one loop.
+        /// Hosts the task code in a state machine. The result runs the chain of tail calls in one loop.
         member inline _.Run
             (code: CancellableTaskBaseCode<'T, 'T, TailRecursiveCancellableTaskMethodBuilder<'T>>)
             : CancellableTask<'T> =
@@ -366,8 +328,7 @@ module TailRecursiveCancellableTasks =
 
         /// <summary>Marks a CancellableTask for <c>return!</c>, <c>let!</c>, and <c>do!</c>.</summary>
         ///
-        /// <remarks>This member is on the builder type, not in an extension module, so that it has priority over the
-        /// <c>Source</c> members of <c>CancellableTaskBuilderBase</c> for a <c>CancellationToken -> Task&lt;'T&gt;</c>.</remarks>
+        /// <remarks>An intrinsic member, so it wins over the base <c>Source</c> extension members.</remarks>
         member inline _.Source
             ([<InlineIfLambda>] cancellableTask: CancellableTask<'T>)
             : TailRecursiveCancellableTaskSource<'T> =
@@ -399,10 +360,7 @@ module TailRecursiveCancellableTasks =
 
         /// <summary>Tail calls a CancellableTask.</summary>
         ///
-        /// <remarks>The computation does not await the CancellableTask. It gives the next step to the method builder and completes.
-        /// The loop in <see cref="T:IcedTasks.TailRecursiveCancellableTasks.TailRecursiveCancellableTask`1"/> runs the next step.
-        ///
-        /// The existence of this method permits the use of return! in the
+        /// <remarks>The existence of this method permits the use of return! in the
         /// tailRecursiveCancellableTask { ... } computation expression syntax.</remarks>
         member inline _.ReturnFrom
             (source: TailRecursiveCancellableTaskSource<'T>)
@@ -430,8 +388,7 @@ module TailRecursiveCancellableTasks =
             ) : CancellableTaskBaseCode<'TOverall, unit, 'Builder> =
             ResumableCode.While(guard, this.FlushTailCall computation)
 
-        /// <summary>Runs computation. A tail call in computation runs to completion inside the protected region, so catchHandler sees its exceptions.
-        /// A tail call in catchHandler is a tail call.</summary>
+        /// <summary>Runs computation, including its tail call, inside the protected region. A tail call in catchHandler stays a tail call.</summary>
         member inline this.TryWith
             (
                 computation: CancellableTaskBaseCode<'TOverall, 'T, 'Builder>,
@@ -527,7 +484,6 @@ module TailRecursiveCancellableTasks =
 
         /// <summary>
         /// Builds a CancellableTask using computation expression syntax, where <c>return!</c> of a CancellableTask is a tail call.
-        /// Use it for a recursive loop, such as a message loop, whose awaits often complete synchronously.
         /// </summary>
         let tailRecursiveCancellableTask = TailRecursiveCancellableTaskBuilder()
 
