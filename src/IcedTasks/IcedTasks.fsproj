@@ -27,6 +27,7 @@
     <Compile Include="CancellableValueTask.fs" />
     <Compile Include="CancellablePoolingValueTask.fs" />
     <Compile Include="CancellableTask.fs" />
+    <Compile Include="TailRecursiveCancellableTask.fs" />
   </ItemGroup>
 
   <ItemGroup>

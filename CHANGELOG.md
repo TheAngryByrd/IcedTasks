@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- [Add `tailRecursiveCancellableTask` on `net6.0` and later: a `CancellableTask<'T>` builder whose `return!` of a `CancellableTask<'T>` is a tail call](https://github.com/TheAngryByrd/IcedTasks/pull/89) - Credits @bigjonroberts
+
 ## [0.12.0-beta002] - 2026-11-23
 
 ### Changed

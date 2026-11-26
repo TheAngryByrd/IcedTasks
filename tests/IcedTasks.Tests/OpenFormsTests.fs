@@ -31,6 +31,7 @@ module RootOpen =
             pvTask
             cancellablePoolingValueTask
             cancelablePVTask
+            tailRecursiveCancellableTask
 #endif
         ]
 

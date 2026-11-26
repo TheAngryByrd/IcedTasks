@@ -41,6 +41,7 @@
     <Compile Include="CancellableTaskTests.fs" />
     <Compile Include="CancellableValueTaskTests.fs" />
     <Compile Include="CancellablePoolingValueTaskTests.fs" />
+    <Compile Include="TailRecursiveCancellableTaskTests.fs" />
     <Compile Include="ColdTaskTests.fs" />
     <Compile Include="ParallelAsyncTests.fs" />
     <Compile Include="OpenFormsTests.fs" />

@@ -22,6 +22,7 @@ Related guides:
 - [Pooling builders](Pooling-builders.html)
 - [Polyfill namespaces and shadowing](Polyfill-namespaces-and-shadowing.html)
 - [Runtime-async task builders](Runtime-async-task-builders.html)
+- [Tail-recursive cancellable task](Tail-recursive-cancellable-task.html)
 
 ## Builder comparison
 
@@ -57,6 +58,7 @@ Related guides:
 | `cancellableValueTask` | `CancellationToken -> ValueTask<'T>` | netstandard2.0 | Cold | Once per start | Multiple | Implicit | Implicit | Yes | Yes | Yes |
 | `cancellablePoolingValueTask` | `CancellationToken -> ValueTask<'T>` | net6.0+ | Cold | Once per start | Multiple | Implicit | Implicit | Yes | Yes | Yes |
 | `cancelablePVTask` | `CancellationToken -> ValueTask<'T>` | net6.0+ | Cold | Once per start | Multiple | Implicit | Implicit | Yes | Yes | Yes |
+| `tailRecursiveCancellableTask` | `CancellationToken -> Task<'T>` | net6.0+ | Cold | Multiple | Multiple | Implicit | Implicit | No | Yes | Yes |
 
 - <sup>1</sup> Hot means the operation has started, or is represented by a started task-like value, when the computation is created. Cold means caller code must start it explicitly.
 - <sup>2</sup> `ValueTask` and `ValueTask<'T>` should generally be awaited once. Cancellable ValueTask builders are multi-start because the outer value is a function, but each invocation returns a ValueTask that should generally be awaited once.
@@ -103,6 +105,10 @@ CancellationToken -> ValueTask<'T>
 That means the operation is cold until the caller supplies a token. The token can then flow through nested cancellable work, and the builder checks cancellation before binds and runs.
 
 Use these builders when cancellation is a real part of the API contract. If the caller should not have to provide a token, use `task`, `valueTask`, `coldTask`, or `asyncEx` instead.
+
+## Use tailRecursiveCancellableTask for a recursive loop
+
+Use `tailRecursiveCancellableTask` when a cancellable computation calls itself with `return!` and its awaits often complete synchronously, for example a message loop. In `cancellableTask`, such a loop adds stack frames for each iteration and can overflow the stack. See [Tail-recursive cancellable task](Tail-recursive-cancellable-task.html).
 
 ## Use coldTask when you want cold task-shaped work without cancellation
 
@@ -178,6 +184,8 @@ If you know the work is actually asynchronous and task-shaped, use `task`.
 If the work may complete synchronously and you want to optimize that case, use `valueTask`.
 
 If cancellation is part of the contract, use `cancellableTask` or `cancellableValueTask`.
+
+If a cancellable computation calls itself with `return!` in a loop, use `tailRecursiveCancellableTask`.
 
 If you want a cold task-shaped operation without cancellation, use `coldTask`.
 
