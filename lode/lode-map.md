@@ -18,6 +18,7 @@ Read [summary](summary.md), [terminology](terminology.md), and this map at the s
 - [builders/and-bang-merge-sources.md](builders/and-bang-merge-sources.md) - `and!` and concurrent start.
 - [builders/background-builders.md](builders/background-builders.md) - thread pool escape.
 - [builders/runtime-task.md](builders/runtime-task.md) - the eight runtime-async builders on `net11.0` and their test project.
+- [builders/tail-recursive-cancellable-task.md](builders/tail-recursive-cancellable-task.md) - `tailRecursiveCancellableTask`: the step type, the tail-call slot, and the flush in the scoped combinators.
 - [builders/namespaces-and-tfms.md](builders/namespaces-and-tfms.md) - AutoOpen modules, open forms, graph checking, polyfill namespaces, TFM guards.
 - [builders/asyncex-and-parallelasync.md](builders/asyncex-and-parallelasync.md) - the `Async` builders.
 - [builders/companion-modules.md](builders/companion-modules.md) - module functions and conversions.

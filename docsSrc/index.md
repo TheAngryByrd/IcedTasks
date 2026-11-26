@@ -48,6 +48,7 @@ If you need API signatures, generated reference documentation is available under
 - [Pooling builders](Explanations/Pooling-builders.html)
 - [Polyfill namespaces and shadowing](Explanations/Polyfill-namespaces-and-shadowing.html)
 - [Why IcedTasks uses `Source` and specialized binds](Explanations/Why-is-there-different-binds.html)
+- [Tail-recursive cancellable task](Explanations/Tail-recursive-cancellable-task.html)
 
 ## Framework examples
 
