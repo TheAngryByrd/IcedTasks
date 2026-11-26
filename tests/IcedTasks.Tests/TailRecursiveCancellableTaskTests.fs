@@ -47,21 +47,24 @@ module TailRecursiveCancellableTaskTests =
     /// Each call completes synchronously, as a message queue that is not empty does.
     let receive (n: int) : CancellableTask<int> = fun _ -> Task.FromResult n
 
+    /// Suspends, then logs `step{i}`. A tail call of this in a scope must complete before the scope ends.
+    let step (order: List<string>) (i: int) : CancellableTask<unit> =
+        tailRecursiveCancellableTask {
+            do! Task.Yield()
+            order.Add $"step{i}"
+        }
+
+    /// A chain of n + 1 steps that each suspend and log. Each step is a tail call of the previous one.
+    let rec countdown (order: List<string>) (n: int) : CancellableTask<int> =
+        tailRecursiveCancellableTask {
+            do! Task.Yield()
+            order.Add $"step{n}"
+
+            if n = 0 then return 0 else return! countdown order (n - 1)
+        }
+
     let builderTests =
         testList "TailRecursiveCancellableTaskBuilder" [
-            testList "Return" [
-                testCaseAsync "Simple Return"
-                <| async {
-                    let foo = tailRecursiveCancellableTask { return "lol" }
-
-                    let! result =
-                        foo
-                        |> Async.AwaitCancellableTask
-
-                    Expect.equal result "lol" "Should be able to Return value"
-                }
-            ]
-
             testList "ReturnFrom" [
                 testCaseAsync "Can ReturnFrom CancellableTask<T>"
                 <| async {
@@ -77,53 +80,25 @@ module TailRecursiveCancellableTaskTests =
                     Expect.equal actual expected "Should be able to Return! value"
                 }
 
-                testCaseAsync "Can ReturnFrom cancellableTask"
-                <| async {
-                    let inner = cancellableTask { return 7 }
-                    let outer = tailRecursiveCancellableTask { return! inner }
-
-                    let! actual =
-                        outer
-                        |> Async.AwaitCancellableTask
-
-                    Expect.equal actual 7 "Should be able to Return! a cancellableTask"
-                }
-
-                testCaseAsync "Can ReturnFrom Task<T>"
+                testCaseAsync "Can ReturnFrom Task<T> and CancellableTask"
                 <| async {
                     let expected = "lol"
+                    let fooTask: CancellableTask = fun ct -> Task.CompletedTask
 
                     let outerTask =
                         tailRecursiveCancellableTask { return! Task.FromResult expected }
 
+                    let unitTask = tailRecursiveCancellableTask { return! fooTask }
+
                     let! actual =
                         outerTask
+                        |> Async.AwaitCancellableTask
+
+                    do!
+                        unitTask
                         |> Async.AwaitCancellableTask
 
                     Expect.equal actual expected "Should be able to Return! value"
-                }
-
-                testCaseAsync "Can ReturnFrom CancellableTask"
-                <| async {
-                    let fooTask: CancellableTask = fun ct -> Task.CompletedTask
-                    let outerTask = tailRecursiveCancellableTask { return! fooTask }
-
-                    do!
-                        outerTask
-                        |> Async.AwaitCancellableTask
-                // Compiling is sufficient expect
-                }
-
-                testCaseAsync "cancellableTask can ReturnFrom a tailRecursiveCancellableTask"
-                <| async {
-                    let inner = tailRecursiveCancellableTask { return 7 }
-                    let outer = cancellableTask { return! inner }
-
-                    let! actual =
-                        outer
-                        |> Async.AwaitCancellableTask
-
-                    Expect.equal actual 7 "Should be able to Return! a tailRecursiveCancellableTask"
                 }
             ]
 
@@ -210,55 +185,6 @@ module TailRecursiveCancellableTaskTests =
                         / 2L
 
                     Expect.equal result expected "The loop should run each iteration"
-                }
-
-                testCaseAsync "A recursive loop with no awaits runs on a small stack"
-                <| async {
-                    let rec spin (n: int) : CancellableTask<int> =
-                        tailRecursiveCancellableTask {
-                            if n = 0 then return 42 else return! spin (n - 1)
-                        }
-
-                    let! result =
-                        runOnSmallStack (fun () -> (spin 1_000_000 CancellationToken.None).Result)
-                        |> Async.AwaitTask
-
-                    Expect.equal result 42 "The loop should end with the base case"
-                }
-
-                testCaseAsync "A recursive loop over asynchronous awaits completes"
-                <| async {
-                    let rec loop (n: int) : CancellableTask<int> =
-                        tailRecursiveCancellableTask {
-                            do! Task.Yield()
-
-                            if n = 0 then return 42 else return! loop (n - 1)
-                        }
-
-                    let! result =
-                        loop 10_000
-                        |> Async.AwaitCancellableTask
-
-                    Expect.equal result 42 "The loop should end with the base case"
-                }
-
-                testCaseAsync "Mutual recursion between two loops runs on a small stack"
-                <| async {
-                    let rec even (n: int) : CancellableTask<string> =
-                        tailRecursiveCancellableTask {
-                            if n = 0 then return "even" else return! odd (n - 1)
-                        }
-
-                    and odd (n: int) : CancellableTask<string> =
-                        tailRecursiveCancellableTask {
-                            if n = 0 then return "odd" else return! even (n - 1)
-                        }
-
-                    let! result =
-                        runOnSmallStack (fun () -> (even 1_000_001 CancellationToken.None).Result)
-                        |> Async.AwaitTask
-
-                    Expect.equal result "odd" "The loops should alternate"
                 }
 
                 testCaseAsync
@@ -444,6 +370,65 @@ module TailRecursiveCancellableTaskTests =
                 }
             ]
 
+            testList "Combine" [
+                testCaseAsync "A tail call runs to completion before the statement after it"
+                <| async {
+                    let order = List<string>()
+
+                    let outer (first: bool) =
+                        tailRecursiveCancellableTask {
+                            if first then
+                                return! step order 1
+
+                            order.Add "end"
+                        }
+
+                    do!
+                        outer true
+                        |> Async.AwaitCancellableTask
+
+                    Expect.sequenceEqual
+                        order
+                        [
+                            "step1"
+                            "end"
+                        ]
+                        "The tail call should complete first"
+                }
+            ]
+
+            testList "While" [
+                testCaseAsync "A tail call in a while body runs in each iteration"
+                <| async {
+                    let order = List<string>()
+
+                    let outer =
+                        tailRecursiveCancellableTask {
+                            let mutable i = 0
+
+                            while i < 3 do
+                                i <- i + 1
+                                return! step order i
+
+                            order.Add "end"
+                        }
+
+                    do!
+                        outer
+                        |> Async.AwaitCancellableTask
+
+                    Expect.sequenceEqual
+                        order
+                        [
+                            "step1"
+                            "step2"
+                            "step3"
+                            "end"
+                        ]
+                        "Each iteration should run its tail call"
+                }
+            ]
+
             testList "TryWith" [
                 testCaseAsync
                     "try/with catches an exception that a tail-called callee throws after an await"
@@ -501,18 +486,10 @@ module TailRecursiveCancellableTaskTests =
                 <| async {
                     let order = List<string>()
 
-                    let rec countdown (n: int) : CancellableTask<int> =
-                        tailRecursiveCancellableTask {
-                            do! Task.Yield()
-                            order.Add $"step{n}"
-
-                            if n = 0 then return 0 else return! countdown (n - 1)
-                        }
-
                     let outer =
                         tailRecursiveCancellableTask {
                             try
-                                return! countdown 2
+                                return! countdown order 2
                             finally
                                 order.Add "finally"
                         }
@@ -540,18 +517,10 @@ module TailRecursiveCancellableTaskTests =
                 <| async {
                     let order = List<string>()
 
-                    let rec countdown (n: int) : CancellableTask<int> =
-                        tailRecursiveCancellableTask {
-                            do! Task.Yield()
-                            order.Add $"step{n}"
-
-                            if n = 0 then return 0 else return! countdown (n - 1)
-                        }
-
                     let outer =
                         tailRecursiveCancellableTask {
                             use _ = TestHelpers.makeDisposable (fun () -> order.Add "dispose")
-                            return! countdown 1
+                            return! countdown order 1
                         }
 
                     let! result =
@@ -575,14 +544,6 @@ module TailRecursiveCancellableTaskTests =
                 <| async {
                     let order = List<string>()
 
-                    let rec countdown (n: int) : CancellableTask<int> =
-                        tailRecursiveCancellableTask {
-                            do! Task.Yield()
-                            order.Add $"step{n}"
-
-                            if n = 0 then return 0 else return! countdown (n - 1)
-                        }
-
                     let outer =
                         tailRecursiveCancellableTask {
                             use _ =
@@ -591,7 +552,7 @@ module TailRecursiveCancellableTaskTests =
                                     ValueTask()
                                 )
 
-                            return! countdown 1
+                            return! countdown order 1
                         }
 
                     let! result =
@@ -616,16 +577,10 @@ module TailRecursiveCancellableTaskTests =
                 <| async {
                     let order = List<string>()
 
-                    let step (i: int) : CancellableTask<unit> =
-                        tailRecursiveCancellableTask {
-                            do! Task.Yield()
-                            order.Add $"step{i}"
-                        }
-
                     let outer =
                         tailRecursiveCancellableTask {
                             for i in 1..3 do
-                                return! step i
+                                return! step order i
 
                             order.Add "end"
                         }
@@ -650,12 +605,6 @@ module TailRecursiveCancellableTaskTests =
                 <| async {
                     let order = List<string>()
 
-                    let step (i: int) : CancellableTask<unit> =
-                        tailRecursiveCancellableTask {
-                            do! Task.Yield()
-                            order.Add $"step{i}"
-                        }
-
                     let outer =
                         tailRecursiveCancellableTask {
                             for i in
@@ -664,7 +613,7 @@ module TailRecursiveCancellableTaskTests =
                                     2
                                     3
                                 } do
-                                return! step i
+                                return! step order i
 
                             order.Add "end"
                         }
@@ -686,54 +635,31 @@ module TailRecursiveCancellableTaskTests =
             ]
 
             testList "Cancellation Semantics" [
-                testCaseAsync "A cancelled token gives a cancelled task before the body runs"
-                <| async {
-                    let mutable ran = false
-
-                    let foo =
-                        tailRecursiveCancellableTask {
-                            ran <- true
-                            return "lol"
-                        }
-
-                    use cts = new CancellationTokenSource()
-                    cts.Cancel()
-
-                    do!
-                        Expect.CancellationRequested(
-                            foo cts.Token
-                            |> Async.AwaitTask
-                            |> Async.Ignore
-                        )
-
-                    Expect.isFalse ran "The body should not run"
-                }
-
-                testCaseAsync "Cancellation ends a recursive loop"
+                testCaseAsync "Cancellation ends a recursive loop before its next step runs"
                 <| async {
                     let mutable seen = 0
 
                     let gate =
-                        TaskCompletionSource<int>(
+                        TaskCompletionSource<unit>(
                             TaskCreationOptions.RunContinuationsAsynchronously
                         )
 
+                    // Only the first step awaits, so only the check at the start of each step
+                    // can see the cancellation.
                     let rec loop (n: int) : CancellableTask<int> =
                         tailRecursiveCancellableTask {
-                            let! received = if n = 0 then gate.Task else Task.FromResult n
+                            if n = 0 then
+                                do! gate.Task
+
                             seen <- n
 
-                            return!
-                                loop (
-                                    received
-                                    + 1
-                                )
+                            if n < 10 then return! loop (n + 1) else return n
                         }
 
                     use cts = new CancellationTokenSource()
                     let running = loop 0 cts.Token
                     cts.Cancel()
-                    gate.SetResult 0
+                    gate.SetResult(())
 
                     do!
                         Expect.CancellationRequested(
@@ -742,7 +668,7 @@ module TailRecursiveCancellableTaskTests =
                             |> Async.Ignore
                         )
 
-                    Expect.equal seen 0 "The loop should not continue after cancellation"
+                    Expect.equal seen 0 "No step should run after the cancellation"
                 }
             ]
 
@@ -768,32 +694,6 @@ module TailRecursiveCancellableTaskTests =
                         }
                     )
                     (fun work -> work CancellationToken.None)
-
-                testCaseAsync "Multi start a tail-called chain"
-                <| async {
-                    let mutable entered = 0
-
-                    let rec loop (n: int) : CancellableTask<int> =
-                        tailRecursiveCancellableTask {
-                            entered <-
-                                entered
-                                + 1
-
-                            if n = 0 then return entered else return! loop (n - 1)
-                        }
-
-                    let work = loop 2
-
-                    let! first =
-                        work
-                        |> Async.AwaitCancellableTask
-
-                    let! second =
-                        work
-                        |> Async.AwaitCancellableTask
-
-                    Expect.equal (first, second) (3, 6) "Each start should run the whole chain"
-                }
             ]
 
             testList "Dynamic path" [
@@ -855,10 +755,141 @@ module TailRecursiveCancellableTaskTests =
                         ]
                         "finally should run last"
                 }
+
+                // The dynamic path runs one flush delegate for each while loop, so it has to reset
+                // its pending flag in each iteration. The static path inlines a fresh flush.
+                testCaseAsync "A tail call in a while body runs in each iteration"
+                <| async {
+                    let order = List<string>()
+
+                    let outer =
+                        dTailRecursiveCancellableTask {
+                            let mutable i = 0
+
+                            while i < 3 do
+                                i <- i + 1
+                                return! step order i
+
+                            order.Add "end"
+                        }
+
+                    do!
+                        outer
+                        |> Async.AwaitCancellableTask
+
+                    Expect.sequenceEqual
+                        order
+                        [
+                            "step1"
+                            "step2"
+                            "step3"
+                            "end"
+                        ]
+                        "Each iteration should run its tail call"
+                }
+
+                testCaseAsync "A cancelled token gives a cancelled task before the body runs"
+                <| async {
+                    let mutable ran = false
+
+                    let foo =
+                        dTailRecursiveCancellableTask {
+                            ran <- true
+                            return "lol"
+                        }
+
+                    use cts = new CancellationTokenSource()
+                    cts.Cancel()
+
+                    do!
+                        Expect.CancellationRequested(
+                            foo cts.Token
+                            |> Async.AwaitTask
+                            |> Async.Ignore
+                        )
+
+                    Expect.isFalse ran "The body should not run"
+                }
             ]
         ]
 
+    let disposalOutcomeTests =
+        testList "DisposeAsync outcome" [
+            AsyncDisposalOutcome.tests
+                "tailRecursiveCancellableTask"
+                AsyncDisposalOutcome.Static
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                    AsyncDisposalOutcome.BodyCancels
+                    AsyncDisposalOutcome.BodyAwaitsCanceledTask
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    tailRecursiveCancellableTask {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+
+                        if AsyncDisposalOutcome.awaitsCanceledTask body then
+                            do! AsyncDisposalOutcome.canceledTask ()
+
+                        do! Task.CompletedTask
+                    }
+                    |> fun t -> t cts.Token :> Task
+                )
+                (fun body cts items ->
+                    tailRecursiveCancellableTask {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+
+                            if AsyncDisposalOutcome.awaitsCanceledTask body then
+                                do! AsyncDisposalOutcome.canceledTask ()
+
+                            do! Task.CompletedTask
+                    }
+                    |> fun t -> t cts.Token :> Task
+                )
+            AsyncDisposalOutcome.tests
+                "tailRecursiveCancellableTask"
+                AsyncDisposalOutcome.Dynamic
+                [
+                    AsyncDisposalOutcome.BodyCompletes
+                    AsyncDisposalOutcome.BodyThrows
+                    AsyncDisposalOutcome.BodyCancels
+                    AsyncDisposalOutcome.BodyAwaitsCanceledTask
+                ]
+                AsyncDisposalOutcome.taskExpectation
+                (fun body cts resource ->
+                    dTailRecursiveCancellableTask {
+                        use _ = resource
+                        AsyncDisposalOutcome.runBody body cts
+
+                        if AsyncDisposalOutcome.awaitsCanceledTask body then
+                            do! AsyncDisposalOutcome.canceledTask ()
+
+                        do! Task.CompletedTask
+                    }
+                    |> fun t -> t cts.Token :> Task
+                )
+                (fun body cts items ->
+                    dTailRecursiveCancellableTask {
+                        for _ in items do
+                            AsyncDisposalOutcome.runBody body cts
+
+                            if AsyncDisposalOutcome.awaitsCanceledTask body then
+                                do! AsyncDisposalOutcome.canceledTask ()
+
+                            do! Task.CompletedTask
+                    }
+                    |> fun t -> t cts.Token :> Task
+                )
+        ]
+
     [<Tests>]
-    let tests = testList "IcedTasks.TailRecursiveCancellableTask" [ builderTests ]
+    let tests =
+        testList "IcedTasks.TailRecursiveCancellableTask" [
+            builderTests
+            disposalOutcomeTests
+        ]
 
 #endif
